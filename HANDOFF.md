@@ -86,8 +86,13 @@ find the Edge crash instead, restoring the middleware is the cleaner solution.
   count badge, always visible on mobile) · person icon (desktop only; burger on mobile).
 - **Dates:** US format, pinned to `America/New_York`, formatted server-side.
 - **Newsletter replaced by an Instagram band** (placeholder URL/handle in `app/page.tsx`).
-- **Node:** pinned to 20 (`.nvmrc`, `engines`). Next 15 rather than 16 because the original
-  machine was on Node 18 — upgrading to Next 16 is reasonable now.
+- **Node:** pinned to 24 (`.nvmrc` = `24`, `engines.node` = `24.x`). Vercel ignores `.nvmrc`
+  and reads `engines.node`; the old `>=20.9` range mapped to "latest 24.x" on Vercel anyway
+  (their default), so local and deploy now agree explicitly. Vercel deprecates Node 20 on
+  1 Oct 2026, so 24 is also the forward-looking choice. Set the Vercel Project Settings →
+  Node.js Version dropdown to 24.x as well (belt and braces; `engines` already wins).
+  Next 15 rather than 16 because the original machine was on Node 18 — upgrading to Next 16
+  is reasonable now.
 
 ## Collaboration model (decided 7 Sep 2026)
 Fanny and Kai both work locally with their own Claude Code sessions and sync through GitHub.

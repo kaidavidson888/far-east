@@ -214,7 +214,10 @@ try {
   const { rmSync, writeFileSync, mkdirSync } = await import('node:fs');
   rmSync('.verify/build', { recursive: true, force: true });
   mkdirSync('.verify/build', { recursive: true });
-  execFileSync('npx', ['tsc', 'lib/db.ts', '--outDir', '.verify/build', '--module', 'es2022',
+  // Invoke the local tsc through the running node binary so this works the same
+  // on Windows (where `npx` is a .cmd and execFileSync cannot spawn it directly).
+  execFileSync(process.execPath, ['node_modules/typescript/bin/tsc',
+    'lib/db.ts', '--outDir', '.verify/build', '--module', 'es2022',
     '--target', 'es2022', '--moduleResolution', 'bundler', '--resolveJsonModule', '--skipLibCheck'],
     { stdio: 'pipe' });
   writeFileSync('.verify/build/package.json', '{"type":"module"}\n');

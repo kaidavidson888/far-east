@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "engines": {
-    "node": ">=20.9"
+    "node": "24.x"
   },
   "scripts": {
     "dev": "next dev",
@@ -31,5 +31,9 @@
     "@types/react-dom": "^19.2.5",
     "embedded-postgres": "^18.4.0-beta.17",
     "typescript": "^5.5.4"
+  },
+  "allowScripts": {
+    "@embedded-postgres/windows-x64@18.4.0-beta.17": true,
+    "sharp@0.34.5": true
   }
 }
