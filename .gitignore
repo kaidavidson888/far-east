@@ -8,3 +8,6 @@ node_modules
 tsconfig.tsbuildinfo
 .verify/build
 .env.local.old-project
+
+# Claude Code local launch config (machine-specific)
+.claude/

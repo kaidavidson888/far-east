@@ -4,6 +4,7 @@ import { currentUser } from '@/lib/auth';
 import { ProductCard } from '@/components/ProductCard';
 import { ScoreSeal } from '@/components/ScoreSeal';
 import { SealDivider } from '@/components/SealDivider';
+import { SplashScreen } from '@/components/SplashScreen';
 import { SurfacePreference } from '@/components/SurfacePreference';
 
 // TODO: swap in the real Instagram handle and URL.
@@ -25,6 +26,7 @@ export default async function HomePage() {
   return (
     <>
       <SurfacePreference mode="dark" />
+      <SplashScreen />
 
       {/* Hero */}
       <section className="container" style={{ paddingBlock: 'var(--xxl)' }}>
