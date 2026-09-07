@@ -3,10 +3,11 @@
 // `npm run build:splash` from scripts/assets/login-source.gif — nothing decodes
 // a GIF at runtime.
 //
-// 101 frames, 40ms apart — 4.00s of animation, then the last frame is held.
+// 51 frames, 80ms apart — 4.00s of animation, then the last frame is held.
+// (Every 2nd source frame; see scripts/build-splash-frames.mjs.)
 
-export const SPLASH_FRAME_MS = 40;
-export const SPLASH_FRAME_COUNT = 101;
+export const SPLASH_FRAME_MS = 80;
+export const SPLASH_FRAME_COUNT = 51;
 export const SPLASH_DURATION_MS = (SPLASH_FRAME_COUNT - 1) * SPLASH_FRAME_MS; // 4000
 
 const src = (i: number) => `/splash/frames/f${String(i).padStart(3, '0')}.webp`;

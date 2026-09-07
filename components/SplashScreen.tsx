@@ -12,8 +12,8 @@ import {
 
 type Phase = 'logo' | 'play' | 'form';
 
-const CANVAS_W = 400;
-const CANVAS_H = Math.round((CANVAS_W * 1600) / 720); // 889 — the source aspect
+const CANVAS_W = 560; // 1:1 with the baked frames; CSS scales the element
+const CANVAS_H = Math.round((CANVAS_W * 1600) / 720); // 1244
 
 /**
  * The homepage splash. The seal is a press-and-hold button: holding grows the
@@ -158,7 +158,7 @@ export function SplashScreen() {
           height={CANVAS_H}
           aria-hidden="true"
         />
-        {phase !== 'form' ? (
+        {phase !== 'form' && (
           <button
             type="button"
             className="splash-seal"
@@ -168,10 +168,10 @@ export function SplashScreen() {
             onPointerCancel={release}
             onLostPointerCapture={release}
           />
-        ) : (
-          <SplashLoginForm />
         )}
       </div>
+      {/* Outside .splash-stage so the stage's zoom doesn't scale the form. */}
+      {phase === 'form' && <SplashLoginForm />}
     </div>
   );
 }

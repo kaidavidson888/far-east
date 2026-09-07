@@ -524,16 +524,21 @@ ul, ol { list-style: none; }
   overflow: hidden;
   background: #ffffff;
 }
-/* Smallest 720x1600 box that covers the viewport, centred — so the red design
-   reaches every screen edge (essentially no crop on phones) and the %-placed
-   overlays track the artwork on any aspect ratio. */
+/* Smallest 720x1600 box that covers the viewport, centred, then scaled up by
+   --splash-scale so the artwork (small in the source frames) fills the page.
+   overflow:hidden on .splash clips the overspill; the %-placed overlays track
+   the artwork on any aspect ratio because they scale with the stage. */
 .splash-stage {
   position: absolute;
   left: 50%; top: 50%;
-  transform: translate(-50%, -50%);
+  transform: translate(-50%, -50%) scale(var(--splash-scale, 1.25));
   width: max(100vw, 100dvh * 720 / 1600);
   height: max(100dvh, 100vw * 1600 / 720);
   touch-action: none;
+}
+/* Phones: the cover box barely zooms, so the logo reads as small — push it. */
+@media (max-width: 640px) {
+  .splash-stage { --splash-scale: 1.5; }
 }
 .splash-poster,
 .splash-canvas {
@@ -560,7 +565,7 @@ ul, ol { list-style: none; }
   --splash-red-deep: #d81f1f;
 }
 .splash-form {
-  position: absolute;
+  position: fixed;
   left: 50%; top: 49%;
   width: min(86vw, 320px);
   transform: translate(-50%, -50%);

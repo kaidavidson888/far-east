@@ -4,7 +4,8 @@
  *   npm run build:splash
  *
  * Source: scripts/assets/login-source.gif (pure-red / black line-art on white).
- * Output: public/splash/frames/f000.webp … f100.webp  (101 frames, 40ms apart)
+ * Output: public/splash/frames/f000.webp … f050.webp  (every 2nd source frame,
+ * 51 stills 80ms apart — still 4.00s, half the bytes, plenty smooth for the bloom)
  *
  * The GIF frames are patches that composite on top of each other (disposal
  * type 1), so we accumulate them and snapshot each step. Colours are remapped:
@@ -21,11 +22,19 @@ import sharp from 'sharp';
 
 const SRC = 'scripts/assets/login-source.gif';
 const OUT = 'public/splash/frames';
-const WIDTH = 400; // output frame width; the animation is full-bleed and in motion
-const QUALITY = 78;
+const WIDTH = 560; // canvas renders these 1:1, CSS scales the element
+const QUALITY = 90;
+const STRIDE = 2; // keep every Nth source frame
 
 const RED = [0xff, 0x31, 0x31];
 const INK = [0x00, 0x00, 0x00];
+
+// Steepen the anti-aliased coverage so faint pixels snap toward paper and
+// mid pixels toward full colour — keeps the line-work from reading as a haze.
+const crisp = (c) => {
+  const t = c < 0 ? 0 : c > 1 ? 1 : c;
+  return t < 0.18 ? 0 : t > 0.9 ? 1 : (t - 0.18) / 0.72;
+};
 
 function recolor(d) {
   for (let i = 0; i < d.length; i += 4) {
@@ -34,12 +43,12 @@ function recolor(d) {
     const chroma = max - Math.min(r, g, b);
     if (max > 250 && chroma < 8) continue; // white paper — leave it
     if (chroma < 24) {
-      const cov = 1 - max / 255; // achromatic → ink by darkness
+      const cov = crisp(1 - max / 255); // achromatic → ink by darkness
       d[i] = 255 + (INK[0] - 255) * cov;
       d[i + 1] = 255 + (INK[1] - 255) * cov;
       d[i + 2] = 255 + (INK[2] - 255) * cov;
     } else if (r === max) {
-      const cov = 1 - (g + b) / 510; // red line-work → red by coverage
+      const cov = crisp(1 - (g + b) / 510); // red line-work → red by coverage
       d[i] = 255 + (RED[0] - 255) * cov;
       d[i + 1] = 255 + (RED[1] - 255) * cov;
       d[i + 2] = 255 + (RED[2] - 255) * cov;
@@ -76,13 +85,22 @@ for (let n = 0; n < frames.length; n++) {
     }
   }
 
+  // The accumulator must see every source frame, but we only emit every STRIDE-th
+  // (and always the final frame).
+  const isLast = n === frames.length - 1;
+  if (n % STRIDE !== 0 && !isLast) continue;
+
   const snap = Buffer.from(acc);
   recolor(snap);
   const png = new PNG({ width: W, height: H });
   snap.copy(png.data);
-  const name = `${OUT}/f${String(n).padStart(3, '0')}.webp`;
-  await sharp(PNG.sync.write(png)).resize({ width: WIDTH }).webp({ quality: QUALITY }).toFile(name);
+  const name = `${OUT}/f${String(written).padStart(3, '0')}.webp`;
+  await sharp(PNG.sync.write(png))
+    .resize({ width: WIDTH })
+    .sharpen({ sigma: 0.6 })
+    .webp({ quality: QUALITY })
+    .toFile(name);
   written++;
 }
 
-console.log(`wrote ${written} frames to ${OUT}/ (${W}x${H} → ${WIDTH}px wide)`);
+console.log(`wrote ${written} frames to ${OUT}/ (${W}x${H} → ${WIDTH}px wide, stride ${STRIDE})`);
