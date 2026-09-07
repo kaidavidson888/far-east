@@ -9,9 +9,12 @@
  *
  * The GIF frames are patches that composite on top of each other (disposal
  * type 1), so we accumulate them and snapshot each step. Colours are remapped:
- *   red  #FF0000  → #FF3131
+ *   red  #FF0000  → #FF0000  (true red)
  *   black          → #000000
  *   white          → left as #FFFFFF
+ * The centre region is knocked back to white: the seal, the transient outline
+ * boxes and the login card are drawn as crisp DOM/SVG on top — only the clouds
+ * come from these frames.
  * Rerun this whenever the source GIF or the palette changes, and commit the
  * results — nothing decodes the GIF at runtime.
  */
@@ -26,8 +29,12 @@ const WIDTH = 560; // canvas renders these 1:1, CSS scales the element
 const QUALITY = 90;
 const STRIDE = 2; // keep every Nth source frame
 
-const RED = [0xff, 0x31, 0x31];
+const RED = [0xff, 0x00, 0x00];
 const INK = [0x00, 0x00, 0x00];
+
+// Centre knockout (fractions of the frame): where the DOM box elements live.
+// Feathered so the clouds fade out into it rather than meeting a hard edge.
+const KO = { x0: 0.30, x1: 0.70, y0: 0.40, y1: 0.60, feather: 0.035 };
 
 // Steepen the anti-aliased coverage so faint pixels snap toward paper and
 // mid pixels toward full colour — keeps the line-work from reading as a haze.
@@ -52,6 +59,26 @@ function recolor(d) {
       d[i] = 255 + (RED[0] - 255) * cov;
       d[i + 1] = 255 + (RED[1] - 255) * cov;
       d[i + 2] = 255 + (RED[2] - 255) * cov;
+    }
+  }
+}
+
+// Fade every pixel in the centre rectangle toward white, softening the edge
+// over `feather` so there's no visible seam behind the DOM box.
+function knockout(d) {
+  const x0 = KO.x0 * W, x1 = KO.x1 * W, y0 = KO.y0 * H, y1 = KO.y1 * H;
+  const fx = KO.feather * W, fy = KO.feather * H;
+  for (let y = 0; y < H; y++) {
+    const sy = Math.min((y - (y0 - fy)) / fy, ((y1 + fy) - y) / fy, 1);
+    if (sy <= 0) continue;
+    for (let x = 0; x < W; x++) {
+      const sx = Math.min((x - (x0 - fx)) / fx, ((x1 + fx) - x) / fx, 1);
+      const k = Math.min(sx, sy);
+      if (k <= 0) continue;
+      const i = (y * W + x) * 4;
+      d[i] = d[i] + (255 - d[i]) * k;
+      d[i + 1] = d[i + 1] + (255 - d[i + 1]) * k;
+      d[i + 2] = d[i + 2] + (255 - d[i + 2]) * k;
     }
   }
 }
@@ -92,6 +119,7 @@ for (let n = 0; n < frames.length; n++) {
 
   const snap = Buffer.from(acc);
   recolor(snap);
+  knockout(snap);
   const png = new PNG({ width: W, height: H });
   snap.copy(png.data);
   const name = `${OUT}/f${String(written).padStart(3, '0')}.webp`;

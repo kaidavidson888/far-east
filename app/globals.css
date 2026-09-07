@@ -518,103 +518,133 @@ ul, ol { list-style: none; }
 .site-footer .btn-icon:hover { background: #222222; }
 
 /* ---------- Splash ---------- */
-/* Homepage press-and-hold splash; sits above the age gate (z-index 100). */
+/* Homepage press-and-hold splash; above the age gate (z-index 100). True red.
+   The seal, the transient outline squares and the login card are all vector DOM
+   at one centred size (--splash-box); only the clouds are raster. */
 .splash {
   position: fixed; inset: 0; z-index: 200;
   overflow: hidden;
   background: #ffffff;
+  touch-action: none;
+  --splash-red: #ff0000;
+  --splash-red-deep: #cc0000;
+  --splash-box: clamp(230px, 20vw, 300px);
 }
-/* Smallest 720x1600 box that covers the viewport, centred, then scaled up by
-   --splash-scale so the artwork (small in the source frames) fills the page.
-   overflow:hidden on .splash clips the overspill; the %-placed overlays track
-   the artwork on any aspect ratio because they scale with the stage. */
-.splash-stage {
-  position: absolute;
-  left: 50%; top: 50%;
-  transform: translate(-50%, -50%) scale(var(--splash-scale, 1.25));
+
+/* Raster cloud frames, covering the viewport so the design meets every edge. */
+.splash-clouds {
+  position: absolute; left: 50%; top: 50%;
+  transform: translate(-50%, -50%);
   width: max(100vw, 100dvh * 720 / 1600);
   height: max(100dvh, 100vw * 1600 / 720);
-  touch-action: none;
-}
-/* Phones: the cover box barely zooms, so the logo reads as small — push it. */
-@media (max-width: 640px) {
-  .splash-stage { --splash-scale: 1.5; }
-}
-.splash-poster,
-.splash-canvas {
-  position: absolute; inset: 0;
-  width: 100%; height: 100%;
   display: block;
+  opacity: 0;
+  transition: opacity 200ms ease;
 }
-/* The seal's square, continued from the boxy sides of the mountain. */
-.splash-seal {
-  position: absolute;
-  left: 38%; top: 42.5%;
-  width: 24%; aspect-ratio: 1;
-  padding: 0; margin: 0;
+.splash-clouds[data-lit="true"] { opacity: 1; }
+
+/* Shared centred stage for the vector elements. */
+.splash-box {
+  position: absolute; left: 50%; top: 50%;
+  transform: translate(-50%, -50%);
+  width: var(--splash-box);
+  min-height: var(--splash-box);
+}
+.splash-layer {
+  position: absolute; left: 50%; top: 50%;
+  transform: translate(-50%, -50%);
+  width: 100%;
+  display: grid; place-items: center;
+  opacity: 0; visibility: hidden;
+  transition: opacity 200ms ease;
+}
+.splash-layer[data-show="true"] { opacity: 1; visibility: visible; }
+.splash-seal-mark { width: 100%; height: auto; display: block; }
+
+/* Transient outline squares. */
+.splash-outline {
+  position: absolute; left: 50%; top: 50%;
+  width: var(--splash-box); height: var(--splash-box);
+  transform: translate(-50%, -50%);
+  border: 2px solid;
+  opacity: 0;
+}
+.splash-outline-red { border-color: var(--splash-red); }
+.splash-outline-black { border-color: #000000; }
+
+/* Press-and-hold target — the seal's square. */
+.splash-hit {
+  position: absolute; left: 50%; top: 50%;
+  transform: translate(-50%, -50%);
+  width: var(--splash-box); height: var(--splash-box);
+  margin: 0; padding: 0;
   background: transparent; border: 0;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
-.splash-seal:focus-visible { outline: 2px solid var(--cobalt); outline-offset: 4px; }
+.splash-hit:focus-visible { outline: 2px solid var(--splash-red); outline-offset: 6px; }
 
-/* Sign-in card over the frozen final frame. The splash runs its own bright red
-   (#FF3131, matching the recoloured animation) rather than the site's cinnabar. */
-.splash {
-  --splash-red: #ff3131;
-  --splash-red-deep: #d81f1f;
-}
-.splash-form {
-  position: fixed;
-  left: 50%; top: 49%;
-  width: min(86vw, 320px);
-  transform: translate(-50%, -50%);
-  display: flex; flex-direction: column;
-  gap: clamp(8px, 1.6vh, 14px);
-  padding: clamp(16px, 3vh, 26px);
+/* ---- Login card — matches the animation's final frame ----
+   Same footprint as the seal and the outline squares (--splash-box): a solid
+   red border with a black dashed border just inside, and three black rows. */
+.splash-card {
+  box-sizing: border-box;
+  width: var(--splash-box);
+  height: var(--splash-box);
   background: #ffffff;
-  border: 2px solid var(--splash-red);
-}
-.splash-field { display: block; }
-.splash-field > span {
-  display: block;
+  border: 3px solid var(--splash-red);
+  padding: 0;
   font-family: var(--font-display);
-  font-size: clamp(10px, 1.5vh, 12px);
-  letter-spacing: 0.09em; text-transform: uppercase;
-  color: var(--splash-red);
-  margin-bottom: 3px;
+  color: #000000;
 }
-.splash-field > input {
-  width: 100%;
-  border: 0; border-bottom: 1.5px solid var(--splash-red);
-  border-radius: 0;
-  background: transparent;
-  font-family: var(--font-display);
-  font-size: clamp(13px, 1.9vh, 15px);
-  padding: 4px 0;
-  color: #14120f;
+.splash-card-inner {
+  height: 100%;
+  border: 1.5px dashed #000000;
+  margin: 5px;
+  padding: 7% 8% 6%;
+  display: flex; flex-direction: column;
+  justify-content: space-between;
 }
-.splash-field > input:focus { outline: none; border-bottom-color: var(--splash-red-deep); }
-.splash-submit {
-  margin-top: clamp(2px, 0.8vh, 8px);
-  border: 0; border-radius: 0;
-  background: var(--splash-red); color: #ffffff;
-  font-family: var(--font-display); font-weight: 600;
-  letter-spacing: 0.08em; text-transform: uppercase;
-  font-size: clamp(11px, 1.6vh, 13px);
-  padding: clamp(9px, 1.5vh, 13px) 0;
-  cursor: pointer;
+.splash-row {
+  position: relative;
+  display: flex; align-items: flex-end; gap: 6px;
+  color: #000000;
 }
-.splash-submit:hover { background: var(--splash-red-deep); }
-.splash-form-error {
-  font-family: var(--font-display);
-  font-size: clamp(10px, 1.4vh, 12px);
-  color: var(--splash-red-deep);
+.splash-row-word {
+  flex: none;
+  font-size: clamp(10px, 2.6vh, 13px); font-weight: 700;
+  letter-spacing: 0.02em; text-transform: uppercase;
+  white-space: nowrap; line-height: 1;
+  transition: opacity 140ms ease;
 }
-.splash-form-alt {
-  font-family: var(--font-display);
-  font-size: clamp(10px, 1.4vh, 12px);
-  text-align: center;
-  color: #857f76;
+.splash-row-cloud { flex: none; margin-bottom: 1px; transition: opacity 140ms ease; }
+.splash-cloud { width: 20px; height: 10px; color: #000000; display: block; }
+.splash-cloud-fill { fill: #000000; }
+.splash-row-rule {
+  flex: 1; height: 0;
+  border-bottom: 1.5px dashed #000000;
+  margin-bottom: 2px;
+  transition: opacity 140ms ease;
 }
-.splash-form-alt a { color: var(--splash-red); text-decoration: underline; }
+.splash-row-input {
+  position: absolute; left: 0; right: 24px; bottom: 1px;
+  padding-left: 40%;
+  border: 0; background: transparent;
+  font-family: "Cormorant Unicase", Georgia, "Times New Roman", serif;
+  font-size: clamp(14px, 3.4vh, 18px); line-height: 1.1;
+  color: #000000;
+  caret-color: transparent;
+}
+.splash-row-input:focus { outline: none; }
+.splash-row-submit {
+  display: flex; align-items: flex-end; gap: 6px;
+  border: 0; padding: 0;
+  background: transparent; cursor: pointer;
+  color: #000000; text-align: left;
+}
+.splash-row-submit .splash-row-word { text-transform: none; }
+.splash-row-submit:focus-visible { outline: 2px solid var(--splash-red); outline-offset: 3px; }
+.splash-card-error {
+  position: absolute; left: 8%; right: 8%; bottom: -1.6em;
+  font-size: 11px; color: var(--splash-red-deep); font-family: var(--font-display);
+}

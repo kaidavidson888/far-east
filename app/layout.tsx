@@ -29,7 +29,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         {/* eslint-disable-next-line @next/next/no-page-custom-font -- App Router: this is the document head */}
         <link
           rel="stylesheet"
-          href="https://fonts.googleapis.com/css2?family=Exo+2:wght@400;500;600;700;800&family=Noto+Serif:wght@400;600;700&family=Noto+Serif+TC:wght@400;700&family=JetBrains+Mono:wght@500&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Cormorant+Unicase:wght@400;500;700&family=Exo+2:wght@400;500;600;700;800&family=Noto+Serif:wght@400;600;700&family=Noto+Serif+TC:wght@400;700&family=JetBrains+Mono:wght@500&display=swap"
         />
         <script dangerouslySetInnerHTML={{ __html: BOOT }} />
       </head>
