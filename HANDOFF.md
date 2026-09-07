@@ -86,6 +86,11 @@ find the Edge crash instead, restoring the middleware is the cleaner solution.
   count badge, always visible on mobile) · person icon (desktop only; burger on mobile).
 - **Dates:** US format, pinned to `America/New_York`, formatted server-side.
 - **Newsletter replaced by an Instagram band** (placeholder URL/handle in `app/page.tsx`).
+- **Session splash** (`components/SplashScreen.tsx`): the stacked mark on the canvas, held
+  ~1.1s then faded out, shown once per browser session (`sessionStorage`), skipped under
+  `prefers-reduced-motion`, click to skip. Mirrors `AgeGate` (nothing in the SSR HTML;
+  decided on hydration). Came from a Figma "login/splash" mock; the mock's off-white ground
+  was dropped for `--canvas` so the reveal doesn't flash light-to-dark.
 - **Node:** pinned to 24 (`.nvmrc` = `24`, `engines.node` = `24.x`). Vercel ignores `.nvmrc`
   and reads `engines.node`; the old `>=20.9` range mapped to "latest 24.x" on Vercel anyway
   (their default), so local and deploy now agree explicitly. Vercel deprecates Node 20 on

@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { AgeGate } from '@/components/AgeGate';
+import { SplashScreen } from '@/components/SplashScreen';
 import { SiteHeader } from '@/components/SiteHeader';
 import { SiteFooter } from '@/components/SiteFooter';
 import './globals.css';
@@ -39,6 +40,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <main id="main">{children}</main>
         <SiteFooter />
         <AgeGate />
+        <SplashScreen />
       </body>
     </html>
   );
