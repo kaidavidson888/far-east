@@ -9,20 +9,23 @@ export const SPLASH_FRAME_COUNT = 101;
 export const SPLASH_DURATION_MS = (SPLASH_FRAME_COUNT - 1) * SPLASH_FRAME_MS; // 4000
 
 // The source frame is 720 x 1600; these are the regions we care about, as
-// fractions of that frame (measured off the baked frames).
+// fractions of that frame (measured off the baked last frame).
 export const SPLASH_GEOM = {
   frame: { w: 720, h: 1600 },
   // frame 0: the seal panel — the press-and-hold target ("boxy sides of the
   // mountain continued into a square"), centred.
-  seal: { cx: 0.5, cy: 0.5, size: 0.34 }, // size as a fraction of frame width
-  // last frame: the login box and its rows.
-  box: { x0: 0.341, x1: 0.664, y0: 0.425, y1: 0.571 },
+  seal: { cx: 0.5, cy: 0.5, size: 0.34 }, // fraction of frame width
+  // last frame: the login box.
+  box: { x0: 0.34, x1: 0.666, y0: 0.425, y1: 0.577 },
+  // Each row's dashed line: y, the "tick" where it starts (= where typed text
+  // begins), and where it ends. yTop/yBot bound the row for the focus dimming.
   rows: {
-    email: { yTop: 0.436, yBot: 0.469, typeX0: 0.475, typeX1: 0.652 },
-    password: { yTop: 0.487, yBot: 0.52, typeX0: 0.475, typeX1: 0.652 },
-    submit: { yTop: 0.53, yBot: 0.566, typeX0: 0.35, typeX1: 0.66 },
+    email: { dashY: 0.456, tickX: 0.369, endX: 0.64, yTop: 0.437, yBot: 0.475 },
+    password: { dashY: 0.511, tickX: 0.369, endX: 0.64, yTop: 0.492, yBot: 0.53 },
+    submit: { dashY: 0.5625, tickX: 0.369, endX: 0.64, yTop: 0.543, yBot: 0.58 },
   },
-  wordX1: 0.47, // labels end / dashed area begins, roughly
+  labelX1: 0.52, // label + cloud occupy tickX..labelX1
+  designWeight: 0.0032, // stroke weight of the red cloud line-work, as a frac of frame width
 };
 
 const src = (i: number) => `/splash/frames/f${String(i).padStart(3, '0')}.webp`;

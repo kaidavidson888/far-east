@@ -1,18 +1,16 @@
 /**
  * Bakes the splash animation (scripts/assets/login-source.gif) into a full set
- * of scrubbable WebP stills — a faithful copy of the original, changed only in
- * colour and sharpness:
- *   red #EC2628 / #FF0000  → #FF0000  (true red)
- *   black                   → #000000
- *   white                   → left as #FFFFFF
- * rendered at full resolution with a light unsharp pass.
+ * of scrubbable WebP stills — a faithful copy of the original, changed in:
+ *   - colour:  red → #FF0000 (true red), black → #000000, white kept
+ *   - sharpness: full resolution + a light unsharp pass
+ *   - opacity:  the red seal panel fades as it drains; the red cloud design
+ *               rises from faint to 100% over the run (frames 0 → 100)
  *
  *   npm run build:splash
  *
- * Output: public/splash/frames/f000.webp … f100.webp (101 frames, 40ms apart —
- * exactly the source timing, 4.0s). The GIF's frames are patches that composite
- * on top of each other (disposal type 1), so we accumulate them and snapshot
- * each step. Commit the results — nothing decodes the GIF at runtime.
+ * 101 frames, 40ms apart — exactly the source timing (4.0s). GIF frames are
+ * patches that composite on top of each other (disposal type 1). Commit the
+ * output; nothing decodes the GIF at runtime.
  */
 import { readFileSync, mkdirSync, rmSync } from 'node:fs';
 import { parseGIF, decompressFrames } from 'gifuct-js';
@@ -21,43 +19,66 @@ import sharp from 'sharp';
 
 const SRC = 'scripts/assets/login-source.gif';
 const OUT = 'public/splash/frames';
-const WIDTH = 640; // canvas renders 1:1 and CSS scales it up; sharper than the source GIF
+const WIDTH = 640;
 const QUALITY = 80;
-const STRIDE = 1; // every frame — this is a 1:1 copy of the animation
 
 const RED = [0xff, 0x00, 0x00];
 const INK = [0x00, 0x00, 0x00];
 
-// Steepen the anti-aliased coverage so faint pixels snap toward paper and mid
-// pixels toward full colour — sharpens the line-work without changing the art.
+// Centre region (fractions of the frame) — the seal panel / login box live here;
+// clouds are everything outside it.
+const C = { x0: 0.29, x1: 0.71, y0: 0.4, y1: 0.59, feather: 0.04 };
+
+const clamp01 = (v) => (v < 0 ? 0 : v > 1 ? 1 : v);
+// Steepen anti-aliased coverage so faint pixels snap toward paper — sharper
+// line-work without changing the art.
 const crisp = (c) => {
-  const t = c < 0 ? 0 : c > 1 ? 1 : c;
+  const t = clamp01(c);
   return t < 0.16 ? 0 : t > 0.92 ? 1 : (t - 0.16) / 0.76;
 };
-
-function recolor(d) {
-  for (let i = 0; i < d.length; i += 4) {
-    const r = d[i], g = d[i + 1], b = d[i + 2];
-    const max = Math.max(r, g, b);
-    const chroma = max - Math.min(r, g, b);
-    if (max > 250 && chroma < 8) continue; // white paper — leave it
-    if (chroma < 24) {
-      const cov = crisp(1 - max / 255); // achromatic → ink by darkness
-      d[i] = 255 + (INK[0] - 255) * cov;
-      d[i + 1] = 255 + (INK[1] - 255) * cov;
-      d[i + 2] = 255 + (INK[2] - 255) * cov;
-    } else if (r === max) {
-      const cov = crisp(1 - (g + b) / 510); // red line-work → red by coverage
-      d[i] = 255 + (RED[0] - 255) * cov;
-      d[i + 1] = 255 + (RED[1] - 255) * cov;
-      d[i + 2] = 255 + (RED[2] - 255) * cov;
-    }
-  }
-}
 
 const gif = parseGIF(readFileSync(SRC));
 const frames = decompressFrames(gif, true);
 const W = gif.lsd.width, H = gif.lsd.height;
+const LAST = frames.length - 1;
+
+// centre membership 0..1 (1 = fully inside), soft-edged
+function centreWeight(fx, fy) {
+  const sx = Math.min((fx - (C.x0 - C.feather)) / C.feather, ((C.x1 + C.feather) - fx) / C.feather, 1);
+  const sy = Math.min((fy - (C.y0 - C.feather)) / C.feather, ((C.y1 + C.feather) - fy) / C.feather, 1);
+  return clamp01(Math.min(sx, sy));
+}
+
+function process(d, n) {
+  const p = n / LAST; // 0..1 through the run
+  const cloudRise = clamp01(0.1 + 0.9 * Math.pow(p, 0.7)); // faint → 100% at 4s
+  const sealFade = clamp01(1 - p / 0.44); // the draining panel fades out by ~frame 44
+  for (let i = 0; i < d.length; i += 4) {
+    const r = d[i], g = d[i + 1], b = d[i + 2];
+    const max = Math.max(r, g, b);
+    const chroma = max - Math.min(r, g, b);
+    if (max > 250 && chroma < 8) continue; // white paper
+
+    if (chroma < 24) {
+      const cov = crisp(1 - max / 255); // achromatic → ink
+      d[i] = 255 + (INK[0] - 255) * cov;
+      d[i + 1] = 255 + (INK[1] - 255) * cov;
+      d[i + 2] = 255 + (INK[2] - 255) * cov;
+    } else if (r === max) {
+      const cov = crisp(1 - (g + b) / 510);
+      const px = (i >> 2) % W;
+      const py = (i >> 2) / W | 0;
+      const cw = centreWeight(px / W, py / H);
+      // Inside the centre the red follows the seal-panel fade (which later gives
+      // way to the box border at cloud opacity); outside it follows the clouds.
+      const alpha = cw > 0 ? Math.max(sealFade, cloudRise) * cw + cloudRise * (1 - cw) : cloudRise;
+      const a = cov * clamp01(alpha);
+      d[i] = 255 + (RED[0] - 255) * a;
+      d[i + 1] = 255 + (RED[1] - 255) * a;
+      d[i + 2] = 255 + (RED[2] - 255) * a;
+    }
+  }
+}
 
 rmSync(OUT, { recursive: true, force: true });
 mkdirSync(OUT, { recursive: true });
@@ -83,20 +104,16 @@ for (let n = 0; n < frames.length; n++) {
     }
   }
 
-  const isLast = n === frames.length - 1;
-  if (n % STRIDE !== 0 && !isLast) continue;
-
   const snap = Buffer.from(acc);
-  recolor(snap);
+  process(snap, n);
   const png = new PNG({ width: W, height: H });
   snap.copy(png.data);
-  const name = `${OUT}/f${String(written).padStart(3, '0')}.webp`;
   await sharp(PNG.sync.write(png))
     .resize({ width: WIDTH })
     .sharpen({ sigma: 0.5 })
     .webp({ quality: QUALITY })
-    .toFile(name);
+    .toFile(`${OUT}/f${String(written).padStart(3, '0')}.webp`);
   written++;
 }
 
-console.log(`wrote ${written} frames to ${OUT}/ (${W}x${H} → ${WIDTH}px wide, stride ${STRIDE})`);
+console.log(`wrote ${written} frames to ${OUT}/ (${W}x${H} → ${WIDTH}px wide)`);

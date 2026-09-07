@@ -33,18 +33,19 @@ export function SplashLoginFields({
   const px = (fx: number) => layout.x + fx * layout.w;
   const py = (fy: number) => layout.y + fy * layout.h;
 
+  // Typing starts at the tick where the dashed line begins.
   const rowStyle = (row: keyof typeof rows): React.CSSProperties => {
     const r = rows[row];
     return {
       position: 'fixed',
-      left: px(r.typeX0),
+      left: px(r.tickX),
       top: py(r.yTop),
-      width: px(r.typeX1) - px(r.typeX0),
+      width: px(r.endX) - px(r.tickX),
       height: py(r.yBot) - py(r.yTop),
     };
   };
   // Scale the text to the box so it matches the baked labels.
-  const baseFont = Math.max(12, layout.w * 0.032);
+  const baseFont = Math.max(12, layout.w * 0.03);
 
   return (
     <form className="splash-fields" action={action}>

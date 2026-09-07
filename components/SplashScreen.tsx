@@ -74,24 +74,73 @@ export function SplashScreen() {
       ctx.drawImage(img, r.x, r.y, r.w, r.h);
     }
 
-    // Row dimming: while a field is focused, drop every label to 10% and every
-    // other row's line + cloud to 10% — leave the focused row's line + cloud.
+    if (phaseRef.current !== 'form') return;
+
+    const { rows, box, labelX1, designWeight } = SPLASH_GEOM;
+    const px = (fx: number) => r.x + fx * r.w;
+    const py = (fy: number) => r.y + fy * r.h;
     const f = focusRef.current;
-    if (phaseRef.current === 'form' && (f === 'email' || f === 'password')) {
+    const typing = f === 'email' || f === 'password';
+    const rowKeys = ['email', 'password', 'submit'] as const;
+    // While interacting, the red cloud design drops to 20% — but not the box.
+    if (typing && img?.complete && img.naturalWidth) {
+      ctx.fillStyle = 'rgba(255,255,255,0.8)';
+      ctx.fillRect(0, 0, vw, vh);
+      const iw = img.naturalWidth;
+      const ih = img.naturalHeight;
+      ctx.drawImage(
+        img,
+        box.x0 * iw, box.y0 * ih, (box.x1 - box.x0) * iw, (box.y1 - box.y0) * ih,
+        px(box.x0), py(box.y0), px(box.x1) - px(box.x0), py(box.y1) - py(box.y0),
+      );
+    }
+
+    // Opacity of the box's words + clouds.
+    if (typing) {
+      // focused row: word only to 10%; other rows: word + line + cloud to 10%.
       ctx.fillStyle = 'rgba(255,255,255,0.9)';
-      const { rows, box, wordX1 } = SPLASH_GEOM;
-      const px = (fx: number) => r.x + fx * r.w;
-      const py = (fy: number) => r.y + fy * r.h;
-      (['email', 'password', 'submit'] as const).forEach((row) => {
-        const rw = rows[row];
-        if (row === f) {
-          // only the label word
-          ctx.fillRect(px(box.x0), py(rw.yTop), px(wordX1) - px(box.x0), py(rw.yBot) - py(rw.yTop));
-        } else {
-          ctx.fillRect(px(box.x0), py(rw.yTop), px(box.x1) - px(box.x0), py(rw.yBot) - py(rw.yTop));
-        }
+      rowKeys.forEach((k) => {
+        const rw = rows[k];
+        const x1 = k === f ? labelX1 : box.x1;
+        ctx.fillRect(px(box.x0 + 0.01), py(rw.yTop), px(x1) - px(box.x0 + 0.01), py(rw.yBot) - py(rw.yTop));
+      });
+    } else {
+      // idle: words + clouds to 50%, dashed lines stay full.
+      ctx.fillStyle = 'rgba(255,255,255,0.5)';
+      rowKeys.forEach((k) => {
+        const rw = rows[k];
+        ctx.fillRect(px(box.x0 + 0.01), py(rw.yTop), px(labelX1) - px(box.x0 + 0.01), py(rw.yBot) - py(rw.yTop));
       });
     }
+
+    // Redraw the box border and the dashed lines at the red-design line weight.
+    const w = Math.max(1, designWeight * r.w);
+    ctx.lineWidth = w;
+    ctx.strokeStyle = '#ff0000';
+    ctx.setLineDash([]);
+    ctx.strokeRect(px(box.x0), py(box.y0), px(box.x1) - px(box.x0), py(box.y1) - py(box.y0));
+
+    ctx.strokeStyle = '#000000';
+    ctx.setLineDash([w * 3.2, w * 2.2]);
+    rowKeys.forEach((k) => {
+      const rw = rows[k];
+      const y = py(rw.dashY);
+      const dim = typing && k !== f ? 0.1 : 1;
+      ctx.globalAlpha = dim;
+      ctx.beginPath();
+      ctx.moveTo(px(rw.tickX), y);
+      ctx.lineTo(px(rw.endX), y);
+      ctx.stroke();
+      // the little vertical tick the line starts with
+      ctx.setLineDash([]);
+      ctx.beginPath();
+      ctx.moveTo(px(rw.tickX), y - w * 3);
+      ctx.lineTo(px(rw.tickX), y);
+      ctx.stroke();
+      ctx.setLineDash([w * 3.2, w * 2.2]);
+    });
+    ctx.globalAlpha = 1;
+    ctx.setLineDash([]);
   }, []);
 
   const stop = useCallback(() => {
