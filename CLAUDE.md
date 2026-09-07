@@ -49,6 +49,23 @@ overwrote this file twice during setup. `.env.example` is the template.
 - Dates are formatted server-side in `lib/format.ts` (`en-US`, `America/New_York`) and passed
   as strings — never re-format on the client.
 
+## Working as a team (two people, two Claude Code sessions)
+The repo is **public** on GitHub — chosen so Vercel Hobby deploys commits from either owner.
+That means: **never commit anything sensitive** (`.env*` is gitignored; keep it that way), and
+the brand assets and review text in this repo are visible to anyone.
+- `git pull` before starting any work; commit small; push when a piece is done.
+- Anything non-trivial goes on a short-lived branch and is merged by pull request. Prefer the
+  other person merging. Don't force-push `main`.
+- **Schema changes:** add a numbered file to `supabase/migrations/`, run `npm run verify:db`,
+  and apply it to the shared Supabase project **once** (the author does it, in the SQL Editor).
+  Say so in the PR. Never edit an already-applied migration; add a new one.
+- `lib/catalog.json` + `npm run seed` is the catalogue's source of truth. Seeding is idempotent,
+  so either person can run it after pulling.
+- **This file is shared memory.** Both Claude Code sessions read it and nothing else carries
+  over between them. When you learn something the other person's Claude needs — a decision,
+  a gotcha, a changed invariant — put it here in the same commit as the work.
+- Commit as yourself. No identity workarounds are needed now that the repo is public.
+
 ## Known gaps / open work (priority order)
 1. **Deploy is not yet green.** See HANDOFF.md → Deployment. The middleware was removed to get
    past `MIDDLEWARE_INVOCATION_FAILED`; that commit (`f6b03ff`) still needs pushing.
@@ -67,8 +84,8 @@ overwrote this file twice during setup. `.env.example` is the template.
 ## Gotchas learned the hard way
 - Run `next build` only with the dev server stopped; both write to `.next`.
 - Restarting the dev server invalidates Server Action ids in open tabs → `POST 404`; hard-refresh.
-- The Vercel project must be owned by the same GitHub account as the repo (`kaidavidson888`) on
-  the Hobby plan, and commits should be authored by that account (repo-local git identity is set).
+- Vercel Hobby blocked deploys authored by a non-owner while the repo was private; the repo was
+  made public to remove that constraint. If it is ever made private again, that returns.
 - `far-east.vercel.app` is NOT this project (someone else's site). Production is `far-east-beta.vercel.app`.
 - If the live domain serves `/logos/*.svg` (200) but `/` and `/_next/static/*` are 404, the
   Vercel project's Framework Preset is not "Next.js" — it is serving `public/` as a static site.

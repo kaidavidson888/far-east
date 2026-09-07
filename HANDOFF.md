@@ -89,6 +89,13 @@ find the Edge crash instead, restoring the middleware is the cleaner solution.
 - **Node:** pinned to 20 (`.nvmrc`, `engines`). Next 15 rather than 16 because the original
   machine was on Node 18 — upgrading to Next 16 is reasonable now.
 
+## Collaboration model (decided 7 Sep 2026)
+Fanny and Kai both work locally with their own Claude Code sessions and sync through GitHub.
+The repo is being made **public** so Vercel Hobby accepts commits from either of them (Hobby
+blocks non-owner commits on private repos). Full history was scanned before flipping: no
+credentials in any commit. Consequences: no secrets ever, and `logos/`, `DESIGN-far-east.md`
+and the review text are public. The workflow rules live in `CLAUDE.md` → "Working as a team".
+
 ## Next steps, in order
 1. Get a **Ready** deployment. Push `f6b03ff`, check status, apply the fallbacks above.
 2. Set Supabase → Authentication → URL Configuration → Site URL to the Vercel domain.
