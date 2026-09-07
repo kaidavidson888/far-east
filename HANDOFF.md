@@ -1,0 +1,100 @@
+# Far East — handoff
+
+Written 7 September 2026 for Kai, taking over from Fanny. `CLAUDE.md` is the short operating
+manual and is loaded automatically by Claude Code; this file is the story and the current state.
+
+## What it is
+A catalogue of 32 cigarettes from ten markets with reader ratings, reviews, a personal shelf,
+and shareable shelf snapshots. The brand and design system were supplied by the owner
+(`DESIGN-far-east.md`, `logos/`) and the site is built to that spec. Everything is readable
+without an account; an account adds rating, reviewing and a shelf.
+
+## Access you need (confirm before doing anything)
+- **GitHub** — `kaidavidson888/far-east` (private). You own it.
+- **Vercel** — project `far-east`, Hobby plan, signed in as `kaidavidson888`. Production
+  domain `far-east-beta.vercel.app`. (`far-east.vercel.app` is a stranger's site — ignore it.)
+- **Supabase** — project ref `cszctbpkadrpgazppsev` (East US, N. Virginia). Created under a
+  "new account" during the migration — check it is yours or get invited as an owner.
+- **Secrets** — three values in `.env.local`. They must be handed over via a password manager,
+  never chat. **The database password appeared in the previous owner's chat transcript and
+  terminal history more than once — treat the current one as compromised and rotate it
+  (Supabase → Project Settings → Database → Reset) before relying on it, then update it in
+  Vercel's env vars and locally with `npm run set-db-password`.**
+
+## Current state — read this carefully
+- **Code:** repo is at `57e5042` on GitHub. Commit `f6b03ff` (removes the middleware, see
+  below) exists only on Fanny's machine and **has not been pushed**. If you clone, you get
+  the version that still crashes on Vercel. The zip that accompanies this handoff includes
+  `f6b03ff`; the repo will be updated as soon as Fanny pushes.
+- **Live site:** `far-east-beta.vercel.app` returns **500 `MIDDLEWARE_INVOCATION_FAILED`**.
+  Every deployment so far has been Blocked or has served that error. **The site has never
+  successfully deployed.**
+- **Database:** schema applied (7 tables, RLS on, both migrations), catalogue seeded
+  (32 rows), one registered account, no favourites or reviews yet.
+- **Verification:** `npm run verify:db` is 29/29 against a real Postgres. Signed-in UI paths
+  (shelf, share link, sign-in/out) were verified in a browser against the live database.
+  The production build is clean.
+
+## Deployment — where it got stuck
+1. Two deployments were **Blocked** with "commit author did not have contributing access…
+   Hobby does not support collaboration for private repositories." Root cause was a
+   two-account split: repo under `kaidavidson888`, Vercel signed in as `fanny-c-davidson`.
+   Resolved by signing into Vercel as `kaidavidson888`. The repo's git identity is now set to
+   `kaidavidson888` so future commits match.
+2. The first build that ran crashed with **`MIDDLEWARE_INVOCATION_FAILED`**. The middleware
+   (`middleware.ts` + `lib/supabase/middleware.ts`) refreshed the Supabase session via
+   `@supabase/ssr`. Wrapping its body in try/catch did not help. It could not be reproduced
+   locally, in `next start`, or by loading the compiled bundle into Vercel's published
+   `edge-runtime` package. It was **removed** in `f6b03ff` to unblock.
+3. **Unconfirmed:** whether the fix commits ever built, or whether Vercel kept blocking. When
+   you push, look at the deployment's **status** in the Deployments list, not the URL — the
+   URL keeps serving the last deployment either way.
+
+If a build is still **Blocked** after all of the above, the remaining Hobby-plan fix is to make
+the repo public (it contains no secrets — verified by scanning history) or upgrade to Pro.
+
+**Consequence of removing the middleware:** a token refreshed during a plain page render
+cannot be persisted from a server component, so a reader who only browses is signed out about
+an hour after login. Server actions (rate, shelve, share) still write cookies and keep active
+sessions alive. Proper fix: a Node-runtime `/auth/refresh` route handler that calls
+`getUser()` and persists cookies, pinged from a small client component near expiry. If you
+find the Edge crash instead, restoring the middleware is the cleaner solution.
+
+## Decisions and why (chronological)
+- **SQLite → Supabase.** Started on local SQLite for zero setup; migrated before handoff on
+  the reasoning that migrating a data layer nobody has built on is far cheaper than later.
+- **Direct SQL (`postgres.js`), not PostgREST.** The catalogue needs window functions,
+  aggregates and multi-facet filters; that reads better as SQL. Cost: the app bypasses RLS, so
+  ownership lives in the queries (see CLAUDE.md invariants).
+- **Data API disabled in Supabase**, RLS on everything, one public read policy on `cigarettes`.
+- **Editorial scoring removed.** The site originally had a house score, sub-scores, "tested N
+  days" stamps and a Seal of Approval. Owner decided ratings are reader-only. Written verdicts
+  and pros/cons were kept as "Our notes". Editorial values remain in `lib/catalog.json` but
+  are no longer seeded or in the schema (`0002_user_ratings.sql`).
+- **Share links are snapshots**, not live views; one live link per user; cancel soft-revokes.
+- **"Add to my shelf" is the primary cinnabar CTA everywhere** (owner's call, overriding the
+  spec's "cinnabar means judged"). Saved state renders as an outline so a shelf page isn't a
+  wall of red.
+- **Shelf is named after the user** (no editable title). Nav: Full Catalogue · My Shelf (with
+  count badge, always visible on mobile) · person icon (desktop only; burger on mobile).
+- **Dates:** US format, pinned to `America/New_York`, formatted server-side.
+- **Newsletter replaced by an Instagram band** (placeholder URL/handle in `app/page.tsx`).
+- **Node:** pinned to 20 (`.nvmrc`, `engines`). Next 15 rather than 16 because the original
+  machine was on Node 18 — upgrading to Next 16 is reasonable now.
+
+## Next steps, in order
+1. Get a **Ready** deployment. Push `f6b03ff`, check status, apply the fallbacks above.
+2. Set Supabase → Authentication → URL Configuration → Site URL to the Vercel domain.
+   Decide on email confirmation (on = needs custom SMTP before real users; Supabase's built-in
+   sender is rate-limited and unbranded).
+3. Restore session refresh (route handler or a working middleware).
+4. Product data: owner will fill `import/catalog-template.csv`; write the importer.
+5. Product images: `public/products/<slug>.jpg` with SVG fallback.
+6. Instagram link. Drop the unused `subscribers` table.
+
+## Things not to do
+- Don't hand-edit `.env.local` in TextEdit; use the scripts. Don't pipe secrets into them.
+- Don't run `next build` while `next dev` is running (shared `.next`).
+- Don't add `SUPABASE_SECRET_KEY` to Vercel. Nothing deployed uses it.
+- Don't scale past the transaction pooler / don't switch `DATABASE_URL` to port 5432.
+- Don't change existing slugs in `catalog.json`.
