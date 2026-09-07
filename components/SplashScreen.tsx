@@ -12,17 +12,24 @@ import {
 
 type Phase = 'logo' | 'play' | 'form';
 
-const CANVAS_W = 560;
-const CANVAS_H = Math.round((CANVAS_W * 1600) / 720); // 1244
+const CANVAS_W = 720; // 1:1 with the baked frames
+const CANVAS_H = 1600;
 
-// Timeline for the transient outline squares (scrub position, ms).
-const rampDown = (t: number, a: number, b: number) =>
-  t <= a ? 1 : t >= b ? 0 : 1 - (t - a) / (b - a);
-const rampUp = (t: number, a: number, b: number) =>
-  t <= a ? 0 : t >= b ? 1 : (t - a) / (b - a);
-const redBoxOpacity = (t: number) => rampDown(t, 200, 1500);
-const blackBoxOpacity = (t: number) =>
-  Math.min(rampUp(t, 250, 850), rampDown(t, 3000, 3800));
+// Timeline for the transient outline squares (scrub position, ms), matched to
+// the source animation: the black frame draws itself in early as the logo
+// dissolves, then hands over to the red frame — which stays and becomes the
+// login card's border. (101 source frames over 4000ms.)
+// Keyframes as a fraction of the run, from the source animation: the black
+// frame draws in early (0.08–0.16) as the logo dissolves, then fades out
+// (0.50–0.64) handing over to the red frame (0.48–0.67), which stays and
+// becomes the login card's border.
+const rampDown = (p: number, a: number, b: number) =>
+  p <= a ? 1 : p >= b ? 0 : 1 - (p - a) / (b - a);
+const rampUp = (p: number, a: number, b: number) =>
+  p <= a ? 0 : p >= b ? 1 : (p - a) / (b - a);
+const blackBoxOpacity = (p: number) =>
+  Math.min(rampUp(p, 0.08, 0.16), rampDown(p, 0.5, 0.64));
+const redBoxOpacity = (p: number) => rampUp(p, 0.48, 0.67);
 
 /**
  * The homepage splash. The seal is a press-and-hold button: holding grows the
@@ -57,8 +64,9 @@ export function SplashScreen() {
         ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
       }
     }
-    if (redBoxRef.current) redBoxRef.current.style.opacity = String(redBoxOpacity(ms));
-    if (blackBoxRef.current) blackBoxRef.current.style.opacity = String(blackBoxOpacity(ms));
+    const p = ms / SPLASH_DURATION_MS;
+    if (redBoxRef.current) redBoxRef.current.style.opacity = String(redBoxOpacity(p));
+    if (blackBoxRef.current) blackBoxRef.current.style.opacity = String(blackBoxOpacity(p));
   }, []);
 
   const stop = useCallback(() => {

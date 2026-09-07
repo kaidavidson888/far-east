@@ -5,8 +5,15 @@ import { loginAction, type FormState } from '@/app/actions';
 
 type Field = 'email' | 'password' | 'submit' | null;
 
+// Keep the row's spacing and scale fixed; just shrink the glyphs once the text
+// outgrows the space, down to a floor.
+const BASE_EM = 1;
+const SHRINK_AFTER = 12;
+const MIN_EM = 0.42;
+const fitEm = (len: number) =>
+  len <= SHRINK_AFTER ? BASE_EM : Math.max(MIN_EM, (BASE_EM * SHRINK_AFTER) / len);
+
 function Cloud({ opacity }: { opacity: number }) {
-  // The little cloud glyph that trails each row in the animation.
   return (
     <span className="splash-row-cloud" style={{ opacity }}>
       <svg className="splash-cloud" viewBox="0 0 40 20" aria-hidden="true">
@@ -23,11 +30,14 @@ function Cloud({ opacity }: { opacity: number }) {
  * The login box from the animation's final frame, rebuilt as vector DOM so it
  * stays sharp and works. Same footprint as the seal and the outline squares.
  * While a field is focused every label drops to 10% and only that row's dashed
- * line + cloud stay lit. Typed text is Cormorant Unicase, no caret.
+ * line + cloud stay lit. Typed text is Cormorant Unicase, no caret, and shrinks
+ * to fit rather than clipping.
  */
 export function SplashCard() {
   const [state, action] = useActionState<FormState, FormData>(loginAction, null);
   const [focus, setFocus] = useState<Field>(null);
+  const [email, setEmail] = useState('');
+  const [pw, setPw] = useState('');
 
   const typing = focus === 'email' || focus === 'password';
   const word = (row: Exclude<Field, null>) => (!typing || row === 'submit' ? 1 : 0.1);
@@ -47,6 +57,9 @@ export function SplashCard() {
             type="email"
             autoComplete="email"
             required
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            style={{ ['--fit' as string]: fitEm(email.length) }}
             onFocus={() => setFocus('email')}
             onBlur={() => setFocus(null)}
           />
@@ -62,6 +75,9 @@ export function SplashCard() {
             type="password"
             autoComplete="current-password"
             required
+            value={pw}
+            onChange={(e) => setPw(e.target.value)}
+            style={{ ['--fit' as string]: fitEm(pw.length) }}
             onFocus={() => setFocus('password')}
             onBlur={() => setFocus(null)}
           />

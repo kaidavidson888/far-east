@@ -25,7 +25,7 @@ import sharp from 'sharp';
 
 const SRC = 'scripts/assets/login-source.gif';
 const OUT = 'public/splash/frames';
-const WIDTH = 560; // canvas renders these 1:1, CSS scales the element
+const WIDTH = 720; // full source width — canvas renders these 1:1, CSS scales the element
 const QUALITY = 90;
 const STRIDE = 2; // keep every Nth source frame
 
