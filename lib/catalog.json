@@ -1,0 +1,1232 @@
+[
+  {
+    "slug": "chunghwa-hard-pack",
+    "name": "Chunghwa Hard Pack",
+    "cjk": "中华",
+    "brand": "Chunghwa",
+    "country": "China",
+    "market": "Shanghai",
+    "strength": "Full",
+    "flavour": "Regular",
+    "format": "King size",
+    "filterType": "Filtered",
+    "lengthMm": 84,
+    "tarMg": 11,
+    "nicotineMg": 1,
+    "packSize": 20,
+    "priceUsd": 9.5,
+    "year": 1951,
+    "score": 8,
+    "tested": "Tested 14 days · March 2026",
+    "summary": "The Chinese state banquet cigarette, and still the reference point for the sweetened Yunnan style.",
+    "verdict": "Chunghwa is the cigarette every other Chinese brand is measured against, and after two weeks it is clear why. The blend leads with a sweet, almost honeyed top note from the Yunnan leaf, then settles into a broad, slightly nutty body that never turns sharp — a construction quality that holds from the first stick in the pack to the last.\n\nWhat it is not is cheap, and the price premium buys refinement rather than strength. If you want a cigarette that behaves the same way every time you light one, this is the benchmark.",
+    "pros": [
+      "Exceptionally consistent draw across the pack",
+      "Sweet Yunnan top note without cloying",
+      "Paper and gum burn evenly to the filter"
+    ],
+    "cons": [
+      "Priced well above comparable blends",
+      "Widely counterfeited outside China",
+      "Sweetness reads as artificial to some palates"
+    ],
+    "criteria": {
+      "Construction": 9,
+      "Draw": 9,
+      "Aroma": 8,
+      "Finish": 8,
+      "Value": 6
+    },
+    "award": true
+  },
+  {
+    "slug": "double-happiness-classic",
+    "name": "Double Happiness Classic",
+    "cjk": "双喜",
+    "brand": "Double Happiness",
+    "country": "China",
+    "market": "Guangdong",
+    "strength": "Medium",
+    "flavour": "Regular",
+    "format": "King size",
+    "filterType": "Filtered",
+    "lengthMm": 84,
+    "tarMg": 10,
+    "nicotineMg": 0.9,
+    "packSize": 20,
+    "priceUsd": 3.2,
+    "year": 1906,
+    "score": 7,
+    "tested": "Tested 10 days · February 2026",
+    "summary": "The everyday southern Chinese blend: sweet, forgiving, and priced to be bought by the carton.",
+    "verdict": "Double Happiness sits a clear step below Chunghwa in refinement and roughly a third of the price, which is the trade the brand has been making for a century. The smoke is soft and sweet with a short finish, and the medium tar rating is honest — this smokes lighter than the number suggests.\n\nConstruction is the weak point. We found two loosely packed sticks across four packs, both of which burned fast down one side.",
+    "pros": [
+      "Outstanding value for a full-flavour blend",
+      "Soft, sweet profile that is easy to return to",
+      "Widely available across southern China"
+    ],
+    "cons": [
+      "Occasional loose packing causes uneven burn",
+      "Short finish with little development"
+    ],
+    "criteria": {
+      "Construction": 6,
+      "Draw": 7,
+      "Aroma": 7,
+      "Finish": 6,
+      "Value": 9
+    }
+  },
+  {
+    "slug": "furongwang-blue",
+    "name": "Furongwang Blue",
+    "cjk": "芙蓉王",
+    "brand": "Furongwang",
+    "country": "China",
+    "market": "Hunan",
+    "strength": "Medium",
+    "flavour": "Regular",
+    "format": "King size",
+    "filterType": "Filtered",
+    "lengthMm": 84,
+    "tarMg": 10,
+    "nicotineMg": 1,
+    "packSize": 20,
+    "priceUsd": 4.4,
+    "year": 1994,
+    "score": 7,
+    "tested": "Tested 10 days · February 2026",
+    "summary": "Hunan's business-class cigarette — clean, bright and noticeably less sweetened than its rivals.",
+    "verdict": "Furongwang is the blend to reach for if the Chunghwa house style reads as too sugary. The leaf is brighter and the finish drier, with a faint grassy note that survives the whole stick.\n\nIt is not a subtle cigarette, but it is a clean one, and the paper quality is a visible cut above the price bracket.",
+    "pros": [
+      "Drier, brighter profile than most Chinese blends",
+      "High-grade paper burns without tunnelling",
+      "Strong mid-market availability"
+    ],
+    "cons": [
+      "Less complexity than the price implies",
+      "Grassy note divides opinion"
+    ],
+    "criteria": {
+      "Construction": 8,
+      "Draw": 8,
+      "Aroma": 7,
+      "Finish": 7,
+      "Value": 7
+    }
+  },
+  {
+    "slug": "yuxi-soft",
+    "name": "Yuxi Soft Pack",
+    "cjk": "玉溪",
+    "brand": "Yuxi",
+    "country": "China",
+    "market": "Yunnan",
+    "strength": "Light",
+    "flavour": "Regular",
+    "format": "King size",
+    "filterType": "Filtered",
+    "lengthMm": 84,
+    "tarMg": 8,
+    "nicotineMg": 0.8,
+    "packSize": 20,
+    "priceUsd": 5.8,
+    "year": 1956,
+    "score": 8,
+    "tested": "Tested 14 days · January 2026",
+    "summary": "Grown and blended at the source in Yunnan, and the most floral cigarette in the Chinese mainstream.",
+    "verdict": "Yuxi does something none of its competitors manage: it makes a light cigarette that still tastes of tobacco. The floral, faintly apricot top note is unusual and genuinely pleasant, and it carries through a very open draw without thinning out.\n\nThe soft pack crushes easily, which is the only real complaint we could raise across two weeks.",
+    "pros": [
+      "Floral top note that is unique in the category",
+      "Light rating without a hollow finish",
+      "Very open, effortless draw"
+    ],
+    "cons": [
+      "Soft pack offers almost no protection",
+      "Fragile ash drops early"
+    ],
+    "criteria": {
+      "Construction": 7,
+      "Draw": 9,
+      "Aroma": 9,
+      "Finish": 8,
+      "Value": 7
+    }
+  },
+  {
+    "slug": "mevius-original",
+    "name": "Mevius Original",
+    "cjk": "メビウス",
+    "brand": "Mevius",
+    "country": "Japan",
+    "market": "Japan",
+    "strength": "Medium",
+    "flavour": "Regular",
+    "format": "King size",
+    "filterType": "Charcoal",
+    "lengthMm": 84,
+    "tarMg": 10,
+    "nicotineMg": 0.8,
+    "packSize": 20,
+    "priceUsd": 4.1,
+    "year": 1977,
+    "score": 9,
+    "tested": "Tested 21 days · March 2026",
+    "summary": "The best-engineered cigarette in this catalogue, and the clearest argument for a charcoal filter.",
+    "verdict": "Mevius — Mild Seven until 2013 — is the most quietly precise cigarette we have smoked. The charcoal filter strips the harsh edge off the smoke without gutting it, leaving a clean, slightly toasted body that stays identical from the first draw to the last.\n\nAcross twenty-one days and six packs we could not find a single badly made stick. That is the review. Everything else is preference.",
+    "pros": [
+      "Flawless construction across every pack tested",
+      "Charcoal filter softens without hollowing the smoke",
+      "Ash holds a full third of the stick"
+    ],
+    "cons": [
+      "Deliberately reserved — offers little drama",
+      "Charcoal note flattens if the pack is left open"
+    ],
+    "criteria": {
+      "Construction": 10,
+      "Draw": 9,
+      "Aroma": 8,
+      "Finish": 9,
+      "Value": 8
+    },
+    "award": true
+  },
+  {
+    "slug": "mevius-option-purple",
+    "name": "Mevius Option Purple",
+    "cjk": "メビウス",
+    "brand": "Mevius",
+    "country": "Japan",
+    "market": "Japan",
+    "strength": "Light",
+    "flavour": "Capsule",
+    "format": "King size",
+    "filterType": "Charcoal",
+    "lengthMm": 84,
+    "tarMg": 6,
+    "nicotineMg": 0.5,
+    "packSize": 20,
+    "priceUsd": 4.3,
+    "year": 2011,
+    "score": 7,
+    "tested": "Tested 10 days · March 2026",
+    "summary": "The capsule format done properly: crush it and you get grape, not detergent.",
+    "verdict": "Most capsule cigarettes taste like a cleaning product. Option Purple does not — the burst is a soft, jammy grape that sits on top of the Mevius base rather than replacing it, and it fades gracefully over the second half of the stick.\n\nIt is a novelty, but it is a well-made one, and the underlying blend is the same reliable Mevius engineering.",
+    "pros": [
+      "Capsule flavour is restrained and convincing",
+      "Base blend remains legible after the crush",
+      "Same build quality as the Original"
+    ],
+    "cons": [
+      "Flavour fades noticeably in the final third",
+      "Capsule occasionally fails to rupture cleanly"
+    ],
+    "criteria": {
+      "Construction": 9,
+      "Draw": 8,
+      "Aroma": 7,
+      "Finish": 6,
+      "Value": 7
+    }
+  },
+  {
+    "slug": "seven-stars",
+    "name": "Seven Stars",
+    "cjk": "セブンスター",
+    "brand": "Seven Stars",
+    "country": "Japan",
+    "market": "Japan",
+    "strength": "Full",
+    "flavour": "Regular",
+    "format": "King size",
+    "filterType": "Charcoal",
+    "lengthMm": 84,
+    "tarMg": 14,
+    "nicotineMg": 1.2,
+    "packSize": 20,
+    "priceUsd": 4.1,
+    "year": 1969,
+    "score": 8,
+    "tested": "Tested 14 days · January 2026",
+    "summary": "Japan's full-flavour standard — heavier than Mevius, and built with the same discipline.",
+    "verdict": "Seven Stars is what Mevius would be without the restraint. Fourteen milligrams of tar arrive as a genuinely rich, cocoa-edged smoke that the charcoal filter keeps just short of harsh, and the ash column is the firmest in this catalogue.\n\nIf you have written off Japanese cigarettes as polite, this is the correction.",
+    "pros": [
+      "Rich cocoa note rare at this price",
+      "Firmest ash of any cigarette tested",
+      "Charcoal filter tames the tar load"
+    ],
+    "cons": [
+      "Genuinely strong — not a starting point",
+      "Lingering room odour"
+    ],
+    "criteria": {
+      "Construction": 9,
+      "Draw": 8,
+      "Aroma": 9,
+      "Finish": 8,
+      "Value": 8
+    }
+  },
+  {
+    "slug": "peace-deluxe",
+    "name": "Peace Deluxe",
+    "cjk": "ピース",
+    "brand": "Peace",
+    "country": "Japan",
+    "market": "Japan",
+    "strength": "Full",
+    "flavour": "Aromatic",
+    "format": "Shorts",
+    "filterType": "Unfiltered",
+    "lengthMm": 70,
+    "tarMg": 28,
+    "nicotineMg": 2.3,
+    "packSize": 10,
+    "priceUsd": 3.6,
+    "year": 1946,
+    "score": 7,
+    "tested": "Tested 7 days · December 2025",
+    "summary": "A 1946 unfiltered short in a Raymond Loewy tin, and by some distance the heaviest thing here.",
+    "verdict": "Peace Deluxe is a historical object that happens to still be in production. The vanilla-cased Virginia blend is genuinely aromatic — the tin smells like a pipe shop — and unfiltered at 28mg it hits accordingly.\n\nWe are scoring the craft, not recommending the dose. Two of these in a day is plenty for anyone.",
+    "pros": [
+      "Distinct vanilla casing, unlike anything else in production",
+      "Loewy tin remains a design landmark",
+      "Dense, genuinely old-fashioned smoke"
+    ],
+    "cons": [
+      "28mg tar unfiltered — extreme by any measure",
+      "Loose tobacco in the mouth without a filter",
+      "Ten to a tin at a twenty-stick price"
+    ],
+    "criteria": {
+      "Construction": 7,
+      "Draw": 6,
+      "Aroma": 9,
+      "Finish": 7,
+      "Value": 5
+    }
+  },
+  {
+    "slug": "hope-regular",
+    "name": "Hope Regular",
+    "cjk": "ホープ",
+    "brand": "Hope",
+    "country": "Japan",
+    "market": "Japan",
+    "strength": "Full",
+    "flavour": "Regular",
+    "format": "Shorts",
+    "filterType": "Filtered",
+    "lengthMm": 70,
+    "tarMg": 14,
+    "nicotineMg": 1.1,
+    "packSize": 10,
+    "priceUsd": 2.4,
+    "year": 1957,
+    "score": 6,
+    "tested": "Not tested — hands-on only",
+    "summary": "A ten-stick short pack built for a quick, strong smoke and nothing else.",
+    "verdict": "Hope has one idea: a short, dense, full-flavour cigarette you finish in four minutes. It executes that idea competently and offers nothing beyond it — the blend is flat, and the finish is abrupt.\n\nWe smoked this over a weekend rather than running the full protocol, so treat the score as provisional.",
+    "pros": [
+      "Ten-stick pack suits occasional smokers",
+      "Very fast, dense burn",
+      "Cheapest Japanese entry here"
+    ],
+    "cons": [
+      "Flat, undeveloped blend",
+      "Abrupt finish",
+      "Short format burns hot in the last third"
+    ],
+    "criteria": {
+      "Construction": 7,
+      "Draw": 6,
+      "Aroma": 5,
+      "Finish": 5,
+      "Value": 7
+    }
+  },
+  {
+    "slug": "esse-super-slims",
+    "name": "Esse Super Slims",
+    "cjk": "에쎄",
+    "brand": "Esse",
+    "country": "South Korea",
+    "market": "South Korea",
+    "strength": "Ultra light",
+    "flavour": "Regular",
+    "format": "Super slims",
+    "filterType": "Filtered",
+    "lengthMm": 100,
+    "tarMg": 3,
+    "nicotineMg": 0.3,
+    "packSize": 20,
+    "priceUsd": 3.6,
+    "year": 1996,
+    "score": 7,
+    "tested": "Tested 10 days · February 2026",
+    "summary": "The super-slim that made the format serious, and the only 3mg here that still tastes of something.",
+    "verdict": "Esse is the reason super slims are a category rather than a novelty. At 3mg the smoke should be water, and it is not — there is a clean, faintly sweet Virginia note that holds all the way down the 100mm stick.\n\nThe narrow gauge burns fast, and you will smoke it in half the time you expect.",
+    "pros": [
+      "Real flavour at 3mg, which is rare",
+      "Excellent paper — no run-off at all",
+      "Elegant, genuinely well-designed pack"
+    ],
+    "cons": [
+      "Burns roughly twice as fast as a king size",
+      "Too light for anyone coming off a full-flavour blend"
+    ],
+    "criteria": {
+      "Construction": 8,
+      "Draw": 7,
+      "Aroma": 6,
+      "Finish": 6,
+      "Value": 8
+    }
+  },
+  {
+    "slug": "this-plus-1mg",
+    "name": "This Plus 1mg",
+    "cjk": "디스플러스",
+    "brand": "This Plus",
+    "country": "South Korea",
+    "market": "South Korea",
+    "strength": "Ultra light",
+    "flavour": "Regular",
+    "format": "King size",
+    "filterType": "Filtered",
+    "lengthMm": 84,
+    "tarMg": 1,
+    "nicotineMg": 0.1,
+    "packSize": 20,
+    "priceUsd": 3.4,
+    "year": 1996,
+    "score": 4,
+    "tested": "Tested 7 days · February 2026",
+    "summary": "One milligram of tar, and about one milligram of reason to smoke it.",
+    "verdict": "At 1mg the ventilation holes are doing almost all of the work, and what reaches you is warm air with a suggestion of tobacco behind it. Construction is fine and the pack is handsome, but the product does not deliver anything to review.\n\nSmokers we spoke to compensate by drawing harder and smoking more, which defeats the entire premise.",
+    "pros": [
+      "Well-built for the price",
+      "No harshness whatsoever"
+    ],
+    "cons": [
+      "Effectively flavourless",
+      "Ventilation encourages harder, more frequent draws",
+      "Filter collapses if drawn hard"
+    ],
+    "criteria": {
+      "Construction": 7,
+      "Draw": 4,
+      "Aroma": 2,
+      "Finish": 2,
+      "Value": 4
+    }
+  },
+  {
+    "slug": "raison-black",
+    "name": "Raison Black",
+    "cjk": "레종",
+    "brand": "Raison",
+    "country": "South Korea",
+    "market": "South Korea",
+    "strength": "Full",
+    "flavour": "Regular",
+    "format": "King size",
+    "filterType": "Filtered",
+    "lengthMm": 84,
+    "tarMg": 8,
+    "nicotineMg": 0.7,
+    "packSize": 20,
+    "priceUsd": 3.6,
+    "year": 2001,
+    "score": 6,
+    "tested": "Tested 10 days · December 2025",
+    "summary": "Korea's answer to a full-flavour American blend, at about two-thirds the intensity.",
+    "verdict": "Raison Black is marketed as the strong option in a market that mostly does not want one, and the result is a cigarette that reads as medium anywhere else. The blend is competent and slightly toasty with a dry finish.\n\nIt is a perfectly good cigarette that struggles to justify choosing it over Mevius at the same price.",
+    "pros": [
+      "Dry, toasty finish",
+      "Consistent build",
+      "Handsome matte pack"
+    ],
+    "cons": [
+      "Not actually strong despite the positioning",
+      "Little to distinguish it from cheaper rivals"
+    ],
+    "criteria": {
+      "Construction": 7,
+      "Draw": 7,
+      "Aroma": 6,
+      "Finish": 6,
+      "Value": 6
+    }
+  },
+  {
+    "slug": "555-state-express",
+    "name": "555 State Express",
+    "cjk": "三五",
+    "brand": "State Express",
+    "country": "United Kingdom",
+    "market": "Asia-Pacific",
+    "strength": "Medium",
+    "flavour": "Regular",
+    "format": "King size",
+    "filterType": "Filtered",
+    "lengthMm": 84,
+    "tarMg": 12,
+    "nicotineMg": 1,
+    "packSize": 20,
+    "priceUsd": 5.2,
+    "year": 1895,
+    "score": 8,
+    "tested": "Tested 14 days · November 2025",
+    "summary": "A London brand that became an Asian institution, and the best straight Virginia blend here.",
+    "verdict": "555 is nominally British and effectively Asian — it has been the gift cigarette across Southeast Asia for fifty years. The blend is a clean, bright Virginia with a bready mid-palate and none of the casing sweetness that defines the Chinese houses.\n\nIt is the cigarette to hand someone who says all cigarettes taste the same.",
+    "pros": [
+      "Clean unsweetened Virginia character",
+      "Bready mid-palate develops as it burns",
+      "Gold pack is the most recognisable object in the catalogue"
+    ],
+    "cons": [
+      "Priced as a gift item, not a daily smoke",
+      "Regional blend variation is significant"
+    ],
+    "criteria": {
+      "Construction": 8,
+      "Draw": 8,
+      "Aroma": 9,
+      "Finish": 8,
+      "Value": 6
+    }
+  },
+  {
+    "slug": "dunhill-international-red",
+    "name": "Dunhill International Red",
+    "cjk": null,
+    "brand": "Dunhill",
+    "country": "United Kingdom",
+    "market": "International",
+    "strength": "Full",
+    "flavour": "Regular",
+    "format": "100s",
+    "filterType": "Filtered",
+    "lengthMm": 100,
+    "tarMg": 12,
+    "nicotineMg": 1,
+    "packSize": 20,
+    "priceUsd": 7.4,
+    "year": 1907,
+    "score": 8,
+    "tested": "Tested 14 days · November 2025",
+    "summary": "The luxury full-flavour benchmark, and still the smoothest 12mg on the shelf.",
+    "verdict": "Dunhill International earns its premium on smoothness rather than power. The tobacco is visibly better graded than anything at half the price, and the 100mm length gives the blend room to develop a dark, leathery finish that a king size cuts short.\n\nThe pack is over-designed and the price is steep, but the cigarette inside is genuinely a tier above.",
+    "pros": [
+      "Noticeably higher leaf grade",
+      "100mm length lets the blend develop",
+      "Dark, leathery finish"
+    ],
+    "cons": [
+      "Expensive in every market",
+      "Heavy pack design feels dated"
+    ],
+    "criteria": {
+      "Construction": 9,
+      "Draw": 8,
+      "Aroma": 8,
+      "Finish": 9,
+      "Value": 6
+    }
+  },
+  {
+    "slug": "benson-hedges-gold",
+    "name": "Benson & Hedges Gold",
+    "cjk": null,
+    "brand": "Benson & Hedges",
+    "country": "United Kingdom",
+    "market": "United Kingdom",
+    "strength": "Medium",
+    "flavour": "Regular",
+    "format": "King size",
+    "filterType": "Filtered",
+    "lengthMm": 84,
+    "tarMg": 10,
+    "nicotineMg": 0.8,
+    "packSize": 20,
+    "priceUsd": 6.8,
+    "year": 1873,
+    "score": 7,
+    "tested": "Tested 10 days · October 2025",
+    "summary": "The British default. Unexciting, entirely reliable, and priced by the Treasury.",
+    "verdict": "B&H Gold is the cigarette a generation of British smokers bought without thinking about it, and it holds up: a soft, mildly sweet Virginia with a short clean finish and no rough edges anywhere.\n\nWhat you are paying for is mostly duty. The cigarette itself is a solid seven.",
+    "pros": [
+      "Completely predictable pack to pack",
+      "Soft finish with no harshness",
+      "Ubiquitous in its home market"
+    ],
+    "cons": [
+      "UK duty makes it poor value",
+      "Blend is deliberately unmemorable"
+    ],
+    "criteria": {
+      "Construction": 8,
+      "Draw": 8,
+      "Aroma": 6,
+      "Finish": 7,
+      "Value": 4
+    }
+  },
+  {
+    "slug": "silk-cut-purple",
+    "name": "Silk Cut Purple",
+    "cjk": null,
+    "brand": "Silk Cut",
+    "country": "United Kingdom",
+    "market": "United Kingdom",
+    "strength": "Light",
+    "flavour": "Regular",
+    "format": "King size",
+    "filterType": "Filtered",
+    "lengthMm": 84,
+    "tarMg": 6,
+    "nicotineMg": 0.5,
+    "packSize": 20,
+    "priceUsd": 6.6,
+    "year": 1964,
+    "score": 6,
+    "tested": "Tested 7 days · October 2025",
+    "summary": "The brand that made low tar a design statement. The design has aged better than the smoke.",
+    "verdict": "Silk Cut Purple is heavily ventilated and tastes it — the smoke is thin and cool with a faint paper note that becomes the dominant flavour in the last third.\n\nThe blend is clean and the construction is fine. There simply is not much there.",
+    "pros": [
+      "Very cool smoke",
+      "Clean, no harshness",
+      "Iconic pack design"
+    ],
+    "cons": [
+      "Paper note dominates the final third",
+      "Thin body even for a 6mg",
+      "Poor value at UK prices"
+    ],
+    "criteria": {
+      "Construction": 7,
+      "Draw": 6,
+      "Aroma": 5,
+      "Finish": 4,
+      "Value": 4
+    }
+  },
+  {
+    "slug": "rothmans-king-size-blue",
+    "name": "Rothmans King Size Blue",
+    "cjk": null,
+    "brand": "Rothmans",
+    "country": "United Kingdom",
+    "market": "Europe",
+    "strength": "Medium",
+    "flavour": "Regular",
+    "format": "King size",
+    "filterType": "Filtered",
+    "lengthMm": 84,
+    "tarMg": 9,
+    "nicotineMg": 0.7,
+    "packSize": 20,
+    "priceUsd": 4.9,
+    "year": 1890,
+    "score": 6,
+    "tested": "Tested 10 days · September 2025",
+    "summary": "The value end of the British houses — competent, plain, and honest about it.",
+    "verdict": "Rothmans Blue is what happens when a heritage brand is repositioned as a budget line. The blend is thinner than the name suggests but perfectly clean, and construction has held up better than we expected across four packs.\n\nAs a cheaper alternative to B&H it makes sense. As a Rothmans it is a shadow.",
+    "pros": [
+      "Clean burn with no tunnelling",
+      "Meaningfully cheaper than its shelf neighbours",
+      "Consistent pack to pack"
+    ],
+    "cons": [
+      "Thin body",
+      "Trades entirely on a name it no longer earns"
+    ],
+    "criteria": {
+      "Construction": 7,
+      "Draw": 7,
+      "Aroma": 5,
+      "Finish": 5,
+      "Value": 7
+    }
+  },
+  {
+    "slug": "marlboro-red",
+    "name": "Marlboro Red",
+    "cjk": null,
+    "brand": "Marlboro",
+    "country": "United States",
+    "market": "International",
+    "strength": "Full",
+    "flavour": "Regular",
+    "format": "King size",
+    "filterType": "Filtered",
+    "lengthMm": 84,
+    "tarMg": 10,
+    "nicotineMg": 0.8,
+    "packSize": 20,
+    "priceUsd": 8.2,
+    "year": 1924,
+    "score": 7,
+    "tested": "Tested 14 days · March 2026",
+    "summary": "The most recognisable cigarette on earth, and a genuinely well-made American blend.",
+    "verdict": "It is easy to be dismissive about Marlboro Red and wrong to be. The American blend — Virginia, burley and Oriental with a cocoa-toned casing — is well balanced, the toasted mid-palate is distinctive, and the manufacturing tolerance is as tight as anything from Japan.\n\nWhere it loses ground is price and sameness: it tastes identical in forty countries, which is the point and also the limitation.",
+    "pros": [
+      "Tight manufacturing tolerance worldwide",
+      "Balanced American blend with a real toasted note",
+      "Available almost anywhere"
+    ],
+    "cons": [
+      "Premium price in nearly every market",
+      "Deliberately identical everywhere — no character of place"
+    ],
+    "criteria": {
+      "Construction": 9,
+      "Draw": 8,
+      "Aroma": 7,
+      "Finish": 7,
+      "Value": 5
+    }
+  },
+  {
+    "slug": "marlboro-gold",
+    "name": "Marlboro Gold",
+    "cjk": null,
+    "brand": "Marlboro",
+    "country": "United States",
+    "market": "International",
+    "strength": "Light",
+    "flavour": "Regular",
+    "format": "King size",
+    "filterType": "Filtered",
+    "lengthMm": 84,
+    "tarMg": 6,
+    "nicotineMg": 0.5,
+    "packSize": 20,
+    "priceUsd": 8.2,
+    "year": 1972,
+    "score": 6,
+    "tested": "Tested 10 days · March 2026",
+    "summary": "The Red blend behind a ventilated filter. Cleaner, and correspondingly less interesting.",
+    "verdict": "Gold keeps the cocoa casing and loses the body. It is smooth, entirely inoffensive and very widely bought, and the toasted note that makes Red worth reviewing is barely detectable here.\n\nGood construction, no surprises, same premium price.",
+    "pros": [
+      "Very smooth",
+      "Same build quality as Red",
+      "Globally available"
+    ],
+    "cons": [
+      "Casing survives, body does not",
+      "Priced identically to the better Red"
+    ],
+    "criteria": {
+      "Construction": 9,
+      "Draw": 7,
+      "Aroma": 5,
+      "Finish": 5,
+      "Value": 5
+    }
+  },
+  {
+    "slug": "camel-filters",
+    "name": "Camel Filters",
+    "cjk": null,
+    "brand": "Camel",
+    "country": "United States",
+    "market": "International",
+    "strength": "Full",
+    "flavour": "Regular",
+    "format": "King size",
+    "filterType": "Filtered",
+    "lengthMm": 84,
+    "tarMg": 10,
+    "nicotineMg": 0.8,
+    "packSize": 20,
+    "priceUsd": 7.6,
+    "year": 1913,
+    "score": 8,
+    "tested": "Tested 14 days · February 2026",
+    "summary": "The original American blend, and still the one with the most Turkish leaf in it.",
+    "verdict": "Camel is the more interesting of the two American giants. The Turkish component gives the smoke an unmistakable slightly sour, resinous edge that no competitor has tried to copy in a century, and it develops rather than flattening as the stick burns.\n\nIt divides people, which is exactly what we want from a review subject.",
+    "pros": [
+      "Distinctive Turkish resinous note",
+      "Blend develops through the stick",
+      "Genuinely different from every other mass-market blend"
+    ],
+    "cons": [
+      "Sour edge is polarising",
+      "Room odour is heavier than the tar rating suggests"
+    ],
+    "criteria": {
+      "Construction": 8,
+      "Draw": 8,
+      "Aroma": 9,
+      "Finish": 8,
+      "Value": 6
+    }
+  },
+  {
+    "slug": "lucky-strike-original-red",
+    "name": "Lucky Strike Original Red",
+    "cjk": null,
+    "brand": "Lucky Strike",
+    "country": "United States",
+    "market": "International",
+    "strength": "Full",
+    "flavour": "Regular",
+    "format": "King size",
+    "filterType": "Unfiltered",
+    "lengthMm": 70,
+    "tarMg": 24,
+    "nicotineMg": 1.5,
+    "packSize": 20,
+    "priceUsd": 7,
+    "year": 1871,
+    "score": 7,
+    "tested": "Tested 7 days · February 2026",
+    "summary": "Unfiltered toasted Virginia. Exactly as blunt as that sounds, and better made than it needs to be.",
+    "verdict": "The unfiltered Lucky is a period piece that still works. Toasting the Virginia leaf gives a bright, almost caramelised smoke with none of the burley heaviness of a filtered American blend, and the paper is good enough that it burns straight without help.\n\nAt 24mg unfiltered this is the second heaviest thing in the catalogue and we are not pretending otherwise.",
+    "pros": [
+      "Bright caramelised Virginia character",
+      "Burns straight with no run-off",
+      "Historically the blend it always was"
+    ],
+    "cons": [
+      "24mg unfiltered — severe",
+      "Loose tobacco on the tongue",
+      "Very short at 70mm"
+    ],
+    "criteria": {
+      "Construction": 8,
+      "Draw": 7,
+      "Aroma": 8,
+      "Finish": 7,
+      "Value": 6
+    }
+  },
+  {
+    "slug": "american-spirit-yellow",
+    "name": "Natural American Spirit Yellow",
+    "cjk": null,
+    "brand": "American Spirit",
+    "country": "United States",
+    "market": "United States",
+    "strength": "Medium",
+    "flavour": "Regular",
+    "format": "King size",
+    "filterType": "Filtered",
+    "lengthMm": 84,
+    "tarMg": 11,
+    "nicotineMg": 0.9,
+    "packSize": 20,
+    "priceUsd": 9.8,
+    "year": 1982,
+    "score": 7,
+    "tested": "Tested 14 days · January 2026",
+    "summary": "Additive-free, densely packed, and slower-burning than anything else here — for better and worse.",
+    "verdict": "American Spirit packs roughly a third more tobacco into the same paper, and the result is a stick that takes twice as long to smoke and tastes purely of leaf: no casing, no sweetness, just dry Virginia.\n\nAdditive-free does not mean safer, and the brand has been fined for implying otherwise. As a smoke, it is honest and unusually pure.",
+    "pros": [
+      "No casing — pure leaf character",
+      "Densely packed, very slow burn",
+      "Tight draw rewards patience"
+    ],
+    "cons": [
+      "Most expensive cigarette in the catalogue",
+      "Draw is genuinely hard work",
+      "\"Additive-free\" implies a safety benefit that does not exist"
+    ],
+    "criteria": {
+      "Construction": 9,
+      "Draw": 5,
+      "Aroma": 8,
+      "Finish": 8,
+      "Value": 5
+    }
+  },
+  {
+    "slug": "newport-menthol",
+    "name": "Newport Menthol",
+    "cjk": null,
+    "brand": "Newport",
+    "country": "United States",
+    "market": "United States",
+    "strength": "Full",
+    "flavour": "Menthol",
+    "format": "King size",
+    "filterType": "Filtered",
+    "lengthMm": 84,
+    "tarMg": 13,
+    "nicotineMg": 1.1,
+    "packSize": 20,
+    "priceUsd": 8.6,
+    "year": 1957,
+    "score": 6,
+    "tested": "Tested 10 days · January 2026",
+    "summary": "The heaviest menthol in the mainstream, and it does not pretend to be subtle.",
+    "verdict": "Newport applies menthol with a shovel. The cooling effect is immediate and overwhelming, and behind it sits a genuinely full-flavour blend that you can only detect in the last third once the menthol has burned off.\n\nIt is very good at the one thing it does. Whether that thing is worth doing is a matter of taste.",
+    "pros": [
+      "Strongest cooling effect of any menthol tested",
+      "Full-bodied blend underneath",
+      "Consistent build"
+    ],
+    "cons": [
+      "Menthol buries the tobacco entirely",
+      "Banned or restricted in a growing number of markets"
+    ],
+    "criteria": {
+      "Construction": 8,
+      "Draw": 8,
+      "Aroma": 5,
+      "Finish": 6,
+      "Value": 5
+    }
+  },
+  {
+    "slug": "parliament-aqua-blue",
+    "name": "Parliament Aqua Blue",
+    "cjk": null,
+    "brand": "Parliament",
+    "country": "United States",
+    "market": "International",
+    "strength": "Light",
+    "flavour": "Regular",
+    "format": "100s",
+    "filterType": "Filtered",
+    "lengthMm": 100,
+    "tarMg": 7,
+    "nicotineMg": 0.6,
+    "packSize": 20,
+    "priceUsd": 7.9,
+    "year": 1931,
+    "score": 7,
+    "tested": "Tested 10 days · December 2025",
+    "summary": "The recessed filter is a real engineering idea, not a gimmick — it keeps the smoke off the lip.",
+    "verdict": "Parliament's recessed filter sets the paper back a few millimetres from the mouth, and the practical effect is that the draw stays dry and the smoke arrives cooler than the 7mg rating implies.\n\nThe blend is unremarkable. The filter is the reason to buy it, and it works.",
+    "pros": [
+      "Recessed filter genuinely cools the draw",
+      "Stays dry through the whole stick",
+      "100mm length suits a slow smoke"
+    ],
+    "cons": [
+      "Blend itself is forgettable",
+      "Recess traps debris if the pack is jostled"
+    ],
+    "criteria": {
+      "Construction": 8,
+      "Draw": 9,
+      "Aroma": 5,
+      "Finish": 6,
+      "Value": 6
+    }
+  },
+  {
+    "slug": "gauloises-blondes-blue",
+    "name": "Gauloises Blondes Blue",
+    "cjk": null,
+    "brand": "Gauloises",
+    "country": "France",
+    "market": "Europe",
+    "strength": "Medium",
+    "flavour": "Regular",
+    "format": "King size",
+    "filterType": "Filtered",
+    "lengthMm": 84,
+    "tarMg": 10,
+    "nicotineMg": 0.8,
+    "packSize": 20,
+    "priceUsd": 6.4,
+    "year": 1984,
+    "score": 6,
+    "tested": "Tested 10 days · November 2025",
+    "summary": "The blonde reinvention of a dark-tobacco legend. Pleasant, and much less interesting than what it replaced.",
+    "verdict": "Blondes is a competent modern Virginia blend wearing a famous name. It is clean, faintly nutty and completely unlike the black tobacco Gauloises that built the brand.\n\nJudged on its own it is a fair mid-market cigarette. Judged against the Brunes, it is a compromise.",
+    "pros": [
+      "Clean nutty profile",
+      "Reliable construction",
+      "Widely available in Europe"
+    ],
+    "cons": [
+      "Bears no relation to the original blend",
+      "Little to distinguish it from any other blonde"
+    ],
+    "criteria": {
+      "Construction": 7,
+      "Draw": 7,
+      "Aroma": 6,
+      "Finish": 6,
+      "Value": 6
+    }
+  },
+  {
+    "slug": "gitanes-brunes",
+    "name": "Gitanes Brunes",
+    "cjk": null,
+    "brand": "Gitanes",
+    "country": "France",
+    "market": "Europe",
+    "strength": "Full",
+    "flavour": "Regular",
+    "format": "Shorts",
+    "filterType": "Unfiltered",
+    "lengthMm": 70,
+    "tarMg": 18,
+    "nicotineMg": 1.3,
+    "packSize": 20,
+    "priceUsd": 7.2,
+    "year": 1910,
+    "score": 8,
+    "tested": "Tested 10 days · November 2025",
+    "summary": "Dark air-cured tobacco, unfiltered, and the most distinctive smoke in this catalogue.",
+    "verdict": "Gitanes Brunes tastes of something no other cigarette here approaches: a dense, earthy, almost cellar-like dark tobacco with a peppery finish that lingers for several minutes. It is a difficult cigarette and it is meant to be.\n\nThe dark-tobacco category is disappearing from European shelves, which makes this worth documenting while it exists.\n\nWe are scoring character. The intensity is not a recommendation.",
+    "pros": [
+      "Earthy dark-tobacco character with no equivalent in production",
+      "Long peppery finish",
+      "A genuine survivor of a vanishing category"
+    ],
+    "cons": [
+      "Unfiltered at 18mg",
+      "Room odour is severe and persistent",
+      "Actively unpleasant to the uninitiated"
+    ],
+    "criteria": {
+      "Construction": 7,
+      "Draw": 6,
+      "Aroma": 10,
+      "Finish": 9,
+      "Value": 6
+    },
+    "award": true
+  },
+  {
+    "slug": "davidoff-classic",
+    "name": "Davidoff Classic",
+    "cjk": null,
+    "brand": "Davidoff",
+    "country": "Switzerland",
+    "market": "International",
+    "strength": "Medium",
+    "flavour": "Regular",
+    "format": "King size",
+    "filterType": "Filtered",
+    "lengthMm": 84,
+    "tarMg": 9,
+    "nicotineMg": 0.8,
+    "packSize": 20,
+    "priceUsd": 7.8,
+    "year": 1969,
+    "score": 8,
+    "tested": "Tested 14 days · October 2025",
+    "summary": "Restrained, dry, and the most European cigarette in the premium bracket.",
+    "verdict": "Davidoff Classic is the anti-Marlboro: no casing sweetness, no cocoa, just a dry, cedar-edged blend that stays cool and never raises its voice. The leaf quality is obvious and the burn line is the straightest we measured.\n\nIt asks for attention and rewards it, which is unusual at this level of the market.",
+    "pros": [
+      "Dry cedar note with no casing sweetness",
+      "Straightest burn line measured",
+      "Excellent leaf grading"
+    ],
+    "cons": [
+      "Reserved to the point of austerity",
+      "Premium price without a premium pack"
+    ],
+    "criteria": {
+      "Construction": 9,
+      "Draw": 8,
+      "Aroma": 8,
+      "Finish": 8,
+      "Value": 6
+    }
+  },
+  {
+    "slug": "sobranie-black-russian",
+    "name": "Sobranie Black Russian",
+    "cjk": null,
+    "brand": "Sobranie",
+    "country": "Russia",
+    "market": "International",
+    "strength": "Full",
+    "flavour": "Aromatic",
+    "format": "King size",
+    "filterType": "Filtered",
+    "lengthMm": 84,
+    "tarMg": 12,
+    "nicotineMg": 1,
+    "packSize": 20,
+    "priceUsd": 9.2,
+    "year": 1879,
+    "score": 6,
+    "tested": "Tested 7 days · September 2025",
+    "summary": "Black paper, gold tip, and a blend that cannot quite live up to the presentation.",
+    "verdict": "Black Russian is the most theatrical object in the catalogue and the black paper is not decoration — it burns differently, adding a faintly sweet, tarry note over a Turkish-leaning blend.\n\nThe problem is that the paper dominates. After three or four you are tasting stationery.",
+    "pros": [
+      "Genuinely striking object",
+      "Turkish blend has real character underneath",
+      "Black paper changes the smoke, not just the look"
+    ],
+    "cons": [
+      "Paper note becomes overwhelming",
+      "Highest price-to-quality gap here",
+      "Burns unevenly more often than it should"
+    ],
+    "criteria": {
+      "Construction": 6,
+      "Draw": 6,
+      "Aroma": 7,
+      "Finish": 5,
+      "Value": 4
+    }
+  },
+  {
+    "slug": "karelia-slims",
+    "name": "Karelia Slims",
+    "cjk": null,
+    "brand": "Karelia",
+    "country": "Greece",
+    "market": "Europe",
+    "strength": "Light",
+    "flavour": "Regular",
+    "format": "Super slims",
+    "filterType": "Filtered",
+    "lengthMm": 100,
+    "tarMg": 5,
+    "nicotineMg": 0.4,
+    "packSize": 20,
+    "priceUsd": 4.8,
+    "year": 1888,
+    "score": 7,
+    "tested": "Tested 10 days · September 2025",
+    "summary": "Greek Oriental leaf in a slim format — light in body, surprisingly aromatic.",
+    "verdict": "Karelia uses domestic Oriental tobacco, and the difference is immediately obvious: a spiced, slightly floral aroma that a slim format usually cannot carry. At 5mg it should be thin and it is not.\n\nThe best-value slim here by a clear margin.",
+    "pros": [
+      "Oriental leaf gives real aroma at 5mg",
+      "Best value in the slims category",
+      "Clean, even burn"
+    ],
+    "cons": [
+      "Fast burn typical of the format",
+      "Limited availability outside Europe"
+    ],
+    "criteria": {
+      "Construction": 8,
+      "Draw": 7,
+      "Aroma": 8,
+      "Finish": 7,
+      "Value": 9
+    }
+  },
+  {
+    "slug": "djarum-black",
+    "name": "Djarum Black",
+    "cjk": null,
+    "brand": "Djarum",
+    "country": "Indonesia",
+    "market": "Southeast Asia",
+    "strength": "Full",
+    "flavour": "Clove",
+    "format": "King size",
+    "filterType": "Filtered",
+    "lengthMm": 84,
+    "tarMg": 20,
+    "nicotineMg": 1.4,
+    "packSize": 12,
+    "priceUsd": 5.4,
+    "year": 1996,
+    "score": 8,
+    "tested": "Tested 10 days · August 2025",
+    "summary": "The definitive kretek: clove, sweet paper, and a crackle you can hear across a room.",
+    "verdict": "A kretek is a different product category wearing a cigarette's shape, and Djarum Black is the one to judge the category by. The clove is intense but balanced against the tobacco rather than covering it, the sweetened filter tip is genuinely pleasant, and the audible crackle is part of the experience.\n\nAt 20mg tar it is heavy, and clove's anaesthetic effect makes it easy to smoke more than you intended.",
+    "pros": [
+      "Best-balanced clove-to-tobacco ratio in the category",
+      "Sweetened tip is a real design touch",
+      "Unmistakable aroma and crackle"
+    ],
+    "cons": [
+      "20mg tar",
+      "Clove numbs the throat and masks overconsumption",
+      "Restricted or banned in several markets"
+    ],
+    "criteria": {
+      "Construction": 8,
+      "Draw": 8,
+      "Aroma": 10,
+      "Finish": 8,
+      "Value": 7
+    },
+    "award": true
+  },
+  {
+    "slug": "gudang-garam-international",
+    "name": "Gudang Garam International",
+    "cjk": null,
+    "brand": "Gudang Garam",
+    "country": "Indonesia",
+    "market": "Southeast Asia",
+    "strength": "Full",
+    "flavour": "Clove",
+    "format": "King size",
+    "filterType": "Filtered",
+    "lengthMm": 84,
+    "tarMg": 26,
+    "nicotineMg": 1.8,
+    "packSize": 12,
+    "priceUsd": 3.4,
+    "year": 1958,
+    "score": 7,
+    "tested": "Tested 7 days · August 2025",
+    "summary": "The heavyweight kretek. Enormous smoke, enormous numbers, and a devoted following.",
+    "verdict": "Gudang Garam International is the strongest cigarette in this catalogue by tar and nicotine both, and it does not feel like an accident — the smoke is thick, sweet and resinous, with the clove sitting deeper in the blend than Djarum places it.\n\nWe ran a shortened protocol for exactly the reason the numbers suggest.",
+    "pros": [
+      "Enormous, resinous smoke volume",
+      "Clove integrated deep into the blend",
+      "Very cheap at source"
+    ],
+    "cons": [
+      "26mg tar and 1.8mg nicotine — the heaviest here",
+      "Burns hot in the final third",
+      "Overwhelming for anyone new to kretek"
+    ],
+    "criteria": {
+      "Construction": 7,
+      "Draw": 7,
+      "Aroma": 9,
+      "Finish": 7,
+      "Value": 8
+    }
+  },
+  {
+    "slug": "sampoerna-a-mild",
+    "name": "Sampoerna A Mild",
+    "cjk": null,
+    "brand": "Sampoerna",
+    "country": "Indonesia",
+    "market": "Southeast Asia",
+    "strength": "Medium",
+    "flavour": "Clove",
+    "format": "King size",
+    "filterType": "Filtered",
+    "lengthMm": 84,
+    "tarMg": 14,
+    "nicotineMg": 1,
+    "packSize": 16,
+    "priceUsd": 2.9,
+    "year": 1989,
+    "score": 8,
+    "tested": "Tested 14 days · August 2025",
+    "summary": "The kretek made approachable, and the reason the light-clove category exists at all.",
+    "verdict": "A Mild invented the low-tar kretek in 1989 and remains the best executed version of it. The clove is dialled back to a warm spice note rather than the main event, the smoke is far lighter than any traditional kretek, and it costs almost nothing at source.\n\nIf you want to understand kretek without committing to 26mg, start here.",
+    "pros": [
+      "Clove as spice rather than spectacle",
+      "Remarkable value",
+      "The most approachable kretek in production"
+    ],
+    "cons": [
+      "Traditionalists find it watered down",
+      "Still 14mg tar despite the \"mild\" name"
+    ],
+    "criteria": {
+      "Construction": 8,
+      "Draw": 8,
+      "Aroma": 8,
+      "Finish": 7,
+      "Value": 10
+    }
+  }
+]

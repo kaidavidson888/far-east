@@ -1,0 +1,35 @@
+{
+  "name": "far-east",
+  "version": "1.0.0",
+  "private": true,
+  "engines": {
+    "node": ">=20.9"
+  },
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "seed": "node scripts/seed-catalog.mjs",
+    "demo": "node scripts/demo-data.mjs",
+    "verify:db": "node .verify/run.mjs",
+    "set-db-password": "node scripts/set-db-password.mjs",
+    "link-supabase": "node scripts/link-supabase.mjs",
+    "diagnose-db": "node scripts/diagnose-db.mjs"
+  },
+  "dependencies": {
+    "@supabase/ssr": "^0.12.5",
+    "@supabase/supabase-js": "^2.78.0",
+    "next": "^15.5.24",
+    "postgres": "^3.4.9",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "server-only": "^0.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.10",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.5",
+    "embedded-postgres": "^18.4.0-beta.17",
+    "typescript": "^5.5.4"
+  }
+}
