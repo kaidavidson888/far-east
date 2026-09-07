@@ -4,12 +4,16 @@ import { useActionState, useCallback, useEffect, useRef, useState } from 'react'
 import Link from 'next/link';
 import { loginAction, type FormState } from '@/app/actions';
 import {
-  loadSplashFrames,
+  splashFrames,
+  preloadSplashFrames,
   frameAt,
   SPLASH_DURATION_MS,
 } from '@/lib/splashFrames';
 
 type Phase = 'logo' | 'play' | 'form';
+
+const CANVAS_W = 400;
+const CANVAS_H = Math.round((CANVAS_W * 1600) / 720); // 889 — the source aspect
 
 /**
  * The homepage splash. The seal is a press-and-hold button: holding grows the
@@ -28,7 +32,7 @@ export function SplashScreen() {
   const posRef = useRef(0); // scrub position, ms
   const dirRef = useRef(0); // -1 | 0 | 1
   const pressedRef = useRef(false);
-  const wantPlayRef = useRef(false); // pressed before frames finished decoding
+  const wantPlayRef = useRef(false); // pressed before the first frame decoded
   const rafRef = useRef(0);
   const lastTsRef = useRef(0);
 
@@ -38,8 +42,8 @@ export function SplashScreen() {
     if (!frames.length || !canvas) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
-    const img = frames[frameAt(ms, frames.length)];
-    if (img.complete && img.naturalWidth) {
+    const img = frames[frameAt(ms)];
+    if (img?.complete && img.naturalWidth) {
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
     }
   }, []);
@@ -88,29 +92,25 @@ export function SplashScreen() {
     if (!rafRef.current) rafRef.current = requestAnimationFrame(tick);
   }, [tick]);
 
-  // Decode the animation in the background; show the static logo until it lands.
   useEffect(() => {
     reducedRef.current =
       typeof window !== 'undefined' &&
       !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 
+    framesRef.current = splashFrames();
+
     let alive = true;
-    loadSplashFrames()
-      .then((frames) => {
-        if (!alive) return;
-        framesRef.current = frames;
-        setReady(true);
-        draw(posRef.current);
-        // Someone held the seal before we were ready.
-        if (wantPlayRef.current && pressedRef.current && !reducedRef.current) {
-          dirRef.current = 1;
-          setPhase('play');
-          run();
-        }
-      })
-      .catch(() => {
-        /* leave the static logo in place */
-      });
+    preloadSplashFrames().then(() => {
+      if (!alive) return;
+      setReady(true);
+      draw(posRef.current);
+      // Someone held the seal before the first frame was paintable.
+      if (wantPlayRef.current && pressedRef.current && !reducedRef.current) {
+        dirRef.current = 1;
+        setPhase('play');
+        run();
+      }
+    });
     return () => {
       alive = false;
       cancelAnimationFrame(rafRef.current);
@@ -120,7 +120,8 @@ export function SplashScreen() {
   const onPointerDown = useCallback(
     (e: React.PointerEvent) => {
       e.preventDefault();
-      e.currentTarget.setPointerCapture?.(e.pointerId);
+      // Keep receiving pointerup even if the finger slides off the seal.
+      try { e.currentTarget.setPointerCapture?.(e.pointerId); } catch { /* no active pointer */ }
       pressedRef.current = true;
       wantPlayRef.current = true;
 
@@ -130,7 +131,7 @@ export function SplashScreen() {
         draw(posRef.current);
         return;
       }
-      if (!ready) return; // will start once frames arrive
+      if (!ready) return; // starts once the first frame decodes
       dirRef.current = 1;
       setPhase('play');
       run();
@@ -148,13 +149,13 @@ export function SplashScreen() {
   return (
     <div className="splash" role="dialog" aria-label="Enter Far East">
       <div className="splash-stage">
-        {/* Matches frame 0 exactly, so the canvas taking over is seamless. */}
-        <img className="splash-poster" src="/splash/login-poster.webp" alt="Far East" />
+        {/* Frame 0, so the canvas taking over is seamless. */}
+        <img className="splash-poster" src="/splash/frames/f000.webp" alt="Far East" />
         <canvas
           ref={canvasRef}
           className="splash-canvas"
-          width={450}
-          height={1000}
+          width={CANVAS_W}
+          height={CANVAS_H}
           aria-hidden="true"
         />
         {phase !== 'form' ? (

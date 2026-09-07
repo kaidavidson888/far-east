@@ -521,15 +521,18 @@ ul, ol { list-style: none; }
 /* Homepage press-and-hold splash; sits above the age gate (z-index 100). */
 .splash {
   position: fixed; inset: 0; z-index: 200;
-  display: grid; place-items: center;
+  overflow: hidden;
   background: #ffffff;
 }
-/* Portrait stage matching the animation (720 x 1600); white bars on wide screens. */
+/* Smallest 720x1600 box that covers the viewport, centred — so the red design
+   reaches every screen edge (essentially no crop on phones) and the %-placed
+   overlays track the artwork on any aspect ratio. */
 .splash-stage {
-  position: relative;
-  height: 100dvh;
-  aspect-ratio: 720 / 1600;
-  max-width: 100vw;
+  position: absolute;
+  left: 50%; top: 50%;
+  transform: translate(-50%, -50%);
+  width: max(100vw, 100dvh * 720 / 1600);
+  height: max(100dvh, 100vw * 1600 / 720);
   touch-action: none;
 }
 .splash-poster,
@@ -538,7 +541,6 @@ ul, ol { list-style: none; }
   width: 100%; height: 100%;
   display: block;
 }
-.splash-poster { object-fit: fill; }
 /* The seal's square, continued from the boxy sides of the mountain. */
 .splash-seal {
   position: absolute;
@@ -551,58 +553,63 @@ ul, ol { list-style: none; }
 }
 .splash-seal:focus-visible { outline: 2px solid var(--cobalt); outline-offset: 4px; }
 
-/* Sign-in card over the frozen final frame, aligned to the animation's card. */
+/* Sign-in card over the frozen final frame. The splash runs its own bright red
+   (#FF3131, matching the recoloured animation) rather than the site's cinnabar. */
+.splash {
+  --splash-red: #ff3131;
+  --splash-red-deep: #d81f1f;
+}
 .splash-form {
   position: absolute;
   left: 50%; top: 49%;
-  width: min(40%, 340px);
+  width: min(86vw, 320px);
   transform: translate(-50%, -50%);
   display: flex; flex-direction: column;
-  gap: clamp(6px, 1.4vh, 12px);
-  padding: clamp(12px, 2.6vh, 22px);
+  gap: clamp(8px, 1.6vh, 14px);
+  padding: clamp(16px, 3vh, 26px);
   background: #ffffff;
-  border: 2px solid var(--cinnabar);
+  border: 2px solid var(--splash-red);
 }
 .splash-field { display: block; }
 .splash-field > span {
   display: block;
   font-family: var(--font-display);
-  font-size: clamp(9px, 1.5vh, 12px);
+  font-size: clamp(10px, 1.5vh, 12px);
   letter-spacing: 0.09em; text-transform: uppercase;
-  color: var(--cinnabar);
-  margin-bottom: 2px;
+  color: var(--splash-red);
+  margin-bottom: 3px;
 }
 .splash-field > input {
   width: 100%;
-  border: 0; border-bottom: 1.5px solid var(--cinnabar);
+  border: 0; border-bottom: 1.5px solid var(--splash-red);
   border-radius: 0;
   background: transparent;
   font-family: var(--font-display);
-  font-size: clamp(12px, 1.9vh, 15px);
-  padding: 3px 0;
-  color: var(--ink);
+  font-size: clamp(13px, 1.9vh, 15px);
+  padding: 4px 0;
+  color: #14120f;
 }
-.splash-field > input:focus { outline: none; border-bottom-color: var(--cinnabar-deep); }
+.splash-field > input:focus { outline: none; border-bottom-color: var(--splash-red-deep); }
 .splash-submit {
   margin-top: clamp(2px, 0.8vh, 8px);
   border: 0; border-radius: 0;
-  background: var(--cinnabar); color: var(--on-cinnabar);
+  background: var(--splash-red); color: #ffffff;
   font-family: var(--font-display); font-weight: 600;
   letter-spacing: 0.08em; text-transform: uppercase;
-  font-size: clamp(10px, 1.6vh, 13px);
-  padding: clamp(7px, 1.4vh, 12px) 0;
+  font-size: clamp(11px, 1.6vh, 13px);
+  padding: clamp(9px, 1.5vh, 13px) 0;
   cursor: pointer;
 }
-.splash-submit:hover { background: var(--cinnabar-deep); }
+.splash-submit:hover { background: var(--splash-red-deep); }
 .splash-form-error {
   font-family: var(--font-display);
-  font-size: clamp(9px, 1.4vh, 12px);
-  color: var(--cinnabar-deep);
+  font-size: clamp(10px, 1.4vh, 12px);
+  color: var(--splash-red-deep);
 }
 .splash-form-alt {
   font-family: var(--font-display);
-  font-size: clamp(9px, 1.4vh, 12px);
+  font-size: clamp(10px, 1.4vh, 12px);
   text-align: center;
-  color: var(--muted);
+  color: #857f76;
 }
-.splash-form-alt a { color: var(--cinnabar); text-decoration: underline; }
+.splash-form-alt a { color: var(--splash-red); text-decoration: underline; }
