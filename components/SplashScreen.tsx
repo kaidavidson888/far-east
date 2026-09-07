@@ -69,8 +69,21 @@ export function SplashScreen() {
     ctx.fillRect(0, 0, vw, vh);
 
     const img = frames[frameAt(ms)];
-    const r = coverRect(vw, vh);
+    const r = coverRect(vw, vh); // the frame, contained + centred (source scale)
     if (img?.complete && img.naturalWidth) {
+      // Background: the same frame scaled to COVER, so the red design reaches
+      // every screen edge. Its centre is softly erased so the zoomed-up
+      // composition there doesn't show behind the real one.
+      const { w: iw, h: ih } = SPLASH_GEOM.frame;
+      const cs = Math.max(vw / iw, vh / ih);
+      const cw = iw * cs, ch = ih * cs;
+      ctx.drawImage(img, (vw - cw) / 2, (vh - ch) / 2, cw, ch);
+      const g = ctx.createRadialGradient(vw / 2, vh / 2, r.w * 0.22, vw / 2, vh / 2, r.w * 0.62);
+      g.addColorStop(0, '#ffffff');
+      g.addColorStop(1, 'rgba(255,255,255,0)');
+      ctx.fillStyle = g;
+      ctx.fillRect(0, 0, vw, vh);
+      // Foreground: the composition at the source scale.
       ctx.drawImage(img, r.x, r.y, r.w, r.h);
     }
 

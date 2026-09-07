@@ -60,10 +60,15 @@ export function frameAt(ms: number): number {
   return i;
 }
 
-/** Where the frame is actually drawn inside a w×h box under object-fit: cover. */
+/**
+ * Where the animation frame is drawn: the whole frame, fit inside the viewport
+ * (contain) and centred, so the composition stays at the source's scale on
+ * every viewport. The cloud pattern is separately mirror-tiled into the margins
+ * so the red design still reaches every screen edge (see SplashScreen.paint).
+ */
 export function coverRect(boxW: number, boxH: number) {
   const { w: iw, h: ih } = SPLASH_GEOM.frame;
-  const scale = Math.max(boxW / iw, boxH / ih);
+  const scale = Math.min(boxW / iw, boxH / ih);
   const w = iw * scale;
   const h = ih * scale;
   return { x: (boxW - w) / 2, y: (boxH - h) / 2, w, h };
