@@ -35,7 +35,18 @@ export async function createClient() {
           }
         } catch {
           // Called from a server component, where cookies are read-only.
-          // middleware.ts refreshes the session, so this is safe to ignore.
+          //
+          // There is currently NO middleware refreshing the session: the
+          // @supabase/ssr middleware crashed on Vercel's Edge Runtime
+          // (MIDDLEWARE_INVOCATION_FAILED) and was removed to unblock the
+          // deploy. Consequence: a refreshed token obtained during a plain page
+          // render cannot be persisted, so a signed-in reader who only browses
+          // is signed out roughly an hour after login. Server actions (rating,
+          // shelving, sharing) CAN write cookies and do keep the session alive.
+          //
+          // Proper fix: a Node-runtime route handler (e.g. /auth/refresh) that
+          // calls getUser() and persists the rotated cookies, pinged from a
+          // small client component when the access token nears expiry.
         }
       },
     },
