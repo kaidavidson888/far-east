@@ -22,13 +22,12 @@ without an account; an account adds rating, reviewing and a shelf.
   Vercel's env vars and locally with `npm run set-db-password`.**
 
 ## Current state — read this carefully
-- **Code:** repo is at `57e5042` on GitHub. Commit `f6b03ff` (removes the middleware, see
-  below) exists only on Fanny's machine and **has not been pushed**. If you clone, you get
-  the version that still crashes on Vercel. The zip that accompanies this handoff includes
-  `f6b03ff`; the repo will be updated as soon as Fanny pushes.
-- **Live site:** `far-east-beta.vercel.app` returns **500 `MIDDLEWARE_INVOCATION_FAILED`**.
-  Every deployment so far has been Blocked or has served that error. **The site has never
-  successfully deployed.**
+- **Code:** GitHub `main` is at `ab60121` and matches the zip. That includes `f6b03ff`
+  (middleware removed) and these handoff docs. Clone from GitHub; the zip is a fallback.
+- **Live site:** after that push, `far-east-beta.vercel.app` returns **404** (no deployment
+  serving) rather than the earlier 500. Whether the `ab60121` build is Ready, Blocked or
+  Errored was **not confirmed** at handoff — check the Deployments list in Vercel first.
+  **The site has never successfully deployed.**
 - **Database:** schema applied (7 tables, RLS on, both migrations), catalogue seeded
   (32 rows), one registered account, no favourites or reviews yet.
 - **Verification:** `npm run verify:db` is 29/29 against a real Postgres. Signed-in UI paths
@@ -46,9 +45,9 @@ without an account; an account adds rating, reviewing and a shelf.
    `@supabase/ssr`. Wrapping its body in try/catch did not help. It could not be reproduced
    locally, in `next start`, or by loading the compiled bundle into Vercel's published
    `edge-runtime` package. It was **removed** in `f6b03ff` to unblock.
-3. **Unconfirmed:** whether the fix commits ever built, or whether Vercel kept blocking. When
-   you push, look at the deployment's **status** in the Deployments list, not the URL — the
-   URL keeps serving the last deployment either way.
+3. **Unconfirmed:** whether the `f6b03ff`/`ab60121` builds succeeded or were Blocked. Look at
+   the deployment's **status** in the Deployments list, not the URL — a 404 there just means
+   no Ready deployment is attached to the domain.
 
 If a build is still **Blocked** after all of the above, the remaining Hobby-plan fix is to make
 the repo public (it contains no secrets — verified by scanning history) or upgrade to Pro.
