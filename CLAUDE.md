@@ -70,5 +70,7 @@ overwrote this file twice during setup. `.env.example` is the template.
 - The Vercel project must be owned by the same GitHub account as the repo (`kaidavidson888`) on
   the Hobby plan, and commits should be authored by that account (repo-local git identity is set).
 - `far-east.vercel.app` is NOT this project (someone else's site). Production is `far-east-beta.vercel.app`.
+- If the live domain serves `/logos/*.svg` (200) but `/` and `/_next/static/*` are 404, the
+  Vercel project's Framework Preset is not "Next.js" — it is serving `public/` as a static site.
 - Verifying signed-in UI: `.verify/temp-user.mjs` creates a throwaway auth user directly in
   Postgres (then `delete`). Never use real credentials for tests; the tools refuse piped input.

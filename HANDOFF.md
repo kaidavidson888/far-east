@@ -49,6 +49,14 @@ without an account; an account adds rating, reviewing and a shelf.
    the deployment's **status** in the Deployments list, not the URL — a 404 there just means
    no Ready deployment is attached to the domain.
 
+4. After `ab60121` the domain served Vercel's own **`NOT_FOUND`** for `/` and `/catalog` while
+   `/logos/*.svg` returned 200 and `/_next/static/*` returned 404 — i.e. the deployment was
+   **static-only: `public/` served with no Next.js output**. Cause: the Vercel project was
+   created before the repo had code, so Next.js was never auto-detected and the Framework
+   Preset stayed "Other". Fix: Project Settings → Build and Deployment → Framework Preset =
+   **Next.js**, Build Command / Output Directory / Root Directory left at defaults, then
+   Redeploy. Diagnostic: if static files 200 and app routes 404, it is this.
+
 If a build is still **Blocked** after all of the above, the remaining Hobby-plan fix is to make
 the repo public (it contains no secrets — verified by scanning history) or upgrade to Pro.
 
