@@ -1,51 +1,37 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { SplashSeal } from './splash/SplashSeal';
-import { SplashCard } from './splash/SplashCard';
+import { SplashLoginFields } from './splash/SplashLoginFields';
 import {
   splashFrames,
   preloadSplashFrames,
   frameAt,
+  coverRect,
+  SPLASH_GEOM,
   SPLASH_DURATION_MS,
 } from '@/lib/splashFrames';
 
 type Phase = 'logo' | 'play' | 'form';
-
-const CANVAS_W = 720; // 1:1 with the baked frames
-const CANVAS_H = 1600;
-
-// Timeline for the transient outline squares (scrub position, ms), matched to
-// the source animation: the black frame draws itself in early as the logo
-// dissolves, then hands over to the red frame — which stays and becomes the
-// login card's border. (101 source frames over 4000ms.)
-// Keyframes as a fraction of the run, from the source animation: the black
-// frame draws in early (0.08–0.16) as the logo dissolves, then fades out
-// (0.50–0.64) handing over to the red frame (0.48–0.67), which stays and
-// becomes the login card's border.
-const rampDown = (p: number, a: number, b: number) =>
-  p <= a ? 1 : p >= b ? 0 : 1 - (p - a) / (b - a);
-const rampUp = (p: number, a: number, b: number) =>
-  p <= a ? 0 : p >= b ? 1 : (p - a) / (b - a);
-const blackBoxOpacity = (p: number) =>
-  Math.min(rampUp(p, 0.08, 0.16), rampDown(p, 0.5, 0.64));
-const redBoxOpacity = (p: number) => rampUp(p, 0.48, 0.67);
+export type FocusField = 'email' | 'password' | 'submit' | null;
 
 /**
- * The homepage splash. The seal is a press-and-hold button: holding grows the
- * cloud animation forward, releasing retracts it, holding the full 4s latches on
- * the last frame with a real sign-in card. The seal, the transient outline
- * squares and the card are all vector DOM at the same centred size; only the
- * clouds come from raster frames (their centre is knocked out to white).
+ * The homepage splash: a faithful copy of the source animation, recoloured and
+ * sharpened. Frame 0 is the resting state; press and hold the seal to scrub the
+ * clouds forward, release to retract, hold the full 4s to land on the last
+ * frame — where the login box becomes real inputs.
  */
 export function SplashScreen() {
-  const [phase, setPhase] = useState<Phase>('logo');
+  const [phase, setPhaseState] = useState<Phase>('logo');
   const [ready, setReady] = useState(false);
+  const [layout, setLayout] = useState({ x: 0, y: 0, w: 0, h: 0, vw: 0, vh: 0 });
   const reducedRef = useRef(false);
+  const phaseRef = useRef<Phase>('logo');
+  const setPhase = useCallback((p: Phase) => {
+    phaseRef.current = p;
+    setPhaseState(p);
+  }, []);
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const redBoxRef = useRef<HTMLSpanElement | null>(null);
-  const blackBoxRef = useRef<HTMLSpanElement | null>(null);
   const framesRef = useRef<HTMLImageElement[]>([]);
   const posRef = useRef(0);
   const dirRef = useRef(0); // -1 | 0 | 1
@@ -53,20 +39,59 @@ export function SplashScreen() {
   const wantPlayRef = useRef(false);
   const rafRef = useRef(0);
   const lastTsRef = useRef(0);
+  const focusRef = useRef<FocusField>(null);
+
+  const measure = useCallback(() => {
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    const r = coverRect(vw, vh);
+    setLayout({ ...r, vw, vh });
+    return { vw, vh, r };
+  }, []);
 
   const paint = useCallback((ms: number) => {
-    const frames = framesRef.current;
     const canvas = canvasRef.current;
-    if (frames.length && canvas) {
-      const ctx = canvas.getContext('2d');
-      const img = frames[frameAt(ms)];
-      if (ctx && img?.complete && img.naturalWidth) {
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-      }
+    const frames = framesRef.current;
+    if (!canvas || !frames.length) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const dpr = window.devicePixelRatio || 1;
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    if (canvas.width !== Math.round(vw * dpr) || canvas.height !== Math.round(vh * dpr)) {
+      canvas.width = Math.round(vw * dpr);
+      canvas.height = Math.round(vh * dpr);
     }
-    const p = ms / SPLASH_DURATION_MS;
-    if (redBoxRef.current) redBoxRef.current.style.opacity = String(redBoxOpacity(p));
-    if (blackBoxRef.current) blackBoxRef.current.style.opacity = String(blackBoxOpacity(p));
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, vw, vh);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, vw, vh);
+
+    const img = frames[frameAt(ms)];
+    const r = coverRect(vw, vh);
+    if (img?.complete && img.naturalWidth) {
+      ctx.drawImage(img, r.x, r.y, r.w, r.h);
+    }
+
+    // Row dimming: while a field is focused, drop every label to 10% and every
+    // other row's line + cloud to 10% — leave the focused row's line + cloud.
+    const f = focusRef.current;
+    if (phaseRef.current === 'form' && (f === 'email' || f === 'password')) {
+      ctx.fillStyle = 'rgba(255,255,255,0.9)';
+      const { rows, box, wordX1 } = SPLASH_GEOM;
+      const px = (fx: number) => r.x + fx * r.w;
+      const py = (fy: number) => r.y + fy * r.h;
+      (['email', 'password', 'submit'] as const).forEach((row) => {
+        const rw = rows[row];
+        if (row === f) {
+          // only the label word
+          ctx.fillRect(px(box.x0), py(rw.yTop), px(wordX1) - px(box.x0), py(rw.yBot) - py(rw.yTop));
+        } else {
+          ctx.fillRect(px(box.x0), py(rw.yTop), px(box.x1) - px(box.x0), py(rw.yBot) - py(rw.yTop));
+        }
+      });
+    }
   }, []);
 
   const stop = useCallback(() => {
@@ -118,6 +143,8 @@ export function SplashScreen() {
       !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 
     framesRef.current = splashFrames();
+    measure();
+
     let alive = true;
     preloadSplashFrames().then(() => {
       if (!alive) return;
@@ -129,19 +156,31 @@ export function SplashScreen() {
         run();
       }
     });
+
+    const onResize = () => {
+      measure();
+      paint(posRef.current);
+    };
+    window.addEventListener('resize', onResize);
     return () => {
       alive = false;
+      window.removeEventListener('resize', onResize);
       cancelAnimationFrame(rafRef.current);
+      rafRef.current = 0;
     };
-  }, [paint, run]);
+  }, [measure, paint, run]);
+
+  // Repaint when the form phase begins so the last frame is definitely drawn.
+  useEffect(() => {
+    if (phase === 'form') paint(SPLASH_DURATION_MS);
+  }, [phase, paint]);
 
   const onPointerDown = useCallback(
     (e: React.PointerEvent) => {
       e.preventDefault();
-      try { e.currentTarget.setPointerCapture?.(e.pointerId); } catch { /* no active pointer */ }
+      try { e.currentTarget.setPointerCapture?.(e.pointerId); } catch { /* no pointer */ }
       pressedRef.current = true;
       wantPlayRef.current = true;
-
       if (reducedRef.current) {
         posRef.current = SPLASH_DURATION_MS;
         setPhase('form');
@@ -163,36 +202,33 @@ export function SplashScreen() {
     run();
   }, [run]);
 
+  const setFocusField = useCallback(
+    (f: FocusField) => {
+      focusRef.current = f;
+      paint(SPLASH_DURATION_MS);
+    },
+    [paint],
+  );
+
+  // Seal hit-square, in viewport px, from the frame geometry.
+  const r = layout;
+  const sealSize = SPLASH_GEOM.seal.size * r.w;
+  const sealStyle: React.CSSProperties = {
+    left: r.x + SPLASH_GEOM.seal.cx * r.w - sealSize / 2,
+    top: r.y + SPLASH_GEOM.seal.cy * r.h - sealSize / 2,
+    width: sealSize,
+    height: sealSize,
+  };
+
   return (
-    <div className="splash" role="dialog" aria-label="Enter Far East">
-      <canvas
-        ref={canvasRef}
-        className="splash-clouds"
-        width={CANVAS_W}
-        height={CANVAS_H}
-        data-lit={phase !== 'logo'}
-        aria-hidden="true"
-      />
-
-      <div className="splash-box">
-        <div className="splash-layer" data-show={phase === 'logo'}>
-          <SplashSeal />
-        </div>
-
-        <div className="splash-layer" data-show={phase === 'play'} aria-hidden="true">
-          <span ref={redBoxRef} className="splash-outline splash-outline-red" />
-          <span ref={blackBoxRef} className="splash-outline splash-outline-black" />
-        </div>
-
-        <div className="splash-layer" data-show={phase === 'form'}>
-          {phase === 'form' && <SplashCard />}
-        </div>
-      </div>
+    <div className="splash" role="dialog" aria-label="Enter Far East" data-phase={phase}>
+      <canvas ref={canvasRef} className="splash-canvas" aria-hidden="true" />
 
       {phase !== 'form' && (
         <button
           type="button"
           className="splash-hit"
+          style={sealStyle}
           aria-label="Press and hold to enter Far East"
           onPointerDown={onPointerDown}
           onPointerUp={release}
@@ -200,6 +236,8 @@ export function SplashScreen() {
           onLostPointerCapture={release}
         />
       )}
+
+      {phase === 'form' && <SplashLoginFields layout={layout} onFocusField={setFocusField} />}
     </div>
   );
 }

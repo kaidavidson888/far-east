@@ -2,7 +2,6 @@
 
 import { randomBytes } from 'node:crypto';
 import { revalidatePath } from 'next/cache';
-import { after } from 'next/server';
 import { redirect } from 'next/navigation';
 import { currentUser } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
@@ -40,7 +39,7 @@ export async function registerAction(_prev: FormState, formData: FormData): Prom
 
   if (error) return { error: error.message };
 
-  after(() => logAuthEvent(email, 'signup'));
+  logAuthEvent(email, 'signup');
 
   // With email confirmation enabled there is no session yet.
   if (!data.session) {
@@ -59,7 +58,7 @@ export async function loginAction(_prev: FormState, formData: FormData): Promise
   const { error } = await supabase.auth.signInWithPassword({ email, password });
   if (error) return { error: 'That email and password do not match an account.' };
 
-  after(() => logAuthEvent(email, 'login'));
+  logAuthEvent(email, 'login');
 
   redirect(next.startsWith('/') ? next : '/favorites');
 }
