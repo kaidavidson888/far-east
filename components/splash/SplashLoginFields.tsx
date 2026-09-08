@@ -54,11 +54,11 @@ export function SplashLoginFields({
   useEffect(() => { onFieldFocus?.(inField); }, [inField, onFieldFocus]);
 
   const { parts } = SPLASH_GEOM;
-  // Where the form sits inside the red outline box, as a fraction of it. OY is
-  // set so the gap above the EMAIL text equals the gap below the "create
-  // account / login" text (not its dashes).
-  const OX = box.w * -0.058;
-  const OY = box.h * -0.0166;
+  // The sprite is cropped from the frame at exactly SPLASH_GEOM.box, so a zero
+  // offset lands the form pixel-on-pixel over the black still baked into the
+  // frame — which is what makes the one overlapping handover frame invisible.
+  const OX = 0;
+  const OY = 0;
   const bx = (fx: number) => box.x + fx * box.w + OX;
   const by = (fy: number) => box.y + fy * box.h + OY;
   const labelSize = box.h * 0.075;

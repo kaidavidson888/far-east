@@ -213,31 +213,50 @@ await sharp(PNG.sync.write(stpng))
 // the crisp overlay is pixel-exact with the box baked into the frames (which
 // settle.webp fades out underneath it). Box crop == SPLASH_GEOM.box.
 const BOX = { x0: 0.3312, x1: 0.6672, y0: 0.4241, y1: 0.5752 };
+const INK_GAMMA = 0.6; // < 1 thickens the overlay text
+// Build the ink as grey-on-white RGB and push it through the frames' exact
+// resize + sharpen, THEN turn grey into alpha. Writing straight into an alpha
+// channel instead loses the strokes: sharp premultiplies on resize, so the
+// anti-aliased edges erode and the text lands at roughly half the weight of the
+// same text baked into the frame.
 const ink = Buffer.from(acc);
 for (let i = 0; i < ink.length; i += 4) {
   const max = Math.max(ink[i], ink[i + 1], ink[i + 2]);
   const chroma = max - Math.min(ink[i], ink[i + 1], ink[i + 2]);
-  if (max < 245 && chroma < 28) {
-    const cov = crisp(1 - max / 255);
-    ink[i] = ink[i + 1] = ink[i + 2] = 0;
-    ink[i + 3] = Math.round(cov * 255);
-  } else {
-    ink[i + 3] = 0;
-  }
+  const cov = max < 245 && chroma < 28 ? crisp(1 - max / 255) : 0;
+  const v = Math.round(255 - 255 * cov); // identical to process()'s INK branch
+  ink[i] = ink[i + 1] = ink[i + 2] = v;
+  ink[i + 3] = 255;
 }
 const ipng = new PNG({ width: W, height: H });
 ink.copy(ipng.data);
 const RH = Math.round((WIDTH * H) / W);
-await sharp(PNG.sync.write(ipng))
+const BX = {
+  left: Math.round(BOX.x0 * WIDTH),
+  top: Math.round(BOX.y0 * RH),
+  width: Math.round((BOX.x1 - BOX.x0) * WIDTH),
+  height: Math.round((BOX.y1 - BOX.y0) * RH),
+};
+const grey = await sharp(PNG.sync.write(ipng))
   .resize({ width: WIDTH })
   .sharpen({ sigma: 0.5 })
-  .extract({
-    left: Math.round(BOX.x0 * WIDTH),
-    top: Math.round(BOX.y0 * RH),
-    width: Math.round((BOX.x1 - BOX.x0) * WIDTH),
-    height: Math.round((BOX.y1 - BOX.y0) * RH),
-  })
-  .webp({ quality: 94, alphaQuality: 100 })
+  .extract(BX)
+  .removeAlpha()
+  .raw()
+  .toBuffer();
+const bpng = new PNG({ width: BX.width, height: BX.height });
+for (let px = 0; px < BX.width * BX.height; px++) {
+  bpng.data[px * 4] = 0;
+  bpng.data[px * 4 + 1] = 0;
+  bpng.data[px * 4 + 2] = 0;
+  // Gamma < 1 lifts partial coverage, so the strokes read bolder than the
+  // baked copy without going blurry (a blur would widen them but soften the
+  // edges; this keeps them crisp).
+  const cov = (255 - grey[px * 3]) / 255;
+  bpng.data[px * 4 + 3] = Math.round(255 * Math.min(1, Math.pow(cov, INK_GAMMA)));
+}
+await sharp(PNG.sync.write(bpng))
+  .webp({ quality: 96, alphaQuality: 100 })
   .toFile('public/splash/blackbox.webp');
 
 const edgeBuf = Buffer.concat(edgeProfiles.map((u) => Buffer.from(u)));

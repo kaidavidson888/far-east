@@ -166,12 +166,18 @@ export function SplashScreen() {
             octx.globalCompositeOperation = 'destination-in';
             octx.drawImage(maskCanvas(prof), 0, 0, 1, prof.length, mx, fy, mw, r.h);
 
-            if (reach < mw + 80) {
+            // Opacity is tied to the spread: alpha tapers from the frame edge
+            // out to the advancing front, so the margin thickens up as `reach`
+            // grows instead of arriving as a flat slab of uniform opacity. The
+            // per-band profile above still shapes *where* it reaches.
+            if (!inForm) {
               const eX = dir < 0 ? r.x : r.x + r.w;
-              const g = octx.createLinearGradient(eX, 0, eX + dir * (reach + 60), 0);
-              g.addColorStop(0, 'rgba(0,0,0,1)');
-              g.addColorStop(clamp01(reach / (reach + 60)), 'rgba(0,0,0,1)');
-              g.addColorStop(1, 'rgba(0,0,0,0)');
+              const span = Math.max(10, reach);
+              const g = octx.createLinearGradient(eX, 0, eX + dir * span, 0);
+              for (let s = 0; s <= 8; s += 1) {
+                const t = s / 8;
+                g.addColorStop(t, `rgba(0,0,0,${Math.pow(1 - t, 1.5).toFixed(4)})`);
+              }
               octx.fillStyle = g;
               octx.fillRect(mx, 0, mw, vh);
             }
