@@ -111,19 +111,19 @@ find the Edge crash instead, restoring the middleware is the cleaner solution.
     `globalAlpha = cloudRise(p)` so the margins share the frame edge's exact weight instead of
     a full-density column appearing beside a fainter frame. On a phone the frame fills the
     width so none of this shows.
-  - **Login box** — no separate asset. The baked box in f100 is what you see;
-    `SplashLoginFields` (rendered only once `phase === 'form'`) overlays it with transparent
-    functional `<input>`s + submit `<button>` at the geometry in `SPLASH_GEOM.box` / `.rows`
-    (measured off f100), plus, as its only visual: white `#fcfcfc` cover divs over the baked
-    label / ☁ / dash regions at `opacity = 1 - target`, a `box-shadow: 0 0 0 100vmax` veil that
-    dims everything *outside* the box while a field is focused, and a DOM `#ff0000` border
-    redrawn on the baked border's footprint so it stays lit while the canvas dims. All of these
-    fade in together (`shown` state, 2×rAF after mount) so they land on top of the already-drawn
-    baked box. Per-row `target` opacity: idle → border 100, dash 50, label 50, ☁ 100. A text
-    field focused → that field's dash 100 (all dashes 100), submit row 80, every other label/☁
-    10, pattern outside the box 20 (box stays lit). Field has text → that row's label + ☁ 0.
-    Submit hovered/focused → whole submit row 100, nothing else changes. Error text is warm
-    grey (`--negative`), never red, per the design spec.
+  - **Login box** — no separate asset. The baked box in f100 is what you see. Once
+    `phase === 'form'`, `SplashLoginFields` **wipes the box interior clean** — one opaque
+    `#fcfcfc` div inset inside `SPLASH_GEOM.box` (`bx(0.045)`→`bx(0.955)`, `by(0.05)`→`by(0.95)`)
+    that removes every black part (the EMAIL / PASSWORD / create-account labels, the ☁ glyphs,
+    the dashed lines) and leaves only the baked red ornate border. Over that it lays transparent
+    functional `<input>`s + a submit `<button>` at the `SPLASH_GEOM.rows` geometry (typed text
+    is bold Cormorant Unicase, no caret), and a `box-shadow: 0 0 0 100vmax` veil that dims
+    everything *outside* the box to 20% while a text field is focused (the box itself stays
+    lit). Wipe + veil fade in together (`shown` state, 2×rAF after mount) so they land on the
+    already-drawn baked box. No DOM red outline — the earlier one was removed; the baked border
+    was never actually dimmed so it was redundant. Error text is warm grey (`--negative`),
+    never red, per the design spec. Fields are unlabelled by design (owner's call) — add
+    `placeholder`s if that changes.
   - **Open:** gates the homepage behind a login every visit, in tension with CLAUDE.md's
     "browsing is open" — revisit. Still on branch `splash-screen`, not merged.
 - **Node:** pinned to 24 (`.nvmrc` = `24`, `engines.node` = `24.x`). Vercel ignores `.nvmrc`

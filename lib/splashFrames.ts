@@ -2,8 +2,9 @@
 // scrubbable WebP stills by `npm run build:splash` (recoloured, sharpened, with
 // the red seal fading as it drains and the red clouds rising to full opacity).
 // The frames keep the original login box exactly as drawn — that IS the visual;
-// SplashLoginFields lays transparent inputs over it and dims its parts (white
-// overlays) for the focus/typing states. Nothing decodes a GIF at runtime.
+// once the form is up SplashLoginFields wipes its interior (the black labels, ☁
+// and dashes) white, keeps the baked red border, and lays transparent functional
+// inputs over it. Nothing decodes a GIF at runtime.
 // `edge.webp` is the final pattern with the box reflected over — tiled beside
 // the frame to continue the design to the screen edges.
 //

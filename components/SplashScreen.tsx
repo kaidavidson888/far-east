@@ -22,8 +22,8 @@ const rampUp = (p: number, a: number, b: number) => (p <= a ? 0 : p >= b ? 1 : (
  * sharpened, played at the source scale. The whole frame sits 1:1 in the middle
  * (the original, untouched) and its cloud strips are tiled outward so the design
  * continues to the screen edge. The login box you see is the one baked into the
- * last frame; SplashLoginFields lays transparent inputs over it and dims its
- * parts for the focus/typing states.
+ * last frame; once the form is up SplashLoginFields wipes its interior clean
+ * (just the baked red border stays) and lays transparent inputs over it.
  */
 export function SplashScreen() {
   const [phase, setPhaseState] = useState<Phase>('logo');
