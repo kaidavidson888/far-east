@@ -1,12 +1,13 @@
 // The splash plays a faithful copy of scripts/assets/login-source.gif, baked to
 // scrubbable WebP stills by `npm run build:splash` (recoloured, sharpened, with
 // the red seal fading as it drains and the red clouds rising to full opacity).
-// The frames keep the original login box exactly as drawn — that IS the visual;
-// once the form is up SplashLoginFields wipes its interior (the black labels, ☁
-// and dashes) white, keeps the baked red border, and lays transparent functional
-// inputs over it. Nothing decodes a GIF at runtime.
-// `edge.webp` is the final pattern with the box reflected over — tiled beside
+// The frames keep the original login box's red outline; its black parts (labels,
+// ☁, dashes) are drawn crisp on top from loginbox-parts.svg once the form is up.
+// Nothing decodes a GIF at runtime.
+// `edge.webp` — the final red pattern with the box reflected over — tiles beside
 // the frame to continue the design to the screen edges.
+// `settle.webp` — the last frame with every black part at 0; cross-faded in on
+// latch so the baked black goes to 0 without a white patch.
 //
 // 101 frames, 40ms apart — exactly the source timing, 4.00s.
 
@@ -33,17 +34,16 @@ export const SPLASH_GEOM = {
   // frame 0: the seal panel — the press-and-hold target, centred.
   seal: { cx: 0.5, cy: 0.5, size: 0.34 }, // fraction of frame width
   // the login box outline's exact footprint (its outer red border edges) — the
-  // baked box is already dead-centre.
+  // baked box is already dead-centre. loginbox-parts.svg is stretched into this.
   box: { x0: 0.3312, x1: 0.6672, y0: 0.4241, y1: 0.5752 },
   boxDy: 0, // vertical nudge of the drawn frame (fraction of height)
-  // per row (fractions of the BOX, measured off f100): the dashed line's y (it
-  // runs the full width [left..0.89]); the label's right edge; the ☁ glyph's
-  // x-span; and the label/☁ vertical band. Typed text starts at `left`, baseline
-  // just above dashY.
+  // per row, as fractions of the BOX (= loginbox-parts.svg viewBox fractions,
+  // printed by split-loginbox.mjs): the dashed line's y and its left/right x.
+  // Typed text starts at lineX0, baseline just above dashY.
   rows: {
-    email:    { dashY: 0.228, left: 0.102, labelR: 0.356, cloudX0: 0.360, cloudX1: 0.478, top: 0.120, bot: 0.210 },
-    password: { dashY: 0.559, left: 0.102, labelR: 0.569, cloudX0: 0.574, cloudX1: 0.690, top: 0.452, bot: 0.540 },
-    submit:   { dashY: 0.850, left: 0.102, labelR: 0.813, cloudX0: 0.817, cloudX1: 0.892, top: 0.798, bot: 0.892 },
+    email:    { dashY: 0.156, lineX0: 0.069, endX: 0.976 },
+    password: { dashY: 0.565, lineX0: 0.051, endX: 0.963 },
+    submit:   { dashY: 0.956, lineX0: 0.058, endX: 0.974 },
   },
 };
 
@@ -51,6 +51,7 @@ const src = (i: number) => `/splash/frames/f${String(i).padStart(3, '0')}.webp`;
 
 let frames: HTMLImageElement[] | null = null;
 let edge: HTMLImageElement | null = null;
+let settle: HTMLImageElement | null = null;
 
 export function splashFrames(): HTMLImageElement[] {
   if (!frames) {
@@ -64,7 +65,7 @@ export function splashFrames(): HTMLImageElement[] {
   return frames;
 }
 
-/** The scaled backdrop pattern (box painted over), drawn behind the frame. */
+/** The final red pattern, box reflected over — tiled into the screen margins. */
 export function edgeImage(): HTMLImageElement {
   if (!edge) {
     edge = new Image();
@@ -74,10 +75,21 @@ export function edgeImage(): HTMLImageElement {
   return edge;
 }
 
+/** The last frame with every black part at 0 — cross-faded in once latched. */
+export function settleImage(): HTMLImageElement {
+  if (!settle) {
+    settle = new Image();
+    settle.decoding = 'async';
+    settle.src = '/splash/settle.webp';
+  }
+  return settle;
+}
+
 export function preloadSplashFrames(): Promise<void> {
   const imgs = splashFrames();
   imgs.forEach((img) => void img.decode().catch(() => {}));
   void edgeImage().decode().catch(() => {});
+  void settleImage().decode().catch(() => {});
   return imgs[0].decode().catch(() => {});
 }
 

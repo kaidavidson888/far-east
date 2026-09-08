@@ -1,58 +1,117 @@
 'use client';
 
-import { useActionState, useEffect, useState } from 'react';
+import { useActionState, useEffect, useRef, useState } from 'react';
 import { loginAction, type FormState } from '@/app/actions';
 import { SPLASH_GEOM } from '@/lib/splashFrames';
 
 type Box = { x: number; y: number; w: number; h: number };
 type Row = 'email' | 'password';
+type Kind = 'line' | 'label' | 'cloud';
 
 const SHRINK_AFTER = 12;
 const fit = (len: number) => (len <= SHRINK_AFTER ? 1 : Math.max(0.42, SHRINK_AFTER / len));
 
+// the vector form sits inside the baked red box, not flush to it; a hair left
+// so the ☁ glyphs (which sit right of centre) don't pull it visually rightward
+const INSET = 0.09;
+const NUDGE_X = -0.037;
+
 /**
- * The login box you see is the one baked into the last frame. Once the form is
- * up, this wipes the box interior clean — every black part (the EMAIL / PASSWORD
- * / create-account labels, the ☁ glyphs, the dashed lines) goes, leaving just
- * the baked red border — and lays transparent, functional inputs + a submit
- * button over it. Typed text shows bold. A veil dims everything outside the box
- * while a text field is focused. The wipe fades in with the overlay.
+ * The login box overlay: loginbox-parts.svg (the black form — labels, ☁ glyphs
+ * and dashed lines, no red border) sized to sit *inside* the animation's red
+ * outline box, with transparent working inputs + a submit button over it.
+ *
+ * Per-part opacity (unchanged): idle → lines 50, labels 50, ☁ 100. A text field
+ * focused → all lines 100, the submit row 80, every other label/☁ 10, and the
+ * red design outside the box drops to 20. A row with text → its label + ☁ 0.
+ * The submit button hovered/focused → its whole row 100, nothing else moves.
  */
 export function SplashLoginFields({ box }: { box: Box }) {
   const [state, action] = useActionState<FormState, FormData>(loginAction, null);
   const [email, setEmail] = useState('');
   const [pw, setPw] = useState('');
   const [focus, setFocus] = useState<Row | null>(null);
+  const [submitActive, setSubmitActive] = useState(false);
+  const [svg, setSvg] = useState('');
   const [shown, setShown] = useState(false);
+  const hostRef = useRef<HTMLDivElement>(null);
 
   const inField = focus === 'email' || focus === 'password';
+
+  useEffect(() => {
+    let ok = true;
+    fetch('/splash/loginbox-parts.svg').then((r) => r.text()).then((s) => ok && setSvg(s)).catch(() => {});
+    return () => { ok = false; };
+  }, []);
+
   useEffect(() => {
     const id = requestAnimationFrame(() => requestAnimationFrame(() => setShown(true)));
     return () => cancelAnimationFrame(id);
   }, []);
 
-  const { rows } = SPLASH_GEOM;
-  const bx = (fx: number) => box.x + fx * box.w;
-  const by = (fy: number) => box.y + fy * box.h;
-  const labelSize = box.h * 0.10; // ≈ the baked "EMAIL" cap height
-
-  const inputStyle = (r: Row, len: number): React.CSSProperties => {
-    const size = labelSize * fit(len);
-    return {
-      position: 'fixed',
-      left: bx(rows[r].left),
-      top: by(rows[r].dashY) - size - Math.max(1, size * 0.06),
-      width: bx(0.93) - bx(rows[r].left),
-      height: size,
-      fontSize: size,
-      lineHeight: 1,
+  // drive each vector part's opacity
+  useEffect(() => {
+    const host = hostRef.current;
+    if (!host) return;
+    const op = (kind: Kind, row: Row | 'submit') => {
+      const rowTyped = (row === 'email' && email.length > 0) || (row === 'password' && pw.length > 0);
+      if (kind === 'cloud') {
+        if (row === 'submit') return submitActive ? 1 : inField ? 0.8 : 1;
+        if (rowTyped) return 0;
+        if (inField) return 0.1;
+        return 1;
+      }
+      if (row === 'submit' && submitActive) return 1;
+      if (row === 'submit' && inField) return 0.8;
+      if (kind === 'line') return inField ? 1 : 0.5;
+      if (rowTyped) return 0;
+      if (inField) return 0.1;
+      return 0.5;
     };
+    for (const row of ['email', 'password', 'submit'] as const) {
+      for (const kind of ['line', 'label', 'cloud'] as const) {
+        const el = host.querySelector<SVGGElement>(`#${kind}-${row}`);
+        if (el) el.style.opacity = String(op(kind, row));
+      }
+    }
+  }, [svg, email, pw, focus, submitActive, inField]);
+
+  const { rows } = SPLASH_GEOM;
+  const sb = {
+    x: box.x + box.w * (INSET + NUDGE_X), y: box.y + box.h * INSET,
+    w: box.w * (1 - 2 * INSET), h: box.h * (1 - 2 * INSET),
+  };
+  const bx = (fx: number) => sb.x + fx * sb.w;
+  const by = (fy: number) => sb.y + fy * sb.h;
+  const labelSize = sb.h * 0.11;
+
+  const field = (r: Row, value: string, set: (v: string) => void, type: string, ac: string, label: string) => {
+    const rw = rows[r];
+    const size = labelSize * fit(value.length);
+    return (
+      <input
+        key={r}
+        className="splash-field-input"
+        style={{
+          position: 'fixed',
+          left: bx(rw.lineX0),
+          top: by(rw.dashY) - size - Math.max(1, size * 0.05),
+          width: bx(rw.endX) - bx(rw.lineX0),
+          height: size, fontSize: size, lineHeight: 1,
+        }}
+        name={r} type={type} autoComplete={ac} required aria-label={label}
+        value={value}
+        onChange={(e) => set(e.target.value)}
+        onFocus={() => setFocus(r)}
+        onBlur={() => setFocus((f) => (f === r ? null : f))}
+      />
+    );
   };
 
   return (
     <>
-      {/* while a text field is in use, everything OUTSIDE the box dims to 20%
-          (the box itself — baked red border, interior — stays lit) */}
+      {/* while a text field is in use, the red design outside the box drops to
+          20% — the box stays lit */}
       <div
         aria-hidden
         style={{
@@ -63,50 +122,44 @@ export function SplashLoginFields({ box }: { box: Box }) {
         }}
       />
 
-      {/* wipe the baked box interior — labels, ☁, dashes all go, leaving the
-          baked red border. Fades in with the overlay. Inset so the border shows. */}
       <div
+        ref={hostRef}
         aria-hidden
+        className="splash-box"
         style={{
-          position: 'fixed', pointerEvents: 'none',
-          left: bx(0.045), top: by(0.05),
-          width: bx(0.955) - bx(0.045), height: by(0.95) - by(0.05),
-          background: '#fcfcfc',
-          opacity: shown ? 1 : 0,
-          transition: `opacity ${shown ? 200 : 320}ms ease`,
+          left: sb.x, top: sb.y, width: sb.w, height: sb.h,
+          opacity: shown ? 1 : 0, transition: `opacity ${shown ? 440 : 0}ms ease`,
         }}
+        dangerouslySetInnerHTML={{ __html: svg }}
       />
 
       <form className="splash-fields" action={action}>
         <input type="hidden" name="next" value="/" />
 
-        <input
-          className="splash-field-input" style={inputStyle('email', email.length)}
-          name="email" type="email" autoComplete="email" required
-          value={email} onChange={(e) => setEmail(e.target.value)}
-          onFocus={() => setFocus('email')} onBlur={() => setFocus(null)} aria-label="Email"
-        />
-        <input
-          className="splash-field-input" style={inputStyle('password', pw.length)}
-          name="password" type="password" autoComplete="current-password" required
-          value={pw} onChange={(e) => setPw(e.target.value)}
-          onFocus={() => setFocus('password')} onBlur={() => setFocus(null)} aria-label="Password"
-        />
+        {field('email', email, setEmail, 'email', 'email', 'Email')}
+        {field('password', pw, setPw, 'password', 'current-password', 'Password')}
+
         <button
-          type="submit" className="splash-field-submit"
+          type="submit"
+          className="splash-field-submit"
           style={{
             position: 'fixed',
-            left: bx(rows.submit.left - 0.03), top: by(rows.submit.top - 0.03),
-            width: bx(0.96) - bx(rows.submit.left - 0.03),
-            height: by(rows.submit.bot + 0.05) - by(rows.submit.top - 0.03),
+            left: bx(rows.submit.lineX0 - 0.03), top: by(rows.submit.dashY) - labelSize * 1.7,
+            width: bx(rows.submit.endX + 0.03) - bx(rows.submit.lineX0 - 0.03), height: labelSize * 2.2,
           }}
+          onPointerEnter={() => setSubmitActive(true)}
+          onPointerLeave={() => setSubmitActive(false)}
+          onFocus={() => setSubmitActive(true)}
+          onBlur={() => setSubmitActive(false)}
         >
           <span className="sr-only">Create account or log in</span>
         </button>
 
         {state?.error ? (
-          <p className="splash-fields-error"
-            style={{ position: 'fixed', left: bx(0), top: by(1) + 8, width: box.w }}>
+          <p
+            className="splash-fields-error"
+            style={{ position: 'fixed', left: box.x, top: box.y + box.h + 10, width: box.w }}
+          >
             {state.error}
           </p>
         ) : null}

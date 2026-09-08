@@ -519,10 +519,10 @@ ul, ol { list-style: none; }
 
 /* ---------- Splash ---------- */
 /* The recoloured source animation on a canvas — the frame 1:1 in the centre, the
-   pattern tiled out to the screen edge. The login box is the one baked into the
-   last frame; SplashLoginFields overlays transparent inputs and white covers
-   (SplashLoginFields.tsx) that dim its parts for the focus/typing states. Above
-   the age gate (z-index 100). */
+   red design branched out to the screen edge with a faint-centre / bold-edge
+   veil. On latch, settle.webp cross-fades the baked black to 0 and the login
+   box vector (loginbox-parts.svg — black, no red border) fades in inside the
+   red outline box. Above the age gate (z-index 100). */
 .splash {
   position: fixed; inset: 0; z-index: 200;
   overflow: hidden; background: #fcfcfc;
@@ -532,6 +532,11 @@ ul, ol { list-style: none; }
   position: absolute; inset: 0; width: 100%; height: 100%;
   display: block;
 }
+
+/* login box vector — sized + placed from JS, drawn over the red outline box */
+.splash-box { position: fixed; pointer-events: none; }
+.splash-box svg { width: 100%; height: 100%; display: block; overflow: visible; }
+.splash-box svg g { transition: opacity 160ms ease; }
 
 /* press-and-hold target — the seal's square (positioned from JS) */
 .splash-hit {
@@ -551,7 +556,8 @@ ul, ol { list-style: none; }
   padding: 0;
 }
 .splash-field-input:focus { outline: none; }
-.splash-field-submit { border: 0; background: transparent; cursor: pointer; }
+.splash-field-submit { border: 0; background: transparent; cursor: pointer; padding: 0; line-height: 1; }
+.splash-field-submit:hover, .splash-field-submit:focus-visible { text-decoration: underline; outline: none; }
 .splash-fields-error {
   margin: 0;
   font-family: var(--font-display); font-size: clamp(10px, 1.5vw, 13px);

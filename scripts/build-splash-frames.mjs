@@ -6,12 +6,14 @@
  *   - opacity:   the red seal panel fades as it drains; the red cloud design
  *                rises from faint to 100% over the run (frames 0 → 100)
  *
- * The frames keep the original login box — the DOM box reveals top-down over it
- * at paint time. Also writes public/splash/edge.webp: the final pattern with the
- * box reflected over, tiled left/right at paint time to continue the design out
- * to the screen edges (the pattern tiles horizontally).
+ * The frames keep the original login box's red outline. Also writes:
+ *   public/splash/edge.webp   the final red pattern, box reflected over, tiled
+ *                             left/right at paint time (it tiles horizontally)
+ *   public/splash/settle.webp the last frame with every black part at 0 —
+ *                             cross-faded in on latch so the baked black goes
+ *                             to 0 without a white patch over it
  *
- *   npm run build:splash
+ *   npm run build:splash   (runs split-loginbox.mjs first)
  *
  * 101 frames, 40ms apart — exactly the source timing (4.0s). GIF frames are
  * patches that composite on top of each other (disposal type 1). Commit the
@@ -79,7 +81,7 @@ function cloudFill(d, src, R, strength) {
 // is hard, and the login box sits over it.
 const BOX_R = { x0: 0.318, x1: 0.682, y0: 0.412, y1: 0.582 };
 
-function process(d, n) {
+function process(d, n, blackAlpha = 1) {
   const p = n / LAST;
   const cloudRise = clamp01(0.12 + 0.88 * Math.pow(p, 0.7)); // faint → 100% at 4s
   const sealFade = clamp01(1 - p / 0.44); // the draining panel fades out by ~frame 44
@@ -90,7 +92,7 @@ function process(d, n) {
     if (max > 250 && chroma < 8) continue; // white paper
 
     if (chroma < 24) {
-      const cov = crisp(1 - max / 255);
+      const cov = crisp(1 - max / 255) * blackAlpha; // blackAlpha 0 → the black vanishes
       d[i] = 255 + (INK[0] - 255) * cov;
       d[i + 1] = 255 + (INK[1] - 255) * cov;
       d[i + 2] = 255 + (INK[2] - 255) * cov;
@@ -186,6 +188,19 @@ await sharp(PNG.sync.write(epng))
   .sharpen({ sigma: 0.4 })
   .webp({ quality: QUALITY })
   .toFile('public/splash/edge.webp');
+
+// settle.webp — the final frame with every black part at 0 (red, incl. the box
+// outline, untouched). Cross-faded over the last frame once the animation
+// latches, so the baked black fades to 0 in place.
+const settle = Buffer.from(acc);
+process(settle, LAST, 0);
+const stpng = new PNG({ width: W, height: H });
+settle.copy(stpng.data);
+await sharp(PNG.sync.write(stpng))
+  .resize({ width: WIDTH })
+  .sharpen({ sigma: 0.5 })
+  .webp({ quality: QUALITY })
+  .toFile('public/splash/settle.webp');
 
 // smooth + monotonic (spread only grows), rounded
 let mx = 0;
