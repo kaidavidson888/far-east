@@ -518,9 +518,9 @@ ul, ol { list-style: none; }
 .site-footer .btn-icon:hover { background: #222222; }
 
 /* ---------- Splash ---------- */
-/* A recoloured, sharpened copy of the source animation played on a canvas,
-   with the cloud pattern growing outward toward the edges. Above the age gate
-   (z-index 100). */
+/* The recoloured source animation on a canvas (its cloud pattern warped so one
+   continuous design reads larger toward the edge), with the login box rebuilt
+   from loginbox-parts.svg on top. Above the age gate (z-index 100). */
 .splash {
   position: fixed; inset: 0; z-index: 200;
   overflow: hidden; background: #ffffff;
@@ -529,9 +529,15 @@ ul, ol { list-style: none; }
 .splash-canvas {
   position: absolute; inset: 0; width: 100%; height: 100%;
   display: block;
+  transition: opacity 260ms ease;
 }
-/* the red design → 20% while a field is focused is painted onto the canvas
-   (paint() in SplashScreen) so the box itself stays lit */
+/* the red design drops to 20% while a field is being used */
+.splash-canvas[data-typing="true"] { opacity: 0.2; }
+
+/* the login box — positioned + sized from JS; parts get their opacity there */
+.splash-box { position: fixed; pointer-events: none; }
+.splash-box svg { width: 100%; height: 100%; display: block; overflow: visible; }
+.splash-box svg g { opacity: 0; transition: opacity 170ms ease; }
 
 /* press-and-hold target — the seal's square (positioned from JS) */
 .splash-hit {
@@ -541,7 +547,6 @@ ul, ol { list-style: none; }
 }
 .splash-hit:focus-visible { outline: 2px solid #ff0000; outline-offset: 6px; }
 
-/* functional inputs over the login box in the last frame */
 .splash-fields { position: static; }
 .splash-field-input {
   border: 0; background: transparent; border-radius: 0;

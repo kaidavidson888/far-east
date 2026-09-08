@@ -12,7 +12,7 @@
     "seed": "node scripts/seed-catalog.mjs",
     "demo": "node scripts/demo-data.mjs",
     "verify:db": "node .verify/run.mjs",
-    "build:splash": "node scripts/build-splash-frames.mjs",
+    "build:splash": "node scripts/split-loginbox.mjs && node scripts/build-splash-frames.mjs",
     "set-db-password": "node scripts/set-db-password.mjs",
     "link-supabase": "node scripts/link-supabase.mjs",
     "diagnose-db": "node scripts/diagnose-db.mjs"

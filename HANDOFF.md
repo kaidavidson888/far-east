@@ -86,19 +86,30 @@ find the Edge crash instead, restoring the middleware is the cleaner solution.
   count badge, always visible on mobile) · person icon (desktop only; burger on mobile).
 - **Dates:** US format, pinned to `America/New_York`, formatted server-side.
 - **Newsletter replaced by an Instagram band** (placeholder URL/handle in `app/page.tsx`).
-- **Homepage splash** (`components/SplashScreen.tsx` + `lib/splashFrames.ts`): a white
-  full-screen overlay on `/` (every visit, no `sessionStorage`). The seal is a press-and-hold
-  button (hit area = the seal's square). Hold to grow a login animation forward, release to
-  retract it, hold the full 4s to latch on the last frame with a real `loginAction` form drawn
-  over it; re-press mid-retract resumes forward. `prefers-reduced-motion` → one press jumps
-  straight to the form. Frames are pre-baked: `npm run build:splash` decodes
-  `scripts/assets/login-source.gif`, recolours it (red `#FF0000`→`#FF3131`, black→`#000`,
-  white kept) and writes `public/splash/frames/f000..f100.webp` — commit the output, nothing
-  decodes a GIF at runtime. `gifuct-js`/`pngjs`/`sharp` are devDependencies for that script.
-  **Open:** this gates the homepage behind a login every visit, which is in tension with
-  CLAUDE.md's "browsing is open, no account needed" — there's a "Just browsing" link to
-  `/catalog` as the escape hatch, but revisit. On wide desktop the cover-fill zooms the art
-  in hard (fine on phones). Still on branch `splash-screen`, not merged.
+- **Homepage splash** (`components/SplashScreen.tsx` + `lib/splashFrames.ts` +
+  `components/splash/SplashLoginFields.tsx`): a white full-screen overlay on `/` (every visit,
+  no `sessionStorage`). The seal is a press-and-hold button (hit area = the seal's square).
+  Hold to grow the login animation forward, release to retract, hold the full 4s to latch on
+  the last frame with a real `loginAction` form (redirects to `/`); re-press mid-retract
+  resumes forward. `prefers-reduced-motion` → one press jumps straight to the form.
+  - **Frames** are pre-baked by `npm run build:splash` (which now runs `split-loginbox.mjs`
+    first, then `build-splash-frames.mjs`): decodes `scripts/assets/login-source.gif`,
+    recolours (red → true `#FF0000`, black → `#000`, white kept), sharpens, ramps the seal
+    down as it drains and the clouds up to 100%, writes `public/splash/frames/f000..f100.webp`.
+    Commit the output; nothing decodes a GIF at runtime. `gifuct-js`/`pngjs`/`sharp` are
+    devDependencies.
+  - **Edge fill / perspective:** `paint()` draws the whole frame 1:1 in the centre (untouched
+    = the original animation) and mirror-repeats its left/right cloud strips (`SW`, no logo in
+    them) outward to the screen edges, each strip `P`× larger for depth. Seamless, no
+    cross-fades. On a phone the frame fills the width so none of this shows.
+  - **Login box** is `public/splash/loginbox-parts.svg` — `split-loginbox.mjs` splits the
+    supplied `scripts/assets/login-box-vector.svg` into `<g>` per part (border / line-/label-/
+    cloud- × email/password/submit) so each opacity is driven independently in `boxOpacity()`.
+    The baked box under it is cleared with a soft white rect at paint time. Idle: border 100,
+    lines/labels 50, ☁ 100. Field focused: lines 100, submit row 80, labels/☁ 10 → 0 once
+    typing, red design (canvas) 20. Submit hovered/focused: that row 100.
+  - **Open:** gates the homepage behind a login every visit, in tension with CLAUDE.md's
+    "browsing is open" — revisit. Still on branch `splash-screen`, not merged.
 - **Node:** pinned to 24 (`.nvmrc` = `24`, `engines.node` = `24.x`). Vercel ignores `.nvmrc`
   and reads `engines.node`; the old `>=20.9` range mapped to "latest 24.x" on Vercel anyway
   (their default), so local and deploy now agree explicitly. Vercel deprecates Node 20 on

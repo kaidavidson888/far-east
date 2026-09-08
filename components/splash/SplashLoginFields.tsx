@@ -5,45 +5,53 @@ import { loginAction, type FormState } from '@/app/actions';
 import { SPLASH_GEOM } from '@/lib/splashFrames';
 import type { FocusField } from '../SplashScreen';
 
-type Layout = { x: number; y: number; w: number; h: number };
+type Box = { x: number; y: number; w: number; h: number };
 type Row = 'email' | 'password' | 'submit';
 
-const SHRINK_AFTER = 12;
+const SHRINK_AFTER = 14;
 const MIN = 0.42;
 const fit = (len: number) => (len <= SHRINK_AFTER ? 1 : Math.max(MIN, SHRINK_AFTER / len));
 
 /**
- * Transparent functional inputs laid over the login box in the animation's last
- * frame. Typed text is Cormorant Unicase, no caret, its baseline on the dashed
- * line, starting at the row's tick. The dimming is painted onto the canvas by
- * the parent (the box art is baked into the frame).
+ * Transparent functional inputs over the vector login box, positioned in box
+ * space. Typed text is Cormorant Unicase, no caret, starting at the left of the
+ * row's dashed line at the same size as the box's labels, its baseline just
+ * above the line. "create account/login" is a submit button — it signs the user
+ * in and sends them to the homepage.
  */
 export function SplashLoginFields({
-  layout,
+  box,
   onFocusField,
+  onSubmitActive,
 }: {
-  layout: Layout;
-  onFocusField: (f: FocusField) => void;
+  box: Box;
+  onFocusField: (f: FocusField, typed: boolean) => void;
+  onSubmitActive: (v: boolean) => void;
 }) {
   const [state, action] = useActionState<FormState, FormData>(loginAction, null);
   const [email, setEmail] = useState('');
   const [pw, setPw] = useState('');
+  const [focus, setFocus] = useState<Row | null>(null);
 
   const { rows } = SPLASH_GEOM;
-  const px = (fx: number) => layout.x + fx * layout.w;
-  const py = (fy: number) => layout.y + fy * layout.h;
-  const base = Math.max(10, layout.w * 0.028);
+  const bx = (fx: number) => box.x + fx * box.w;
+  const by = (fy: number) => box.y + fy * box.h;
+  const labelSize = box.h * 0.1; // ≈ the box's own label cap height
 
-  // Start the text at the left end of the dashed line; sit it so the bottom of
-  // the glyphs is just above the line.
-  const rowStyle = (r: Row, len: number): React.CSSProperties => {
-    const rw = rows[r];
-    const size = base * fit(len);
+  // Tell the splash which field is in use and whether it has any text yet
+  // (box labels sit at 10% on focus, 0 once typing starts).
+  const report = (f: Row | null, e: string, p: string) => {
+    if (f === 'submit') return; // the button drives onSubmitActive itself
+    onFocusField(f, (f === 'email' && e.length > 0) || (f === 'password' && p.length > 0));
+  };
+
+  const inputStyle = (r: Row, len: number): React.CSSProperties => {
+    const size = labelSize * fit(len);
     return {
       position: 'fixed',
-      left: px(rw.lineX0),
-      top: py(rw.dashY) - size - Math.max(1, size * 0.08),
-      width: px(rw.endX) - px(rw.lineX0),
+      left: bx(rows[r].lineX0),
+      top: by(rows[r].dashY) - size - Math.max(1, size * 0.06),
+      width: bx(rows[r].endX) - bx(rows[r].lineX0),
       height: size,
       fontSize: size,
       lineHeight: 1,
@@ -52,35 +60,45 @@ export function SplashLoginFields({
 
   return (
     <form className="splash-fields" action={action}>
-      <input type="hidden" name="next" value="/favorites" />
+      <input type="hidden" name="next" value="/" />
 
       <input
-        className="splash-field-input" style={rowStyle('email', email.length)}
+        className="splash-field-input" style={inputStyle('email', email.length)}
         name="email" type="email" autoComplete="email" required
-        value={email} onChange={(e) => setEmail(e.target.value)}
-        onFocus={() => onFocusField('email')} onBlur={() => onFocusField(null)} aria-label="Email"
+        value={email}
+        onChange={(e) => { setEmail(e.target.value); if (focus === 'email') report('email', e.target.value, pw); }}
+        onFocus={() => { setFocus('email'); report('email', email, pw); }}
+        onBlur={() => { setFocus(null); report(null, email, pw); }}
+        aria-label="Email"
       />
       <input
-        className="splash-field-input" style={rowStyle('password', pw.length)}
+        className="splash-field-input" style={inputStyle('password', pw.length)}
         name="password" type="password" autoComplete="current-password" required
-        value={pw} onChange={(e) => setPw(e.target.value)}
-        onFocus={() => onFocusField('password')} onBlur={() => onFocusField(null)} aria-label="Password"
+        value={pw}
+        onChange={(e) => { setPw(e.target.value); if (focus === 'password') report('password', email, e.target.value); }}
+        onFocus={() => { setFocus('password'); report('password', email, pw); }}
+        onBlur={() => { setFocus(null); report(null, email, pw); }}
+        aria-label="Password"
       />
       <button
         type="submit" className="splash-field-submit"
         style={{
           position: 'fixed',
-          left: px(rows.submit.lineX0), top: py(rows.submit.yTop),
-          width: px(rows.submit.endX) - px(rows.submit.lineX0),
-          height: py(rows.submit.yBot) - py(rows.submit.yTop),
+          left: bx(rows.submit.lineX0 - 0.02), top: by(rows.submit.yTop),
+          width: bx(rows.submit.endX) - bx(rows.submit.lineX0 - 0.02),
+          height: by(rows.submit.yBot) - by(rows.submit.yTop),
         }}
-        onFocus={() => onFocusField('submit')} onBlur={() => onFocusField(null)}
+        onPointerEnter={() => onSubmitActive(true)}
+        onPointerLeave={() => onSubmitActive(false)}
+        onFocus={() => onSubmitActive(true)}
+        onBlur={() => onSubmitActive(false)}
       >
         <span className="sr-only">Create account or log in</span>
       </button>
 
       {state?.error ? (
-        <p className="splash-fields-error" style={{ position: 'fixed', left: px(0.28), top: py(0.6), width: px(0.72) - px(0.28) }}>
+        <p className="splash-fields-error"
+          style={{ position: 'fixed', left: bx(0), top: by(1) + 6, width: box.w }}>
           {state.error}
         </p>
       ) : null}

@@ -63,8 +63,7 @@ function process(d, n) {
     } else if (r === max) {
       const cov = crisp(1 - (g + b) / 510);
       const cw = centreWeight(((i >> 2) % W) / W, (((i >> 2) / W) | 0) / H);
-      // centre red follows the draining panel (then the box border at cloud
-      // opacity); outside it follows the rising clouds.
+      // centre red follows the draining panel; outside it follows the rising clouds.
       const alpha = cw > 0 ? Math.max(sealFade, cloudRise) * cw + cloudRise * (1 - cw) : cloudRise;
       const a = cov * clamp01(alpha);
       d[i] = 255 + (RED[0] - 255) * a;

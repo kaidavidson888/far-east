@@ -1,7 +1,8 @@
 // The splash plays a faithful copy of scripts/assets/login-source.gif, baked to
 // scrubbable WebP stills by `npm run build:splash` (recoloured, sharpened, with
 // the red seal fading as it drains and the red clouds rising to full opacity).
-// Nothing decodes a GIF at runtime.
+// Nothing decodes a GIF at runtime. The login-box footprint is cleared to white
+// on the canvas at paint time (not baked) so mirrored edge tiles stay clean.
 //
 // 101 frames, 40ms apart — exactly the source timing, 4.00s.
 
@@ -15,14 +16,17 @@ export const SPLASH_GEOM = {
   frame: { w: 720, h: 1600 },
   // frame 0: the seal panel — the press-and-hold target, centred.
   seal: { cx: 0.5, cy: 0.5, size: 0.34 }, // fraction of frame width
-  // last frame: the login box and its rows (fractions of the frame).
-  box: { x0: 0.332, x1: 0.662, y0: 0.42, y1: 0.578 },
-  // per row: dashY = the dotted line; lineX0..endX = the line's extent (typed
-  // text starts at lineX0); wordX1 = end of the label; cloudX1 = end of the ☁.
+  // the login box's footprint (fractions of the frame): cleared to white on the
+  // canvas at paint time, and where loginbox-parts.svg is positioned. Near-square
+  // (~240×250 of 720×1600) so the square-ish vector barely stretches.
+  box: { x0: 0.331, x1: 0.667, y0: 0.423, y1: 0.569 },
+  // per row, as fractions of the BOX (0..1 within it, = loginbox-parts.svg
+  // viewBox fractions): the dashed line's y and its left/right x. Typed text
+  // starts at lineX0 with its baseline just above dashY.
   rows: {
-    email:    { dashY: 0.4585, lineX0: 0.367, endX: 0.636, wordX1: 0.45, cloudX1: 0.502, yTop: 0.432, yBot: 0.478 },
-    password: { dashY: 0.5090, lineX0: 0.367, endX: 0.636, wordX1: 0.52, cloudX1: 0.573, yTop: 0.483, yBot: 0.529 },
-    submit:   { dashY: 0.5610, lineX0: 0.367, endX: 0.636, wordX1: 0.59, cloudX1: 0.636, yTop: 0.535, yBot: 0.581 },
+    email:    { dashY: 0.180, lineX0: 0.076, endX: 0.96, yTop: 0.03, yBot: 0.24 },
+    password: { dashY: 0.572, lineX0: 0.076, endX: 0.96, yTop: 0.42, yBot: 0.63 },
+    submit:   { dashY: 0.961, lineX0: 0.076, endX: 0.96, yTop: 0.82, yBot: 1.0 },
   },
 };
 
