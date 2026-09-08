@@ -1,10 +1,10 @@
 /**
- * Bakes the splash animation (scripts/assets/login-source.gif) into a full set
- * of scrubbable WebP stills — a faithful copy of the original, changed in:
- *   - colour:  red → #FF0000 (true red), black → #000000, white kept
+ * Bakes the splash animation (scripts/assets/login-source.gif) into scrubbable
+ * WebP stills — a faithful copy of the original, changed only in:
+ *   - colour:   red → #FF0000, black → #000000, white kept
  *   - sharpness: full resolution + a light unsharp pass
- *   - opacity:  the red seal panel fades as it drains; the red cloud design
- *               rises from faint to 100% over the run (frames 0 → 100)
+ *   - opacity:   the red seal panel fades as it drains; the red cloud design
+ *                rises from faint to 100% over the run (frames 0 → 100)
  *
  *   npm run build:splash
  *
@@ -25,13 +25,10 @@ const QUALITY = 80;
 const RED = [0xff, 0x00, 0x00];
 const INK = [0x00, 0x00, 0x00];
 
-// Centre region (fractions of the frame) — the seal panel / login box live here;
-// clouds are everything outside it.
-const C = { x0: 0.29, x1: 0.71, y0: 0.4, y1: 0.59, feather: 0.04 };
+// The seal panel / login box live here; clouds are everything outside it.
+const C = { x0: 0.29, x1: 0.71, y0: 0.4, y1: 0.59, feather: 0.045 };
 
 const clamp01 = (v) => (v < 0 ? 0 : v > 1 ? 1 : v);
-// Steepen anti-aliased coverage so faint pixels snap toward paper — sharper
-// line-work without changing the art.
 const crisp = (c) => {
   const t = clamp01(c);
   return t < 0.16 ? 0 : t > 0.92 ? 1 : (t - 0.16) / 0.76;
@@ -42,7 +39,6 @@ const frames = decompressFrames(gif, true);
 const W = gif.lsd.width, H = gif.lsd.height;
 const LAST = frames.length - 1;
 
-// centre membership 0..1 (1 = fully inside), soft-edged
 function centreWeight(fx, fy) {
   const sx = Math.min((fx - (C.x0 - C.feather)) / C.feather, ((C.x1 + C.feather) - fx) / C.feather, 1);
   const sy = Math.min((fy - (C.y0 - C.feather)) / C.feather, ((C.y1 + C.feather) - fy) / C.feather, 1);
@@ -50,34 +46,30 @@ function centreWeight(fx, fy) {
 }
 
 function process(d, n) {
-  const p = n / LAST; // 0..1 through the run
-  const cloudRise = clamp01(0.1 + 0.9 * Math.pow(p, 0.7)); // faint → 100% at 4s
+  const p = n / LAST;
+  const cloudRise = clamp01(0.12 + 0.88 * Math.pow(p, 0.7)); // faint → 100% at 4s
+  const sealFade = clamp01(1 - p / 0.44); // the draining panel fades out by ~frame 44
   for (let i = 0; i < d.length; i += 4) {
     const r = d[i], g = d[i + 1], b = d[i + 2];
     const max = Math.max(r, g, b);
     const chroma = max - Math.min(r, g, b);
     if (max > 250 && chroma < 8) continue; // white paper
 
-    const px = (i >> 2) % W;
-    const py = (i >> 2) / W | 0;
-    // Knock the centre out to white — the seal, outline squares and login box
-    // are drawn there as vector on top; only the clouds come from these frames.
-    const keep = 1 - centreWeight(px / W, py / H);
-    if (keep <= 0) {
-      d[i] = 255; d[i + 1] = 255; d[i + 2] = 255;
-      continue;
-    }
-
     if (chroma < 24) {
-      const cov = crisp(1 - max / 255) * keep; // achromatic → ink
+      const cov = crisp(1 - max / 255);
       d[i] = 255 + (INK[0] - 255) * cov;
       d[i + 1] = 255 + (INK[1] - 255) * cov;
       d[i + 2] = 255 + (INK[2] - 255) * cov;
     } else if (r === max) {
-      const cov = crisp(1 - (g + b) / 510) * cloudRise * keep; // red clouds, rising
-      d[i] = 255 + (RED[0] - 255) * cov;
-      d[i + 1] = 255 + (RED[1] - 255) * cov;
-      d[i + 2] = 255 + (RED[2] - 255) * cov;
+      const cov = crisp(1 - (g + b) / 510);
+      const cw = centreWeight(((i >> 2) % W) / W, (((i >> 2) / W) | 0) / H);
+      // centre red follows the draining panel (then the box border at cloud
+      // opacity); outside it follows the rising clouds.
+      const alpha = cw > 0 ? Math.max(sealFade, cloudRise) * cw + cloudRise * (1 - cw) : cloudRise;
+      const a = cov * clamp01(alpha);
+      d[i] = 255 + (RED[0] - 255) * a;
+      d[i + 1] = 255 + (RED[1] - 255) * a;
+      d[i + 2] = 255 + (RED[2] - 255) * a;
     }
   }
 }

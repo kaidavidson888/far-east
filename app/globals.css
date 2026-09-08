@@ -518,69 +518,41 @@ ul, ol { list-style: none; }
 .site-footer .btn-icon:hover { background: #222222; }
 
 /* ---------- Splash ---------- */
-/* Recoloured cloud animation (canvas) with a vector composition on top that
-   never scales with it. Above the age gate (z-index 100). */
+/* A recoloured, sharpened copy of the source animation played on a canvas,
+   with the cloud pattern growing outward toward the edges. Above the age gate
+   (z-index 100). */
 .splash {
   position: fixed; inset: 0; z-index: 200;
   overflow: hidden; background: #ffffff;
   touch-action: none;
-  --splash-red: #ff0000;
 }
 .splash-canvas {
   position: absolute; inset: 0; width: 100%; height: 100%;
   display: block;
-  transition: opacity 240ms ease;
 }
-/* the red design drops to 20% while the login box is being used */
-.splash-canvas[data-typing="true"] { opacity: 0.2; }
+/* the red design → 20% while a field is focused is painted onto the canvas
+   (paint() in SplashScreen) so the box itself stays lit */
 
-/* the centred vector composition (position + size set from JS) */
-.splash-stage { position: fixed; --splash-rule: 2px; }
-.splash-stage > *, .splash-box > * { position: absolute; inset: 0; }
-
-.splash-logo, .splash-box-face { width: 100%; height: 100%; }
-.splash-logo svg, .splash-box-face svg { width: 100%; height: 100%; display: block; }
-
-.splash-ob {
-  border: var(--splash-rule) solid;
-  opacity: 0;
-}
-.splash-ob-red { border-color: var(--splash-red); }
-.splash-ob-black { border-color: #000000; }
-
+/* press-and-hold target — the seal's square (positioned from JS) */
 .splash-hit {
   position: fixed;
   margin: 0; padding: 0; background: transparent; border: 0;
   cursor: pointer; -webkit-tap-highlight-color: transparent;
 }
-.splash-hit:focus-visible { outline: 2px solid var(--splash-red); outline-offset: 6px; }
+.splash-hit:focus-visible { outline: 2px solid #ff0000; outline-offset: 6px; }
 
-/* login box */
-.splash-box { opacity: 0; }
-.splash-box-face { background: #ffffff; }
-.splash-box-border { border: var(--splash-rule) solid var(--splash-red); }
-
-.splash-fields { inset: 0; }
-.splash-fields > * { position: absolute; }
-.splash-rule {
-  height: 0;
-  border-top: 0 dashed #000000;
-  transform: translateY(-50%);
-  transition: opacity 140ms ease;
-}
-.splash-label-wash {
-  background: #ffffff;
-  transition: opacity 140ms ease;
-}
+/* functional inputs over the login box in the last frame */
+.splash-fields { position: static; }
 .splash-field-input {
   border: 0; background: transparent; border-radius: 0;
   font-family: "Cormorant Unicase", Georgia, "Times New Roman", serif;
-  color: #000000; caret-color: transparent;
-  line-height: 1; padding: 0;
+  line-height: 1; color: #000000;
+  caret-color: transparent;
+  padding: 0;
 }
 .splash-field-input:focus { outline: none; }
 .splash-field-submit { border: 0; background: transparent; cursor: pointer; }
 .splash-fields-error {
-  left: 4%; right: 4%; bottom: -1.5em;
-  font-family: var(--font-display); font-size: 0.72em; color: #cc0000; text-align: center;
+  font-family: var(--font-display); font-size: clamp(10px, 1.5vw, 13px);
+  color: #cc0000; text-align: center;
 }

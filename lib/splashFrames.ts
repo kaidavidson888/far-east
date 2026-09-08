@@ -1,7 +1,7 @@
-// The splash: recoloured, sharpened cloud frames from the source animation with
-// their centre knocked out, plus vector overlays (logo, outline squares, login
-// box) drawn on top at the source scale. `npm run build:splash` bakes the
-// frames — nothing decodes a GIF at runtime.
+// The splash plays a faithful copy of scripts/assets/login-source.gif, baked to
+// scrubbable WebP stills by `npm run build:splash` (recoloured, sharpened, with
+// the red seal fading as it drains and the red clouds rising to full opacity).
+// Nothing decodes a GIF at runtime.
 //
 // 101 frames, 40ms apart — exactly the source timing, 4.00s.
 
@@ -9,16 +9,20 @@ export const SPLASH_FRAME_MS = 40;
 export const SPLASH_FRAME_COUNT = 101;
 export const SPLASH_DURATION_MS = (SPLASH_FRAME_COUNT - 1) * SPLASH_FRAME_MS; // 4000
 
+// Regions we care about, as fractions of the 720×1600 source frame (measured
+// off the baked last frame).
 export const SPLASH_GEOM = {
   frame: { w: 720, h: 1600 },
-  // The centred square the vector elements occupy, as a fraction of the frame.
-  stage: 0.335,
-  // Rows inside the login box, as fractions of the stage (loginbox.svg viewBox).
-  // labelX1 = right end of that row's label + cloud (where typing may begin).
+  // frame 0: the seal panel — the press-and-hold target, centred.
+  seal: { cx: 0.5, cy: 0.5, size: 0.34 }, // fraction of frame width
+  // last frame: the login box and its rows (fractions of the frame).
+  box: { x0: 0.34, x1: 0.664, y0: 0.426, y1: 0.577 },
+  // each row's dashed line: y, the tick where typing begins, and the end;
+  // yTop/yBot bound the row for the focus dimming; labelX1 = end of label+cloud.
   rows: {
-    email: { dashY: 0.135, tickX: 0.04, endX: 0.95, yTop: 0.04, yBot: 0.2, labelX1: 0.45 },
-    password: { dashY: 0.515, tickX: 0.04, endX: 0.95, yTop: 0.42, yBot: 0.58, labelX1: 0.7 },
-    submit: { dashY: 0.895, tickX: 0.04, endX: 0.95, yTop: 0.8, yBot: 0.96, labelX1: 0.82 },
+    email: { dashY: 0.458, tickX: 0.375, endX: 0.64, yTop: 0.44, yBot: 0.472, labelX1: 0.475 },
+    password: { dashY: 0.5125, tickX: 0.375, endX: 0.64, yTop: 0.495, yBot: 0.527, labelX1: 0.53 },
+    submit: { dashY: 0.5625, tickX: 0.375, endX: 0.64, yTop: 0.545, yBot: 0.578, labelX1: 0.58 },
   },
 };
 
@@ -52,7 +56,7 @@ export function frameAt(ms: number): number {
   return i;
 }
 
-/** The frame contained (whole frame visible) inside a w×h box, centred. */
+/** The whole frame fit inside a w×h box (contain) and centred — source scale. */
 export function coverRect(boxW: number, boxH: number) {
   const { w: iw, h: ih } = SPLASH_GEOM.frame;
   const scale = Math.min(boxW / iw, boxH / ih);
