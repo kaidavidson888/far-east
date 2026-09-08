@@ -155,6 +155,10 @@ export function SplashScreen() {
           // their red in (cloudRise in build-splash-frames.mjs). Match it, or the
           // margins sit at full strength beside a centre that is still ~66%.
           const cloudRise = inForm ? 1 : clamp01(0.12 + 0.88 * Math.pow(p, 0.7));
+          // 0 while the design is still travelling, 1 once it has linked up to
+          // the screen edges — blends the distance taper away so the extensions
+          // end at parity with the centre.
+          const connect = inForm ? 1 : smooth(rampUp(p, 0.8, 1));
           // each side, self-contained — a second destination-in over the whole
           // offscreen would wipe the first side's result.
           const drawSide = (dir: -1 | 1, prof: Float32Array) => {
@@ -170,17 +174,23 @@ export function SplashScreen() {
             octx.globalCompositeOperation = 'destination-in';
             octx.drawImage(maskCanvas(prof), 0, 0, 1, prof.length, mx, fy, mw, r.h);
 
-            // Opacity is tied to the spread: alpha tapers from the frame edge
-            // out to the advancing front, so the margin thickens up as `reach`
-            // grows instead of arriving as a flat slab of uniform opacity. The
-            // per-band profile above still shapes *where* it reaches.
-            if (!inForm) {
+            // Opacity is tied to the spread. Alpha tapers from the frame edge out
+            // to the advancing front, so the margin thickens as `reach` grows
+            // rather than arriving as a slab; then `connect` — which rises only
+            // once the design has actually reached the edges — relaxes the taper
+            // away so the extensions finish at the same strength as the centre.
+            // At p = 1 connect is 1, so this is continuous into the settled state
+            // instead of snapping to full on latch.
+            {
               const eX = dir < 0 ? r.x : r.x + r.w;
-              const span = Math.max(10, reach);
-              const g = octx.createLinearGradient(eX, 0, eX + dir * span, 0);
-              for (let s = 0; s <= 8; s += 1) {
-                const t = s / 8;
-                g.addColorStop(t, `rgba(0,0,0,${Math.pow(1 - t, 1.5).toFixed(4)})`);
+              const g = octx.createLinearGradient(eX, 0, eX + dir * Math.max(10, mw), 0);
+              const N = 10;
+              for (let s = 0; s <= N; s += 1) {
+                const f = s / N;
+                const d = f * mw; // distance out from the frame edge
+                const taper = reach > 0 && d <= reach ? Math.pow(1 - d / reach, 1.5) : 0;
+                const a = taper + (1 - taper) * connect;
+                g.addColorStop(f, `rgba(0,0,0,${a.toFixed(4)})`);
               }
               octx.fillStyle = g;
               octx.fillRect(mx, 0, mw, vh);
