@@ -49,7 +49,7 @@ export function SplashLoginFields({
   const { parts } = SPLASH_GEOM;
   // the black content (dashes included) sits low in the red outline box; nudge
   // the whole overlay up so it's equidistant from every side of it
-  const OX = box.w * 0;
+  const OX = box.w * -0.015;
   const OY = box.h * -0.024;
   const bx = (fx: number) => box.x + fx * box.w + OX;
   const by = (fy: number) => box.y + fy * box.h + OY;
