@@ -37,13 +37,15 @@ export const SPLASH_GEOM = {
   // baked box is already dead-centre. loginbox-parts.svg is stretched into this.
   box: { x0: 0.3312, x1: 0.6672, y0: 0.4241, y1: 0.5752 },
   boxDy: 0, // vertical nudge of the drawn frame (fraction of height)
-  // per row, as fractions of the BOX (= loginbox-parts.svg viewBox fractions,
-  // printed by split-loginbox.mjs): the dashed line's y and its left/right x.
-  // Typed text starts at lineX0, baseline just above dashY.
-  rows: {
-    email:    { dashY: 0.156, lineX0: 0.069, endX: 0.976 },
-    password: { dashY: 0.565, lineX0: 0.051, endX: 0.963 },
-    submit:   { dashY: 0.956, lineX0: 0.058, endX: 0.974 },
+  // Per row, as fractions of the BOX — measured off the black baked into f100
+  // (the reference the vector overlay must match 1:1). Three non-overlapping
+  // sprite windows of blackbox.webp: label x[x0..mid], ☁ x[mid..cloudX1] (both
+  // y[y0..y1]), dashed line x[x0..dashX1] y[dY0..dY1]. Typed text sits on the
+  // dash: left x0, baseline just above dY0.
+  parts: {
+    email:    { x0: 0.100, mid: 0.350, cloudX1: 0.495, dashX1: 0.900, y0: 0.146, y1: 0.220, dY0: 0.218, dY1: 0.238 },
+    password: { x0: 0.100, mid: 0.565, cloudX1: 0.702, dashX1: 0.892, y0: 0.480, y1: 0.555, dY0: 0.552, dY1: 0.573 },
+    submit:   { x0: 0.100, mid: 0.758, cloudX1: 0.900, dashX1: 0.900, y0: 0.800, y1: 0.889, dY0: 0.887, dY1: 0.908 },
   },
 };
 
@@ -52,6 +54,7 @@ const src = (i: number) => `/splash/frames/f${String(i).padStart(3, '0')}.webp`;
 let frames: HTMLImageElement[] | null = null;
 let edge: HTMLImageElement | null = null;
 let settle: HTMLImageElement | null = null;
+let blackbox: HTMLImageElement | null = null;
 
 export function splashFrames(): HTMLImageElement[] {
   if (!frames) {
@@ -85,11 +88,22 @@ export function settleImage(): HTMLImageElement {
   return settle;
 }
 
+/** The box's black content, transparent bg — the 1:1 login-box overlay sprite. */
+export function blackboxImage(): HTMLImageElement {
+  if (!blackbox) {
+    blackbox = new Image();
+    blackbox.decoding = 'async';
+    blackbox.src = '/splash/blackbox.webp';
+  }
+  return blackbox;
+}
+
 export function preloadSplashFrames(): Promise<void> {
   const imgs = splashFrames();
   imgs.forEach((img) => void img.decode().catch(() => {}));
   void edgeImage().decode().catch(() => {});
   void settleImage().decode().catch(() => {});
+  void blackboxImage().decode().catch(() => {});
   return imgs[0].decode().catch(() => {});
 }
 

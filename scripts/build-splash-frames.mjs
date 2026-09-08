@@ -7,11 +7,13 @@
  *                rises from faint to 100% over the run (frames 0 → 100)
  *
  * The frames keep the original login box's red outline. Also writes:
- *   public/splash/edge.webp   the final red pattern, box reflected over, tiled
- *                             left/right at paint time (it tiles horizontally)
- *   public/splash/settle.webp the last frame with every black part at 0 —
- *                             cross-faded in on latch so the baked black goes
- *                             to 0 without a white patch over it
+ *   edge.webp     the final red pattern, box reflected over, tiled left/right
+ *                 at paint time (it tiles horizontally)
+ *   settle.webp   the last frame with every black part at 0 — cross-faded in on
+ *                 latch so the baked black goes to 0 without a white patch
+ *   blackbox.webp the box's black content only (transparent bg), cropped to the
+ *                 box — SplashLoginFields shows per-part windows of it, so the
+ *                 crisp overlay is pixel-exact with the baked box
  *
  *   npm run build:splash   (runs split-loginbox.mjs first)
  *
@@ -201,6 +203,40 @@ await sharp(PNG.sync.write(stpng))
   .sharpen({ sigma: 0.5 })
   .webp({ quality: QUALITY })
   .toFile('public/splash/settle.webp');
+
+// blackbox.webp — the login box's black content (EMAIL/PASSWORD/create-account
+// labels, the ☁ glyphs, the dashed lines + left tick) as one transparent sprite
+// cropped to the box region, at the SAME resize + sharpen as the frames.
+// SplashLoginFields shows per-part windows of it at the per-part opacities, so
+// the crisp overlay is pixel-exact with the box baked into the frames (which
+// settle.webp fades out underneath it). Box crop == SPLASH_GEOM.box.
+const BOX = { x0: 0.3312, x1: 0.6672, y0: 0.4241, y1: 0.5752 };
+const ink = Buffer.from(acc);
+for (let i = 0; i < ink.length; i += 4) {
+  const max = Math.max(ink[i], ink[i + 1], ink[i + 2]);
+  const chroma = max - Math.min(ink[i], ink[i + 1], ink[i + 2]);
+  if (max < 245 && chroma < 28) {
+    const cov = crisp(1 - max / 255);
+    ink[i] = ink[i + 1] = ink[i + 2] = 0;
+    ink[i + 3] = Math.round(cov * 255);
+  } else {
+    ink[i + 3] = 0;
+  }
+}
+const ipng = new PNG({ width: W, height: H });
+ink.copy(ipng.data);
+const RH = Math.round((WIDTH * H) / W);
+await sharp(PNG.sync.write(ipng))
+  .resize({ width: WIDTH })
+  .sharpen({ sigma: 0.5 })
+  .extract({
+    left: Math.round(BOX.x0 * WIDTH),
+    top: Math.round(BOX.y0 * RH),
+    width: Math.round((BOX.x1 - BOX.x0) * WIDTH),
+    height: Math.round((BOX.y1 - BOX.y0) * RH),
+  })
+  .webp({ quality: 94, alphaQuality: 100 })
+  .toFile('public/splash/blackbox.webp');
 
 // smooth + monotonic (spread only grows), rounded
 let mx = 0;

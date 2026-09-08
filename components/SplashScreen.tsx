@@ -29,8 +29,8 @@ const clamp01 = (v: number) => (v < 0 ? 0 : v > 1 ? 1 : v);
  * frame's own edge has grown so the margins branch outward like water. A radial
  * veil keeps the centre faint and the edges bold, easing in as it grows. Once
  * the animation latches, settle.webp cross-fades over the frame (all the baked
- * black → 0) and SplashLoginFields lays the login box vector (black, no red
- * border) + working inputs inside the red outline box.
+ * black → 0) and SplashLoginFields shows the box's own black content back —
+ * pixel-exact, from blackbox.webp — with working inputs over it.
  */
 export function SplashScreen() {
   const [phase, setPhaseState] = useState<Phase>('logo');
@@ -47,6 +47,7 @@ export function SplashScreen() {
   const edgeRef = useRef<HTMLImageElement | null>(null);
   const settleRef = useRef<HTMLImageElement | null>(null);
   const offRef = useRef<HTMLCanvasElement | null>(null);
+  const fieldOnRef = useRef(false); // a splash text field is focused
   const posRef = useRef(0);
   const dirRef = useRef(0);
   const pressedRef = useRef(false);
@@ -213,15 +214,17 @@ export function SplashScreen() {
     // Permanent "faint centre, bold edges": a radial veil of the page colour
     // that eases in as the design grows and stays for the resting state. The
     // login box sits in a calm halo; the red intensifies to full where it meets
-    // the screen edge.
+    // the screen edge. While a text field is focused the very centre clears so
+    // the red outline box reads at 100%.
     const vig = inForm ? 1 : smooth(rampUp(p, 0.18, 1));
     if (vig > 0.005) {
       const cx = vw / 2;
       const cy = vh / 2;
       const maxR = Math.hypot(vw, vh) / 2;
+      const lit = fieldOnRef.current;
       const g = ctx.createRadialGradient(cx, cy, Math.min(vw, vh) * 0.09, cx, cy, maxR);
-      g.addColorStop(0, `rgba(252,252,252,${0.34 * vig})`); // box: dimmed but legible
-      g.addColorStop(0.26, `rgba(252,252,252,${0.52 * vig})`); // the calm halo around it
+      g.addColorStop(0, `rgba(252,252,252,${(lit ? 0 : 0.34) * vig})`); // box outline
+      g.addColorStop(0.26, `rgba(252,252,252,${(lit ? 0.12 : 0.52) * vig})`); // halo
       g.addColorStop(0.72, `rgba(252,252,252,${0.05 * vig})`);
       g.addColorStop(1, 'rgba(252,252,252,0)'); // screen edge: full strength
       ctx.fillStyle = g;
@@ -350,11 +353,19 @@ export function SplashScreen() {
     run();
   }, [run]);
 
+  // the form tells us when a text field is focused so the vignette can clear the
+  // centre (red outline box → 100%); repaint since the rAF loop has stopped
+  const onFieldFocus = useCallback((on: boolean) => {
+    if (fieldOnRef.current === on) return;
+    fieldOnRef.current = on;
+    paint(posRef.current || SPLASH_DURATION_MS);
+  }, [paint]);
+
   return (
     <div className="splash" role="dialog" aria-label="Enter Far East" data-phase={phase}>
       <canvas ref={canvasRef} className="splash-canvas" aria-hidden="true" />
 
-      {phase === 'form' && <SplashLoginFields box={box} />}
+      {phase === 'form' && <SplashLoginFields box={box} onFieldFocus={onFieldFocus} />}
 
       {phase !== 'form' && (
         <button
