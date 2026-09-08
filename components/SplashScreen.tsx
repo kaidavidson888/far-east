@@ -14,16 +14,12 @@ import {
 type Phase = 'logo' | 'play' | 'form';
 export type FocusField = 'email' | 'password' | 'submit' | null;
 
-// Concentric bands of the frame at growing scale — the pattern reads larger
-// toward the screen edge, for depth. [scale, featherStart×, opaqueBy×] as
-// multiples of the contained frame's half-width; each band is opaque from
-// `opaqueBy` outward and feathers in over the inner edge to blend with the
-// smaller band (and, for the innermost, with the composition itself).
-const BANDS: Array<[number, number, number]> = [
-  [1.55, 0.78, 1.28],
-  [2.5, 1.35, 2.1],
-  [4.2, 2.4, 3.6],
-];
+// Concentric copies of the frame at a geometric run of scales. Each is masked
+// to the annulus [R(k-1), R(k)] where R(k) = halfW · scale(k) · DISC_F, with a
+// wide two-sided feather that overlaps its neighbours — so every boundary shows
+// the frame content at the same frame-radius and the scale change cross-fades.
+const SCALES = [1, 1.34, 1.79, 2.4, 3.2, 4.3];
+const DISC_F = 0.95;
 
 /**
  * The homepage splash: a faithful copy of the source animation, recoloured and
@@ -96,23 +92,41 @@ export function SplashScreen() {
       off.height = canvas.height;
     }
     const octx = off.getContext('2d')!;
-    for (let k = BANDS.length - 1; k >= 0; k--) {
-      const [s, featherAt, opaqueBy] = BANDS[k];
+    const discR = (k: number) => (k < 0 ? 0 : halfW * SCALES[k] * DISC_F);
+    for (let k = SCALES.length - 1; k >= 1; k--) {
+      const s = SCALES[k];
+      const dw = iw * r.scale * s;
+      const dh = ih * r.scale * s;
       octx.setTransform(dpr, 0, 0, dpr, 0, 0);
       octx.globalCompositeOperation = 'source-over';
       octx.clearRect(0, 0, vw, vh);
-      octx.drawImage(img, cx - (iw * r.scale * s) / 2, cy - (ih * r.scale * s) / 2, iw * r.scale * s, ih * r.scale * s);
+      octx.drawImage(img, cx - dw / 2, cy - dh / 2, dw, dh);
       octx.globalCompositeOperation = 'destination-in';
-      const grd = octx.createRadialGradient(cx, cy, halfW * featherAt, cx, cy, halfW * opaqueBy);
-      grd.addColorStop(0, 'rgba(0,0,0,0)');
-      grd.addColorStop(1, 'rgba(0,0,0,1)'); // opaque from opaqueBy outward
-      octx.fillStyle = grd;
+      const inner = Math.max(0, discR(k - 1) * 0.8);
+      const outer = k === SCALES.length - 1 ? Math.hypot(vw, vh) : discR(k) * 1.22;
+      const g = octx.createRadialGradient(cx, cy, inner, cx, cy, outer);
+      g.addColorStop(0, 'rgba(0,0,0,0)');
+      g.addColorStop(0.34, 'rgba(0,0,0,1)');
+      g.addColorStop(k === SCALES.length - 1 ? 1 : 0.7, 'rgba(0,0,0,1)');
+      g.addColorStop(1, k === SCALES.length - 1 ? 'rgba(0,0,0,1)' : 'rgba(0,0,0,0)');
+      octx.fillStyle = g;
       octx.fillRect(0, 0, vw, vh);
       ctx.drawImage(off, 0, 0, canvas.width, canvas.height, 0, 0, vw, vh);
     }
 
-    // The composition itself, at the source scale.
-    ctx.drawImage(img, r.x, r.y, r.w, r.h);
+    // The composition itself, at the source scale, feathered at its edge so it
+    // blends into the first band rather than meeting it at a hard rectangle.
+    octx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    octx.globalCompositeOperation = 'source-over';
+    octx.clearRect(0, 0, vw, vh);
+    octx.drawImage(img, r.x, r.y, r.w, r.h);
+    octx.globalCompositeOperation = 'destination-in';
+    const gc = octx.createRadialGradient(cx, cy, halfW * 0.85, cx, cy, halfW * 1.06);
+    gc.addColorStop(0, 'rgba(0,0,0,1)');
+    gc.addColorStop(1, 'rgba(0,0,0,0)');
+    octx.fillStyle = gc;
+    octx.fillRect(0, 0, vw, vh);
+    ctx.drawImage(off, 0, 0, canvas.width, canvas.height, 0, 0, vw, vh);
 
     if (phaseRef.current !== 'form') return;
 
@@ -123,8 +137,8 @@ export function SplashScreen() {
     const isTyping = f === 'email' || f === 'password';
     const rowKeys = ['email', 'password', 'submit'] as const;
 
-    // While a field is focused the red design drops to 20% — but not the box.
     if (isTyping) {
+      // The red design drops to 20% — but the box stays lit.
       ctx.fillStyle = 'rgba(255,255,255,0.8)';
       ctx.fillRect(0, 0, vw, vh);
       ctx.drawImage(
@@ -133,16 +147,22 @@ export function SplashScreen() {
         (box.x1 - box.x0) * img.naturalWidth, (box.y1 - box.y0) * img.naturalHeight,
         px(box.x0), py(box.y0), px(box.x1) - px(box.x0), py(box.y1) - py(box.y0),
       );
+      // Labels + ☁ disappear; dashed lines stay at 100%.
+      ctx.fillStyle = '#ffffff';
+      rowKeys.forEach((k) => {
+        const rw = rows[k];
+        ctx.fillRect(px(box.x0 - 0.006), py(rw.yTop), px(rw.cloudX1 + 0.006) - px(box.x0 - 0.006), py(rw.dashY) - py(rw.yTop));
+        ctx.fillRect(px(rw.wordX1), py(rw.dashY), px(rw.cloudX1 + 0.006) - px(rw.wordX1), py(rw.yBot) - py(rw.dashY));
+      });
+    } else {
+      // Idle: labels + dashed lines → 50%; the ☁ glyphs stay at 100%.
+      ctx.fillStyle = 'rgba(255,255,255,0.5)';
+      rowKeys.forEach((k) => {
+        const rw = rows[k];
+        ctx.fillRect(px(box.x0 - 0.004), py(rw.yTop), px(rw.wordX1) - px(box.x0 - 0.004), py(rw.yBot) - py(rw.yTop));
+        ctx.fillRect(px(rw.cloudX1), py(rw.yTop), px(rw.endX + 0.01) - px(rw.cloudX1), py(rw.yBot) - py(rw.yTop));
+      });
     }
-
-    // Row dimming: idle → labels + clouds to 50%; focused → every label to 10%,
-    // other rows' line + cloud to 10%, the focused row's line + cloud stay lit.
-    ctx.fillStyle = isTyping ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.5)';
-    rowKeys.forEach((k) => {
-      const rw = rows[k];
-      const x1 = isTyping && k !== f ? box.x1 : rw.labelX1;
-      ctx.fillRect(px(box.x0 + 0.008), py(rw.yTop), px(x1) - px(box.x0 + 0.008), py(rw.yBot) - py(rw.yTop));
-    });
   }, []);
 
   const stop = useCallback(() => {

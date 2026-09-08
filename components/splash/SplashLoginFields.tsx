@@ -32,19 +32,21 @@ export function SplashLoginFields({
   const { rows } = SPLASH_GEOM;
   const px = (fx: number) => layout.x + fx * layout.w;
   const py = (fy: number) => layout.y + fy * layout.h;
-  const base = Math.max(10, layout.w * 0.026);
+  const base = Math.max(10, layout.w * 0.028);
 
-  // Sit the text so its baseline lands on the dashed line.
+  // Start the text at the left end of the dashed line; sit it so the bottom of
+  // the glyphs is just above the line.
   const rowStyle = (r: Row, len: number): React.CSSProperties => {
     const rw = rows[r];
     const size = base * fit(len);
     return {
       position: 'fixed',
-      left: px(rw.tickX),
-      top: py(rw.dashY) - size * 1.05,
-      width: px(rw.endX) - px(rw.tickX),
-      height: size * 1.15,
+      left: px(rw.lineX0),
+      top: py(rw.dashY) - size - Math.max(1, size * 0.08),
+      width: px(rw.endX) - px(rw.lineX0),
+      height: size,
       fontSize: size,
+      lineHeight: 1,
     };
   };
 
@@ -68,8 +70,8 @@ export function SplashLoginFields({
         type="submit" className="splash-field-submit"
         style={{
           position: 'fixed',
-          left: px(rows.submit.tickX), top: py(rows.submit.yTop),
-          width: px(rows.submit.endX) - px(rows.submit.tickX),
+          left: px(rows.submit.lineX0), top: py(rows.submit.yTop),
+          width: px(rows.submit.endX) - px(rows.submit.lineX0),
           height: py(rows.submit.yBot) - py(rows.submit.yTop),
         }}
         onFocus={() => onFocusField('submit')} onBlur={() => onFocusField(null)}

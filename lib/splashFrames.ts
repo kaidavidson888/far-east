@@ -16,13 +16,13 @@ export const SPLASH_GEOM = {
   // frame 0: the seal panel — the press-and-hold target, centred.
   seal: { cx: 0.5, cy: 0.5, size: 0.34 }, // fraction of frame width
   // last frame: the login box and its rows (fractions of the frame).
-  box: { x0: 0.34, x1: 0.664, y0: 0.426, y1: 0.577 },
-  // each row's dashed line: y, the tick where typing begins, and the end;
-  // yTop/yBot bound the row for the focus dimming; labelX1 = end of label+cloud.
+  box: { x0: 0.332, x1: 0.662, y0: 0.42, y1: 0.578 },
+  // per row: dashY = the dotted line; lineX0..endX = the line's extent (typed
+  // text starts at lineX0); wordX1 = end of the label; cloudX1 = end of the ☁.
   rows: {
-    email: { dashY: 0.458, tickX: 0.375, endX: 0.64, yTop: 0.44, yBot: 0.472, labelX1: 0.475 },
-    password: { dashY: 0.5125, tickX: 0.375, endX: 0.64, yTop: 0.495, yBot: 0.527, labelX1: 0.53 },
-    submit: { dashY: 0.5625, tickX: 0.375, endX: 0.64, yTop: 0.545, yBot: 0.578, labelX1: 0.58 },
+    email:    { dashY: 0.4585, lineX0: 0.367, endX: 0.636, wordX1: 0.45, cloudX1: 0.502, yTop: 0.432, yBot: 0.478 },
+    password: { dashY: 0.5090, lineX0: 0.367, endX: 0.636, wordX1: 0.52, cloudX1: 0.573, yTop: 0.483, yBot: 0.529 },
+    submit:   { dashY: 0.5610, lineX0: 0.367, endX: 0.636, wordX1: 0.59, cloudX1: 0.636, yTop: 0.535, yBot: 0.581 },
   },
 };
 
