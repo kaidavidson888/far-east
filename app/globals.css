@@ -518,12 +518,13 @@ ul, ol { list-style: none; }
 .site-footer .btn-icon:hover { background: #222222; }
 
 /* ---------- Splash ---------- */
-/* The recoloured source animation on a canvas (its cloud pattern warped so one
-   continuous design reads larger toward the edge), with the login box rebuilt
-   from loginbox-parts.svg on top. Above the age gate (z-index 100). */
+/* The recoloured source animation on a canvas — the frame 1:1 in the centre,
+   feathered into a scaled copy of the same pattern so the design continues to
+   the screen edge — with the login box rebuilt from loginbox-parts.svg on top.
+   Above the age gate (z-index 100). */
 .splash {
   position: fixed; inset: 0; z-index: 200;
-  overflow: hidden; background: #ffffff;
+  overflow: hidden; background: #fcfcfc;
   touch-action: none;
 }
 .splash-canvas {
@@ -551,6 +552,7 @@ ul, ol { list-style: none; }
 .splash-field-input {
   border: 0; background: transparent; border-radius: 0;
   font-family: "Cormorant Unicase", Georgia, "Times New Roman", serif;
+  font-weight: 700;
   line-height: 1; color: #000000;
   caret-color: transparent;
   padding: 0;

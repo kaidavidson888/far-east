@@ -1,8 +1,9 @@
 // The splash plays a faithful copy of scripts/assets/login-source.gif, baked to
 // scrubbable WebP stills by `npm run build:splash` (recoloured, sharpened, with
-// the red seal fading as it drains and the red clouds rising to full opacity).
-// Nothing decodes a GIF at runtime. The login-box footprint is cleared to white
-// on the canvas at paint time (not baked) so mirrored edge tiles stay clean.
+// the red seal fading as it drains, the red clouds rising to full opacity, and
+// the original login box painted over with cloud near the end). Nothing decodes
+// a GIF at runtime. `edge.webp` is the final pattern with the box painted over —
+// scaled up beside the frame to continue the design out to the screen edges.
 //
 // 101 frames, 40ms apart — exactly the source timing, 4.00s.
 
@@ -16,10 +17,11 @@ export const SPLASH_GEOM = {
   frame: { w: 720, h: 1600 },
   // frame 0: the seal panel — the press-and-hold target, centred.
   seal: { cx: 0.5, cy: 0.5, size: 0.34 }, // fraction of frame width
-  // the login box's footprint (fractions of the frame): cleared to white on the
-  // canvas at paint time, and where loginbox-parts.svg is positioned. Near-square
-  // (~240×250 of 720×1600) so the square-ish vector barely stretches.
-  box: { x0: 0.331, x1: 0.667, y0: 0.423, y1: 0.569 },
+  // the login box's size (fractions of the frame). Positioned dead-centre on the
+  // page (measure() / paint()), not at the frame fraction — the original box
+  // sits a few px high. The frames erase the baked box; a tight white rect fills
+  // just inside this, and loginbox-parts.svg #border draws at its edge.
+  box: { x0: 0.332, x1: 0.668, y0: 0.4285, y1: 0.5715 },
   // per row, as fractions of the BOX (0..1 within it, = loginbox-parts.svg
   // viewBox fractions): the dashed line's y and its left/right x. Typed text
   // starts at lineX0 with its baseline just above dashY.
@@ -33,6 +35,7 @@ export const SPLASH_GEOM = {
 const src = (i: number) => `/splash/frames/f${String(i).padStart(3, '0')}.webp`;
 
 let frames: HTMLImageElement[] | null = null;
+let edge: HTMLImageElement | null = null;
 
 export function splashFrames(): HTMLImageElement[] {
   if (!frames) {
@@ -46,9 +49,20 @@ export function splashFrames(): HTMLImageElement[] {
   return frames;
 }
 
+/** The scaled backdrop pattern (box painted over), drawn behind the frame. */
+export function edgeImage(): HTMLImageElement {
+  if (!edge) {
+    edge = new Image();
+    edge.decoding = 'async';
+    edge.src = '/splash/edge.webp';
+  }
+  return edge;
+}
+
 export function preloadSplashFrames(): Promise<void> {
   const imgs = splashFrames();
   imgs.forEach((img) => void img.decode().catch(() => {}));
+  void edgeImage().decode().catch(() => {});
   return imgs[0].decode().catch(() => {});
 }
 

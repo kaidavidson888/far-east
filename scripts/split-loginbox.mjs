@@ -64,15 +64,10 @@ const groups = order
   .filter((k) => parts[k])
   .map((k) => `  <g id="${k}"><path d="${parts[k].join(' ')}" fill="#000000"/></g>`)
   .join('\n');
-// A red border rect sized to the box's own extent inside the viewBox.
-const bx0 = Math.min(...b.map((r) => r.x0));
-const bx1 = Math.max(...b.map((r) => r.x1));
-const by0 = Math.min(...b.map((r) => r.y0));
-const by1 = Math.max(...b.map((r) => r.y1));
-const pad = 30;
+// The red outline box = the whole box div (SPLASH_GEOM.box), so the canvas
+// knockout behind it lines up and the pattern meets it with no white gap.
 const border =
-  `  <g id="border"><rect x="${(bx0 - pad).toFixed(0)}" y="${(by0 - pad).toFixed(0)}" ` +
-  `width="${(bx1 - bx0 + 2 * pad).toFixed(0)}" height="${(by1 - by0 + 2 * pad).toFixed(0)}" ` +
+  `  <g id="border"><rect x="1.5" y="1.5" width="${(VW - 3).toFixed(0)}" height="${(VH - 3).toFixed(0)}" ` +
   `fill="none" stroke="#ff0000" stroke-width="2.25" vector-effect="non-scaling-stroke"/></g>`;
 
 const out = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${VW} ${VH}" preserveAspectRatio="none">\n${border}\n${groups}\n</svg>\n`;

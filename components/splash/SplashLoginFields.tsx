@@ -1,6 +1,6 @@
 'use client';
 
-import { useActionState, useState } from 'react';
+import { useActionState, useEffect, useState } from 'react';
 import { loginAction, type FormState } from '@/app/actions';
 import { SPLASH_GEOM } from '@/lib/splashFrames';
 import type { FocusField } from '../SplashScreen';
@@ -8,49 +8,48 @@ import type { FocusField } from '../SplashScreen';
 type Box = { x: number; y: number; w: number; h: number };
 type Row = 'email' | 'password' | 'submit';
 
-const SHRINK_AFTER = 14;
+const SHRINK_AFTER = 12;
 const MIN = 0.42;
 const fit = (len: number) => (len <= SHRINK_AFTER ? 1 : Math.max(MIN, SHRINK_AFTER / len));
 
 /**
  * Transparent functional inputs over the vector login box, positioned in box
- * space. Typed text is Cormorant Unicase, no caret, starting at the left of the
- * row's dashed line at the same size as the box's labels, its baseline just
- * above the line. "create account/login" is a submit button — it signs the user
- * in and sends them to the homepage.
+ * space. Typed text is bold Cormorant Unicase, no caret, the same size as the
+ * box's "EMAIL" label, starting at the left of the row's dashed line with its
+ * baseline just above the line (and shrinking as it grows long). A row's box
+ * label drops to 0 once that row has text. "create account / login" is a submit
+ * button — it signs the user in and sends them to the homepage.
  */
 export function SplashLoginFields({
   box,
-  onFocusField,
+  onFieldState,
   onSubmitActive,
 }: {
   box: Box;
-  onFocusField: (f: FocusField, typed: boolean) => void;
+  onFieldState: (f: FocusField, emailTyped: boolean, pwTyped: boolean) => void;
   onSubmitActive: (v: boolean) => void;
 }) {
   const [state, action] = useActionState<FormState, FormData>(loginAction, null);
   const [email, setEmail] = useState('');
   const [pw, setPw] = useState('');
-  const [focus, setFocus] = useState<Row | null>(null);
+  const [focus, setFocus] = useState<FocusField>(null);
+
+  // Report focus + which rows have text whenever any of it changes.
+  useEffect(() => {
+    onFieldState(focus, email.length > 0, pw.length > 0);
+  }, [focus, email, pw, onFieldState]);
 
   const { rows } = SPLASH_GEOM;
   const bx = (fx: number) => box.x + fx * box.w;
   const by = (fy: number) => box.y + fy * box.h;
-  const labelSize = box.h * 0.1; // ≈ the box's own label cap height
-
-  // Tell the splash which field is in use and whether it has any text yet
-  // (box labels sit at 10% on focus, 0 once typing starts).
-  const report = (f: Row | null, e: string, p: string) => {
-    if (f === 'submit') return; // the button drives onSubmitActive itself
-    onFocusField(f, (f === 'email' && e.length > 0) || (f === 'password' && p.length > 0));
-  };
+  const labelSize = box.h * 0.145; // matches the box's own "EMAIL" cap height
 
   const inputStyle = (r: Row, len: number): React.CSSProperties => {
     const size = labelSize * fit(len);
     return {
       position: 'fixed',
       left: bx(rows[r].lineX0),
-      top: by(rows[r].dashY) - size - Math.max(1, size * 0.06),
+      top: by(rows[r].dashY) - size - Math.max(1, size * 0.05),
       width: bx(rows[r].endX) - bx(rows[r].lineX0),
       height: size,
       fontSize: size,
@@ -65,20 +64,14 @@ export function SplashLoginFields({
       <input
         className="splash-field-input" style={inputStyle('email', email.length)}
         name="email" type="email" autoComplete="email" required
-        value={email}
-        onChange={(e) => { setEmail(e.target.value); if (focus === 'email') report('email', e.target.value, pw); }}
-        onFocus={() => { setFocus('email'); report('email', email, pw); }}
-        onBlur={() => { setFocus(null); report(null, email, pw); }}
-        aria-label="Email"
+        value={email} onChange={(e) => setEmail(e.target.value)}
+        onFocus={() => setFocus('email')} onBlur={() => setFocus(null)} aria-label="Email"
       />
       <input
         className="splash-field-input" style={inputStyle('password', pw.length)}
         name="password" type="password" autoComplete="current-password" required
-        value={pw}
-        onChange={(e) => { setPw(e.target.value); if (focus === 'password') report('password', email, e.target.value); }}
-        onFocus={() => { setFocus('password'); report('password', email, pw); }}
-        onBlur={() => { setFocus(null); report(null, email, pw); }}
-        aria-label="Password"
+        value={pw} onChange={(e) => setPw(e.target.value)}
+        onFocus={() => setFocus('password')} onBlur={() => setFocus(null)} aria-label="Password"
       />
       <button
         type="submit" className="splash-field-submit"

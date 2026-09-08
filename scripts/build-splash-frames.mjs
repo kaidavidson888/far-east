@@ -5,6 +5,12 @@
  *   - sharpness: full resolution + a light unsharp pass
  *   - opacity:   the red seal panel fades as it drains; the red cloud design
  *                rises from faint to 100% over the run (frames 0 → 100)
+ *   - the original login box is painted over with cloud near the end so only the
+ *     vector box (loginbox-parts.svg) on the DOM remains
+ *
+ * Also writes public/splash/edge.webp: the final pattern with the box footprint
+ * painted over with cloud, used as the scaled backdrop that continues the design
+ * out to the screen edges.
  *
  *   npm run build:splash
  *
@@ -20,6 +26,7 @@ import sharp from 'sharp';
 const SRC = 'scripts/assets/login-source.gif';
 const OUT = 'public/splash/frames';
 const WIDTH = 640;
+const EDGE_WIDTH = 900;
 const QUALITY = 80;
 
 const RED = [0xff, 0x00, 0x00];
@@ -29,6 +36,7 @@ const INK = [0x00, 0x00, 0x00];
 const C = { x0: 0.29, x1: 0.71, y0: 0.4, y1: 0.59, feather: 0.045 };
 
 const clamp01 = (v) => (v < 0 ? 0 : v > 1 ? 1 : v);
+const smooth = (t) => t * t * (3 - 2 * t);
 const crisp = (c) => {
   const t = clamp01(c);
   return t < 0.16 ? 0 : t > 0.92 ? 1 : (t - 0.16) / 0.76;
@@ -44,6 +52,33 @@ function centreWeight(fx, fy) {
   const sy = Math.min((fy - (C.y0 - C.feather)) / C.feather, ((C.y1 + C.feather) - fy) / C.feather, 1);
   return clamp01(Math.min(sx, sy));
 }
+
+// Replace the box region with clean pattern reflected in from just outside each
+// side of it: left half mirrors the strip left of the box, right half mirrors
+// the strip to its right. Same rows → top/bottom edges match exactly (no
+// horizontal seam to streak across the tiled margins); left/right box edges are
+// seamless mirror continuations. The only join is a short vertical seam down the
+// box centre, which the login box itself sits over. Hard copy — no ghost.
+function cloudFill(d, src, R, strength) {
+  if (strength <= 0) return;
+  const x0 = Math.floor(R.x0 * W), x1 = Math.ceil(R.x1 * W);
+  const y0 = Math.floor(R.y0 * H), y1 = Math.ceil(R.y1 * H);
+  const w = clamp01(strength);
+  const mid = (x0 + x1) >> 1;
+  for (let y = y0; y < y1; y++) {
+    for (let x = x0; x < x1; x++) {
+      const sx = x < mid ? 2 * x0 - x - 1 : 2 * x1 - x - 1;
+      if (sx < 0 || sx >= W) continue;
+      const i = (y * W + x) * 4;
+      const is = (y * W + sx) * 4;
+      for (let k = 0; k < 3; k++) d[i + k] = d[i + k] * (1 - w) + src[is + k] * w;
+    }
+  }
+}
+// generously covers the original login box (border + labels). The left/right/
+// top/bottom joins are seamless mirror continuations; only the box-centre join
+// is hard, and the login box sits over it.
+const BOX_R = { x0: 0.318, x1: 0.682, y0: 0.412, y1: 0.582 };
 
 function process(d, n) {
   const p = n / LAST;
@@ -73,11 +108,27 @@ function process(d, n) {
   }
 }
 
+// Erase the original login box from frame ~78 on — a clean cut (the fill is
+// seamless, and it's a hard on/off so the box and pattern never overlap). The
+// DOM box fades in on top from ~frame 76.
+function eraseBox(d, n) {
+  cloudFill(d, Buffer.from(d), BOX_R, n / LAST >= 0.78 ? 1 : 0);
+}
+
+// The seamless tile: frame 100's pattern with the box reflected over, used to
+// continue the design past the frame edge (the pattern tiles horizontally).
+function buildEdge(raw) {
+  const d = Buffer.from(raw);
+  process(d, LAST); // recolour at the final state
+  cloudFill(d, Buffer.from(d), BOX_R, 1);
+  return d;
+}
+
 rmSync(OUT, { recursive: true, force: true });
 mkdirSync(OUT, { recursive: true });
 
 const acc = Buffer.alloc(W * H * 4);
-for (let i = 0; i < W * H; i++) { acc[i*4]=255; acc[i*4+1]=255; acc[i*4+2]=255; acc[i*4+3]=255; }
+for (let i = 0; i < W * H; i++) { acc[i * 4] = 255; acc[i * 4 + 1] = 255; acc[i * 4 + 2] = 255; acc[i * 4 + 3] = 255; }
 
 let written = 0;
 for (let n = 0; n < frames.length; n++) {
@@ -99,6 +150,7 @@ for (let n = 0; n < frames.length; n++) {
 
   const snap = Buffer.from(acc);
   process(snap, n);
+  eraseBox(snap, n);
   const png = new PNG({ width: W, height: H });
   snap.copy(png.data);
   await sharp(PNG.sync.write(png))
@@ -109,4 +161,13 @@ for (let n = 0; n < frames.length; n++) {
   written++;
 }
 
-console.log(`wrote ${written} frames to ${OUT}/ (${W}x${H} → ${WIDTH}px wide)`);
+const edge = buildEdge(acc);
+const epng = new PNG({ width: W, height: H });
+edge.copy(epng.data);
+await sharp(PNG.sync.write(epng))
+  .resize({ width: EDGE_WIDTH })
+  .sharpen({ sigma: 0.4 })
+  .webp({ quality: QUALITY })
+  .toFile('public/splash/edge.webp');
+
+console.log(`wrote ${written} frames to ${OUT}/ + edge.webp (${W}x${H} → ${WIDTH}px / ${EDGE_WIDTH}px)`);

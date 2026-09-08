@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { SplashLoginFields } from './splash/SplashLoginFields';
 import {
   splashFrames,
+  edgeImage,
   preloadSplashFrames,
   frameAt,
   coverRect,
@@ -25,10 +26,12 @@ const BOX_IDS = [
 
 /**
  * The homepage splash: a faithful copy of the source animation, recoloured and
- * sharpened, played at the source scale. The whole frame sits 1:1 in the middle;
- * its left/right cloud strips are mirror-repeated outward — one continuous
- * branching design, growing a little toward the screen edge for depth. The login
- * box is rebuilt from loginbox-parts.svg so each part's opacity is independent.
+ * sharpened, played at the source scale. The whole frame sits 1:1 in the middle
+ * (untouched — the original); a scaled, softened copy of the same pattern
+ * (edge.webp, box painted over) sits behind it and the frame's edges feather
+ * into it, so the design reads as one branching pattern that grew outward and
+ * larger. The login box is rebuilt from loginbox-parts.svg so each part's
+ * opacity is independent.
  */
 export function SplashScreen() {
   const [phase, setPhaseState] = useState<Phase>('logo');
@@ -45,6 +48,7 @@ export function SplashScreen() {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const boxHostRef = useRef<HTMLDivElement | null>(null);
   const framesRef = useRef<HTMLImageElement[]>([]);
+  const edgeRef = useRef<HTMLImageElement | null>(null);
   const posRef = useRef(0);
   const dirRef = useRef(0);
   const pressedRef = useRef(false);
@@ -52,38 +56,42 @@ export function SplashScreen() {
   const rafRef = useRef(0);
   const lastTsRef = useRef(0);
   const focusRef = useRef<FocusField>(null);
-  const typedRef = useRef(false); // the focused field has at least one character
+  const typedRef = useRef({ email: false, password: false }); // which fields have text
   const submitActiveRef = useRef(false);
 
   const measure = useCallback(() => {
-    const r = coverRect(window.innerWidth, window.innerHeight);
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    const r = coverRect(vw, vh);
     const g = SPLASH_GEOM;
-    setBox({
-      x: r.x + g.box.x0 * r.w,
-      y: r.y + g.box.y0 * r.h,
-      w: (g.box.x1 - g.box.x0) * r.w,
-      h: (g.box.y1 - g.box.y0) * r.h,
-    });
+    // size from the frame, but pin dead-centre on the page
+    const w = (g.box.x1 - g.box.x0) * r.w;
+    const h = (g.box.y1 - g.box.y0) * r.h;
+    setBox({ x: (vw - w) / 2, y: (vh - h) / 2, w, h });
     const s = g.seal.size * r.w;
-    setSeal({ x: r.x + g.seal.cx * r.w - s / 2, y: r.y + g.seal.cy * r.h - s / 2, s });
+    setSeal({ x: (vw - s) / 2, y: (vh - s) / 2, s });
   }, []);
 
   const boxOpacity = useCallback((id: string, fadeIn: number) => {
     if (id === 'border') return fadeIn; // the red outline box: always 100%
-    const [kind, row] = id.split('-');
+    const [kind, row] = id.split('-') as ['line' | 'label' | 'cloud', 'email' | 'password' | 'submit'];
     const inField = focusRef.current === 'email' || focusRef.current === 'password';
+    const rowTyped = row !== 'submit' && typedRef.current[row];
 
-    // "create account / login" row: 100% when the button itself is hovered or
-    // focused; 80% while a text field is in use; otherwise the idle values.
-    if (row === 'submit' && submitActiveRef.current) return fadeIn;
-    if (row === 'submit' && inField) return fadeIn * 0.8;
+    // The ☁ glyphs never react to the submit button — only to a text field.
+    if (kind !== 'cloud') {
+      // "create account / login" line + label: 100% when the button is hovered
+      // or focused, 80% while a text field is in use, else the idle value.
+      if (row === 'submit' && submitActiveRef.current) return fadeIn;
+      if (row === 'submit' && inField) return fadeIn * 0.8;
+      // all three dashed lines, uniform: 100% while a field is in use, else 50%.
+      if (kind === 'line') return fadeIn * (inField ? 1 : 0.5);
+    }
 
-    // all three dashed lines, uniform: 100% while a field is in use, else 50%.
-    if (kind === 'line') return fadeIn * (inField ? 1 : 0.5);
-
-    // labels + ☁ glyphs: 10% once a field is focused, 0 once it has text,
-    // and idle → ☁ 100% / labels 50%.
-    if (inField) return fadeIn * (typedRef.current ? 0 : 0.1);
+    // labels + ☁ glyphs: this row's vanish (0) once it has text; any field in
+    // use dims the rest to 10%; idle → ☁ 100% / labels 50%.
+    if (rowTyped) return 0;
+    if (inField) return fadeIn * 0.1;
     return fadeIn * (kind === 'cloud' ? 1 : 0.5);
   }, []);
 
@@ -112,7 +120,7 @@ export function SplashScreen() {
       canvas.height = Math.round(vh * dpr);
     }
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    ctx.fillStyle = '#ffffff';
+    ctx.fillStyle = '#fcfcfc'; // matches the WebP frames' flat white
     ctx.fillRect(0, 0, vw, vh);
 
     const img = frames[frameAt(ms)];
@@ -120,68 +128,42 @@ export function SplashScreen() {
     if (img?.complete && img.naturalWidth) {
       const iw = img.naturalWidth;
       const ih = img.naturalHeight;
-      const fcy = r.y + r.h / 2;
+      const p = Math.min(Math.max(ms / SPLASH_DURATION_MS, 0), 1);
 
-      // One continuous branching pattern out to the screen edge. The whole frame
-      // sits 1:1 in the middle (untouched — this is the original animation). Its
-      // left/right edge strips — pure cloud, no logo — are then mirror-repeated
-      // sideways to fill the margins: reflections meet exactly so there are no
-      // seams or cross-fades, and each strip out is a little larger for a hint of
-      // depth. On a phone the frame already fills the width, so none of this
-      // shows; it only fills a wide screen's side margins. Above/below, the frame
-      // itself is mirrored (its centre lands off-screen on any real viewport).
-      const SW = 0.29; // side-strip depth as a fraction of the frame width (clears the logo)
-      const P = 1.2;   // each strip outward this much larger (perspective toward the edges)
+      // The frame itself, 1:1 in the centre — the original animation, untouched.
+      ctx.drawImage(img, 0, 0, iw, ih, r.x, r.y, r.w, r.h);
 
-      // draw source column [srcX0..srcX1] of the frame, mirror-tiled vertically
-      // to fill the height, into a screen column at screenX of width cellW.
-      const column = (
-        screenX: number, cellW: number, unit: number,
-        srcX0: number, srcX1: number, flipX: boolean,
-      ) => {
-        const rings: { cy: number; flip: boolean }[] = [{ cy: fcy, flip: false }];
-        let e = fcy + unit / 2;
-        for (let k = 1; k < 7 && e < vh + 4; k++) { rings.push({ cy: e + unit / 2, flip: k % 2 === 1 }); e += unit; }
-        e = fcy - unit / 2;
-        for (let k = 1; k < 7 && e > -4; k++) { rings.push({ cy: e - unit / 2, flip: k % 2 === 1 }); e -= unit; }
-        for (const rg of rings) {
-          ctx.save();
-          ctx.translate(screenX + cellW / 2, rg.cy);
-          ctx.scale(flipX ? -1 : 1, rg.flip ? -1 : 1);
-          ctx.drawImage(img, srcX0, 0, srcX1 - srcX0, ih, -cellW / 2, -unit / 2, cellW, unit);
-          ctx.restore();
-        }
-      };
-
-      column(r.x, r.w, r.h, 0, iw, false); // the frame itself, 1:1
-      for (const dir of [1, -1]) {
-        let ex = dir > 0 ? r.x + r.w : r.x;
-        for (let k = 1; k < 8; k++) {
-          const w = SW * r.w * Math.pow(P, k - 1);
-          const unit = r.h * Math.pow(P, k - 1);
-          if (dir < 0) ex -= w;
-          column(ex, w, unit, dir > 0 ? iw * (1 - SW) : 0, dir > 0 ? iw : iw * SW, k % 2 === 1);
-          if (dir > 0) ex += w;
-          if (dir > 0 ? ex > vw + 4 : ex < -4) break;
-        }
+      // Continue the pattern to the screen edge by tiling the box-free copy
+      // (edge.webp) left and right at the same scale. The design tiles cleanly
+      // (its left edge matches its right edge), so this is one seamless pattern —
+      // no reflection axis, no overlap. It fades in with the clouds; on a phone
+      // the frame fills the width so none of it shows.
+      const edge = edgeRef.current;
+      // hold the tiles back until the frame's own pattern has spread to its
+      // edges, so the margins don't run ahead of the animation
+      const edgeA = phaseRef.current === 'form' ? 1 : Math.pow(rampUp(p, 0.58, 0.98), 0.8);
+      if (edge?.complete && edge.naturalWidth && edgeA > 0.01 && r.x > 2) {
+        const ew = edge.naturalWidth;
+        const eh = edge.naturalHeight;
+        ctx.save();
+        ctx.globalAlpha = edgeA;
+        for (let x = r.x + r.w; x < vw + 1; x += r.w) ctx.drawImage(edge, 0, 0, ew, eh, x, r.y, r.w, r.h);
+        for (let x = r.x - r.w; x + r.w > -1; x -= r.w) ctx.drawImage(edge, 0, 0, ew, eh, x, r.y, r.w, r.h);
+        ctx.restore();
       }
 
-      // Clear the login-box footprint to clean white for the vector box on top
-      // (the frames still bake the original box; tiled copies would otherwise
-      // smear it across the margin). Soft-edged, ramping in as the box latches.
+      // Clean white behind the vector login box — a tight rect just inside where
+      // its red border draws (dead centre, matching the DOM box), hard-edged so
+      // the pattern meets the border with no halo. Ramps in as the box latches.
       const gb = SPLASH_GEOM.box;
       const bw = (gb.x1 - gb.x0) * r.w;
       const bh = (gb.y1 - gb.y0) * r.h;
-      const bcx = r.x + ((gb.x0 + gb.x1) / 2) * r.w;
-      const bcy = r.y + ((gb.y0 + gb.y1) / 2) * r.h;
-      const clearA =
-        phaseRef.current === 'form' ? 1 : rampUp(ms / SPLASH_DURATION_MS, 0.76, 0.94);
-      if (clearA > 0) {
-        const m = Math.min(bw, bh) * 0.12;
+      const fillA = phaseRef.current === 'form' ? 1 : rampUp(p, 0.78, 0.98);
+      if (fillA > 0.001) {
         ctx.save();
-        ctx.filter = 'blur(6px)';
-        ctx.fillStyle = `rgba(255,255,255,${clearA})`;
-        ctx.fillRect(bcx - bw / 2 - m, bcy - bh / 2 - m, bw + 2 * m, bh + 2 * m);
+        ctx.globalAlpha = fillA;
+        ctx.fillStyle = '#fcfcfc';
+        ctx.fillRect((vw - bw) / 2 + 2, (vh - bh) / 2 + 2, bw - 4, bh - 4);
         ctx.restore();
       }
     }
@@ -224,9 +206,13 @@ export function SplashScreen() {
   useEffect(() => {
     reducedRef.current =
       typeof window !== 'undefined' &&
-      !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+      (!!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ||
+        // dev-only shortcut to the latched form, for iterating on it
+        (process.env.NODE_ENV !== 'production' &&
+          new URLSearchParams(window.location.search).has('splashform')));
 
     framesRef.current = splashFrames();
+    edgeRef.current = edgeImage();
     measure();
     fetch('/splash/loginbox-parts.svg').then((res) => res.text()).then(setBoxSvg).catch(() => {});
 
@@ -283,12 +269,15 @@ export function SplashScreen() {
     run();
   }, [run]);
 
-  const setFocusField = useCallback((val: FocusField, typed = false) => {
-    focusRef.current = val;
-    typedRef.current = typed;
-    setTyping(val === 'email' || val === 'password'); // dims the red design to 20%
-    applyBox(SPLASH_DURATION_MS);
-  }, [applyBox]);
+  const setFieldState = useCallback(
+    (val: FocusField, emailTyped: boolean, pwTyped: boolean) => {
+      focusRef.current = val;
+      typedRef.current = { email: emailTyped, password: pwTyped };
+      setTyping(val === 'email' || val === 'password'); // dims the red design to 20%
+      applyBox(SPLASH_DURATION_MS);
+    },
+    [applyBox],
+  );
 
   const setSubmitActive = useCallback((v: boolean) => {
     submitActiveRef.current = v;
@@ -314,7 +303,7 @@ export function SplashScreen() {
       {phase === 'form' && (
         <SplashLoginFields
           box={box}
-          onFocusField={setFocusField}
+          onFieldState={setFieldState}
           onSubmitActive={setSubmitActive}
         />
       )}
