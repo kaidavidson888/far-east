@@ -14,16 +14,20 @@ import {
 type Phase = 'logo' | 'play' | 'form';
 export type FocusField = 'email' | 'password' | 'submit' | null;
 
+const rampUp = (p: number, a: number, b: number) => (p <= a ? 0 : p >= b ? 1 : (p - a) / (b - a));
+const rampDown = (p: number, a: number, b: number) => (p <= a ? 1 : p >= b ? 0 : 1 - (p - a) / (b - a));
+
 /**
- * The homepage splash: a faithful copy of the source animation, recoloured and
- * sharpened. Frame 0 is the resting state; press and hold the seal to scrub the
- * clouds forward, release to retract, hold the full 4s to land on the last
- * frame — where the login box becomes real inputs.
+ * The homepage splash: the recoloured, sharpened cloud animation with its centre
+ * knocked out, and the logo / outline squares / login box drawn on top as vector
+ * at the source scale (so they never zoom). Frame 0 is the resting state; hold
+ * the seal to grow the clouds, release to retract, hold 4s to land on the box.
  */
 export function SplashScreen() {
   const [phase, setPhaseState] = useState<Phase>('logo');
   const [ready, setReady] = useState(false);
-  const [layout, setLayout] = useState({ x: 0, y: 0, w: 0, h: 0, vw: 0, vh: 0 });
+  const [stage, setStage] = useState({ x: 0, y: 0, size: 0 });
+
   const reducedRef = useRef(false);
   const phaseRef = useRef<Phase>('logo');
   const setPhase = useCallback((p: Phase) => {
@@ -32,9 +36,13 @@ export function SplashScreen() {
   }, []);
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const logoRef = useRef<HTMLDivElement | null>(null);
+  const obRedRef = useRef<HTMLSpanElement | null>(null);
+  const obBlackRef = useRef<HTMLSpanElement | null>(null);
+  const boxRef = useRef<HTMLDivElement | null>(null);
   const framesRef = useRef<HTMLImageElement[]>([]);
   const posRef = useRef(0);
-  const dirRef = useRef(0); // -1 | 0 | 1
+  const dirRef = useRef(0);
   const pressedRef = useRef(false);
   const wantPlayRef = useRef(false);
   const rafRef = useRef(0);
@@ -44,116 +52,57 @@ export function SplashScreen() {
   const measure = useCallback(() => {
     const vw = window.innerWidth;
     const vh = window.innerHeight;
-    const r = coverRect(vw, vh);
-    setLayout({ ...r, vw, vh });
-    return { vw, vh, r };
+    // Fixed, usable size — not tied to the cloud frame's scale, so it never
+    // zooms on wide screens.
+    const size = Math.round(Math.max(220, Math.min(vw * 0.62, vh * 0.42, 300)));
+    setStage({ x: vw / 2 - size / 2, y: vh / 2 - size / 2, size });
   }, []);
 
   const paint = useCallback((ms: number) => {
     const canvas = canvasRef.current;
     const frames = framesRef.current;
-    if (!canvas || !frames.length) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
+    if (canvas && frames.length) {
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        const dpr = window.devicePixelRatio || 1;
+        const vw = window.innerWidth;
+        const vh = window.innerHeight;
+        if (canvas.width !== Math.round(vw * dpr) || canvas.height !== Math.round(vh * dpr)) {
+          canvas.width = Math.round(vw * dpr);
+          canvas.height = Math.round(vh * dpr);
+        }
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, vw, vh);
 
-    const dpr = window.devicePixelRatio || 1;
-    const vw = window.innerWidth;
-    const vh = window.innerHeight;
-    if (canvas.width !== Math.round(vw * dpr) || canvas.height !== Math.round(vh * dpr)) {
-      canvas.width = Math.round(vw * dpr);
-      canvas.height = Math.round(vh * dpr);
-    }
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    ctx.clearRect(0, 0, vw, vh);
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, vw, vh);
-
-    const img = frames[frameAt(ms)];
-    const r = coverRect(vw, vh); // the frame, contained + centred (source scale)
-    if (img?.complete && img.naturalWidth) {
-      // Background: the same frame scaled to COVER, so the red design reaches
-      // every screen edge. Its centre is softly erased so the zoomed-up
-      // composition there doesn't show behind the real one.
-      const { w: iw, h: ih } = SPLASH_GEOM.frame;
-      const cs = Math.max(vw / iw, vh / ih);
-      const cw = iw * cs, ch = ih * cs;
-      ctx.drawImage(img, (vw - cw) / 2, (vh - ch) / 2, cw, ch);
-      const g = ctx.createRadialGradient(vw / 2, vh / 2, r.w * 0.22, vw / 2, vh / 2, r.w * 0.62);
-      g.addColorStop(0, '#ffffff');
-      g.addColorStop(1, 'rgba(255,255,255,0)');
-      ctx.fillStyle = g;
-      ctx.fillRect(0, 0, vw, vh);
-      // Foreground: the composition at the source scale.
-      ctx.drawImage(img, r.x, r.y, r.w, r.h);
+        const img = frames[frameAt(ms)];
+        const r = coverRect(vw, vh);
+        if (img?.complete && img.naturalWidth) {
+          const { w: iw, h: ih } = SPLASH_GEOM.frame;
+          const cs = Math.max(vw / iw, vh / ih);
+          const cw = iw * cs, ch = ih * cs;
+          ctx.drawImage(img, (vw - cw) / 2, (vh - ch) / 2, cw, ch); // reach the edges
+          const g = ctx.createRadialGradient(vw / 2, vh / 2, r.w * 0.2, vw / 2, vh / 2, r.w * 0.6);
+          g.addColorStop(0, '#ffffff');
+          g.addColorStop(1, 'rgba(255,255,255,0)');
+          ctx.fillStyle = g;
+          ctx.fillRect(0, 0, vw, vh);
+          ctx.drawImage(img, r.x, r.y, r.w, r.h); // the composition at source scale
+        }
+      }
     }
 
-    if (phaseRef.current !== 'form') return;
-
-    const { rows, box, labelX1, designWeight } = SPLASH_GEOM;
-    const px = (fx: number) => r.x + fx * r.w;
-    const py = (fy: number) => r.y + fy * r.h;
-    const f = focusRef.current;
-    const typing = f === 'email' || f === 'password';
-    const rowKeys = ['email', 'password', 'submit'] as const;
-    // While interacting, the red cloud design drops to 20% — but not the box.
-    if (typing && img?.complete && img.naturalWidth) {
-      ctx.fillStyle = 'rgba(255,255,255,0.8)';
-      ctx.fillRect(0, 0, vw, vh);
-      const iw = img.naturalWidth;
-      const ih = img.naturalHeight;
-      ctx.drawImage(
-        img,
-        box.x0 * iw, box.y0 * ih, (box.x1 - box.x0) * iw, (box.y1 - box.y0) * ih,
-        px(box.x0), py(box.y0), px(box.x1) - px(box.x0), py(box.y1) - py(box.y0),
+    // Vector overlay opacities along the timeline.
+    const p = ms / SPLASH_DURATION_MS;
+    const inForm = phaseRef.current === 'form';
+    if (logoRef.current) logoRef.current.style.opacity = String(inForm ? 0 : rampDown(p, 0, 0.12));
+    if (obBlackRef.current)
+      obBlackRef.current.style.opacity = String(
+        inForm ? 0 : Math.min(rampUp(p, 0.08, 0.16), rampDown(p, 0.5, 0.64)),
       );
-    }
-
-    // Opacity of the box's words + clouds.
-    if (typing) {
-      // focused row: word only to 10%; other rows: word + line + cloud to 10%.
-      ctx.fillStyle = 'rgba(255,255,255,0.9)';
-      rowKeys.forEach((k) => {
-        const rw = rows[k];
-        const x1 = k === f ? labelX1 : box.x1;
-        ctx.fillRect(px(box.x0 + 0.01), py(rw.yTop), px(x1) - px(box.x0 + 0.01), py(rw.yBot) - py(rw.yTop));
-      });
-    } else {
-      // idle: words + clouds to 50%, dashed lines stay full.
-      ctx.fillStyle = 'rgba(255,255,255,0.5)';
-      rowKeys.forEach((k) => {
-        const rw = rows[k];
-        ctx.fillRect(px(box.x0 + 0.01), py(rw.yTop), px(labelX1) - px(box.x0 + 0.01), py(rw.yBot) - py(rw.yTop));
-      });
-    }
-
-    // Redraw the box border and the dashed lines at the red-design line weight.
-    const w = Math.max(1, designWeight * r.w);
-    ctx.lineWidth = w;
-    ctx.strokeStyle = '#ff0000';
-    ctx.setLineDash([]);
-    ctx.strokeRect(px(box.x0), py(box.y0), px(box.x1) - px(box.x0), py(box.y1) - py(box.y0));
-
-    ctx.strokeStyle = '#000000';
-    ctx.setLineDash([w * 3.2, w * 2.2]);
-    rowKeys.forEach((k) => {
-      const rw = rows[k];
-      const y = py(rw.dashY);
-      const dim = typing && k !== f ? 0.1 : 1;
-      ctx.globalAlpha = dim;
-      ctx.beginPath();
-      ctx.moveTo(px(rw.tickX), y);
-      ctx.lineTo(px(rw.endX), y);
-      ctx.stroke();
-      // the little vertical tick the line starts with
-      ctx.setLineDash([]);
-      ctx.beginPath();
-      ctx.moveTo(px(rw.tickX), y - w * 3);
-      ctx.lineTo(px(rw.tickX), y);
-      ctx.stroke();
-      ctx.setLineDash([w * 3.2, w * 2.2]);
-    });
-    ctx.globalAlpha = 1;
-    ctx.setLineDash([]);
+    if (obRedRef.current)
+      obRedRef.current.style.opacity = String(inForm ? 0 : rampUp(p, 0.48, 0.66));
+    if (boxRef.current) boxRef.current.style.opacity = String(inForm ? 1 : rampUp(p, 0.88, 1));
   }, []);
 
   const stop = useCallback(() => {
@@ -192,7 +141,7 @@ export function SplashScreen() {
       }
       rafRef.current = requestAnimationFrame(tick);
     },
-    [paint, stop],
+    [paint, stop, setPhase],
   );
 
   const run = useCallback(() => {
@@ -230,9 +179,8 @@ export function SplashScreen() {
       cancelAnimationFrame(rafRef.current);
       rafRef.current = 0;
     };
-  }, [measure, paint, run]);
+  }, [measure, paint, run, setPhase]);
 
-  // Repaint when the form phase begins so the last frame is definitely drawn.
   useEffect(() => {
     if (phase === 'form') paint(SPLASH_DURATION_MS);
   }, [phase, paint]);
@@ -254,7 +202,7 @@ export function SplashScreen() {
       setPhase('play');
       run();
     },
-    [ready, run, paint],
+    [ready, run, paint, setPhase],
   );
 
   const release = useCallback(() => {
@@ -264,33 +212,56 @@ export function SplashScreen() {
     run();
   }, [run]);
 
-  const setFocusField = useCallback(
-    (f: FocusField) => {
-      focusRef.current = f;
-      paint(SPLASH_DURATION_MS);
-    },
-    [paint],
-  );
+  const [typing, setTyping] = useState(false);
+  const setFocusField = useCallback((f: FocusField) => {
+    focusRef.current = f;
+    setTyping(f === 'email' || f === 'password');
+  }, []);
 
-  // Seal hit-square, in viewport px, from the frame geometry.
-  const r = layout;
-  const sealSize = SPLASH_GEOM.seal.size * r.w;
-  const sealStyle: React.CSSProperties = {
-    left: r.x + SPLASH_GEOM.seal.cx * r.w - sealSize / 2,
-    top: r.y + SPLASH_GEOM.seal.cy * r.h - sealSize / 2,
-    width: sealSize,
-    height: sealSize,
+  // Inline the SVGs — <img src> of these does not scale reliably in the dev
+  // server, and inlining lets the timeline drive their parts.
+  const [logoSvg, setLogoSvg] = useState('');
+  const [boxSvg, setBoxSvg] = useState('');
+  useEffect(() => {
+    fetch('/splash/logo.svg').then((r) => r.text()).then(setLogoSvg).catch(() => {});
+    fetch('/splash/loginbox.svg').then((r) => r.text()).then(setBoxSvg).catch(() => {});
+  }, []);
+
+  const stageStyle: React.CSSProperties = {
+    left: stage.x,
+    top: stage.y,
+    width: stage.size,
+    height: stage.size,
+    ['--splash-rule' as string]: `${Math.max(2, stage.size * 0.018)}px`,
   };
 
   return (
     <div className="splash" role="dialog" aria-label="Enter Far East" data-phase={phase}>
-      <canvas ref={canvasRef} className="splash-canvas" aria-hidden="true" />
+      <canvas ref={canvasRef} className="splash-canvas" data-typing={typing} aria-hidden="true" />
+
+      <div className="splash-stage" style={stageStyle}>
+        <div
+          ref={logoRef}
+          className="splash-logo"
+          aria-hidden="true"
+          dangerouslySetInnerHTML={{ __html: logoSvg }}
+        />
+        <span ref={obRedRef} className="splash-ob splash-ob-red" aria-hidden="true" />
+        <span ref={obBlackRef} className="splash-ob splash-ob-black" aria-hidden="true" />
+        <div ref={boxRef} className="splash-box">
+          <div className="splash-box-face" aria-hidden="true" dangerouslySetInnerHTML={{ __html: boxSvg }} />
+          <div className="splash-box-border" aria-hidden="true" />
+          {phase === 'form' && (
+            <SplashLoginFields stageSize={stage.size} onFocusField={setFocusField} />
+          )}
+        </div>
+      </div>
 
       {phase !== 'form' && (
         <button
           type="button"
           className="splash-hit"
-          style={sealStyle}
+          style={stageStyle}
           aria-label="Press and hold to enter Far East"
           onPointerDown={onPointerDown}
           onPointerUp={release}
@@ -298,8 +269,6 @@ export function SplashScreen() {
           onLostPointerCapture={release}
         />
       )}
-
-      {phase === 'form' && <SplashLoginFields layout={layout} onFocusField={setFocusField} />}
     </div>
   );
 }

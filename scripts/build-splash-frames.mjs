@@ -52,30 +52,32 @@ function centreWeight(fx, fy) {
 function process(d, n) {
   const p = n / LAST; // 0..1 through the run
   const cloudRise = clamp01(0.1 + 0.9 * Math.pow(p, 0.7)); // faint → 100% at 4s
-  const sealFade = clamp01(1 - p / 0.44); // the draining panel fades out by ~frame 44
   for (let i = 0; i < d.length; i += 4) {
     const r = d[i], g = d[i + 1], b = d[i + 2];
     const max = Math.max(r, g, b);
     const chroma = max - Math.min(r, g, b);
     if (max > 250 && chroma < 8) continue; // white paper
 
+    const px = (i >> 2) % W;
+    const py = (i >> 2) / W | 0;
+    // Knock the centre out to white — the seal, outline squares and login box
+    // are drawn there as vector on top; only the clouds come from these frames.
+    const keep = 1 - centreWeight(px / W, py / H);
+    if (keep <= 0) {
+      d[i] = 255; d[i + 1] = 255; d[i + 2] = 255;
+      continue;
+    }
+
     if (chroma < 24) {
-      const cov = crisp(1 - max / 255); // achromatic → ink
+      const cov = crisp(1 - max / 255) * keep; // achromatic → ink
       d[i] = 255 + (INK[0] - 255) * cov;
       d[i + 1] = 255 + (INK[1] - 255) * cov;
       d[i + 2] = 255 + (INK[2] - 255) * cov;
     } else if (r === max) {
-      const cov = crisp(1 - (g + b) / 510);
-      const px = (i >> 2) % W;
-      const py = (i >> 2) / W | 0;
-      const cw = centreWeight(px / W, py / H);
-      // Inside the centre the red follows the seal-panel fade (which later gives
-      // way to the box border at cloud opacity); outside it follows the clouds.
-      const alpha = cw > 0 ? Math.max(sealFade, cloudRise) * cw + cloudRise * (1 - cw) : cloudRise;
-      const a = cov * clamp01(alpha);
-      d[i] = 255 + (RED[0] - 255) * a;
-      d[i + 1] = 255 + (RED[1] - 255) * a;
-      d[i + 2] = 255 + (RED[2] - 255) * a;
+      const cov = crisp(1 - (g + b) / 510) * cloudRise * keep; // red clouds, rising
+      d[i] = 255 + (RED[0] - 255) * cov;
+      d[i + 1] = 255 + (RED[1] - 255) * cov;
+      d[i + 2] = 255 + (RED[2] - 255) * cov;
     }
   }
 }

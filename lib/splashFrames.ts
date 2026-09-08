@@ -1,6 +1,7 @@
-// The splash plays a faithful copy of scripts/assets/login-source.gif, baked to
-// scrubbable WebP stills by `npm run build:splash` (recoloured to true red and
-// sharpened — nothing else changed, nothing decodes a GIF at runtime).
+// The splash: recoloured, sharpened cloud frames from the source animation with
+// their centre knocked out, plus vector overlays (logo, outline squares, login
+// box) drawn on top at the source scale. `npm run build:splash` bakes the
+// frames — nothing decodes a GIF at runtime.
 //
 // 101 frames, 40ms apart — exactly the source timing, 4.00s.
 
@@ -8,24 +9,17 @@ export const SPLASH_FRAME_MS = 40;
 export const SPLASH_FRAME_COUNT = 101;
 export const SPLASH_DURATION_MS = (SPLASH_FRAME_COUNT - 1) * SPLASH_FRAME_MS; // 4000
 
-// The source frame is 720 x 1600; these are the regions we care about, as
-// fractions of that frame (measured off the baked last frame).
 export const SPLASH_GEOM = {
   frame: { w: 720, h: 1600 },
-  // frame 0: the seal panel — the press-and-hold target ("boxy sides of the
-  // mountain continued into a square"), centred.
-  seal: { cx: 0.5, cy: 0.5, size: 0.34 }, // fraction of frame width
-  // last frame: the login box.
-  box: { x0: 0.34, x1: 0.666, y0: 0.425, y1: 0.577 },
-  // Each row's dashed line: y, the "tick" where it starts (= where typed text
-  // begins), and where it ends. yTop/yBot bound the row for the focus dimming.
+  // The centred square the vector elements occupy, as a fraction of the frame.
+  stage: 0.335,
+  // Rows inside the login box, as fractions of the stage (loginbox.svg viewBox).
+  // labelX1 = right end of that row's label + cloud (where typing may begin).
   rows: {
-    email: { dashY: 0.456, tickX: 0.369, endX: 0.64, yTop: 0.437, yBot: 0.475 },
-    password: { dashY: 0.511, tickX: 0.369, endX: 0.64, yTop: 0.492, yBot: 0.53 },
-    submit: { dashY: 0.5625, tickX: 0.369, endX: 0.64, yTop: 0.543, yBot: 0.58 },
+    email: { dashY: 0.135, tickX: 0.04, endX: 0.95, yTop: 0.04, yBot: 0.2, labelX1: 0.45 },
+    password: { dashY: 0.515, tickX: 0.04, endX: 0.95, yTop: 0.42, yBot: 0.58, labelX1: 0.7 },
+    submit: { dashY: 0.895, tickX: 0.04, endX: 0.95, yTop: 0.8, yBot: 0.96, labelX1: 0.82 },
   },
-  labelX1: 0.52, // label + cloud occupy tickX..labelX1
-  designWeight: 0.0032, // stroke weight of the red cloud line-work, as a frac of frame width
 };
 
 const src = (i: number) => `/splash/frames/f${String(i).padStart(3, '0')}.webp`;
@@ -44,14 +38,12 @@ export function splashFrames(): HTMLImageElement[] {
   return frames;
 }
 
-/** Decode the frames in order; resolves once frame 0 is paintable. */
 export function preloadSplashFrames(): Promise<void> {
   const imgs = splashFrames();
   imgs.forEach((img) => void img.decode().catch(() => {}));
   return imgs[0].decode().catch(() => {});
 }
 
-/** Frame index for a scrub position in ms, clamped to what has decoded. */
 export function frameAt(ms: number): number {
   const imgs = splashFrames();
   let i = Math.round(ms / SPLASH_FRAME_MS);
@@ -60,16 +52,11 @@ export function frameAt(ms: number): number {
   return i;
 }
 
-/**
- * Where the animation frame is drawn: the whole frame, fit inside the viewport
- * (contain) and centred, so the composition stays at the source's scale on
- * every viewport. The cloud pattern is separately mirror-tiled into the margins
- * so the red design still reaches every screen edge (see SplashScreen.paint).
- */
+/** The frame contained (whole frame visible) inside a w×h box, centred. */
 export function coverRect(boxW: number, boxH: number) {
   const { w: iw, h: ih } = SPLASH_GEOM.frame;
   const scale = Math.min(boxW / iw, boxH / ih);
   const w = iw * scale;
   const h = ih * scale;
-  return { x: (boxW - w) / 2, y: (boxH - h) / 2, w, h };
+  return { x: (boxW - w) / 2, y: (boxH - h) / 2, w, h, scale };
 }
