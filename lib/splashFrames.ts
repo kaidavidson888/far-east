@@ -2,30 +2,53 @@
 // scrubbable WebP stills by `npm run build:splash` (recoloured, sharpened, with
 // the red seal fading as it drains and the red clouds rising to full opacity).
 // The frames keep the original login box's red outline; its black parts (labels,
-// ☁, dashes) are drawn crisp on top from loginbox-parts.svg once the form is up.
+// ☁, dashes) are drawn crisp on top from blackbox.webp once the form is up.
 // Nothing decodes a GIF at runtime.
 // `edge.webp` — the final red pattern with the box reflected over — tiles beside
 // the frame to continue the design to the screen edges.
-// `settle.webp` — the last frame with every black part at 0; cross-faded in on
-// latch so the baked black goes to 0 without a white patch.
+// `settle.webp` — the last frame with every black part at 0; drawn straight over
+// the frame on latch so the baked black is gone at once (no white patch).
 //
 // 101 frames, 40ms apart — exactly the source timing, 4.00s.
+
+import { SPLASH_EDGE_BANDS, SPLASH_EDGE_B64 } from './splashEdgeProfile';
 
 export const SPLASH_FRAME_MS = 40;
 export const SPLASH_FRAME_COUNT = 101;
 export const SPLASH_DURATION_MS = (SPLASH_FRAME_COUNT - 1) * SPLASH_FRAME_MS; // 4000
 
-// How far down the frame the cloud pattern has spread, per frame (0..1). Printed
-// by build-splash-frames.mjs. Used to reveal the edge tiles in step with it.
-// prettier-ignore
-export const SPLASH_SPREAD = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0.279,0.279,0.313,0.314,0.315,0.316,0.341,0.341,0.346,0.346,0.346,0.346,0.346,0.346,0.346,0.346,0.346,0.346,0.346,0.368,0.368,0.369,0.369,0.369,0.369,0.369,0.433,0.434,0.434,0.436,0.454,0.464,0.504,0.54,0.586,0.629,0.637,0.649,0.672,0.707,0.729,0.753,0.775,0.779,0.814,0.831,0.831,0.831,0.849,0.884,0.886,0.886,0.908,0.943,0.961,0.992,1,1,1,1,1];
+// Per-frame edge-coverage profile: for each frame, SPLASH_EDGE_BANDS bands of
+// red density in a strip just inside the LEFT frame edge, then the same for the
+// RIGHT. paint() reveals the tiled margins through this so they finger outward
+// in the frame's own organic shape — baked (in lib/splashEdgeProfile.ts, by
+// build-splash-frames.mjs) so paint() never getImageData's (that stretched the
+// animation on slower machines).
+export { SPLASH_EDGE_BANDS };
 
-export function spreadAt(ms: number): number {
+let splashEdgeData: Uint8Array | null = null;
+function splashEdge(): Uint8Array {
+  if (!splashEdgeData) {
+    const bin = atob(SPLASH_EDGE_B64);
+    splashEdgeData = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i += 1) splashEdgeData[i] = bin.charCodeAt(i);
+  }
+  return splashEdgeData;
+}
+
+/** Edge-coverage profile at `ms` for one side (0 = left, 1 = right), 0..1 per band. */
+export function edgeProfileAt(ms: number, side: 0 | 1): Float32Array {
+  const data = splashEdge();
+  const N = SPLASH_EDGE_BANDS;
+  const rowLen = N * 2;
   const f = ms / SPLASH_FRAME_MS;
-  const i = Math.max(0, Math.min(SPLASH_SPREAD.length - 1, Math.floor(f)));
-  const j = Math.min(SPLASH_SPREAD.length - 1, i + 1);
+  const i = Math.max(0, Math.min(SPLASH_FRAME_COUNT - 1, Math.floor(f)));
+  const j = Math.min(SPLASH_FRAME_COUNT - 1, i + 1);
   const t = f - i;
-  return SPLASH_SPREAD[i] * (1 - t) + SPLASH_SPREAD[j] * t;
+  const oi = i * rowLen + side * N;
+  const oj = j * rowLen + side * N;
+  const out = new Float32Array(N);
+  for (let b = 0; b < N; b += 1) out[b] = (data[oi + b] * (1 - t) + data[oj + b] * t) / 255;
+  return out;
 }
 
 // Everything measured off the baked last frame (f100), as fractions.

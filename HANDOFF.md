@@ -101,13 +101,15 @@ find the Edge crash instead, restoring the middleware is the cleaner solution.
     `settle.webp` (`process(…, LAST, 0)` — the last frame with every black part at 0), and
     `blackbox.webp` (`acc` keeping only the ink → black-on-transparent, same resize+sharpen,
     cropped to `SPLASH_GEOM.box`). Commit the output; nothing decodes a GIF at runtime.
-  - **Edge fill — branching growth:** `paint()` draws the frame 1:1 in the centre, then for
-    each side reads a thin strip just inside the frame edge (`getImageData`, `willReadFrequently`),
-    builds a 120-band vertical coverage profile, and reveals that side's `edge.webp` tiles
-    through it (`destination-in`, each side its own offscreen pass — a second pass over the whole
-    offscreen would wipe the first). A `reach` ramp (`rampUp(p, .34, .98)`) grows the margins
-    outward over the run; `inForm` → full. So the red fingers out in the frame's own organic
-    shape, like water, never a rectangle. On a phone the frame fills the width so none shows.
+  - **Edge fill — branching growth:** `paint()` draws the frame 1:1 in the centre, then per
+    side reveals `edge.webp` tiles through a **baked** 44-band edge-coverage profile —
+    `edgeProfileAt(ms, side)` from `lib/splashEdgeProfile.ts` (base64, written by
+    build-splash-frames.mjs; `paint()` used to `getImageData` this every frame, which stretched
+    the 4s animation to 6–20s on slower CPUs — now paint is ~0.5ms). Each side is its own
+    `destination-in` offscreen pass (a whole-offscreen second pass would wipe the first). A
+    `reach` ramp (`rampUp(p, .34, .98)`) grows the margins outward over the run; `inForm` →
+    full. The red fingers out in the frame's own organic shape, like water, never a rectangle.
+    On a phone the frame fills the width so none shows.
   - **Faint centre / bold edges:** after everything, `paint()` lays a radial veil of the page
     colour — eased in with `smooth(rampUp(p, .18, 1))`, permanent once latched. Idle: `0.34`
     alpha at the box, `0.52` in the halo, `0.05` by 72% radius, `0` at the screen edge. While
@@ -116,9 +118,10 @@ find the Edge crash instead, restoring the middleware is the cleaner solution.
   - **Login box** — `SplashLoginFields` shows nine sprite windows onto `blackbox.webp`, three
     per row: `label` x[x0..mid], `☁` x[mid..cloudX1], `line` x[x0..dashX1] (all fractions of
     the box, `SPLASH_GEOM.parts`, **measured off the black baked into f100** so the overlay is
-    pixel-exact — verified 100% overlap). On latch `settle.webp` cross-fades over the frame
-    (`SETTLE_MS` 480) so the baked black → 0 in place — **no white patch** — as the windows
-    fade in. Transparent `<input>`s + submit `<button>` sit on the dashes (typed text bold
+    pixel-exact — verified 100% overlap). Offset by `OX/OY` so the content sits equidistant
+    from the red frame. On latch `settle.webp` is drawn straight over the frame — baked black
+    gone **at once**, no white patch — and the windows fade in ~200ms later (black first, then
+    the form). Transparent `<input>`s + submit `<button>` sit on the dashes (typed text bold
     Cormorant Unicase, no caret, shrink-to-fit). Per-part opacity: idle → lines 50, labels 50,
     ☁ 100. A text field focused → all lines 100, submit row 80, every other label/☁ 10, and a
     full-screen veil with a soft radial hole at the box drops the red outside to 20 (the hole +

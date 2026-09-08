@@ -39,9 +39,10 @@ export function SplashLoginFields({
 
   const inField = focus === 'email' || focus === 'password';
 
+  // the baked black vanishes instantly on latch; the form appears a beat later
   useEffect(() => {
-    const id = requestAnimationFrame(() => requestAnimationFrame(() => setShown(true)));
-    return () => cancelAnimationFrame(id);
+    const id = window.setTimeout(() => setShown(true), 200);
+    return () => window.clearTimeout(id);
   }, []);
 
   useEffect(() => { onFieldFocus?.(inField); }, [inField, onFieldFocus]);
@@ -129,7 +130,7 @@ export function SplashLoginFields({
         }}
       />
 
-      <div style={{ opacity: shown ? 1 : 0, transition: `opacity ${shown ? 440 : 0}ms ease` }}>
+      <div style={{ opacity: shown ? 1 : 0, transition: `opacity ${shown ? 200 : 0}ms ease` }}>
         {(['email', 'password', 'submit'] as const).flatMap((row) => {
           const p = parts[row];
           return [

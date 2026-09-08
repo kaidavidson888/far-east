@@ -9,11 +9,10 @@ import {
   preloadSplashFrames,
   frameAt,
   coverRect,
+  edgeProfileAt,
   SPLASH_GEOM,
   SPLASH_DURATION_MS,
 } from '@/lib/splashFrames';
-
-const SETTLE_MS = 480; // black cross-fades to 0 over this once the form latches
 
 type Phase = 'logo' | 'play' | 'form';
 
@@ -25,11 +24,11 @@ const clamp01 = (v: number) => (v < 0 ? 0 : v > 1 ? 1 : v);
  * The homepage splash: a faithful copy of the source animation, recoloured and
  * sharpened, played at the source scale. The frame sits 1:1 in the middle (the
  * original, untouched); its red design is continued out to the screen edges by
- * tiling the box-free copy, revealed per horizontal band from how far the
- * frame's own edge has grown so the margins branch outward like water. A radial
- * veil keeps the centre faint and the edges bold, easing in as it grows. Once
- * the animation latches, settle.webp cross-fades over the frame (all the baked
- * black → 0) and SplashLoginFields shows the box's own black content back —
+ * tiling the box-free copy, revealed per band from the baked per-frame edge
+ * profile so the margins branch outward like water. A radial veil keeps the
+ * centre faint and the edges bold, easing in as it grows. On latch settle.webp
+ * is drawn straight over the frame (all the baked black gone at once) and
+ * SplashLoginFields shows the box's own black content back a beat later —
  * pixel-exact, from blackbox.webp — with working inputs over it.
  */
 export function SplashScreen() {
@@ -52,7 +51,6 @@ export function SplashScreen() {
   const dirRef = useRef(0);
   const pressedRef = useRef(false);
   const wantPlayRef = useRef(false);
-  const formAtRef = useRef(0); // performance.now() when the form latched
   const rafRef = useRef(0);
   const lastTsRef = useRef(0);
 
@@ -73,7 +71,7 @@ export function SplashScreen() {
     const canvas = canvasRef.current;
     const frames = framesRef.current;
     if (!canvas || !frames.length) return;
-    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
     const dpr = window.devicePixelRatio || 1;
@@ -100,61 +98,35 @@ export function SplashScreen() {
     // The frame itself, 1:1 in the centre — the original animation, untouched.
     ctx.drawImage(img, 0, 0, iw, ih, r.x, fy, r.w, r.h);
 
-    // Once latched, cross-fade settle.webp (same frame, every black part at 0)
-    // over it, so the baked black — the login-box labels, ☁ and dashes — fades
-    // to nothing in place. The crisp vector version comes back on top, in DOM.
+    // Once latched, settle.webp (same frame, every black part at 0) is drawn
+    // straight over it — the baked login-box black is gone instantly; the crisp
+    // version comes back on top, in DOM.
     const settle = settleRef.current;
     if (inForm && settle?.complete && settle.naturalWidth) {
-      const sf = clamp01((performance.now() - formAtRef.current) / SETTLE_MS);
-      if (sf > 0) {
-        ctx.globalAlpha = sf;
-        ctx.drawImage(settle, 0, 0, settle.naturalWidth, settle.naturalHeight, r.x, fy, r.w, r.h);
-        ctx.globalAlpha = 1;
-      }
+      ctx.drawImage(settle, 0, 0, settle.naturalWidth, settle.naturalHeight, r.x, fy, r.w, r.h);
     }
 
     // Continue the red design out to the screen edges. edge.webp is the box-free
     // final pattern and it tiles horizontally (its left edge matches its right).
-    // Each horizontal band of the margin is revealed by how filled-in the
-    // frame's own edge column is at that band — so the margins finger outward in
-    // the frame's organic shape, like water branching, never as a rectangle.
+    // Each band of the margin is revealed by the baked per-frame edge-coverage
+    // profile, so the margins finger outward in the frame's organic shape, like
+    // water branching, never a rectangle — and paint() never getImageData's.
     const edge = edgeRef.current;
     const sideM = r.x;
     if (edge?.complete && edge.naturalWidth && sideM > 2) {
-      const BANDS = 120;
-      const readCol = (cssX: number): Float32Array | null => {
-        const x0 = Math.max(0, Math.min(canvas.width - 4, Math.round(cssX * dpr)));
-        const y0 = Math.max(0, Math.round(fy * dpr));
-        const w = Math.max(1, Math.round(4 * dpr));
-        const h = Math.min(canvas.height - y0, Math.round(r.h * dpr));
-        if (h < BANDS) return null;
-        let d: Uint8ClampedArray;
-        try { d = ctx.getImageData(x0, y0, w, h).data; } catch { return null; }
-        const raw = new Float32Array(BANDS);
-        const per = h / BANDS;
-        for (let bnd = 0; bnd < BANDS; bnd++) {
-          let hit = 0, tot = 0;
-          const ya = Math.floor(bnd * per), yb = Math.max(ya + 1, Math.floor((bnd + 1) * per));
-          for (let y = ya; y < yb; y++) {
-            for (let xx = 0; xx < w; xx++) {
-              const i = (y * w + xx) * 4;
-              tot++;
-              if (d[i] - d[i + 1] > 26 && d[i] > 120) hit++;
-            }
-          }
-          raw[bnd] = tot ? hit / tot : 0;
-        }
-        const out = new Float32Array(BANDS); // soften so bands read as fingers
-        for (let i = 0; i < BANDS; i++) {
-          const a = raw[Math.max(0, i - 1)], b = raw[i], c = raw[Math.min(BANDS - 1, i + 1)];
+      const smoothProfile = (raw: Float32Array) => {
+        const n = raw.length;
+        const out = new Float32Array(n);
+        for (let i = 0; i < n; i += 1) {
+          const a = raw[Math.max(0, i - 1)], b = raw[i], c = raw[Math.min(n - 1, i + 1)];
           out[i] = Math.pow(clamp01((a + 2 * b + c) / 4), 0.62);
         }
         return out;
       };
-      const left = readCol(r.x + 3);
-      const right = readCol(r.x + r.w - 7);
+      const left = smoothProfile(edgeProfileAt(ms, 0));
+      const right = smoothProfile(edgeProfileAt(ms, 1));
 
-      if (left && right) {
+      {
         const off = offRef.current ?? (offRef.current = document.createElement('canvas'));
         if (off.width !== canvas.width || off.height !== canvas.height) {
           off.width = canvas.width;
@@ -249,11 +221,12 @@ export function SplashScreen() {
         posRef.current = SPLASH_DURATION_MS;
         if (dirRef.current > 0) {
           dirRef.current = 0;
-          if (phaseRef.current !== 'form') { formAtRef.current = ts; setPhase('form'); }
+          stop();
+          setPhase('form'); // phaseRef flips synchronously
+          paint(posRef.current); // inForm → settle over the frame, baked black gone at once
+          return;
         }
         paint(posRef.current);
-        // keep painting through the settle cross-fade, then idle
-        if (dirRef.current === 0 && ts - formAtRef.current > SETTLE_MS + 80) { stop(); return; }
       } else if (posRef.current <= 0) {
         posRef.current = 0;
         paint(posRef.current);
@@ -333,9 +306,8 @@ export function SplashScreen() {
       if (reducedRef.current) {
         posRef.current = SPLASH_DURATION_MS;
         dirRef.current = 0;
-        formAtRef.current = performance.now();
         setPhase('form');
-        run(); // paints the settle cross-fade, then idles
+        paint(posRef.current); // settle over the frame — baked black gone at once
         return;
       }
       if (!ready) return;
@@ -343,7 +315,7 @@ export function SplashScreen() {
       setPhase('play');
       run();
     },
-    [ready, run, setPhase],
+    [ready, run, setPhase, paint],
   );
 
   const release = useCallback(() => {
