@@ -47,8 +47,12 @@ export function SplashLoginFields({
   useEffect(() => { onFieldFocus?.(inField); }, [inField, onFieldFocus]);
 
   const { parts } = SPLASH_GEOM;
-  const bx = (fx: number) => box.x + fx * box.w;
-  const by = (fy: number) => box.y + fy * box.h;
+  // the black content sits a hair low in the red outline box; nudge the whole
+  // overlay up so it's equidistant from every side of it
+  const OX = box.w * -0.004;
+  const OY = box.h * -0.018;
+  const bx = (fx: number) => box.x + fx * box.w + OX;
+  const by = (fy: number) => box.y + fy * box.h + OY;
   const labelSize = box.h * 0.075;
 
   const op = (kind: Kind, row: Row | 'submit'): number => {
@@ -67,27 +71,25 @@ export function SplashLoginFields({
     return 0.5;
   };
 
-  // a window onto blackbox.webp: the rect [x0f,y0f]-[x1f,y1f] of the box
-  const win = (key: string, x0f: number, y0f: number, x1f: number, y1f: number, o: number) => {
-    const wx = bx(x0f);
-    const wy = by(y0f);
-    return (
-      <div
-        key={key}
-        aria-hidden
-        style={{
-          position: 'fixed', pointerEvents: 'none',
-          left: wx, top: wy, width: bx(x1f) - wx, height: by(y1f) - wy,
-          backgroundImage: 'url(/splash/blackbox.webp)',
-          backgroundRepeat: 'no-repeat',
-          backgroundSize: `${box.w}px ${box.h}px`,
-          backgroundPosition: `${box.x - wx}px ${box.y - wy}px`,
-          opacity: o,
-          transition: 'opacity 160ms ease',
-        }}
-      />
-    );
-  };
+  // a window onto blackbox.webp: the rect [x0f,y0f]-[x1f,y1f] of the box. The
+  // sprite is anchored to the window's own top-left (so the OX/OY nudge moves
+  // the content with the window, not relative to it).
+  const win = (key: string, x0f: number, y0f: number, x1f: number, y1f: number, o: number) => (
+    <div
+      key={key}
+      aria-hidden
+      style={{
+        position: 'fixed', pointerEvents: 'none',
+        left: bx(x0f), top: by(y0f), width: (x1f - x0f) * box.w, height: (y1f - y0f) * box.h,
+        backgroundImage: 'url(/splash/blackbox.webp)',
+        backgroundRepeat: 'no-repeat',
+        backgroundSize: `${box.w}px ${box.h}px`,
+        backgroundPosition: `${-x0f * box.w}px ${-y0f * box.h}px`,
+        opacity: o,
+        transition: 'opacity 160ms ease',
+      }}
+    />
+  );
 
   const field = (r: Row, value: string, set: (v: string) => void, type: string, ac: string, label: string) => {
     const p = parts[r];
