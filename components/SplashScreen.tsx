@@ -8,6 +8,7 @@ import {
   preloadSplashFrames,
   frameAt,
   coverRect,
+  spreadAt,
   SPLASH_GEOM,
   SPLASH_DURATION_MS,
 } from '@/lib/splashFrames';
@@ -16,6 +17,10 @@ type Phase = 'logo' | 'play' | 'form';
 export type FocusField = 'email' | 'password' | 'submit' | null;
 
 const rampUp = (p: number, a: number, b: number) => (p <= a ? 0 : p >= b ? 1 : (p - a) / (b - a));
+const smoothstep = (t: number) => {
+  const x = t < 0 ? 0 : t > 1 ? 1 : t;
+  return x * x * (3 - 2 * x);
+};
 
 const BOX_IDS = [
   'border',
@@ -49,6 +54,7 @@ export function SplashScreen() {
   const boxHostRef = useRef<HTMLDivElement | null>(null);
   const framesRef = useRef<HTMLImageElement[]>([]);
   const edgeRef = useRef<HTMLImageElement | null>(null);
+  const offRef = useRef<HTMLCanvasElement | null>(null);
   const posRef = useRef(0);
   const dirRef = useRef(0);
   const pressedRef = useRef(false);
@@ -68,8 +74,9 @@ export function SplashScreen() {
     const w = (g.box.x1 - g.box.x0) * r.w;
     const h = (g.box.y1 - g.box.y0) * r.h;
     setBox({ x: (vw - w) / 2, y: (vh - h) / 2, w, h });
+    // the seal is drawn as part of the frame (nudged down by boxDy), so match it
     const s = g.seal.size * r.w;
-    setSeal({ x: (vw - s) / 2, y: (vh - s) / 2, s });
+    setSeal({ x: (vw - s) / 2, y: (vh - s) / 2 + g.boxDy * r.h, s });
   }, []);
 
   const boxOpacity = useCallback((id: string, fadeIn: number) => {
@@ -95,15 +102,30 @@ export function SplashScreen() {
     return fadeIn * (kind === 'cloud' ? 1 : 0.5);
   }, []);
 
+  // How far the box has "grown in" from the top — it draws itself downward as
+  // the red drain fills it, rather than fading in whole.
+  const boxReveal = useCallback(
+    (ms: number) =>
+      phaseRef.current === 'form' ? 1 : smoothstep(rampUp(ms / SPLASH_DURATION_MS, 0.46, 0.9)),
+    [],
+  );
+
   const applyBox = useCallback((ms: number) => {
     const host = boxHostRef.current;
     if (!host) return;
-    const fadeIn = phaseRef.current === 'form' ? 1 : rampUp(ms / SPLASH_DURATION_MS, 0.84, 1);
     for (const id of BOX_IDS) {
       const el = host.querySelector<SVGGElement>(`#${id}`);
-      if (el) el.style.opacity = String(boxOpacity(id, fadeIn));
+      if (el) el.style.opacity = String(boxOpacity(id, 1));
     }
-  }, [boxOpacity]);
+    // top-down reveal (soft edge) instead of a flat fade
+    const rev = boxReveal(ms);
+    const m =
+      rev >= 1
+        ? 'none'
+        : `linear-gradient(to bottom, #000 ${(rev * 116 - 13).toFixed(1)}%, transparent ${(rev * 116 - 1).toFixed(1)}%)`;
+    host.style.setProperty('mask-image', m);
+    host.style.setProperty('-webkit-mask-image', m);
+  }, [boxOpacity, boxReveal]);
 
   const paint = useCallback((ms: number) => {
     const canvas = canvasRef.current;
@@ -129,41 +151,94 @@ export function SplashScreen() {
       const iw = img.naturalWidth;
       const ih = img.naturalHeight;
       const p = Math.min(Math.max(ms / SPLASH_DURATION_MS, 0), 1);
+      const fy = r.y + SPLASH_GEOM.boxDy * r.h; // nudge so the baked box centres on the page
 
       // The frame itself, 1:1 in the centre — the original animation, untouched.
-      ctx.drawImage(img, 0, 0, iw, ih, r.x, r.y, r.w, r.h);
+      ctx.drawImage(img, 0, 0, iw, ih, r.x, fy, r.w, r.h);
 
       // Continue the pattern to the screen edge by tiling the box-free copy
       // (edge.webp) left and right at the same scale. The design tiles cleanly
-      // (its left edge matches its right edge), so this is one seamless pattern —
-      // no reflection axis, no overlap. It fades in with the clouds; on a phone
-      // the frame fills the width so none of it shows.
+      // (its left edge matches its right edge) so this is one seamless pattern —
+      // no reflection axis, no overlap. It's not faded in: a soft front spreads
+      // outward from the frame edge (horizontal) but only as far *down* as the
+      // frame's own pattern has spread (SPLASH_SPREAD), so the margins read as
+      // the same pattern flowing outward from the animation, never materialising.
       const edge = edgeRef.current;
-      // hold the tiles back until the frame's own pattern has spread to its
-      // edges, so the margins don't run ahead of the animation
-      const edgeA = phaseRef.current === 'form' ? 1 : Math.pow(rampUp(p, 0.58, 0.98), 0.8);
-      if (edge?.complete && edge.naturalWidth && edgeA > 0.01 && r.x > 2) {
-        const ew = edge.naturalWidth;
-        const eh = edge.naturalHeight;
-        ctx.save();
-        ctx.globalAlpha = edgeA;
-        for (let x = r.x + r.w; x < vw + 1; x += r.w) ctx.drawImage(edge, 0, 0, ew, eh, x, r.y, r.w, r.h);
-        for (let x = r.x - r.w; x + r.w > -1; x -= r.w) ctx.drawImage(edge, 0, 0, ew, eh, x, r.y, r.w, r.h);
-        ctx.restore();
+      const sideM = r.x;
+      const inForm = phaseRef.current === 'form';
+      const vSpread = inForm ? 1.2 : spreadAt(ms);
+      const hSpread = inForm ? 1 : Math.pow(rampUp(p, 0.38, 0.95), 0.9);
+      if (edge?.complete && edge.naturalWidth && vSpread > 0.02 && sideM > 2) {
+        const off = offRef.current ?? (offRef.current = document.createElement('canvas'));
+        if (off.width !== canvas.width || off.height !== canvas.height) {
+          off.width = canvas.width;
+          off.height = canvas.height;
+        }
+        const octx = off.getContext('2d');
+        if (octx) {
+          const ew = edge.naturalWidth;
+          const eh = edge.naturalHeight;
+          octx.setTransform(dpr, 0, 0, dpr, 0, 0);
+          octx.globalCompositeOperation = 'source-over';
+          octx.clearRect(0, 0, vw, vh);
+          for (let x = r.x + r.w; x < vw + 1; x += r.w) octx.drawImage(edge, 0, 0, ew, eh, x, fy, r.w, r.h);
+          for (let x = r.x - r.w; x + r.w > -1; x -= r.w) octx.drawImage(edge, 0, 0, ew, eh, x, fy, r.w, r.h);
+
+          octx.globalCompositeOperation = 'destination-in';
+          const clamp01 = (v: number) => Math.max(0, Math.min(1, v));
+          // horizontal: spreading outward from each frame edge
+          const reach = hSpread * sideM + 10;
+          const feat = Math.min(reach, 70);
+          const fL = r.x - reach;
+          const fR = r.x + r.w + reach;
+          const gh = octx.createLinearGradient(0, 0, vw, 0);
+          gh.addColorStop(0, 'rgba(0,0,0,0)');
+          gh.addColorStop(clamp01(fL / vw), 'rgba(0,0,0,0)');
+          gh.addColorStop(clamp01((fL + feat) / vw), 'rgba(0,0,0,1)');
+          gh.addColorStop(clamp01((fR - feat) / vw), 'rgba(0,0,0,1)');
+          gh.addColorStop(clamp01(fR / vw), 'rgba(0,0,0,0)');
+          gh.addColorStop(1, 'rgba(0,0,0,0)');
+          octx.fillStyle = gh;
+          octx.fillRect(0, 0, vw, vh);
+          // vertical: only as far down as the frame's own pattern has reached
+          const front = fy + vSpread * r.h;
+          const gv = octx.createLinearGradient(0, 0, 0, vh);
+          gv.addColorStop(0, 'rgba(0,0,0,1)');
+          gv.addColorStop(clamp01((front - 55) / vh), 'rgba(0,0,0,1)');
+          gv.addColorStop(clamp01(front / vh), 'rgba(0,0,0,0)');
+          gv.addColorStop(1, 'rgba(0,0,0,0)');
+          octx.fillStyle = gv;
+          octx.fillRect(0, 0, vw, vh);
+
+          octx.globalCompositeOperation = 'source-over';
+          ctx.drawImage(off, 0, 0, canvas.width, canvas.height, 0, 0, vw, vh);
+        }
       }
 
-      // Clean white behind the vector login box — a tight rect just inside where
-      // its red border draws (dead centre, matching the DOM box), hard-edged so
-      // the pattern meets the border with no halo. Ramps in as the box latches.
+      // Clean white behind the vector login box, revealed top-down in step with
+      // the box (which draws itself downward), so the pattern/drain still shows
+      // below the growing edge. Dead centre, matching the DOM box.
       const gb = SPLASH_GEOM.box;
       const bw = (gb.x1 - gb.x0) * r.w;
       const bh = (gb.y1 - gb.y0) * r.h;
-      const fillA = phaseRef.current === 'form' ? 1 : rampUp(p, 0.78, 0.98);
-      if (fillA > 0.001) {
+      const bx = (vw - bw) / 2;
+      const by = (vh - bh) / 2;
+      const rev = phaseRef.current === 'form' ? 1 : smoothstep(rampUp(p, 0.46, 0.9));
+      if (rev > 0.001) {
         ctx.save();
-        ctx.globalAlpha = fillA;
-        ctx.fillStyle = '#fcfcfc';
-        ctx.fillRect((vw - bw) / 2 + 2, (vh - bh) / 2 + 2, bw - 4, bh - 4);
+        if (rev >= 1) {
+          ctx.fillStyle = '#fcfcfc';
+          ctx.fillRect(bx + 2, by + 2, bw - 4, bh - 4);
+        } else {
+          const gg = ctx.createLinearGradient(0, by, 0, by + bh);
+          const e = rev * 1.08;
+          gg.addColorStop(0, '#fcfcfc');
+          gg.addColorStop(Math.max(0, Math.min(1, e - 0.06)), '#fcfcfc');
+          gg.addColorStop(Math.max(0, Math.min(1, e + 0.06)), 'rgba(252,252,252,0)');
+          gg.addColorStop(1, 'rgba(252,252,252,0)');
+          ctx.fillStyle = gg;
+          ctx.fillRect(bx + 2, by + 2, bw - 4, bh - 4);
+        }
         ctx.restore();
       }
     }
@@ -216,10 +291,25 @@ export function SplashScreen() {
     measure();
     fetch('/splash/loginbox-parts.svg').then((res) => res.text()).then(setBoxSvg).catch(() => {});
 
+    // dev-only: ?splashms=2800 paints one point of the animation and holds
+    const devMs =
+      process.env.NODE_ENV !== 'production'
+        ? Number(new URLSearchParams(window.location.search).get('splashms'))
+        : NaN;
+
     let alive = true;
     preloadSplashFrames().then(() => {
       if (!alive) return;
       setReady(true);
+      if (Number.isFinite(devMs)) {
+        posRef.current = Math.max(0, Math.min(SPLASH_DURATION_MS, devMs));
+        setPhase('play');
+        paint(posRef.current);
+        Promise.all(framesRef.current.map((im) => im.decode().catch(() => {}))).then(
+          () => alive && paint(posRef.current),
+        );
+        return;
+      }
       paint(posRef.current);
       if (wantPlayRef.current && pressedRef.current && !reducedRef.current) {
         dirRef.current = 1;

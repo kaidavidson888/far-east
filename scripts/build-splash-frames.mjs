@@ -5,12 +5,11 @@
  *   - sharpness: full resolution + a light unsharp pass
  *   - opacity:   the red seal panel fades as it drains; the red cloud design
  *                rises from faint to 100% over the run (frames 0 → 100)
- *   - the original login box is painted over with cloud near the end so only the
- *     vector box (loginbox-parts.svg) on the DOM remains
  *
- * Also writes public/splash/edge.webp: the final pattern with the box footprint
- * painted over with cloud, used as the scaled backdrop that continues the design
- * out to the screen edges.
+ * The frames keep the original login box — the DOM box reveals top-down over it
+ * at paint time. Also writes public/splash/edge.webp: the final pattern with the
+ * box reflected over, tiled left/right at paint time to continue the design out
+ * to the screen edges (the pattern tiles horizontally).
  *
  *   npm run build:splash
  *
@@ -108,13 +107,10 @@ function process(d, n) {
   }
 }
 
-// Erase the original login box from frame ~78 on — a clean cut (the fill is
-// seamless, and it's a hard on/off so the box and pattern never overlap). The
-// DOM box fades in on top from ~frame 76.
-function eraseBox(d, n) {
-  cloudFill(d, Buffer.from(d), BOX_R, n / LAST >= 0.78 ? 1 : 0);
-}
-
+// The frames keep the original login box (it draws itself out of the drain —
+// the DOM box + its white backing reveal top-down over it at paint time). Only
+// the tile needs it gone.
+//
 // The seamless tile: frame 100's pattern with the box reflected over, used to
 // continue the design past the frame edge (the pattern tiles horizontally).
 function buildEdge(raw) {
@@ -123,6 +119,27 @@ function buildEdge(raw) {
   cloudFill(d, Buffer.from(d), BOX_R, 1);
   return d;
 }
+
+// How far down the frame the cloud pattern has spread (0..1) — the last row,
+// scanning top-down over the full width, that still has red. Used to reveal the
+// edge tiles in step with the animation so the margins don't run ahead.
+function patternSpread(d) {
+  // Only the very edges of the frame — that's where the tiles butt on — so the
+  // tiles are held back until the pattern has actually reached the frame edge.
+  const cols = [];
+  for (let x = 2; x < W * 0.09; x += 2) cols.push(x);
+  for (let x = Math.floor(W * 0.91); x < W - 2; x += 2) cols.push(x);
+  for (let y = H - 1; y >= 0; y--) {
+    let red = 0;
+    for (const x of cols) {
+      const i = (y * W + x) * 4;
+      if (d[i] - d[i + 1] > 40 && d[i] > 150) red++;
+      if (red >= 5) return (y + 1) / H;
+    }
+  }
+  return 0;
+}
+const spreadProfile = [];
 
 rmSync(OUT, { recursive: true, force: true });
 mkdirSync(OUT, { recursive: true });
@@ -150,7 +167,7 @@ for (let n = 0; n < frames.length; n++) {
 
   const snap = Buffer.from(acc);
   process(snap, n);
-  eraseBox(snap, n);
+  spreadProfile.push(patternSpread(snap));
   const png = new PNG({ width: W, height: H });
   snap.copy(png.data);
   await sharp(PNG.sync.write(png))
@@ -170,4 +187,8 @@ await sharp(PNG.sync.write(epng))
   .webp({ quality: QUALITY })
   .toFile('public/splash/edge.webp');
 
+// smooth + monotonic (spread only grows), rounded
+let mx = 0;
+const spread = spreadProfile.map((v) => (mx = Math.max(mx, v))).map((v) => +v.toFixed(3));
 console.log(`wrote ${written} frames to ${OUT}/ + edge.webp (${W}x${H} → ${WIDTH}px / ${EDGE_WIDTH}px)`);
+console.log('SPLASH_SPREAD =', JSON.stringify(spread));

@@ -6,8 +6,10 @@
  *
  *   npm run build:splash    (runs this too)
  *
- * Classifies each M-subpath by its bounding box: row by Y, then within a row
- * line = short/flat dash marks, cloud = the right-hand glyph, label = the rest.
+ * The output viewBox is the content bounding box + a symmetric pad, and #border
+ * is that rectangle — so the red outline hugs the content evenly on all sides
+ * (no extra room on one side). It also prints the box aspect ratio and the row
+ * geometry to paste into SPLASH_GEOM in lib/splashFrames.ts.
  */
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 
@@ -16,21 +18,18 @@ const OUT = 'public/splash';
 mkdirSync(OUT, { recursive: true });
 
 const svg = readFileSync(SRC, 'utf8');
-const vb = svg.match(/viewBox="([^"]+)"/)[1];
-const [, , VW, VH] = vb.split(/\s+/).map(Number);
+const [, , VW, VH] = svg.match(/viewBox="([^"]+)"/)[1].split(/\s+/).map(Number);
 const d = svg.match(/<path d="([^"]+)"/)[1];
 
 const subs = d.split(/(?=[Mm])/).filter((s) => s.trim());
 const bbox = (sp) => {
   const nums = (sp.match(/-?\d+\.?\d*/g) || []).map(Number);
-  const xs = [];
-  const ys = [];
+  const xs = [], ys = [];
   for (let i = 0; i < nums.length - 1; i += 2) { xs.push(nums[i]); ys.push(nums[i + 1]); }
   return { x0: Math.min(...xs), x1: Math.max(...xs), y0: Math.min(...ys), y1: Math.max(...ys), sp };
 };
 const b = subs.map(bbox);
 
-// Row bands by Y (three roughly-even rows across the viewBox).
 const rowOf = (yc) => (yc < VH * 0.33 ? 'email' : yc < VH * 0.66 ? 'password' : 'submit');
 const w = (r) => r.x1 - r.x0;
 const h = (r) => r.y1 - r.y0;
@@ -46,14 +45,21 @@ const isLine = (r) =>
 const isCloud = (r) => pts(r) > 100 || (w(r) > 115 && h(r) > 35 && r.x0 > VW * 0.42);
 
 const parts = {};
-const add = (key, r) => { (parts[key] ||= []).push(r.sp); };
-
+const kindOf = (r) => (isLine(r) ? 'line' : isCloud(r) ? 'cloud' : 'label');
 for (const r of b) {
   const row = rowOf((r.y0 + r.y1) / 2);
-  if (isLine(r)) add(`line-${row}`, r);
-  else if (isCloud(r)) add(`cloud-${row}`, r);
-  else add(`label-${row}`, r);
+  ((parts[`${kindOf(r)}-${row}`] ||= [])).push(r);
 }
+
+// content bounding box → viewBox + border, padded evenly
+const all = b;
+const cx0 = Math.min(...all.map((r) => r.x0));
+const cx1 = Math.max(...all.map((r) => r.x1));
+const cy0 = Math.min(...all.map((r) => r.y0));
+const cy1 = Math.max(...all.map((r) => r.y1));
+const PAD = 22;
+const X0 = cx0 - PAD, Y0 = cy0 - PAD;
+const BW = cx1 - cx0 + 2 * PAD, BH = cy1 - cy0 + 2 * PAD;
 
 const order = [
   'line-email', 'line-password', 'line-submit',
@@ -62,14 +68,33 @@ const order = [
 ];
 const groups = order
   .filter((k) => parts[k])
-  .map((k) => `  <g id="${k}"><path d="${parts[k].join(' ')}" fill="#000000"/></g>`)
+  .map((k) => `  <g id="${k}"><path d="${parts[k].map((r) => r.sp).join(' ')}" fill="#000000"/></g>`)
   .join('\n');
-// The red outline box = the whole box div (SPLASH_GEOM.box), so the canvas
-// knockout behind it lines up and the pattern meets it with no white gap.
 const border =
-  `  <g id="border"><rect x="1.5" y="1.5" width="${(VW - 3).toFixed(0)}" height="${(VH - 3).toFixed(0)}" ` +
+  `  <g id="border"><rect x="${(X0 + 1).toFixed(1)}" y="${(Y0 + 1).toFixed(1)}" ` +
+  `width="${(BW - 2).toFixed(1)}" height="${(BH - 2).toFixed(1)}" ` +
   `fill="none" stroke="#ff0000" stroke-width="2.25" vector-effect="non-scaling-stroke"/></g>`;
 
-const out = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${VW} ${VH}" preserveAspectRatio="none">\n${border}\n${groups}\n</svg>\n`;
+const out =
+  `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${X0.toFixed(1)} ${Y0.toFixed(1)} ${BW.toFixed(1)} ${BH.toFixed(1)}" ` +
+  `preserveAspectRatio="none">\n${border}\n${groups}\n</svg>\n`;
 writeFileSync(`${OUT}/loginbox-parts.svg`, out);
-console.log(`wrote ${OUT}/loginbox-parts.svg`, Object.fromEntries(Object.entries(parts).map(([k, v]) => [k, v.length])));
+
+// row geometry as fractions of the new viewBox, for SPLASH_GEOM.rows
+const rowGeom = {};
+for (const row of ['email', 'password', 'submit']) {
+  const dashes = (parts[`line-${row}`] || []).filter((r) => h(r) <= 8);
+  const dashY = dashes.reduce((s, r) => s + (r.y0 + r.y1) / 2, 0) / dashes.length;
+  const lx = Math.min(...dashes.map((r) => r.x0)); // first dash (typed text starts here)
+  const rx = Math.max(...dashes.map((r) => r.x1));
+  rowGeom[row] = {
+    dashY: +((dashY - Y0) / BH).toFixed(3),
+    lineX0: +((lx - X0) / BW).toFixed(3),
+    endX: +((rx - X0) / BW).toFixed(3),
+  };
+}
+
+console.log('wrote', `${OUT}/loginbox-parts.svg`);
+console.log('box aspect (w/h):', (BW / BH).toFixed(4), ' → SPLASH_GEOM.box width should be height * this * (frame.h / frame.w)');
+console.log('rows:', JSON.stringify(rowGeom));
+console.log('parts:', Object.fromEntries(Object.entries(parts).map(([k, v]) => [k, v.length])));
