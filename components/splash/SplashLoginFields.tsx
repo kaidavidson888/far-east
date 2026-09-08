@@ -1,6 +1,6 @@
 'use client';
 
-import { useActionState, useEffect, useState } from 'react';
+import { useActionState, useEffect, useLayoutEffect, useState } from 'react';
 import { loginAction, type FormState } from '@/app/actions';
 import { SPLASH_GEOM } from '@/lib/splashFrames';
 
@@ -17,9 +17,12 @@ const TYPED_SCALE: Record<Row, number> = { email: 1.1, password: 1 };
 /**
  * The login box overlay. Its visuals ARE the box baked into the frames: three
  * sprite windows per row (label · ☁ · dashed line) onto `blackbox.webp`, which
- * is that black content cropped from f100 — so it's pixel-exact with what
- * settle.webp fades out underneath. Transparent working inputs sit on the
- * dashes.
+ * is that black content cropped from f100 — so it's pixel-exact with the black
+ * still baked into the frame underneath. It renders at full opacity on its very
+ * first painted frame and reports back through `onReady`; the parent then drops
+ * the baked black on the *next* frame, so there is exactly one frame where both
+ * are on screen and the handover is invisible. Transparent working inputs sit on
+ * the dashes.
  *
  * Per-part opacity (unchanged): idle → lines 50, labels 50, ☁ 100. A text field
  * focused → all lines 100, the submit row 80, every other label/☁ 10, and the
@@ -29,25 +32,24 @@ const TYPED_SCALE: Record<Row, number> = { email: 1.1, password: 1 };
 export function SplashLoginFields({
   box,
   onFieldFocus,
+  onReady,
 }: {
   box: Box;
   onFieldFocus?: (on: boolean) => void;
+  onReady?: () => void;
 }) {
   const [state, action] = useActionState<FormState, FormData>(loginAction, null);
   const [email, setEmail] = useState('');
   const [pw, setPw] = useState('');
   const [focus, setFocus] = useState<Row | null>(null);
   const [submitActive, setSubmitActive] = useState(false);
-  const [shown, setShown] = useState(false);
 
   const inField = focus === 'email' || focus === 'password';
 
-  // the baked black vanishes instantly on latch; the form comes in right behind
-  // it — one frame's grace so the settle paint lands first, then a quick fade
-  useEffect(() => {
-    const id = requestAnimationFrame(() => setShown(true));
-    return () => cancelAnimationFrame(id);
-  }, []);
+  // After the commit but before the browser paints — so by the time this fires
+  // the form is in the DOM and *will* be in this frame. The parent hands the
+  // baked black one more frame, then drops it.
+  useLayoutEffect(() => { onReady?.(); }, [onReady]);
 
   useEffect(() => { onFieldFocus?.(inField); }, [inField, onFieldFocus]);
 
@@ -134,7 +136,7 @@ export function SplashLoginFields({
         }}
       />
 
-      <div style={{ opacity: shown ? 1 : 0, transition: `opacity ${shown ? 120 : 0}ms ease` }}>
+      <div>
         {(['email', 'password', 'submit'] as const).flatMap((row) => {
           const p = parts[row];
           return [

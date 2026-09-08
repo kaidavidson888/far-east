@@ -26,10 +26,10 @@ const clamp01 = (v: number) => (v < 0 ? 0 : v > 1 ? 1 : v);
  * original, untouched); its red design is continued out to the screen edges by
  * tiling the box-free copy, revealed per band from the baked per-frame edge
  * profile so the margins branch outward like water. A radial veil keeps the
- * centre faint and the edges bold, easing in as it grows. On latch settle.webp
- * is drawn straight over the frame (all the baked black gone at once) and
- * SplashLoginFields shows the box's own black content back a beat later —
- * pixel-exact, from blackbox.webp — with working inputs over it.
+ * centre faint and the edges bold, easing in as it grows. On latch the baked
+ * black is held for one more frame while SplashLoginFields paints the same
+ * content back over it — pixel-exact, from blackbox.webp — and settle.webp then
+ * drops the baked copy, so the handover to the working form is invisible.
  */
 export function SplashScreen() {
   const [phase, setPhaseState] = useState<Phase>('logo');
@@ -47,6 +47,7 @@ export function SplashScreen() {
   const settleRef = useRef<HTMLImageElement | null>(null);
   const offRef = useRef<HTMLCanvasElement | null>(null);
   const fieldOnRef = useRef(false); // a splash text field is focused
+  const settleOnRef = useRef(false); // baked black dropped (one frame after the form paints)
   const posRef = useRef(0);
   const dirRef = useRef(0);
   const pressedRef = useRef(false);
@@ -98,11 +99,12 @@ export function SplashScreen() {
     // The frame itself, 1:1 in the centre — the original animation, untouched.
     ctx.drawImage(img, 0, 0, iw, ih, r.x, fy, r.w, r.h);
 
-    // Once latched, settle.webp (same frame, every black part at 0) is drawn
-    // straight over it — the baked login-box black is gone instantly; the crisp
-    // version comes back on top, in DOM.
+    // settle.webp is the same frame with every black part at 0. It goes on one
+    // frame *after* the DOM form has painted (settleOnRef, flipped by onReady →
+    // rAF), so there is exactly one frame carrying both the baked black and the
+    // crisp overlay — the handover reads as no change at all.
     const settle = settleRef.current;
-    if (inForm && settle?.complete && settle.naturalWidth) {
+    if (inForm && settleOnRef.current && settle?.complete && settle.naturalWidth) {
       ctx.drawImage(settle, 0, 0, settle.naturalWidth, settle.naturalHeight, r.x, fy, r.w, r.h);
     }
 
@@ -222,8 +224,9 @@ export function SplashScreen() {
         if (dirRef.current > 0) {
           dirRef.current = 0;
           stop();
+          settleOnRef.current = false; // hold the baked black until the form has painted
           setPhase('form'); // phaseRef flips synchronously
-          paint(posRef.current); // inForm → settle over the frame, baked black gone at once
+          paint(posRef.current);
           return;
         }
         paint(posRef.current);
@@ -306,8 +309,9 @@ export function SplashScreen() {
       if (reducedRef.current) {
         posRef.current = SPLASH_DURATION_MS;
         dirRef.current = 0;
+        settleOnRef.current = false; // hold the baked black until the form has painted
         setPhase('form');
-        paint(posRef.current); // settle over the frame — baked black gone at once
+        paint(posRef.current);
         return;
       }
       if (!ready) return;
@@ -333,11 +337,22 @@ export function SplashScreen() {
     paint(posRef.current || SPLASH_DURATION_MS);
   }, [paint]);
 
+  // The form has committed and will be in this frame — which still carries the
+  // baked black. Drop that on the next one, so exactly one frame shows both.
+  const onFormReady = useCallback(() => {
+    requestAnimationFrame(() => {
+      settleOnRef.current = true;
+      paint(SPLASH_DURATION_MS);
+    });
+  }, [paint]);
+
   return (
     <div className="splash" role="dialog" aria-label="Enter Far East" data-phase={phase}>
       <canvas ref={canvasRef} className="splash-canvas" aria-hidden="true" />
 
-      {phase === 'form' && <SplashLoginFields box={box} onFieldFocus={onFieldFocus} />}
+      {phase === 'form' && (
+        <SplashLoginFields box={box} onFieldFocus={onFieldFocus} onReady={onFormReady} />
+      )}
 
       {phase !== 'form' && (
         <button
