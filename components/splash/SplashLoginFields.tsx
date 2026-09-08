@@ -47,10 +47,10 @@ export function SplashLoginFields({
   useEffect(() => { onFieldFocus?.(inField); }, [inField, onFieldFocus]);
 
   const { parts } = SPLASH_GEOM;
-  // the black content sits a hair low in the red outline box; nudge the whole
-  // overlay up so it's equidistant from every side of it
-  const OX = box.w * -0.004;
-  const OY = box.h * -0.018;
+  // the black content (dashes included) sits low in the red outline box; nudge
+  // the whole overlay up so it's equidistant from every side of it
+  const OX = box.w * 0;
+  const OY = box.h * -0.024;
   const bx = (fx: number) => box.x + fx * box.w + OX;
   const by = (fy: number) => box.y + fy * box.h + OY;
   const labelSize = box.h * 0.075;
