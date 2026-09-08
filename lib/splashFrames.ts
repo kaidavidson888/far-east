@@ -1,10 +1,11 @@
 // The splash plays a faithful copy of scripts/assets/login-source.gif, baked to
 // scrubbable WebP stills by `npm run build:splash` (recoloured, sharpened, with
 // the red seal fading as it drains and the red clouds rising to full opacity).
-// The frames keep the original login box (the DOM box reveals top-down over it).
-// Nothing decodes a GIF at runtime. `edge.webp` is the final pattern with the
-// box reflected over — tiled beside the frame to continue the design to the
-// screen edges.
+// The frames keep the original login box exactly as drawn — that IS the visual;
+// SplashLoginFields lays transparent inputs over it and dims its parts (white
+// overlays) for the focus/typing states. Nothing decodes a GIF at runtime.
+// `edge.webp` is the final pattern with the box reflected over — tiled beside
+// the frame to continue the design to the screen edges.
 //
 // 101 frames, 40ms apart — exactly the source timing, 4.00s.
 
@@ -25,27 +26,23 @@ export function spreadAt(ms: number): number {
   return SPLASH_SPREAD[i] * (1 - t) + SPLASH_SPREAD[j] * t;
 }
 
-// Regions we care about, as fractions of the 720×1600 source frame (measured
-// off the baked last frame).
+// Everything measured off the baked last frame (f100), as fractions.
 export const SPLASH_GEOM = {
   frame: { w: 720, h: 1600 },
   // frame 0: the seal panel — the press-and-hold target, centred.
   seal: { cx: 0.5, cy: 0.5, size: 0.34 }, // fraction of frame width
-  // the login box's size (fractions of the frame), same as the baked box. The
-  // frame is nudged down by BOX_DY when drawn so this lands dead-centre on the
-  // page; the DOM box and its white backing are centred to match. #border in
-  // loginbox-parts.svg draws at this edge.
-  box: { x0: 0.332, x1: 0.668, y0: 0.4285, y1: 0.5715 },
-  // vertical nudge (fraction of the drawn frame height) so the baked box, which
-  // sits a hair high of the frame centre, renders at the page centre.
-  boxDy: 0.0045,
-  // per row, as fractions of the BOX (0..1 within it, = loginbox-parts.svg
-  // viewBox fractions, printed by scripts/split-loginbox.mjs): the dashed line's
-  // y and its left/right x. Typed text starts at lineX0, baseline above dashY.
+  // the login box outline's exact footprint (its outer red border edges) — the
+  // baked box is already dead-centre.
+  box: { x0: 0.3312, x1: 0.6672, y0: 0.4241, y1: 0.5752 },
+  boxDy: 0, // vertical nudge of the drawn frame (fraction of height)
+  // per row (fractions of the BOX, measured off f100): the dashed line's y (it
+  // runs the full width [left..0.89]); the label's right edge; the ☁ glyph's
+  // x-span; and the label/☁ vertical band. Typed text starts at `left`, baseline
+  // just above dashY.
   rows: {
-    email:    { dashY: 0.156, lineX0: 0.069, endX: 0.976, yTop: 0.02, yBot: 0.28 },
-    password: { dashY: 0.565, lineX0: 0.051, endX: 0.963, yTop: 0.42, yBot: 0.70 },
-    submit:   { dashY: 0.956, lineX0: 0.058, endX: 0.974, yTop: 0.83, yBot: 1.0 },
+    email:    { dashY: 0.228, left: 0.102, labelR: 0.356, cloudX0: 0.360, cloudX1: 0.478, top: 0.120, bot: 0.210 },
+    password: { dashY: 0.559, left: 0.102, labelR: 0.569, cloudX0: 0.574, cloudX1: 0.690, top: 0.452, bot: 0.540 },
+    submit:   { dashY: 0.850, left: 0.102, labelR: 0.813, cloudX0: 0.817, cloudX1: 0.892, top: 0.798, bot: 0.892 },
   },
 };
 

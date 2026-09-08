@@ -92,22 +92,38 @@ find the Edge crash instead, restoring the middleware is the cleaner solution.
   Hold to grow the login animation forward, release to retract, hold the full 4s to latch on
   the last frame with a real `loginAction` form (redirects to `/`); re-press mid-retract
   resumes forward. `prefers-reduced-motion` → one press jumps straight to the form.
-  - **Frames** are pre-baked by `npm run build:splash` (which now runs `split-loginbox.mjs`
-    first, then `build-splash-frames.mjs`): decodes `scripts/assets/login-source.gif`,
-    recolours (red → true `#FF0000`, black → `#000`, white kept), sharpens, ramps the seal
-    down as it drains and the clouds up to 100%, writes `public/splash/frames/f000..f100.webp`.
-    Commit the output; nothing decodes a GIF at runtime. `gifuct-js`/`pngjs`/`sharp` are
-    devDependencies.
-  - **Edge fill / perspective:** `paint()` draws the whole frame 1:1 in the centre (untouched
-    = the original animation) and mirror-repeats its left/right cloud strips (`SW`, no logo in
-    them) outward to the screen edges, each strip `P`× larger for depth. Seamless, no
-    cross-fades. On a phone the frame fills the width so none of this shows.
-  - **Login box** is `public/splash/loginbox-parts.svg` — `split-loginbox.mjs` splits the
-    supplied `scripts/assets/login-box-vector.svg` into `<g>` per part (border / line-/label-/
-    cloud- × email/password/submit) so each opacity is driven independently in `boxOpacity()`.
-    The baked box under it is cleared with a soft white rect at paint time. Idle: border 100,
-    lines/labels 50, ☁ 100. Field focused: lines 100, submit row 80, labels/☁ 10 → 0 once
-    typing, red design (canvas) 20. Submit hovered/focused: that row 100.
+  - **Frames** are pre-baked by `npm run build:splash` (`scripts/build-splash-frames.mjs`
+    only — `split-loginbox.mjs` and the login-box vectors are gone): decodes
+    `scripts/assets/login-source.gif`, recolours (red → true `#FF0000`, black → `#000`, white
+    kept), sharpens, ramps the seal down as it drains and the clouds up to 100%, writes
+    `public/splash/frames/f000..f100.webp`. **The frames keep the original login box exactly as
+    drawn — that baked box IS the visual.** Also writes `public/splash/edge.webp`: the final
+    frame's pattern with the box mirror-filled over (reflected in from just outside each side,
+    so top/bottom tile edges match and there's no horizontal streak). Also prints
+    `SPLASH_SPREAD` — per-frame, how far down the frame the pattern has reached its extreme
+    left/right edge columns. Paste it into `lib/splashFrames.ts`. Commit the output; nothing
+    decodes a GIF at runtime. `gifuct-js`/`pngjs`/`sharp` are devDependencies.
+  - **Edge fill:** the cloud pattern tiles horizontally (f100's left edge column ≈ its right,
+    ~0.999 corr). `paint()` draws the frame 1:1 in the centre, then tiles `edge.webp` left/right
+    at the same scale — one seamless pattern, no reflection axis. A soft front spreads it
+    outward from each frame edge (`hSpread`) but only as far *down* as `spreadAt(ms)` says the
+    frame's own edge pattern has reached (`SPLASH_SPREAD`), and the tile is composited at
+    `globalAlpha = cloudRise(p)` so the margins share the frame edge's exact weight instead of
+    a full-density column appearing beside a fainter frame. On a phone the frame fills the
+    width so none of this shows.
+  - **Login box** — no separate asset. The baked box in f100 is what you see;
+    `SplashLoginFields` (rendered only once `phase === 'form'`) overlays it with transparent
+    functional `<input>`s + submit `<button>` at the geometry in `SPLASH_GEOM.box` / `.rows`
+    (measured off f100), plus, as its only visual: white `#fcfcfc` cover divs over the baked
+    label / ☁ / dash regions at `opacity = 1 - target`, a `box-shadow: 0 0 0 100vmax` veil that
+    dims everything *outside* the box while a field is focused, and a DOM `#ff0000` border
+    redrawn on the baked border's footprint so it stays lit while the canvas dims. All of these
+    fade in together (`shown` state, 2×rAF after mount) so they land on top of the already-drawn
+    baked box. Per-row `target` opacity: idle → border 100, dash 50, label 50, ☁ 100. A text
+    field focused → that field's dash 100 (all dashes 100), submit row 80, every other label/☁
+    10, pattern outside the box 20 (box stays lit). Field has text → that row's label + ☁ 0.
+    Submit hovered/focused → whole submit row 100, nothing else changes. Error text is warm
+    grey (`--negative`), never red, per the design spec.
   - **Open:** gates the homepage behind a login every visit, in tension with CLAUDE.md's
     "browsing is open" — revisit. Still on branch `splash-screen`, not merged.
 - **Node:** pinned to 24 (`.nvmrc` = `24`, `engines.node` = `24.x`). Vercel ignores `.nvmrc`

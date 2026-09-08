@@ -518,10 +518,11 @@ ul, ol { list-style: none; }
 .site-footer .btn-icon:hover { background: #222222; }
 
 /* ---------- Splash ---------- */
-/* The recoloured source animation on a canvas — the frame 1:1 in the centre,
-   feathered into a scaled copy of the same pattern so the design continues to
-   the screen edge — with the login box rebuilt from loginbox-parts.svg on top.
-   Above the age gate (z-index 100). */
+/* The recoloured source animation on a canvas — the frame 1:1 in the centre, the
+   pattern tiled out to the screen edge. The login box is the one baked into the
+   last frame; SplashLoginFields overlays transparent inputs and white covers
+   (SplashLoginFields.tsx) that dim its parts for the focus/typing states. Above
+   the age gate (z-index 100). */
 .splash {
   position: fixed; inset: 0; z-index: 200;
   overflow: hidden; background: #fcfcfc;
@@ -530,15 +531,7 @@ ul, ol { list-style: none; }
 .splash-canvas {
   position: absolute; inset: 0; width: 100%; height: 100%;
   display: block;
-  transition: opacity 260ms ease;
 }
-/* the red design drops to 20% while a field is being used */
-.splash-canvas[data-typing="true"] { opacity: 0.2; }
-
-/* the login box — positioned + sized from JS; parts get their opacity there */
-.splash-box { position: fixed; pointer-events: none; }
-.splash-box svg { width: 100%; height: 100%; display: block; overflow: visible; }
-.splash-box svg g { opacity: 0; transition: opacity 170ms ease; }
 
 /* press-and-hold target — the seal's square (positioned from JS) */
 .splash-hit {
@@ -560,6 +553,7 @@ ul, ol { list-style: none; }
 .splash-field-input:focus { outline: none; }
 .splash-field-submit { border: 0; background: transparent; cursor: pointer; }
 .splash-fields-error {
+  margin: 0;
   font-family: var(--font-display); font-size: clamp(10px, 1.5vw, 13px);
-  color: #cc0000; text-align: center;
+  color: var(--negative); text-align: center; /* spec: errors are warm grey, never red */
 }
