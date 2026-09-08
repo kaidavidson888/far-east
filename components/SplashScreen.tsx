@@ -151,6 +151,10 @@ export function SplashScreen() {
           // how far the water has pushed out from each frame edge (grows over
           // the run, full once latched)
           const reach = inForm ? vw : Math.pow(rampUp(p, 0.34, 0.98), 0.8) * (sideM + 70);
+          // edge.webp is baked at the FINAL pattern density, but the frames ramp
+          // their red in (cloudRise in build-splash-frames.mjs). Match it, or the
+          // margins sit at full strength beside a centre that is still ~66%.
+          const cloudRise = inForm ? 1 : clamp01(0.12 + 0.88 * Math.pow(p, 0.7));
           // each side, self-contained — a second destination-in over the whole
           // offscreen would wipe the first side's result.
           const drawSide = (dir: -1 | 1, prof: Float32Array) => {
@@ -183,7 +187,9 @@ export function SplashScreen() {
             }
 
             octx.globalCompositeOperation = 'source-over';
+            ctx.globalAlpha = cloudRise;
             ctx.drawImage(off, 0, 0, canvas.width, canvas.height, 0, 0, vw, vh);
+            ctx.globalAlpha = 1;
           };
           drawSide(-1, left);
           drawSide(1, right);
