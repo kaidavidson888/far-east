@@ -11,6 +11,9 @@ type Kind = 'line' | 'label' | 'cloud';
 const SHRINK_AFTER = 12;
 const fit = (len: number) => (len <= SHRINK_AFTER ? 1 : Math.max(0.42, SHRINK_AFTER / len));
 
+// per-row size of the typed text, relative to the baked label height
+const TYPED_SCALE: Record<Row, number> = { email: 1.1, password: 1 };
+
 /**
  * The login box overlay. Its visuals ARE the box baked into the frames: three
  * sprite windows per row (label · ☁ · dashed line) onto `blackbox.webp`, which
@@ -49,10 +52,9 @@ export function SplashLoginFields({
   useEffect(() => { onFieldFocus?.(inField); }, [inField, onFieldFocus]);
 
   const { parts } = SPLASH_GEOM;
-  // the black content (dashes included) sits low in the red outline box; nudge
-  // the whole overlay up so it's equidistant from every side of it
-  const OX = box.w * -0.042;
-  const OY = box.h * -0.024;
+  // where the form sits inside the red outline box, as a fraction of it
+  const OX = box.w * -0.058;
+  const OY = box.h * 0.004;
   const bx = (fx: number) => box.x + fx * box.w + OX;
   const by = (fy: number) => box.y + fy * box.h + OY;
   const labelSize = box.h * 0.075;
@@ -95,7 +97,7 @@ export function SplashLoginFields({
 
   const field = (r: Row, value: string, set: (v: string) => void, type: string, ac: string, label: string) => {
     const p = parts[r];
-    const size = labelSize * fit(value.length);
+    const size = labelSize * TYPED_SCALE[r] * fit(value.length);
     return (
       <input
         key={r}
