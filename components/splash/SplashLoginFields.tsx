@@ -55,9 +55,10 @@ export function SplashLoginFields({
 
   const { parts } = SPLASH_GEOM;
   // Where the form sits inside the red outline box, as a fraction of it. OY is
-  // set so the gap above the EMAIL text equals the gap below the submit dashes.
+  // set so the gap above the EMAIL text equals the gap below the "create
+  // account / login" text (not its dashes).
   const OX = box.w * -0.058;
-  const OY = box.h * -0.025;
+  const OY = box.h * -0.0166;
   const bx = (fx: number) => box.x + fx * box.w + OX;
   const by = (fy: number) => box.y + fy * box.h + OY;
   const labelSize = box.h * 0.075;
