@@ -23,6 +23,19 @@ const rampUp = (p: number, a: number, b: number) => (p <= a ? 0 : p >= b ? 1 : (
 const smooth = (t: number) => { const c = t < 0 ? 0 : t > 1 ? 1 : t; return c * c * (3 - 2 * c); };
 const clamp01 = (v: number) => (v < 0 ? 0 : v > 1 ? 1 : v);
 
+// The layout viewport — what a position:fixed element is sized and placed
+// against. NOT window.innerWidth, which counts the classic scrollbar: the page
+// under the splash is long, so on a desktop browser that is ~15px wider than the
+// box the fixed canvas actually occupies. Sizing the canvas buffer to it while
+// CSS stretches the element to the real width squashed everything painted by
+// ~3%, and the DOM form (laid out against the true width) then landed a good 6px
+// to the right of the ink the canvas had been fading in — the form appeared to
+// jump sideways the instant it took over.
+const viewport = () => ({
+  vw: document.documentElement.clientWidth || window.innerWidth,
+  vh: document.documentElement.clientHeight || window.innerHeight,
+});
+
 /**
  * The homepage splash: a faithful copy of the source animation, recoloured and
  * sharpened, played at the source scale. The frame sits 1:1 in the middle (the
@@ -61,8 +74,7 @@ export function SplashScreen() {
   const lastTsRef = useRef(0);
 
   const measure = useCallback(() => {
-    const vw = window.innerWidth;
-    const vh = window.innerHeight;
+    const { vw, vh } = viewport();
     const r = coverRect(vw, vh);
     const g = SPLASH_GEOM;
     const w = (g.box.x1 - g.box.x0) * r.w;
@@ -125,8 +137,7 @@ export function SplashScreen() {
     if (!ctx) return;
 
     const dpr = window.devicePixelRatio || 1;
-    const vw = window.innerWidth;
-    const vh = window.innerHeight;
+    const { vw, vh } = viewport();
     if (canvas.width !== Math.round(vw * dpr) || canvas.height !== Math.round(vh * dpr)) {
       canvas.width = Math.round(vw * dpr);
       canvas.height = Math.round(vh * dpr);

@@ -140,6 +140,12 @@ find the Edge crash instead, restoring the middleware is the cleaner solution.
     alpha at the box, `0.52` in the halo, `0.05` by 72% radius, `0` at the screen edge. While
     a text field is focused (`fieldOnRef`, fed up from the form) the centre clears — `0` at the
     box, `0.12` halo — so the red outline box reads at 100%.
+  - **Viewport = `document.documentElement.clientWidth/Height`, never `window.innerWidth`.** The
+    page under the splash is long, so a desktop browser always shows a classic scrollbar and
+    `innerWidth` is ~15px larger than the box a position:fixed element occupies. Sizing the canvas
+    buffer to it while CSS stretched the element to the real width squashed everything painted by
+    ~3%, and the DOM form (laid out against the true width) landed 6px right of the ink the canvas
+    had been fading in — the form appeared to teleport sideways the instant it took over.
   - **Login box ink** — stripped from the frames, so `paint()` draws it instead, simply fading
     up from 0 across `SPLASH_FORM.fadeFrom`..`fadeTo` (0.36 → 1 of the run, smoothstepped): it
     starts where the frames' own black first branches into the box and finishes with the
