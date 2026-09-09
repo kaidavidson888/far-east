@@ -96,11 +96,13 @@ find the Edge crash instead, restoring the middleware is the cleaner solution.
     decodes `scripts/assets/login-source.gif`, recolours (red → `#FF0000`, black → `#000`,
     white kept), sharpens, ramps the seal down as it drains and the clouds up to 100%, writes
     `public/splash/frames/f000..f100.webp` — the frames keep the login box's **red** outline
-    but **none of its black**: the labels, ☁ glyphs and dashed lines are stripped out of every
-    frame (`INK_GATE`), because the overlay fades them back in instead. The strip is the box
-    inset by 4% so the outline survives, and it starts at frame 30 — the 遠東 seal drains
-    through the same rectangle and the inset box holds exactly zero black at frames 30-32, so
-    the gate lands in a real gap. Also writes:
+    and the black **tendrils** that branch in toward its words, but not the finished words: the
+    labels, ☁ glyphs and dashed lines are stripped out (`INK_STRIP`), because the overlay fades
+    in over them instead. The strip is shape-scoped — only pixels the LAST frame inks, grown by
+    2px so no ghost halo is left — so everything that merely branches toward them survives and
+    still animates. It starts at `INK_GATE` = frame 30: the 遠東 seal drains through the same
+    rectangle and the inset box holds 1473 black pixels at f28 and exactly zero at f30-32, so
+    the gate sits in a real gap. Also writes:
     `edge.webp` (the final red pattern, box reflected over — tiles horizontally, ~0.999 corr),
     `settle.webp` (`process(…, LAST, 0)` — the last frame with every black part at 0), and
     `blackbox.webp` (`acc` keeping only the ink → black-on-transparent, same resize+sharpen,
@@ -129,10 +131,10 @@ find the Edge crash instead, restoring the middleware is the cleaner solution.
     alpha at the box, `0.52` in the halo, `0.05` by 72% radius, `0` at the screen edge. While
     a text field is focused (`fieldOnRef`, fed up from the form) the centre clears — `0` at the
     box, `0.12` halo — so the red outline box reads at 100%.
-  - **Login box ink** — stripped from the frames, so `paint()` draws it instead, fading up on
-    `boxInkAt(ms)` (`SPLASH_BOX_INK_B64`, one byte per frame: the share of the final content's
-    pixels already inked in the source). It arrives exactly as the removed black would have
-    spread — flat 0 until frame 30, 1.0 on the last frame. It is drawn **after** the vignette,
+  - **Login box ink** — stripped from the frames, so `paint()` draws it instead, simply fading
+    up from 0 across `SPLASH_FORM.fadeFrom`..`fadeTo` (0.36 → 1 of the run, smoothstepped): it
+    starts where the frames' own black first branches into the box and finishes with the
+    animation, so the words arrive as the tendrils reach for them. Drawn **after** the vignette,
     unveiled, at the same rectangles and idle weights the DOM overlay uses (`SPLASH_FORM`,
     shared by both), and stops one frame after that overlay paints — so the two are the same
     pixels and the handover is silent.

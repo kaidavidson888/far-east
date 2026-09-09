@@ -8,7 +8,6 @@ import {
   settleImage,
   blackboxImage,
   blackboxBoldImage,
-  boxInkAt,
   SPLASH_FORM,
   preloadSplashFrames,
   frameAt,
@@ -284,16 +283,16 @@ export function SplashScreen() {
       ctx.fillRect(0, 0, vw, vh);
     }
 
-    // The login box's own black — labels, ☁, dashed lines — is not baked into
-    // the frames at all any more; it is drawn here instead, fading up on the
-    // profile of what was stripped, so it arrives exactly as the ink would have
-    // spread. It goes on last, unveiled, because the DOM overlay that takes over
-    // at latch sits above the canvas and is unveiled too. That overlay draws the
-    // same sprite windows at the same place and weight, and this stops one frame
-    // after it paints (settleOnRef), so the two are indistinguishable across the
-    // single frame they share.
+    // The login box's finished black — labels, ☁, dashed lines — is not baked
+    // into the frames any more (only the tendrils that branch toward it are), so
+    // it is drawn here instead, simply fading up from nothing over the back half
+    // of the run. It goes on last, unveiled, because the DOM overlay that takes
+    // over at latch sits above the canvas and is unveiled too. That overlay draws
+    // the same sprite windows at the same place and weight, and this stops one
+    // frame after it paints (settleOnRef), so the two are indistinguishable
+    // across the single frame they share.
     if (!settleOnRef.current) {
-      const ink = inForm ? 1 : boxInkAt(ms);
+      const ink = inForm ? 1 : smooth(rampUp(p, SPLASH_FORM.fadeFrom, SPLASH_FORM.fadeTo));
       if (ink > 0.002) drawFormInk(ctx, r, fy, r.h, ink);
     }
   }, [drawFormInk]);

@@ -11,7 +11,7 @@
 //
 // 101 frames, 40ms apart — exactly the source timing, 4.00s.
 
-import { SPLASH_EDGE_BANDS, SPLASH_EDGE_B64, SPLASH_BOX_INK_B64 } from './splashEdgeProfile';
+import { SPLASH_EDGE_BANDS, SPLASH_EDGE_B64 } from './splashEdgeProfile';
 
 export const SPLASH_FRAME_MS = 40;
 export const SPLASH_FRAME_COUNT = 101;
@@ -35,29 +35,6 @@ function splashEdge(): Uint8Array {
   return splashEdgeData;
 }
 
-let boxInkData: Uint8Array | null = null;
-/**
- * How much of the login box's black content had drawn in at `ms`, 0..1.
- *
- * That content — the labels, the ☁ glyphs and the dashed lines — is stripped
- * out of the baked frames entirely (INK_GATE in build-splash-frames.mjs). This
- * is the profile of what was removed, so the overlay can fade in on exactly the
- * timing the ink would have had. It is flat 0 until frame 30 (the 遠東 seal is
- * still draining through the same rectangle) and reaches 1 on the last frame.
- */
-export function boxInkAt(ms: number): number {
-  if (!boxInkData) {
-    const bin = atob(SPLASH_BOX_INK_B64);
-    boxInkData = new Uint8Array(bin.length);
-    for (let i = 0; i < bin.length; i += 1) boxInkData[i] = bin.charCodeAt(i);
-  }
-  const f = ms / SPLASH_FRAME_MS;
-  const i = Math.max(0, Math.min(SPLASH_FRAME_COUNT - 1, Math.floor(f)));
-  const j = Math.min(SPLASH_FRAME_COUNT - 1, i + 1);
-  const t = f - i;
-  return (boxInkData[i] * (1 - t) + boxInkData[j] * t) / 255;
-}
-
 /**
  * Where the form sits inside the red outline box, and how heavy each part reads
  * when nothing is focused. Shared: SplashLoginFields positions its DOM windows
@@ -68,6 +45,11 @@ export const SPLASH_FORM = {
   ox: -0.070, // fractions of the box
   oy: -0.0066,
   idle: { label: 0.5, cloud: 1, line: 0.5 },
+  // the overlay fades up from nothing across this span of the run — it starts
+  // where the frames' own black first branches into the box and finishes with
+  // the animation, so the words arrive as the tendrils reach for them
+  fadeFrom: 0.36,
+  fadeTo: 1,
 };
 
 /** Edge-coverage profile at `ms` for one side (0 = left, 1 = right), 0..1 per band. */

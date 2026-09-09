@@ -83,14 +83,16 @@ function cloudFill(d, src, R, strength) {
 // is hard, and the login box sits over it.
 const BOX_R = { x0: 0.318, x1: 0.682, y0: 0.412, y1: 0.582 };
 
-// The login box's black content — EMAIL / PASSWORD / create account·login, the
-// dashed lines and the ☁ glyphs — is stripped out of the frames entirely; the
-// overlay fades it back in instead (see SPLASH_BOX_INK_B64 below). The strip is
-// the box inset by INK_INSET, so the box's own outline is never touched, and it
-// only applies from INK_GATE on: the 遠東 seal drains through the same rectangle
-// and is still there up to frame 28. Measured off the source, the inset box
-// holds exactly zero black at frames 30-32 — the logo has gone and the login box
-// has not started — so the gate lands in a genuine gap and shows no seam.
+// The login box's finished black — EMAIL / PASSWORD / create account·login, the
+// dashed lines and the ☁ glyphs — is stripped out of the frames; the overlay
+// fades in over the top instead. The strip is shape-scoped, not rectangle-
+// scoped: only pixels the FINAL frame inks are cleared (INK_STRIP), so the
+// tendrils that branch in and settle into those words are left alone and still
+// grow, exactly as in the source — they just never land. It only applies from
+// INK_GATE on: the 遠東 seal drains through the same rectangle and is still
+// there at frame 28. Measured off the source, the inset box holds 1473 black
+// pixels at f28 and exactly zero at f30-32 — the logo has gone and the login box
+// has not started — so the gate sits in a genuine gap and shows no seam.
 const INK_BOX = { x0: 0.3312, x1: 0.6672, y0: 0.4241, y1: 0.5752 }; // == SPLASH_GEOM.box
 const INK_INSET = 0.04; // fraction of the box, keeps the red outline out of it
 const INK_GATE = 30;
@@ -111,7 +113,7 @@ function process(d, n, blackAlpha = 1) {
 
     if (chroma < 24) {
       const px = (i >> 2) % W, py = ((i >> 2) / W) | 0;
-      const stripped = n >= INK_GATE && px >= IKX0 && px < IKX1 && py >= IKY0 && py < IKY1;
+      const stripped = n >= INK_GATE && INK_STRIP[py * W + px] === 1;
       const cov = stripped ? 0 : crisp(1 - max / 255) * blackAlpha; // 0 → the black vanishes
       d[i] = 255 + (INK[0] - 255) * cov;
       d[i + 1] = 255 + (INK[1] - 255) * cov;
@@ -164,22 +166,33 @@ function edgeProfile(d) {
   return out;
 }
 const edgeProfiles = [];
-// Per-frame "how much of the login box's black has arrived", 0..255 — the share
-// of the FINAL content's pixels that are already inked. Monotonic, unlike a raw
-// count (transitional strokes overshoot around frame 80 and settle back). The
-// overlay fades in on this, so it arrives exactly as the stripped black would
-// have spread.
-const boxInkCounts = [];
 const inkPx = (d, i) => { const mx = Math.max(d[i], d[i+1], d[i+2]); return mx < 200 && mx - Math.min(d[i], d[i+1], d[i+2]) < 40; };
-function inkMaskOf(d) {
+// The shapes the last frame inks inside the box, grown by INK_STRIP_R so the
+// glyphs' anti-aliased edges go with them (a 1px halo left behind reads as a
+// ghost outline of the word that was removed).
+const INK_STRIP_R = 2;
+function inkStripMask(d) {
+  const hit = new Uint8Array(W * H);
+  for (let y = IKY0; y < IKY1; y++) for (let x = IKX0; x < IKX1; x++) { if (inkPx(d, (y * W + x) * 4)) hit[y * W + x] = 1; }
   const m = new Uint8Array(W * H);
-  for (let y = IKY0; y < IKY1; y++) for (let x = IKX0; x < IKX1; x++) { const i = (y * W + x) * 4; if (inkPx(d, i)) m[y * W + x] = 1; }
+  const R = INK_STRIP_R;
+  for (let y = IKY0; y < IKY1; y++) {
+    for (let x = IKX0; x < IKX1; x++) {
+      let on = 0;
+      for (let dy = -R; dy <= R && !on; dy++) {
+        const yy = y + dy;
+        if (yy < IKY0 || yy >= IKY1) continue;
+        for (let dx = -R; dx <= R; dx++) {
+          if (dx * dx + dy * dy > R * R) continue;
+          const xx = x + dx;
+          if (xx < IKX0 || xx >= IKX1) continue;
+          if (hit[yy * W + xx]) { on = 1; break; }
+        }
+      }
+      if (on) m[y * W + x] = 1;
+    }
+  }
   return m;
-}
-function inkCovered(d, mask) {
-  let n = 0;
-  for (let y = IKY0; y < IKY1; y++) for (let x = IKX0; x < IKX1; x++) { const k = y * W + x; if (mask[k] && inkPx(d, k * 4)) n++; }
-  return n;
 }
 
 rmSync(OUT, { recursive: true, force: true });
@@ -208,15 +221,13 @@ const paste = (dst, f) => {
 // first frame is written — the main loop only ever holds a running accumulation.
 const finalAcc = blank();
 for (const f of frames) paste(finalAcc, f);
-const INK_MASK = inkMaskOf(finalAcc);
-const INK_TOTAL = Math.max(1, inkCovered(finalAcc, INK_MASK));
+const INK_STRIP = inkStripMask(finalAcc);
 
 const acc = blank();
 
 let written = 0;
 for (let n = 0; n < frames.length; n++) {
   paste(acc, frames[n]);
-  boxInkCounts.push(Math.round((255 * inkCovered(acc, INK_MASK)) / INK_TOTAL));
 
   const snap = Buffer.from(acc);
   process(snap, n);
@@ -371,22 +382,11 @@ for (const prof of edgeProfiles) {
   }
 }
 const edgeBuf = Buffer.concat(edgeProfiles.map((u) => Buffer.from(u)));
-// Before INK_GATE the count is the 遠東 seal happening to overlap the final ink
-// mask (a flat ~0.23), not the login box arriving — zero it, then keep the ramp
-// monotonic so the overlay only ever fades up.
-for (let n = 0; n < boxInkCounts.length; n++) {
-  if (n < INK_GATE) boxInkCounts[n] = 0;
-  else if (n > 0) boxInkCounts[n] = Math.max(boxInkCounts[n], boxInkCounts[n - 1]);
-}
-const inkBuf = Buffer.from(boxInkCounts);
 writeFileSync(
   'lib/splashEdgeProfile.ts',
   `// GENERATED by scripts/build-splash-frames.mjs — do not edit.\n` +
     `// ${edgeProfiles.length} frames x ${EBANDS} bands x 2 sides, one byte each.\n` +
     `export const SPLASH_EDGE_BANDS = ${EBANDS};\n` +
-    `export const SPLASH_EDGE_B64 =\n  '${edgeBuf.toString('base64')}';\n` +
-    `\n// One byte per frame: how much of the login box's black content had drawn\n` +
-    `// in, 0..255. It is stripped out of the frames; the overlay fades in on it.\n` +
-    `export const SPLASH_BOX_INK_B64 =\n  '${inkBuf.toString('base64')}';\n`,
+    `export const SPLASH_EDGE_B64 =\n  '${edgeBuf.toString('base64')}';\n`,
 );
 console.log(`wrote ${written} frames + edge/settle/blackbox+bold.webp + lib/splashEdgeProfile.ts (${edgeBuf.length}B)`);
