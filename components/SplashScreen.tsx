@@ -81,8 +81,11 @@ export function SplashScreen() {
     const g = SPLASH_GEOM;
     const w = (g.box.x1 - g.box.x0) * r.w;
     const h = (g.box.y1 - g.box.y0) * r.h;
-    // the box + seal are drawn as part of the frame, at its centre
-    setBox({ x: (vw - w) / 2, y: (vh - h) / 2 + g.boxDy * r.h, w, h });
+    // Take the box from the frame's own geometry rather than centring it on the
+    // viewport: SPLASH_GEOM.box is not quite symmetric about the frame (its
+    // centre is 0.4992, not 0.5), so centring put the DOM box a quarter-pixel
+    // right of the baked one it has to sit exactly on top of.
+    setBox({ x: r.x + g.box.x0 * r.w, y: r.y + (g.boxDy + g.box.y0) * r.h, w, h });
     const s = g.seal.size * r.w;
     setSeal({ x: (vw - s) / 2, y: (vh - s) / 2 + g.boxDy * r.h, s });
   }, []);

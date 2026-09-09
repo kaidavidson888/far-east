@@ -44,7 +44,15 @@ function splashEdge(): Uint8Array {
  * so the two are the same pixels at the same weight and the handover is silent.
  */
 export const SPLASH_FORM = {
-  ox: -0.070, // fractions of the box
+  // Horizontal placement is not a tuned number any more: it is whatever centres
+  // the whole overlay in the baked box. As DRAWN the widest thing in it is the
+  // dashed line, and its window clips the sprite at both ends — the tick's
+  // leftmost pixel (21 of 215) and the email row's rightmost dash pixel (193)
+  // each straddle the window edge — so the overlay's ink spans exactly 0.100 to
+  // 0.900 and is already symmetric about the box centre. ox = (1 - 0.100 - 0.900)
+  // / 2 = 0. The old -0.070 left 0.028 of box on the left against 0.182 on the
+  // right; the whole overlay was hanging off to one side.
+  ox: 0, // fractions of the box
   oy: -0.0066,
   idle: { label: 0.5, cloud: 1, line: 0.5 },
   // the overlay fades up from nothing across this span of the run — it starts
@@ -77,14 +85,13 @@ export function edgeProfileAt(ms: number, side: 0 | 1): Float32Array {
 // (0.336 × 720 = 0.1511 × 1600 = 242), so a height fraction times an aspect is
 // a width fraction.
 //
-// x0 is the artwork's own left edge, which is NOT where its P starts: the first
-// 15 of its 1538 columns are the rounded tail curling out below the stem (the
-// tallest vertical ink run per column jumps 58 → 190 at column 15, which is the
-// stem's straight edge). Backing x0 off by those 15 columns puts that straight
-// edge on 0.1023 — where the P of PASSWORD starts — so the two P stems line up
-// rather than the tail hanging left of everything.
-const EMAIL_LABEL_STEM = 0.0041; // 15/1538 of the art, in box fractions
-const EMAIL_LABEL = { x0: 0.1023 - EMAIL_LABEL_STEM, y0: 0.1442, h: 0.0744 };
+// x0 is the artwork's own left edge — the leftmost ink of its P, tail included.
+// PASSWORD's 0.1023 is the leftmost ink of its P too, so putting them on the
+// same number lines the two glyphs' bounding boxes up on the vertical. (An
+// earlier pass instead aligned the P *stems*, backing x0 off by the 15 of 1538
+// columns the tail curls out over; that left the two bounding boxes a hair
+// apart, which is what actually reads.)
+const EMAIL_LABEL = { x0: 0.1023, y0: 0.1442, h: 0.0744 };
 
 // Everything measured off the baked last frame (f100), as fractions.
 export const SPLASH_GEOM = {
@@ -105,12 +112,12 @@ export const SPLASH_GEOM = {
     // cloudDx moves where the email ☁ is DRAWN without moving what is sampled
     // for it — the sprite windows otherwise use one pair of fractions for both,
     // so shifting the window slides it onto blank sprite. It is the width the
-    // artwork adds over the word it replaces, less the stem back-off above, so
-    // the gap from label to ☁ stays the 0.0139 it was (baked EMAIL ink ended at
-    // 0.3442, the ☁ ink starts at 0.3581). No y is touched: the ☁ stays on the
-    // line it was on, and dashX1 is untouched so the dashes and the tick at
-    // their left end are exactly as baked.
-    email:    { x0: 0.100, mid: 0.350, cloudX1: 0.495, cloudDx: 0.1732, dashX1: 0.900, y0: 0.146, y1: 0.220, dY0: 0.218, dY1: 0.238 },
+    // artwork adds over the word it replaces, so the gap from label to ☁ stays
+    // the 0.0139 it was (baked EMAIL ink ended at 0.3442, the ☁ ink starts at
+    // 0.3581) and moves with the label rather than away from it. No y is
+    // touched: the ☁ stays on the line it was on, and dashX1 is untouched so the
+    // dashes and the tick at their left end are exactly as baked.
+    email:    { x0: 0.100, mid: 0.350, cloudX1: 0.495, cloudDx: 0.1773, dashX1: 0.900, y0: 0.146, y1: 0.220, dY0: 0.218, dY1: 0.238 },
     password: { x0: 0.100, mid: 0.565, cloudX1: 0.702, dashX1: 0.892, y0: 0.480, y1: 0.555, dY0: 0.552, dY1: 0.573 },
     submit:   { x0: 0.100, mid: 0.758, cloudX1: 0.900, dashX1: 0.900, y0: 0.800, y1: 0.889, dY0: 0.887, dY1: 0.908 },
   },

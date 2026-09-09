@@ -160,11 +160,10 @@ find the Edge crash instead, restoring the middleware is the cleaner solution.
     the same way blackbox is, then trimmed to its own ink so the artwork can be lined up with
     the word it replaces rather than with its artboard. Placed at the cap height and top of the
     baked EMAIL word (y0 0.1442, h 0.0744) with the width following the art's own
-    aspect (`SPLASH_EMAIL_LABEL_ASPECT`, written by the build). x0 is backed off by
-    `EMAIL_LABEL_STEM` (15 of the art's 1538 columns, where the per-column tallest ink run jumps
-    58 → 190 — the P's straight stem edge, the columns before it being the tail curling out
-    below), so the two P stems line up on 0.1023 instead of the tail hanging left of everything.
-    The art is 0.1732 of the box wider
+    aspect (`SPLASH_EMAIL_LABEL_ASPECT`, written by the build). x0 is the artwork's own left edge,
+    the leftmost ink of its P with the tail included — the same thing 0.1023 is for PASSWORD's
+    P — so the two glyphs' bounding boxes line up on the vertical. The art is 0.1773 of the box
+    wider
     than EMAIL was, so `parts.email.cloudDx` shifts where the ☁ is DRAWN by exactly that —
     **not** `mid`/`cloudX1`, which are the sprite SOURCE rect too, so moving them slides the
     window onto blank sprite and the ☁ disappears. The gap from label to ☁ stays 0.0139 and the
@@ -188,6 +187,14 @@ find the Edge crash instead, restoring the middleware is the cleaner solution.
     on_auth_user_created trigger (display_name falls back to the email local part). Either way
     it redirects to `/`, and the splash is skipped for a signed-in reader (`app/page.tsx`) — it
     IS the sign-in, so it would otherwise re-gate the page its own button sends them to.
+  - **Horizontal placement is derived, not tuned.** `SPLASH_FORM.ox` = 0, because as DRAWN the
+    overlay's ink spans exactly 0.100–0.900 of the box: the dashed line is its widest element
+    and its window clips the sprite at both ends (the tick's leftmost pixel, 21 of 215, and the
+    email row's rightmost dash pixel, 193, each straddle a window edge). So the perpendicular
+    tick sits the same 0.100 from the box's left edge as the dashes end from its right.
+    `measure()` also takes the box origin from the frame geometry rather than centring it on
+    the viewport — SPLASH_GEOM.box's centre is 0.4992, not 0.5, so centring left the DOM box a
+    quarter-pixel right of the baked one. Measured after: 10.30px left against 10.33px right.
   - **Rejections** flood the box with the splash red for 500ms and clear the offending row: the
     EMAIL row for an address that fails `EMAIL_RE` (checked client-side so the flash is instant,
     and again in the action, because a server action is a public endpoint), the PASSWORD row
