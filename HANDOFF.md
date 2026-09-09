@@ -100,7 +100,11 @@ find the Edge crash instead, restoring the middleware is the cleaner solution.
     `edge.webp` (the final red pattern, box reflected over — tiles horizontally, ~0.999 corr),
     `settle.webp` (`process(…, LAST, 0)` — the last frame with every black part at 0), and
     `blackbox.webp` (`acc` keeping only the ink → black-on-transparent, same resize+sharpen,
-    cropped to `SPLASH_GEOM.box`). Commit the output; nothing decodes a GIF at runtime.
+    cropped to `SPLASH_GEOM.box`), and `blackbox-bold.webp` (the same sprite with the ink
+    dilated by a 1px round kernel **at full resolution**, before the downscale — dilating the
+    215px sprite instead fills the letter counters in). The label windows draw from the bold
+    sprite, so EMAIL / PASSWORD / create account·login are bold and the ☁ + dashes are not.
+    Commit the output; nothing decodes a GIF at runtime.
   - **Edge fill — branching growth:** `paint()` draws the frame 1:1 in the centre, then per
     side reveals `edge.webp` tiles through a **baked** 44-band edge-coverage profile —
     `edgeProfileAt(ms, side)` from `lib/splashEdgeProfile.ts` (base64, written by
@@ -108,7 +112,13 @@ find the Edge crash instead, restoring the middleware is the cleaner solution.
     the 4s animation to 6–20s on slower CPUs — now paint is ~0.5ms). Each side is its own
     `destination-in` offscreen pass (a whole-offscreen second pass would wipe the first). A
     `reach` ramp (`rampUp(p, .34, .98)`) grows the margins outward over the run; `inForm` →
-    full. The red fingers out in the frame's own organic shape, like water, never a rectangle.
+    full. The margins composite with **`multiply`**, not `source-over`: `edge.webp` is ink on
+    opaque white paper, so drawing it normally dragged that white field across the page as a
+    wash. White is multiply's identity, so only the ink lands. The baked profile stores each
+    band **normalised against its own fully-grown value** — raw red *density* peaks at 0.36 on
+    a sparse line pattern, and feeding that straight in as mask alpha held the extensions at a
+    third strength for the whole run.
+    The red fingers out in the frame's own organic shape, like water, never a rectangle.
     On a phone the frame fills the width so none shows.
   - **Faint centre / bold edges:** after everything, `paint()` lays a radial veil of the page
     colour — eased in with `smooth(rampUp(p, .18, 1))`, permanent once latched. Idle: `0.34`

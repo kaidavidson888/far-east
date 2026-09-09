@@ -263,6 +263,55 @@ await sharp(PNG.sync.write(bpng))
   .webp({ quality: 96, alphaQuality: 100 })
   .toFile('public/splash/blackbox.webp');
 
+// blackbox-bold.webp — the same sprite with the strokes thickened, used by
+// SplashLoginFields for the LABEL windows only (EMAIL / PASSWORD / create
+// account·login), so the words go bold while the ☁ glyphs and the dashed lines
+// keep the weight they have in the baked box.
+//
+// The dilation runs on the FULL-RESOLUTION ink and is then put through the same
+// resize + sharpen. At 215px the sprite's caps are only ~10px tall, so dilating
+// after the downscale moves a whole pixel and fills the counters in; at 720px a
+// 2px round kernel lands as a sub-pixel weight increase that survives resampling
+// as a heavier stroke rather than a blob.
+const BOLD_R = 1; // dilation radius, full-resolution pixels
+const bold = Buffer.from(ink);
+for (let y = 0; y < H; y++) {
+  for (let x = 0; x < W; x++) {
+    let m = 0; // max ink coverage in the neighbourhood
+    for (let dy = -BOLD_R; dy <= BOLD_R; dy++) {
+      const yy = y + dy;
+      if (yy < 0 || yy >= H) continue;
+      for (let dx = -BOLD_R; dx <= BOLD_R; dx++) {
+        const xx = x + dx;
+        if (dx * dx + dy * dy > BOLD_R * BOLD_R) continue; // round kernel
+        if (xx < 0 || xx >= W) continue;
+        const v = 255 - ink[(yy * W + xx) * 4];
+        if (v > m) m = v;
+      }
+    }
+    const o = (y * W + x) * 4;
+    bold[o] = bold[o + 1] = bold[o + 2] = 255 - m;
+  }
+}
+const bipng = new PNG({ width: W, height: H });
+bold.copy(bipng.data);
+const bgrey = await sharp(PNG.sync.write(bipng))
+  .resize({ width: WIDTH })
+  .sharpen({ sigma: 0.5 })
+  .extract(BX)
+  .removeAlpha()
+  .raw()
+  .toBuffer();
+const boldPng = new PNG({ width: BX.width, height: BX.height });
+for (let px = 0; px < BX.width * BX.height; px++) {
+  boldPng.data[px * 4] = boldPng.data[px * 4 + 1] = boldPng.data[px * 4 + 2] = 0;
+  const cov = (255 - bgrey[px * 3]) / 255;
+  boldPng.data[px * 4 + 3] = Math.round(255 * Math.min(1, Math.pow(cov, INK_GAMMA)));
+}
+await sharp(PNG.sync.write(boldPng))
+  .webp({ quality: 96, alphaQuality: 100 })
+  .toFile('public/splash/blackbox-bold.webp');
+
 // Normalise every band against its OWN fully-grown value (the last frame), so a
 // band means "how far has the design grown here", not "how dense is the pattern
 // here". Raw density peaks near 0.36 — a sparse line pattern is mostly paper —
@@ -282,4 +331,4 @@ writeFileSync(
     `export const SPLASH_EDGE_BANDS = ${EBANDS};\n` +
     `export const SPLASH_EDGE_B64 =\n  '${edgeBuf.toString('base64')}';\n`,
 );
-console.log(`wrote ${written} frames + edge/settle/blackbox.webp + lib/splashEdgeProfile.ts (${edgeBuf.length}B)`);
+console.log(`wrote ${written} frames + edge/settle/blackbox+bold.webp + lib/splashEdgeProfile.ts (${edgeBuf.length}B)`);

@@ -78,6 +78,7 @@ let frames: HTMLImageElement[] | null = null;
 let edge: HTMLImageElement | null = null;
 let settle: HTMLImageElement | null = null;
 let blackbox: HTMLImageElement | null = null;
+let blackboxBold: HTMLImageElement | null = null;
 
 export function splashFrames(): HTMLImageElement[] {
   if (!frames) {
@@ -121,12 +122,23 @@ export function blackboxImage(): HTMLImageElement {
   return blackbox;
 }
 
+/** The same sprite with the label strokes dilated — the bold overlay text. */
+export function blackboxBoldImage(): HTMLImageElement {
+  if (!blackboxBold) {
+    blackboxBold = new Image();
+    blackboxBold.decoding = 'async';
+    blackboxBold.src = '/splash/blackbox-bold.webp';
+  }
+  return blackboxBold;
+}
+
 export function preloadSplashFrames(): Promise<void> {
   const imgs = splashFrames();
   imgs.forEach((img) => void img.decode().catch(() => {}));
   void edgeImage().decode().catch(() => {});
   void settleImage().decode().catch(() => {});
   void blackboxImage().decode().catch(() => {});
+  void blackboxBoldImage().decode().catch(() => {});
   return imgs[0].decode().catch(() => {});
 }
 

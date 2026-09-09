@@ -82,14 +82,16 @@ export function SplashLoginFields({
   // a window onto blackbox.webp: the rect [x0f,y0f]-[x1f,y1f] of the box. The
   // sprite is anchored to the window's own top-left (so the OX/OY nudge moves
   // the content with the window, not relative to it).
-  const win = (key: string, x0f: number, y0f: number, x1f: number, y1f: number, o: number) => (
+  const win = (key: string, x0f: number, y0f: number, x1f: number, y1f: number, o: number, bold = false) => (
     <div
       key={key}
       aria-hidden
       style={{
         position: 'fixed', pointerEvents: 'none',
         left: bx(x0f), top: by(y0f), width: (x1f - x0f) * box.w, height: (y1f - y0f) * box.h,
-        backgroundImage: 'url(/splash/blackbox.webp)',
+        // the label windows read from the dilated sprite, so EMAIL / PASSWORD /
+        // create account·login are bold while the ☁ and the dashes are not
+        backgroundImage: `url(/splash/blackbox${bold ? '-bold' : ''}.webp)`,
         backgroundRepeat: 'no-repeat',
         backgroundSize: `${box.w}px ${box.h}px`,
         backgroundPosition: `${-x0f * box.w}px ${-y0f * box.h}px`,
@@ -141,7 +143,7 @@ export function SplashLoginFields({
         {(['email', 'password', 'submit'] as const).flatMap((row) => {
           const p = parts[row];
           return [
-            win(`${row}-label`, p.x0, p.y0, p.mid, p.y1, op('label', row)),
+            win(`${row}-label`, p.x0, p.y0, p.mid, p.y1, op('label', row), true),
             win(`${row}-cloud`, p.mid, p.y0, p.cloudX1, p.y1, op('cloud', row)),
             win(`${row}-line`, p.x0, p.dY0, p.dashX1, p.dY1, op('line', row)),
           ];
