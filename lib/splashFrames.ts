@@ -71,12 +71,20 @@ export function edgeProfileAt(ms: number, side: 0 | 1): Float32Array {
 }
 
 // The EMAIL row's label is supplied artwork (scripts/assets/phone-label.svg →
-// phone-label.webp), not a slice of the baked sprite. It is sized to the ink box
-// the baked EMAIL word occupied — same left edge, same cap height — and its
-// width follows the artwork's own aspect. SPLASH_GEOM.box is square in source
-// pixels (0.336 × 720 = 0.1511 × 1600 = 242), so a height fraction times an
-// aspect is a width fraction.
-const EMAIL_LABEL = { x0: 0.1023, y0: 0.1442, h: 0.0744 };
+// phone-label.webp), not a slice of the baked sprite. It keeps the cap height
+// and top of the baked EMAIL word it replaces, and its width follows the
+// artwork's own aspect. SPLASH_GEOM.box is square in source pixels
+// (0.336 × 720 = 0.1511 × 1600 = 242), so a height fraction times an aspect is
+// a width fraction.
+//
+// x0 is the artwork's own left edge, which is NOT where its P starts: the first
+// 15 of its 1538 columns are the rounded tail curling out below the stem (the
+// tallest vertical ink run per column jumps 58 → 190 at column 15, which is the
+// stem's straight edge). Backing x0 off by those 15 columns puts that straight
+// edge on 0.1023 — where the P of PASSWORD starts — so the two P stems line up
+// rather than the tail hanging left of everything.
+const EMAIL_LABEL_STEM = 0.0041; // 15/1538 of the art, in box fractions
+const EMAIL_LABEL = { x0: 0.1023 - EMAIL_LABEL_STEM, y0: 0.1442, h: 0.0744 };
 
 // Everything measured off the baked last frame (f100), as fractions.
 export const SPLASH_GEOM = {
@@ -96,11 +104,13 @@ export const SPLASH_GEOM = {
   parts: {
     // cloudDx moves where the email ☁ is DRAWN without moving what is sampled
     // for it — the sprite windows otherwise use one pair of fractions for both,
-    // so shifting the window slides it onto blank sprite. 0.1773 is the width
-    // the artwork adds over the word it replaces, so the gap from label to ☁
-    // stays the 0.0139 it was (baked EMAIL ink ended at 0.3442, the ☁ ink
-    // starts at 0.3581). No y is touched: the ☁ stays on the line it was on.
-    email:    { x0: 0.100, mid: 0.350, cloudX1: 0.495, cloudDx: 0.1773, dashX1: 0.900, y0: 0.146, y1: 0.220, dY0: 0.218, dY1: 0.238 },
+    // so shifting the window slides it onto blank sprite. It is the width the
+    // artwork adds over the word it replaces, less the stem back-off above, so
+    // the gap from label to ☁ stays the 0.0139 it was (baked EMAIL ink ended at
+    // 0.3442, the ☁ ink starts at 0.3581). No y is touched: the ☁ stays on the
+    // line it was on, and dashX1 is untouched so the dashes and the tick at
+    // their left end are exactly as baked.
+    email:    { x0: 0.100, mid: 0.350, cloudX1: 0.495, cloudDx: 0.1732, dashX1: 0.900, y0: 0.146, y1: 0.220, dY0: 0.218, dY1: 0.238 },
     password: { x0: 0.100, mid: 0.565, cloudX1: 0.702, dashX1: 0.892, y0: 0.480, y1: 0.555, dY0: 0.552, dY1: 0.573 },
     submit:   { x0: 0.100, mid: 0.758, cloudX1: 0.900, dashX1: 0.900, y0: 0.800, y1: 0.889, dY0: 0.887, dY1: 0.908 },
   },
