@@ -387,6 +387,40 @@ await sharp(PNG.sync.write(boldPng))
   .webp({ quality: 96, alphaQuality: 100 })
   .toFile('public/splash/blackbox-bold.webp');
 
+// phone-label.webp — the EMAIL row's label, supplied as vector art rather than
+// taken from the baked box. Rasterised, its white ground turned into
+// transparency the same way blackbox is, then trimmed to its own ink so
+// SPLASH_GEOM can line the artwork's edges up with the word it replaces rather
+// than with the artboard it happens to sit on.
+const phoneRaw = await sharp(readFileSync('scripts/assets/phone-label.svg'))
+  .resize({ width: 1600 })
+  .flatten({ background: '#ffffff' })
+  .removeAlpha()
+  .raw()
+  .toBuffer({ resolveWithObject: true });
+const PW = phoneRaw.info.width, PH = phoneRaw.info.height;
+const phonePng = new PNG({ width: PW, height: PH });
+let px0 = PW, py0 = PH, px1 = -1, py1 = -1;
+for (let i = 0; i < PW * PH; i++) {
+  const mx = Math.max(phoneRaw.data[i * 3], phoneRaw.data[i * 3 + 1], phoneRaw.data[i * 3 + 2]);
+  const a = Math.round(255 * clamp01(1 - mx / 255));
+  phonePng.data[i * 4] = phonePng.data[i * 4 + 1] = phonePng.data[i * 4 + 2] = 0;
+  phonePng.data[i * 4 + 3] = a;
+  if (a > 15) {
+    const x = i % PW, y = (i / PW) | 0;
+    if (x < px0) px0 = x;
+    if (x > px1) px1 = x;
+    if (y < py0) py0 = y;
+    if (y > py1) py1 = y;
+  }
+}
+const phoneCrop = { left: px0, top: py0, width: px1 - px0 + 1, height: py1 - py0 + 1 };
+await sharp(PNG.sync.write(phonePng))
+  .extract(phoneCrop)
+  .webp({ quality: 96, alphaQuality: 100 })
+  .toFile('public/splash/phone-label.webp');
+const EMAIL_LABEL_ASPECT = Number((phoneCrop.width / phoneCrop.height).toFixed(4));
+
 // Normalise every band against its OWN fully-grown value (the last frame), so a
 // band means "how far has the design grown here", not "how dense is the pattern
 // here". Raw density peaks near 0.36 — a sparse line pattern is mostly paper —
@@ -404,7 +438,7 @@ for (const prof of edgeProfiles) {
 // mix old frames with new ones — which looks exactly like a half-applied edit.
 const stamp = createHash('sha1');
 for (const f of readdirSync(OUT).sort()) stamp.update(readFileSync(`${OUT}/${f}`));
-for (const f of ['edge', 'settle', 'blackbox', 'blackbox-bold']) stamp.update(readFileSync(`public/splash/${f}.webp`));
+for (const f of ['edge', 'settle', 'blackbox', 'blackbox-bold', 'phone-label']) stamp.update(readFileSync(`public/splash/${f}.webp`));
 const ASSET_V = stamp.digest('hex').slice(0, 8);
 
 const edgeBuf = Buffer.concat(edgeProfiles.map((u) => Buffer.from(u)));
@@ -416,6 +450,9 @@ writeFileSync(
     `export const SPLASH_EDGE_B64 =\n  '${edgeBuf.toString('base64')}';\n` +
     `\n// Content hash of every baked asset — appended to their URLs so a rebuild\n` +
     `// is never served from a stale cache.\n` +
-    `export const SPLASH_ASSET_V = '${ASSET_V}';\n`,
+    `export const SPLASH_ASSET_V = '${ASSET_V}';\n` +
+    `\n// Width/height of phone-label.webp once trimmed to its own ink, so the\n` +
+    `// EMAIL row can size the artwork by height and let the width follow.\n` +
+    `export const SPLASH_EMAIL_LABEL_ASPECT = ${EMAIL_LABEL_ASPECT};\n`,
 );
 console.log(`wrote ${written} frames + edge/settle/blackbox+bold.webp + lib/splashEdgeProfile.ts (${edgeBuf.length}B)`);

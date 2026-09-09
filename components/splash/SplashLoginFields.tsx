@@ -108,14 +108,18 @@ export function SplashLoginFields({
 
   // a window onto blackbox.webp: the rect [x0f,y0f]-[x1f,y1f] of the box. The
   // sprite is anchored to the window's own top-left (so the OX/OY nudge moves
-  // the content with the window, not relative to it).
-  const win = (key: string, x0f: number, y0f: number, x1f: number, y1f: number, o: number, bold = false) => (
+  // the content with the window, not relative to it). dx shifts where the
+  // window sits without changing what it shows.
+  const win = (
+    key: string, x0f: number, y0f: number, x1f: number, y1f: number,
+    o: number, bold = false, dx = 0,
+  ) => (
     <div
       key={key}
       aria-hidden
       style={{
         position: 'fixed', pointerEvents: 'none',
-        left: bx(x0f), top: by(y0f), width: (x1f - x0f) * box.w, height: (y1f - y0f) * box.h,
+        left: bx(x0f + dx), top: by(y0f), width: (x1f - x0f) * box.w, height: (y1f - y0f) * box.h,
         // the label windows read from the dilated sprite, so EMAIL / PASSWORD /
         // create account·login are bold while the ☁ and the dashes are not
         backgroundImage: `url(${splashAsset(`blackbox${bold ? '-bold' : ''}.webp`)})`,
@@ -127,6 +131,28 @@ export function SplashLoginFields({
       }}
     />
   );
+
+  // The EMAIL row's label is supplied artwork, not a slice of the baked sprite:
+  // same left edge and cap height as the word it replaces, width from its own
+  // aspect, and the same opacity rules as any other label.
+  const emailLabel = (o: number) => {
+    const g = SPLASH_GEOM.emailLabel;
+    return (
+      <div
+        key="email-label"
+        aria-hidden
+        style={{
+          position: 'fixed', pointerEvents: 'none',
+          left: bx(g.x0), top: by(g.y0), width: g.w * box.w, height: g.h * box.h,
+          backgroundImage: `url(${splashAsset('phone-label.webp')})`,
+          backgroundRepeat: 'no-repeat',
+          backgroundSize: '100% 100%',
+          opacity: o,
+          transition: 'opacity 160ms ease',
+        }}
+      />
+    );
+  };
 
   const field = (r: Row, value: string, set: (v: string) => void, type: string, ac: string, label: string) => {
     const p = parts[r];
@@ -171,8 +197,11 @@ export function SplashLoginFields({
         {(['email', 'password', 'submit'] as const).flatMap((row) => {
           const p = parts[row];
           return [
-            win(`${row}-label`, p.x0, p.y0, p.mid, p.y1, op('label', row), true),
-            win(`${row}-cloud`, p.mid, p.y0, p.cloudX1, p.y1, op('cloud', row)),
+            row === 'email'
+              ? emailLabel(op('label', row))
+              : win(`${row}-label`, p.x0, p.y0, p.mid, p.y1, op('label', row), true),
+            win(`${row}-cloud`, p.mid, p.y0, p.cloudX1, p.y1, op('cloud', row), false,
+              'cloudDx' in p ? p.cloudDx : 0),
             win(`${row}-line`, p.x0, p.dY0, p.dashX1, p.dY1, op('line', row)),
           ];
         })}
