@@ -99,14 +99,15 @@ find the Edge crash instead, restoring the middleware is the cleaner solution.
     and the black **tendrils** that branch in toward its words, but not the finished words: the
     labels, ☁ glyphs and dashed lines are stripped out, because the overlay fades in over them
     instead. The strip is shape-scoped — only pixels the LAST frame inks — so everything that
-    merely branches toward them survives and still animates. Two dilations: `INK_STRIP` (2px) is
-    cut outright, and `INK_HALO` (8px) is *faded* out across frames 70-88. The source draws each
-    word with a few pixels of wobble before it settles, so late in the run that ring fills with
-    near-final strokes — a legible second copy of the word, sitting where the baked box was
-    rather than where the overlay now sits, which reads as two overlays a few pixels apart.
-    Fading the ring rather than just widening the cut keeps the tendrils at full strength through
-    the stretch where they are actually branching (2052px at f70 with the tight mask, only 942px
-    with an 8px one) and then dissolves them into the overlay as it reaches full opacity. It starts at `INK_GATE` = frame 30: the 遠東 seal drains through the same
+    merely branches toward them survives and still animates. `INK_STRIP` is every pixel the
+    words occupy *while they finish* — the union of the box's ink over frames 84-100, grown 2px —
+    and all of it is deleted. The union rather than just f100: the source draws each word with a
+    few pixels of wobble before it settles, so an f100 mask leaves those near-final strokes
+    behind and late in the run they read as a second, legible copy of the word, sitting where the
+    baked box was rather than where the overlay now sits. The union is also gentler on the
+    tendrils than simply widening the mask, since it only covers where the words actually went —
+    black left inside the box at f70: 2052px with an f100 mask (ghosts), 942px with a blanket 8px
+    one, 1073px with this; 0 from f88 either way. It starts at `INK_GATE` = frame 30: the 遠東 seal drains through the same
     rectangle and the inset box holds 1473 black pixels at f28 and exactly zero at f30-32, so
     the gate sits in a real gap. Also writes:
     `edge.webp` (the final red pattern, box reflected over — tiles horizontally, ~0.999 corr),

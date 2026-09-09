@@ -113,14 +113,8 @@ function process(d, n, blackAlpha = 1) {
 
     if (chroma < 24) {
       const px = (i >> 2) % W, py = ((i >> 2) / W) | 0;
-      const k = py * W + px;
-      // the words themselves go; the ring around them fades out as they finish
-      const keep =
-        n < INK_GATE ? 1
-        : INK_STRIP[k] ? 0
-        : INK_HALO[k] ? clamp01((INK_HALO_TO - n) / (INK_HALO_TO - INK_HALO_FROM))
-        : 1;
-      const cov = crisp(1 - max / 255) * blackAlpha * keep;
+      const stripped = n >= INK_GATE && INK_STRIP[py * W + px] === 1;
+      const cov = stripped ? 0 : crisp(1 - max / 255) * blackAlpha;
       d[i] = 255 + (INK[0] - 255) * cov;
       d[i + 1] = 255 + (INK[1] - 255) * cov;
       d[i + 2] = 255 + (INK[2] - 255) * cov;
@@ -173,28 +167,26 @@ function edgeProfile(d) {
 }
 const edgeProfiles = [];
 const inkPx = (d, i) => { const mx = Math.max(d[i], d[i+1], d[i+2]); return mx < 200 && mx - Math.min(d[i], d[i+1], d[i+2]) < 40; };
-// Two dilations of the shapes the last frame inks inside the box.
+// INK_STRIP is every pixel the words occupy while they finish — the union of
+// the ink inside the box over frames INK_UNION_FROM..LAST, grown by
+// INK_STRIP_R so no anti-aliased halo is left behind. All of it is deleted.
 //
-// INK_STRIP (tight) is cleared outright — the finished words plus enough of a
-// margin that no anti-aliased halo of them is left behind.
+// The union, rather than just the last frame: the source draws each word with a
+// few pixels of wobble before it settles, so a mask taken from f100 alone
+// leaves those near-final strokes behind, and late in the run they read as a
+// second, legible copy of the word — sitting where the baked box was rather
+// than where the overlay now sits. Taking the union deletes them as well.
 //
-// INK_HALO (wide) is the ring around them, and it is *faded* out rather than
-// cut, over INK_HALO_FROM..INK_HALO_TO. The source draws each word with a few
-// pixels of wobble before it settles, so late in the run that ring fills with
-// near-final strokes — a legible second copy of the word, sitting where the
-// baked box used to be rather than where the overlay now sits, which reads as
-// two overlays a few pixels apart. Fading the ring instead of widening the hard
-// strip keeps the tendrils at full strength through the whole stretch where
-// they are actually branching (they are 2052px at f70 with the tight mask, but
-// only 942px with an 8px one), and then dissolves them into the overlay as it
-// reaches full opacity.
+// It is also gentler on the tendrils than simply widening the mask, because it
+// only covers where the words actually went. Black left inside the box at f70:
+// 2052px with an f100 mask (ghosts), 942px with a blanket 8px one, 1073px with
+// this — and 0 from f88 either way.
 const INK_STRIP_R = 2;
-const INK_HALO_R = 8;
-const INK_HALO_FROM = 70;
-const INK_HALO_TO = 88;
-function dilateInk(d, R) {
-  const hit = new Uint8Array(W * H);
-  for (let y = IKY0; y < IKY1; y++) for (let x = IKX0; x < IKX1; x++) { if (inkPx(d, (y * W + x) * 4)) hit[y * W + x] = 1; }
+const INK_UNION_FROM = 84;
+function markInk(d, into) {
+  for (let y = IKY0; y < IKY1; y++) for (let x = IKX0; x < IKX1; x++) { if (inkPx(d, (y * W + x) * 4)) into[y * W + x] = 1; }
+}
+function dilateMask(hit, R) {
   const m = new Uint8Array(W * H);
   for (let y = IKY0; y < IKY1; y++) {
     for (let x = IKX0; x < IKX1; x++) {
@@ -237,12 +229,15 @@ const paste = (dst, f) => {
   }
 };
 
-// A pre-pass composites the whole GIF so the FINAL ink mask is known before the
+// A pre-pass composites the whole GIF so the strip mask is known before the
 // first frame is written — the main loop only ever holds a running accumulation.
 const finalAcc = blank();
-for (const f of frames) paste(finalAcc, f);
-const INK_STRIP = dilateInk(finalAcc, INK_STRIP_R);
-const INK_HALO = dilateInk(finalAcc, INK_HALO_R);
+const inkUnion = new Uint8Array(W * H);
+for (let n = 0; n < frames.length; n++) {
+  paste(finalAcc, frames[n]);
+  if (n >= INK_UNION_FROM) markInk(finalAcc, inkUnion);
+}
+const INK_STRIP = dilateMask(inkUnion, INK_STRIP_R);
 
 const acc = blank();
 
