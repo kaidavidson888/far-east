@@ -197,9 +197,16 @@ export function SplashScreen() {
             }
 
             octx.globalCompositeOperation = 'source-over';
+            // 'multiply', not 'source-over': edge.webp is ink on white paper, so
+            // laying it down normally drags that white field over the margins —
+            // a wash the centre, drawn 1:1 into the same white page, never gets.
+            // White is multiply's identity, so only the ink lands, and soft ink
+            // composites exactly as it would from a transparent tile.
+            ctx.globalCompositeOperation = 'multiply';
             ctx.globalAlpha = cloudRise;
             ctx.drawImage(off, 0, 0, canvas.width, canvas.height, 0, 0, vw, vh);
             ctx.globalAlpha = 1;
+            ctx.globalCompositeOperation = 'source-over';
           };
           drawSide(-1, left);
           drawSide(1, right);

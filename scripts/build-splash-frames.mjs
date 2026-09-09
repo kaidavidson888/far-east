@@ -184,6 +184,10 @@ for (let n = 0; n < frames.length; n++) {
   written++;
 }
 
+// edge.webp stays ink-on-WHITE — the paper is part of the bake, and giving it
+// an alpha channel instead triples the file. paint() draws the margins with
+// 'multiply', for which white is the identity, so the tile's background has no
+// effect on the page and soft ink composites exactly as if it were transparent.
 const edge = buildEdge(acc);
 const epng = new PNG({ width: W, height: H });
 edge.copy(epng.data);
@@ -259,6 +263,17 @@ await sharp(PNG.sync.write(bpng))
   .webp({ quality: 96, alphaQuality: 100 })
   .toFile('public/splash/blackbox.webp');
 
+// Normalise every band against its OWN fully-grown value (the last frame), so a
+// band means "how far has the design grown here", not "how dense is the pattern
+// here". Raw density peaks near 0.36 — a sparse line pattern is mostly paper —
+// and feeding that straight in as mask alpha held the margins at roughly a third
+// strength for the whole run, i.e. a permanent white wash beside a 1:1 centre.
+const finalProf = Uint8Array.from(edgeProfiles[edgeProfiles.length - 1]);
+for (const prof of edgeProfiles) {
+  for (let i = 0; i < prof.length; i++) {
+    prof[i] = Math.round(255 * clamp01(prof[i] / Math.max(finalProf[i], 24)));
+  }
+}
 const edgeBuf = Buffer.concat(edgeProfiles.map((u) => Buffer.from(u)));
 writeFileSync(
   'lib/splashEdgeProfile.ts',
