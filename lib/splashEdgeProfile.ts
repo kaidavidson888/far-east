@@ -6,4 +6,4 @@ export const SPLASH_EDGE_B64 =
 
 // Content hash of every baked asset — appended to their URLs so a rebuild
 // is never served from a stale cache.
-export const SPLASH_ASSET_V = '545c9a2f';
+export const SPLASH_ASSET_V = '38d00302';

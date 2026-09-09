@@ -183,7 +183,7 @@ const inkPx = (d, i) => { const mx = Math.max(d[i], d[i+1], d[i+2]); return mx <
 // 2052px with an f100 mask (ghosts), 942px with a blanket 8px one, 1073px with
 // this — and 0 from f88 either way.
 const INK_STRIP_R = 2;
-const INK_UNION_FROM = 84;
+const INK_UNION_FROM = 88;
 function markInk(d, into) {
   for (let y = IKY0; y < IKY1; y++) for (let x = IKX0; x < IKX1; x++) { if (inkPx(d, (y * W + x) * 4)) into[y * W + x] = 1; }
 }
