@@ -97,10 +97,16 @@ find the Edge crash instead, restoring the middleware is the cleaner solution.
     white kept), sharpens, ramps the seal down as it drains and the clouds up to 100%, writes
     `public/splash/frames/f000..f100.webp` — the frames keep the login box's **red** outline
     and the black **tendrils** that branch in toward its words, but not the finished words: the
-    labels, ☁ glyphs and dashed lines are stripped out (`INK_STRIP`), because the overlay fades
-    in over them instead. The strip is shape-scoped — only pixels the LAST frame inks, grown by
-    2px so no ghost halo is left — so everything that merely branches toward them survives and
-    still animates. It starts at `INK_GATE` = frame 30: the 遠東 seal drains through the same
+    labels, ☁ glyphs and dashed lines are stripped out, because the overlay fades in over them
+    instead. The strip is shape-scoped — only pixels the LAST frame inks — so everything that
+    merely branches toward them survives and still animates. Two dilations: `INK_STRIP` (2px) is
+    cut outright, and `INK_HALO` (8px) is *faded* out across frames 70-88. The source draws each
+    word with a few pixels of wobble before it settles, so late in the run that ring fills with
+    near-final strokes — a legible second copy of the word, sitting where the baked box was
+    rather than where the overlay now sits, which reads as two overlays a few pixels apart.
+    Fading the ring rather than just widening the cut keeps the tendrils at full strength through
+    the stretch where they are actually branching (2052px at f70 with the tight mask, only 942px
+    with an 8px one) and then dissolves them into the overlay as it reaches full opacity. It starts at `INK_GATE` = frame 30: the 遠東 seal drains through the same
     rectangle and the inset box holds 1473 black pixels at f28 and exactly zero at f30-32, so
     the gate sits in a real gap. Also writes:
     `edge.webp` (the final red pattern, box reflected over — tiles horizontally, ~0.999 corr),

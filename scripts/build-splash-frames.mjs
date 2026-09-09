@@ -113,8 +113,14 @@ function process(d, n, blackAlpha = 1) {
 
     if (chroma < 24) {
       const px = (i >> 2) % W, py = ((i >> 2) / W) | 0;
-      const stripped = n >= INK_GATE && INK_STRIP[py * W + px] === 1;
-      const cov = stripped ? 0 : crisp(1 - max / 255) * blackAlpha; // 0 → the black vanishes
+      const k = py * W + px;
+      // the words themselves go; the ring around them fades out as they finish
+      const keep =
+        n < INK_GATE ? 1
+        : INK_STRIP[k] ? 0
+        : INK_HALO[k] ? clamp01((INK_HALO_TO - n) / (INK_HALO_TO - INK_HALO_FROM))
+        : 1;
+      const cov = crisp(1 - max / 255) * blackAlpha * keep;
       d[i] = 255 + (INK[0] - 255) * cov;
       d[i + 1] = 255 + (INK[1] - 255) * cov;
       d[i + 2] = 255 + (INK[2] - 255) * cov;
@@ -167,15 +173,29 @@ function edgeProfile(d) {
 }
 const edgeProfiles = [];
 const inkPx = (d, i) => { const mx = Math.max(d[i], d[i+1], d[i+2]); return mx < 200 && mx - Math.min(d[i], d[i+1], d[i+2]) < 40; };
-// The shapes the last frame inks inside the box, grown by INK_STRIP_R so the
-// glyphs' anti-aliased edges go with them (a 1px halo left behind reads as a
-// ghost outline of the word that was removed).
+// Two dilations of the shapes the last frame inks inside the box.
+//
+// INK_STRIP (tight) is cleared outright — the finished words plus enough of a
+// margin that no anti-aliased halo of them is left behind.
+//
+// INK_HALO (wide) is the ring around them, and it is *faded* out rather than
+// cut, over INK_HALO_FROM..INK_HALO_TO. The source draws each word with a few
+// pixels of wobble before it settles, so late in the run that ring fills with
+// near-final strokes — a legible second copy of the word, sitting where the
+// baked box used to be rather than where the overlay now sits, which reads as
+// two overlays a few pixels apart. Fading the ring instead of widening the hard
+// strip keeps the tendrils at full strength through the whole stretch where
+// they are actually branching (they are 2052px at f70 with the tight mask, but
+// only 942px with an 8px one), and then dissolves them into the overlay as it
+// reaches full opacity.
 const INK_STRIP_R = 2;
-function inkStripMask(d) {
+const INK_HALO_R = 8;
+const INK_HALO_FROM = 70;
+const INK_HALO_TO = 88;
+function dilateInk(d, R) {
   const hit = new Uint8Array(W * H);
   for (let y = IKY0; y < IKY1; y++) for (let x = IKX0; x < IKX1; x++) { if (inkPx(d, (y * W + x) * 4)) hit[y * W + x] = 1; }
   const m = new Uint8Array(W * H);
-  const R = INK_STRIP_R;
   for (let y = IKY0; y < IKY1; y++) {
     for (let x = IKX0; x < IKX1; x++) {
       let on = 0;
@@ -221,7 +241,8 @@ const paste = (dst, f) => {
 // first frame is written — the main loop only ever holds a running accumulation.
 const finalAcc = blank();
 for (const f of frames) paste(finalAcc, f);
-const INK_STRIP = inkStripMask(finalAcc);
+const INK_STRIP = dilateInk(finalAcc, INK_STRIP_R);
+const INK_HALO = dilateInk(finalAcc, INK_HALO_R);
 
 const acc = blank();
 
