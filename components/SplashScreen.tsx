@@ -6,6 +6,10 @@ import {
   splashFrames,
   edgeImage,
   settleImage,
+  blackboxImage,
+  blackboxBoldImage,
+  boxInkAt,
+  SPLASH_FORM,
   preloadSplashFrames,
   frameAt,
   coverRect,
@@ -45,6 +49,8 @@ export function SplashScreen() {
   const framesRef = useRef<HTMLImageElement[]>([]);
   const edgeRef = useRef<HTMLImageElement | null>(null);
   const settleRef = useRef<HTMLImageElement | null>(null);
+  const inkRef = useRef<HTMLImageElement | null>(null);
+  const inkBoldRef = useRef<HTMLImageElement | null>(null);
   const offRef = useRef<HTMLCanvasElement | null>(null);
   const fieldOnRef = useRef(false); // a splash text field is focused
   const settleOnRef = useRef(false); // baked black dropped (one frame after the form paints)
@@ -67,6 +73,50 @@ export function SplashScreen() {
     const s = g.seal.size * r.w;
     setSeal({ x: (vw - s) / 2, y: (vh - s) / 2 + g.boxDy * r.h, s });
   }, []);
+
+  const drawFormInk = useCallback(
+    (
+      ctx: CanvasRenderingContext2D,
+      r: { x: number; w: number },
+      fy: number,
+      boxH: number,
+      ink: number,
+    ) => {
+      const plain = inkRef.current;
+      const bold = inkBoldRef.current;
+      if (!plain?.complete || !plain.naturalWidth || !bold?.complete || !bold.naturalWidth) return;
+      const g = SPLASH_GEOM;
+      const bw = (g.box.x1 - g.box.x0) * r.w;
+      const bh = (g.box.y1 - g.box.y0) * boxH;
+      const bxo = r.x + g.box.x0 * r.w + bw * SPLASH_FORM.ox;
+      const byo = fy + g.box.y0 * boxH + bh * SPLASH_FORM.oy;
+      const sw = plain.naturalWidth;
+      const sh = plain.naturalHeight;
+      // one sprite window, in the box's own fractions — the same rectangles
+      // SplashLoginFields lays out in the DOM
+      const win = (
+        src: HTMLImageElement,
+        x0: number, y0: number, x1: number, y1: number,
+        idle: number,
+      ) => {
+        ctx.globalAlpha = idle * ink;
+        ctx.drawImage(
+          src,
+          x0 * sw, y0 * sh, (x1 - x0) * sw, (y1 - y0) * sh,
+          bxo + x0 * bw, byo + y0 * bh, (x1 - x0) * bw, (y1 - y0) * bh,
+        );
+      };
+      const { idle } = SPLASH_FORM;
+      (['email', 'password', 'submit'] as const).forEach((row) => {
+        const p = g.parts[row];
+        win(bold, p.x0, p.y0, p.mid, p.y1, idle.label);
+        win(plain, p.mid, p.y0, p.cloudX1, p.y1, idle.cloud);
+        win(plain, p.x0, p.dY0, p.dashX1, p.dY1, idle.line);
+      });
+      ctx.globalAlpha = 1;
+    },
+    [],
+  );
 
   const paint = useCallback((ms: number) => {
     const canvas = canvasRef.current;
@@ -99,10 +149,10 @@ export function SplashScreen() {
     // The frame itself, 1:1 in the centre — the original animation, untouched.
     ctx.drawImage(img, 0, 0, iw, ih, r.x, fy, r.w, r.h);
 
-    // settle.webp is the same frame with every black part at 0. It goes on one
+    // settle.webp is the same frame with every black part at 0, laid down one
     // frame *after* the DOM form has painted (settleOnRef, flipped by onReady →
-    // rAF), so there is exactly one frame carrying both the baked black and the
-    // crisp overlay — the handover reads as no change at all.
+    // rAF). The box's own ink is no longer baked into the frames at all, so this
+    // now only clears black left anywhere else on the last frame.
     const settle = settleRef.current;
     if (inForm && settleOnRef.current && settle?.complete && settle.naturalWidth) {
       ctx.drawImage(settle, 0, 0, settle.naturalWidth, settle.naturalHeight, r.x, fy, r.w, r.h);
@@ -233,7 +283,20 @@ export function SplashScreen() {
       ctx.fillStyle = g;
       ctx.fillRect(0, 0, vw, vh);
     }
-  }, []);
+
+    // The login box's own black — labels, ☁, dashed lines — is not baked into
+    // the frames at all any more; it is drawn here instead, fading up on the
+    // profile of what was stripped, so it arrives exactly as the ink would have
+    // spread. It goes on last, unveiled, because the DOM overlay that takes over
+    // at latch sits above the canvas and is unveiled too. That overlay draws the
+    // same sprite windows at the same place and weight, and this stops one frame
+    // after it paints (settleOnRef), so the two are indistinguishable across the
+    // single frame they share.
+    if (!settleOnRef.current) {
+      const ink = inForm ? 1 : boxInkAt(ms);
+      if (ink > 0.002) drawFormInk(ctx, r, fy, r.h, ink);
+    }
+  }, [drawFormInk]);
 
   const stop = useCallback(() => {
     cancelAnimationFrame(rafRef.current);
@@ -285,6 +348,8 @@ export function SplashScreen() {
     framesRef.current = splashFrames();
     edgeRef.current = edgeImage();
     settleRef.current = settleImage();
+    inkRef.current = blackboxImage();
+    inkBoldRef.current = blackboxBoldImage();
     measure();
 
     // dev-only: ?splashms=2800 paints one point of the animation and holds

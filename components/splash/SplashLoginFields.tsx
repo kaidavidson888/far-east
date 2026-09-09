@@ -2,7 +2,7 @@
 
 import { useActionState, useEffect, useLayoutEffect, useState } from 'react';
 import { loginAction, type FormState } from '@/app/actions';
-import { SPLASH_GEOM } from '@/lib/splashFrames';
+import { SPLASH_GEOM, SPLASH_FORM } from '@/lib/splashFrames';
 
 type Box = { x: number; y: number; w: number; h: number };
 type Row = 'email' | 'password';
@@ -57,8 +57,8 @@ export function SplashLoginFields({
   // Owner-tuned position inside the red outline box. Note this deliberately
   // does NOT sit on top of the black still baked into the frame, so the single
   // handover frame carries a brief doubled-text ghost at this offset.
-  const OX = box.w * -0.070;
-  const OY = box.h * -0.0066;
+  const OX = box.w * SPLASH_FORM.ox;
+  const OY = box.h * SPLASH_FORM.oy;
   const bx = (fx: number) => box.x + fx * box.w + OX;
   const by = (fy: number) => box.y + fy * box.h + OY;
   const labelSize = box.h * 0.075;
@@ -69,14 +69,14 @@ export function SplashLoginFields({
       if (row === 'submit') return submitActive ? 1 : inField ? 0.8 : 1;
       if (rowTyped) return 0;
       if (inField) return 0.1;
-      return 1;
+      return SPLASH_FORM.idle.cloud;
     }
     if (row === 'submit' && submitActive) return 1;
     if (row === 'submit' && inField) return 0.8;
-    if (kind === 'line') return inField ? 1 : 0.5;
+    if (kind === 'line') return inField ? 1 : SPLASH_FORM.idle.line;
     if (rowTyped) return 0;
     if (inField) return 0.1;
-    return 0.5;
+    return SPLASH_FORM.idle.label;
   };
 
   // a window onto blackbox.webp: the rect [x0f,y0f]-[x1f,y1f] of the box. The
