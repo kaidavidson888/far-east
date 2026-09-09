@@ -26,7 +26,9 @@ export default async function HomePage() {
   return (
     <>
       <SurfacePreference mode="dark" />
-      <SplashScreen />
+      {/* The splash IS the sign-in, so it would otherwise re-gate the reader on
+          the very page its own button sends them to. */}
+      {user ? null : <SplashScreen />}
 
       {/* Hero */}
       <section className="container" style={{ paddingBlock: 'var(--xxl)' }}>

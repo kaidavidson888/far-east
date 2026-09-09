@@ -1,12 +1,16 @@
 'use client';
 
-import { useActionState, useEffect, useLayoutEffect, useState } from 'react';
-import { loginAction, type FormState } from '@/app/actions';
+import { useActionState, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { splashAuthAction, type SplashAuthState } from '@/app/actions';
 import { SPLASH_GEOM, SPLASH_FORM, splashAsset } from '@/lib/splashFrames';
 
 type Box = { x: number; y: number; w: number; h: number };
 type Row = 'email' | 'password';
 type Kind = 'line' | 'label' | 'cloud';
+
+// Matches EMAIL_RE in app/actions.ts, which re-checks it server-side.
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const REJECT_MS = 500;
 
 const SHRINK_AFTER = 12;
 const fit = (len: number) => (len <= SHRINK_AFTER ? 1 : Math.max(0.42, SHRINK_AFTER / len));
@@ -38,13 +42,36 @@ export function SplashLoginFields({
   onFieldFocus?: (on: boolean) => void;
   onReady?: () => void;
 }) {
-  const [state, action] = useActionState<FormState, FormData>(loginAction, null);
+  const [state, action] = useActionState<SplashAuthState, FormData>(splashAuthAction, null);
   const [email, setEmail] = useState('');
   const [pw, setPw] = useState('');
   const [focus, setFocus] = useState<Row | null>(null);
   const [submitActive, setSubmitActive] = useState(false);
+  const [rejected, setRejected] = useState(false);
+  const rejectTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   const inField = focus === 'email' || focus === 'password';
+
+  // A rejected field fills the box red for half a second and takes its own row
+  // with it, so the reader is left looking at one empty line to try again on:
+  // the EMAIL line for an address that is not an address, the PASSWORD line for
+  // a password that does not match an account that already exists.
+  const reject = useCallback((row: Row) => {
+    if (row === 'email') setEmail('');
+    else setPw('');
+    setRejected(true);
+    clearTimeout(rejectTimer.current);
+    rejectTimer.current = setTimeout(() => setRejected(false), REJECT_MS);
+  }, []);
+
+  useEffect(() => () => clearTimeout(rejectTimer.current), []);
+
+  // The server re-checks the address, and only it can know the password is
+  // wrong — either way the form answers the same way.
+  useEffect(() => {
+    if (state?.badEmail) reject('email');
+    else if (state?.badPassword) reject('password');
+  }, [state, reject]);
 
   // After the commit but before the browser paints — so by the time this fires
   // the form is in the DOM and *will* be in this frame. The parent hands the
@@ -115,7 +142,8 @@ export function SplashLoginFields({
           width: bx(p.dashX1) - bx(p.x0),
           height: size, fontSize: size, lineHeight: 1,
         }}
-        name={r} type={type} autoComplete={ac} required aria-label={label}
+        name={r} type={type} autoComplete={ac} aria-label={label}
+        inputMode={r === 'email' ? 'email' : undefined}
         value={value}
         onChange={(e) => set(e.target.value)}
         onFocus={() => setFocus(r)}
@@ -150,10 +178,20 @@ export function SplashLoginFields({
         })}
       </div>
 
-      <form className="splash-fields" action={action}>
-        <input type="hidden" name="next" value="/" />
-
-        {field('email', email, setEmail, 'email', 'email', 'Email')}
+      <form
+        className="splash-fields"
+        action={action}
+        // our own check runs instead of the browser's, which would otherwise
+        // block the submit with a bubble before the box could flash
+        noValidate
+        onSubmit={(e) => {
+          if (!EMAIL_RE.test(email.trim())) {
+            e.preventDefault();
+            reject('email');
+          }
+        }}
+      >
+        {field('email', email, setEmail, 'text', 'email', 'Email')}
         {field('password', pw, setPw, 'password', 'current-password', 'Password')}
 
         <button
@@ -173,15 +211,33 @@ export function SplashLoginFields({
           <span className="sr-only">Create account or log in</span>
         </button>
 
-        {state?.error ? (
+        {state?.error || state?.ok ? (
           <p
             className="splash-fields-error"
             style={{ position: 'fixed', left: box.x, top: box.y + box.h + 10, width: box.w }}
           >
-            {state.error}
+            {state.error ?? state.ok}
           </p>
         ) : null}
       </form>
+
+      {/* Owner's call, and a deliberate exception to the spec's "red is never an
+          error colour": a rejected field floods the box with the splash's own
+          red, right out to the outline's own footprint so no paper shows at the edge. */}
+      <div
+        aria-hidden
+        style={{
+          position: 'fixed',
+          left: box.x,
+          top: box.y,
+          width: box.w,
+          height: box.h,
+          background: '#FF0000',
+          opacity: rejected ? 1 : 0,
+          transition: rejected ? 'none' : 'opacity 150ms ease',
+          pointerEvents: 'none',
+        }}
+      />
     </>
   );
 }

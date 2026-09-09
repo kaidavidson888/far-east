@@ -168,8 +168,23 @@ find the Edge crash instead, restoring the middleware is the cleaner solution.
     the cleared vignette keep the whole ornate red frame at 100 — no hard clip). A row with
     text → its label + ☁ 0. Submit hovered/focused → its whole row 100, nothing else. Error
     text is warm grey (`--negative`), never red.
-  - **Open:** gates the homepage behind a login every visit, in tension with CLAUDE.md's
-    "browsing is open" — revisit. Still on branch `splash-screen`, not merged.
+  - **Sign-in** — the create account/login button runs `splashAuthAction`: sign in first, and
+    if that fails, sign up, so one button serves both. The profiles row comes from the
+    on_auth_user_created trigger (display_name falls back to the email local part). Either way
+    it redirects to `/`, and the splash is skipped for a signed-in reader (`app/page.tsx`) — it
+    IS the sign-in, so it would otherwise re-gate the page its own button sends them to.
+  - **Rejections** flood the box with the splash red for 500ms and clear the offending row: the
+    EMAIL row for an address that fails `EMAIL_RE` (checked client-side so the flash is instant,
+    and again in the action, because a server action is a public endpoint), the PASSWORD row
+    when the address already has an account and the password does not match. Owner’s call,
+    and a deliberate exception to the spec’s "red is never an error colour".
+  - **Supabase gotchas found wiring this up:** the project rejects some domains outright
+    (`Email address "x@example.com" is invalid`; it rejects `.dev` test domains too), so
+    "any valid email" is bounded by GoTrue’s own validation, not by our regex — sign-up is
+    only testable against real deliverable domains. Auth also enforces a minimum password
+    length (6 by default, Authentication → Providers → Email), so "any password" has a floor
+    unless that is lowered. If Confirm email is ON there is no session after sign-up and the
+    form says so instead of redirecting.
 - **Node:** pinned to 24 (`.nvmrc` = `24`, `engines.node` = `24.x`). Vercel ignores `.nvmrc`
   and reads `engines.node`; the old `>=20.9` range mapped to "latest 24.x" on Vercel anyway
   (their default), so local and deploy now agree explicitly. Vercel deprecates Node 20 on

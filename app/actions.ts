@@ -63,6 +63,64 @@ export async function loginAction(_prev: FormState, formData: FormData): Promise
   redirect(next.startsWith('/') ? next : '/favorites');
 }
 
+export type SplashAuthState =
+  | { error?: string; ok?: string; badEmail?: true; badPassword?: true }
+  | null;
+
+/**
+ * The splash's one button is "create account / login". There is a single field
+ * pair — no confirmation, no display name, no age gate — so an address that
+ * already has an account signs into it and anything else gets an account made
+ * for it. The profiles row comes from the on_auth_user_created trigger, whose
+ * display_name falls back to the local part of the email. Either way the reader
+ * lands on the homepage.
+ */
+export async function splashAuthAction(
+  _prev: SplashAuthState,
+  formData: FormData,
+): Promise<SplashAuthState> {
+  const email = String(formData.get('email') ?? '').trim();
+  const password = String(formData.get('password') ?? '');
+
+  // The form flashes the box red and clears the email row on this. It is
+  // checked again here because a server action is a public endpoint.
+  if (!EMAIL_RE.test(email)) return { badEmail: true };
+  if (!password) return { error: 'Enter a password.' };
+
+  const supabase = await createClient();
+
+  // Sign in first, so a returning reader is never told their own address is
+  // taken.
+  const signIn = await supabase.auth.signInWithPassword({ email, password });
+  if (!signIn.error) {
+    logAuthEvent(email, 'login');
+    redirect('/');
+  }
+
+  const { data, error } = await supabase.auth.signUp({ email, password });
+
+  // Sign-in has already failed, so an address that turns out to be taken means
+  // the password was wrong — the form flashes the box and clears that row.
+  // Supabase says so two different ways: with email confirmation off it is an
+  // error, and with it on the sign-up answers with a user carrying no
+  // identities instead, so the endpoint cannot be used to enumerate accounts.
+  const taken =
+    error?.code === 'user_already_exists'
+    || /already (registered|exists)/i.test(error?.message ?? '')
+    || (!!data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0);
+  if (taken) return { badPassword: true };
+  if (error) return { error: error.message };
+
+  logAuthEvent(email, 'signup');
+
+  // Email confirmation on → no session yet, so there is nothing to redirect to.
+  if (!data.session) {
+    return { ok: `Almost there — confirm your address from the email we just sent to ${email}.` };
+  }
+
+  redirect('/');
+}
+
 export async function logoutAction() {
   const supabase = await createClient();
   await supabase.auth.signOut();
