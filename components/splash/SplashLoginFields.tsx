@@ -57,8 +57,8 @@ export function SplashLoginFields({
   // Owner-tuned position inside the red outline box. Note this deliberately
   // does NOT sit on top of the black still baked into the frame, so the single
   // handover frame carries a brief doubled-text ghost at this offset.
-  const OX = box.w * -0.058;
-  const OY = box.h * -0.0166;
+  const OX = box.w * -0.070;
+  const OY = box.h * -0.0066;
   const bx = (fx: number) => box.x + fx * box.w + OX;
   const by = (fy: number) => box.y + fy * box.h + OY;
   const labelSize = box.h * 0.075;
