@@ -11,7 +11,7 @@
 //
 // 101 frames, 40ms apart — exactly the source timing, 4.00s.
 
-import { SPLASH_EDGE_BANDS, SPLASH_EDGE_B64 } from './splashEdgeProfile';
+import { SPLASH_EDGE_BANDS, SPLASH_EDGE_B64, SPLASH_ASSET_V } from './splashEdgeProfile';
 
 export const SPLASH_FRAME_MS = 40;
 export const SPLASH_FRAME_COUNT = 101;
@@ -89,7 +89,13 @@ export const SPLASH_GEOM = {
   },
 };
 
-const src = (i: number) => `/splash/frames/f${String(i).padStart(3, '0')}.webp`;
+// Every baked asset carries the build's content hash. They all live at fixed
+// paths and are rewritten in place by each rebuild, so without this a browser
+// holding some of them in cache will mix old frames with new ones — which looks
+// like a half-applied edit rather than a caching problem.
+export const splashAsset = (name: string) => `/splash/${name}?v=${SPLASH_ASSET_V}`;
+
+const src = (i: number) => splashAsset(`frames/f${String(i).padStart(3, '0')}.webp`);
 
 let frames: HTMLImageElement[] | null = null;
 let edge: HTMLImageElement | null = null;
@@ -114,7 +120,7 @@ export function edgeImage(): HTMLImageElement {
   if (!edge) {
     edge = new Image();
     edge.decoding = 'async';
-    edge.src = '/splash/edge.webp';
+    edge.src = splashAsset('edge.webp');
   }
   return edge;
 }
@@ -124,7 +130,7 @@ export function settleImage(): HTMLImageElement {
   if (!settle) {
     settle = new Image();
     settle.decoding = 'async';
-    settle.src = '/splash/settle.webp';
+    settle.src = splashAsset('settle.webp');
   }
   return settle;
 }
@@ -134,7 +140,7 @@ export function blackboxImage(): HTMLImageElement {
   if (!blackbox) {
     blackbox = new Image();
     blackbox.decoding = 'async';
-    blackbox.src = '/splash/blackbox.webp';
+    blackbox.src = splashAsset('blackbox.webp');
   }
   return blackbox;
 }
@@ -144,7 +150,7 @@ export function blackboxBoldImage(): HTMLImageElement {
   if (!blackboxBold) {
     blackboxBold = new Image();
     blackboxBold.decoding = 'async';
-    blackboxBold.src = '/splash/blackbox-bold.webp';
+    blackboxBold.src = splashAsset('blackbox-bold.webp');
   }
   return blackboxBold;
 }

@@ -2,7 +2,7 @@
 
 import { useActionState, useEffect, useLayoutEffect, useState } from 'react';
 import { loginAction, type FormState } from '@/app/actions';
-import { SPLASH_GEOM, SPLASH_FORM } from '@/lib/splashFrames';
+import { SPLASH_GEOM, SPLASH_FORM, splashAsset } from '@/lib/splashFrames';
 
 type Box = { x: number; y: number; w: number; h: number };
 type Row = 'email' | 'password';
@@ -91,7 +91,7 @@ export function SplashLoginFields({
         left: bx(x0f), top: by(y0f), width: (x1f - x0f) * box.w, height: (y1f - y0f) * box.h,
         // the label windows read from the dilated sprite, so EMAIL / PASSWORD /
         // create account·login are bold while the ☁ and the dashes are not
-        backgroundImage: `url(/splash/blackbox${bold ? '-bold' : ''}.webp)`,
+        backgroundImage: `url(${splashAsset(`blackbox${bold ? '-bold' : ''}.webp`)})`,
         backgroundRepeat: 'no-repeat',
         backgroundSize: `${box.w}px ${box.h}px`,
         backgroundPosition: `${-x0f * box.w}px ${-y0f * box.h}px`,
