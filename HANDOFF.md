@@ -96,20 +96,17 @@ find the Edge crash instead, restoring the middleware is the cleaner solution.
     decodes `scripts/assets/login-source.gif`, recolours (red → `#FF0000`, black → `#000`,
     white kept), sharpens, ramps the seal down as it drains and the clouds up to 100%, writes
     `public/splash/frames/f000..f100.webp` — the frames keep the login box's **red** outline
-    and the black **tendrils** that branch in toward its words, but not the finished words: the
-    labels, ☁ glyphs and dashed lines are stripped out, because the overlay fades in over them
-    instead. The strip is shape-scoped — only pixels the LAST frame inks — so everything that
-    merely branches toward them survives and still animates. `INK_STRIP` is every pixel the
-    words occupy *while they finish* — the union of the box's ink over frames 84-100, grown 2px —
-    and all of it is deleted. The union rather than just f100: the source draws each word with a
-    few pixels of wobble before it settles, so an f100 mask leaves those near-final strokes
-    behind and late in the run they read as a second, legible copy of the word, sitting where the
-    baked box was rather than where the overlay now sits. The union is also gentler on the
-    tendrils than simply widening the mask, since it only covers where the words actually went —
-    black left inside the box at f70: 2052px with an f100 mask (ghosts), 942px with a blanket 8px
-    one, 1073px with this; 0 from f88 either way. It starts at `INK_GATE` = frame 30: the 遠東 seal drains through the same
-    rectangle and the inset box holds 1473 black pixels at f28 and exactly zero at f30-32, so
-    the gate sits in a real gap. Also writes:
+    and nothing else of the box: every black thing it draws — the labels, ☁ glyphs, dashed
+    lines and every stroke that forms them — is cleared, because the overlay fades in over the
+    top instead. The clear is the whole box inset by 4%, at every frame from `INK_GATE`.
+    Shape-scoped masks were tried first (the final glyphs only, then the union of the last 17
+    frames) to keep the branching strokes alive inside the box; both left partly-drawn words
+    behind at some point in the run, sitting where the baked box was rather than where the
+    overlay sits, which read as a second overlay a few pixels off. Clearing the rectangle is the
+    version with nothing left to catch the eye — the design outside the box is untouched and its
+    tendrils still grow in around it. `INK_GATE` = frame 30: the 遠東 seal drains through the
+    same rectangle and the inset box holds 1473 black pixels at f28 and exactly zero at f30-32,
+    so the gate sits in a real gap. Also writes:
     `edge.webp` (the final red pattern, box reflected over — tiles horizontally, ~0.999 corr),
     `settle.webp` (`process(…, LAST, 0)` — the last frame with every black part at 0), and
     `blackbox.webp` (`acc` keeping only the ink → black-on-transparent, same resize+sharpen,

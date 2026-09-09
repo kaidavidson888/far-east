@@ -83,16 +83,25 @@ function cloudFill(d, src, R, strength) {
 // is hard, and the login box sits over it.
 const BOX_R = { x0: 0.318, x1: 0.682, y0: 0.412, y1: 0.582 };
 
-// The login box's finished black — EMAIL / PASSWORD / create account·login, the
-// dashed lines and the ☁ glyphs — is stripped out of the frames; the overlay
-// fades in over the top instead. The strip is shape-scoped, not rectangle-
-// scoped: only pixels the FINAL frame inks are cleared (INK_STRIP), so the
-// tendrils that branch in and settle into those words are left alone and still
-// grow, exactly as in the source — they just never land. It only applies from
-// INK_GATE on: the 遠東 seal drains through the same rectangle and is still
-// there at frame 28. Measured off the source, the inset box holds 1473 black
-// pixels at f28 and exactly zero at f30-32 — the logo has gone and the login box
-// has not started — so the gate sits in a genuine gap and shows no seam.
+// Everything the login box draws in black — EMAIL / PASSWORD / create
+// account·login, the dashed lines, the ☁ glyphs and every stroke that forms
+// them — is cleared out of the frames; the overlay fades in over the top
+// instead. The clear is the whole box inset by INK_INSET, so the box's own
+// outline survives and nothing of its contents does, at any frame.
+//
+// Shape-scoped masks were tried first (the final glyphs only, then the union of
+// the last 17 frames) to keep the branching strokes alive inside the box. Both
+// left partly-drawn words behind at some point in the run, sitting where the
+// baked box was rather than where the overlay sits, which read as a second
+// overlay a few pixels off. Clearing the rectangle is the one version with
+// nothing left to catch the eye; the design's tendrils outside the box are
+// untouched and still grow in around it.
+//
+// It only applies from INK_GATE on: the 遠東 seal drains through the same
+// rectangle and is still there at frame 28. Measured off the source, the inset
+// box holds 1473 black pixels at f28 and exactly zero at f30-32 — the logo has
+// gone and the login box has not started — so the gate sits in a genuine gap
+// and shows no seam.
 const INK_BOX = { x0: 0.3312, x1: 0.6672, y0: 0.4241, y1: 0.5752 }; // == SPLASH_GEOM.box
 const INK_INSET = 0.04; // fraction of the box, keeps the red outline out of it
 const INK_GATE = 30;
@@ -113,7 +122,7 @@ function process(d, n, blackAlpha = 1) {
 
     if (chroma < 24) {
       const px = (i >> 2) % W, py = ((i >> 2) / W) | 0;
-      const stripped = n >= INK_GATE && INK_STRIP[py * W + px] === 1;
+      const stripped = n >= INK_GATE && px >= IKX0 && px < IKX1 && py >= IKY0 && py < IKY1;
       const cov = stripped ? 0 : crisp(1 - max / 255) * blackAlpha;
       d[i] = 255 + (INK[0] - 255) * cov;
       d[i + 1] = 255 + (INK[1] - 255) * cov;
@@ -166,46 +175,6 @@ function edgeProfile(d) {
   return out;
 }
 const edgeProfiles = [];
-const inkPx = (d, i) => { const mx = Math.max(d[i], d[i+1], d[i+2]); return mx < 200 && mx - Math.min(d[i], d[i+1], d[i+2]) < 40; };
-// INK_STRIP is every pixel the words occupy while they finish — the union of
-// the ink inside the box over frames INK_UNION_FROM..LAST, grown by
-// INK_STRIP_R so no anti-aliased halo is left behind. All of it is deleted.
-//
-// The union, rather than just the last frame: the source draws each word with a
-// few pixels of wobble before it settles, so a mask taken from f100 alone
-// leaves those near-final strokes behind, and late in the run they read as a
-// second, legible copy of the word — sitting where the baked box was rather
-// than where the overlay now sits. Taking the union deletes them as well.
-//
-// It is also gentler on the tendrils than simply widening the mask, because it
-// only covers where the words actually went. Black left inside the box at f70:
-// 2052px with an f100 mask (ghosts), 942px with a blanket 8px one, 1073px with
-// this — and 0 from f88 either way.
-const INK_STRIP_R = 2;
-const INK_UNION_FROM = 84;
-function markInk(d, into) {
-  for (let y = IKY0; y < IKY1; y++) for (let x = IKX0; x < IKX1; x++) { if (inkPx(d, (y * W + x) * 4)) into[y * W + x] = 1; }
-}
-function dilateMask(hit, R) {
-  const m = new Uint8Array(W * H);
-  for (let y = IKY0; y < IKY1; y++) {
-    for (let x = IKX0; x < IKX1; x++) {
-      let on = 0;
-      for (let dy = -R; dy <= R && !on; dy++) {
-        const yy = y + dy;
-        if (yy < IKY0 || yy >= IKY1) continue;
-        for (let dx = -R; dx <= R; dx++) {
-          if (dx * dx + dy * dy > R * R) continue;
-          const xx = x + dx;
-          if (xx < IKX0 || xx >= IKX1) continue;
-          if (hit[yy * W + xx]) { on = 1; break; }
-        }
-      }
-      if (on) m[y * W + x] = 1;
-    }
-  }
-  return m;
-}
 
 rmSync(OUT, { recursive: true, force: true });
 mkdirSync(OUT, { recursive: true });
@@ -228,16 +197,6 @@ const paste = (dst, f) => {
     }
   }
 };
-
-// A pre-pass composites the whole GIF so the strip mask is known before the
-// first frame is written — the main loop only ever holds a running accumulation.
-const finalAcc = blank();
-const inkUnion = new Uint8Array(W * H);
-for (let n = 0; n < frames.length; n++) {
-  paste(finalAcc, frames[n]);
-  if (n >= INK_UNION_FROM) markInk(finalAcc, inkUnion);
-}
-const INK_STRIP = dilateMask(inkUnion, INK_STRIP_R);
 
 const acc = blank();
 
