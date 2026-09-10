@@ -3,20 +3,20 @@
 import { useActionState, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { splashAuthAction, type SplashAuthState } from '@/app/actions';
 import { SPLASH_GEOM, SPLASH_FORM, splashAsset } from '@/lib/splashFrames';
+import { normalisePhone } from '@/lib/phone';
 
 type Box = { x: number; y: number; w: number; h: number };
-type Row = 'email' | 'password';
+type Row = 'phone' | 'password';
 type Kind = 'line' | 'label' | 'cloud';
 
-// Matches EMAIL_RE in app/actions.ts, which re-checks it server-side.
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+// normalisePhone is shared with the action, which re-checks server-side.
 const REJECT_MS = 500;
 
 const SHRINK_AFTER = 12;
 const fit = (len: number) => (len <= SHRINK_AFTER ? 1 : Math.max(0.42, SHRINK_AFTER / len));
 
 // per-row size of the typed text, relative to the baked label height
-const TYPED_SCALE: Record<Row, number> = { email: 1.1, password: 1 };
+const TYPED_SCALE: Record<Row, number> = { phone: 1.1, password: 1 };
 
 /**
  * The login box overlay. Its visuals ARE the box baked into the frames: three
@@ -47,21 +47,21 @@ export function SplashLoginFields({
   live?: boolean;
 }) {
   const [state, action] = useActionState<SplashAuthState, FormData>(splashAuthAction, null);
-  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
   const [pw, setPw] = useState('');
   const [focus, setFocus] = useState<Row | null>(null);
   const [submitActive, setSubmitActive] = useState(false);
   const [rejected, setRejected] = useState(false);
   const rejectTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
-  const inField = focus === 'email' || focus === 'password';
+  const inField = focus === 'phone' || focus === 'password';
 
   // A rejected field fills the box red for half a second and takes its own row
   // with it, so the reader is left looking at one empty line to try again on:
-  // the EMAIL line for an address that is not an address, the PASSWORD line for
-  // a password that does not match an account that already exists.
+  // the PHONE line for a number that is not a number, the PASSWORD line for a
+  // password that does not match an account that already exists.
   const reject = useCallback((row: Row) => {
-    if (row === 'email') setEmail('');
+    if (row === 'phone') setPhone('');
     else setPw('');
     setRejected(true);
     clearTimeout(rejectTimer.current);
@@ -73,7 +73,7 @@ export function SplashLoginFields({
   // The server re-checks the address, and only it can know the password is
   // wrong — either way the form answers the same way.
   useEffect(() => {
-    if (state?.badEmail) reject('email');
+    if (state?.badPhone) reject('phone');
     else if (state?.badPassword) reject('password');
   }, [state, reject]);
 
@@ -92,10 +92,10 @@ export function SplashLoginFields({
   const OY = box.h * SPLASH_FORM.oy;
   const bx = (fx: number) => box.x + fx * box.w + OX;
   const by = (fy: number) => box.y + fy * box.h + OY;
-  const labelSize = box.h * 0.075;
+  const labelSize = box.h * 0.0825;
 
   const op = (kind: Kind, row: Row | 'submit'): number => {
-    const rowTyped = (row === 'email' && email.length > 0) || (row === 'password' && pw.length > 0);
+    const rowTyped = (row === 'phone' && phone.length > 0) || (row === 'password' && pw.length > 0);
     if (kind === 'cloud') {
       if (row === 'submit') return submitActive ? 1 : inField ? 0.8 : 1;
       if (rowTyped) return 0;
@@ -134,14 +134,14 @@ export function SplashLoginFields({
     />
   );
 
-  // The EMAIL row's label is supplied artwork, not a slice of the baked sprite:
+  // The PHONE row's label is supplied artwork, not a slice of the baked sprite:
   // same left edge and cap height as the word it replaces, width from its own
   // aspect, and the same opacity rules as any other label.
-  const emailLabel = (o: number) => {
-    const g = SPLASH_GEOM.emailLabel;
+  const phoneLabel = (o: number) => {
+    const g = SPLASH_GEOM.phoneLabel;
     return (
       <div
-        key="email-label"
+        key="phone-label"
         aria-hidden
         style={{
           position: 'fixed', pointerEvents: 'none',
@@ -172,7 +172,7 @@ export function SplashLoginFields({
           height: size, fontSize: size, lineHeight: 1,
         }}
         name={r} type={type} autoComplete={ac} aria-label={label}
-        inputMode={r === 'email' ? 'email' : undefined}
+        inputMode={r === 'phone' ? 'tel' : undefined}
         value={value}
         onChange={(e) => set(e.target.value)}
         onFocus={() => setFocus(r)}
@@ -183,11 +183,11 @@ export function SplashLoginFields({
 
   const windows = (
     <div>
-      {(['email', 'password', 'submit'] as const).flatMap((row) => {
+      {(['phone', 'password', 'submit'] as const).flatMap((row) => {
         const p = parts[row];
         return [
-          row === 'email'
-            ? emailLabel(op('label', row))
+          row === 'phone'
+            ? phoneLabel(op('label', row))
             : win(`${row}-label`, p.labelX0, p.y0, p.mid, p.y1, op('label', row)),
           win(`${row}-cloud`, p.mid, p.y0, p.cloudX1, p.y1, op('cloud', row),
             'cloudDx' in p ? p.cloudDx : 0),
@@ -228,13 +228,13 @@ export function SplashLoginFields({
         // block the submit with a bubble before the box could flash
         noValidate
         onSubmit={(e) => {
-          if (!EMAIL_RE.test(email.trim())) {
+          if (!normalisePhone(phone)) {
             e.preventDefault();
-            reject('email');
+            reject('phone');
           }
         }}
       >
-        {field('email', email, setEmail, 'text', 'email', 'Email')}
+        {field('phone', phone, setPhone, 'tel', 'tel', 'Phone number')}
         {field('password', pw, setPw, 'password', 'current-password', 'Password')}
 
         <button

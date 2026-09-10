@@ -208,6 +208,17 @@ find the Edge crash instead, restoring the middleware is the cleaner solution.
     the cleared vignette keep the whole ornate red frame at 100 — no hard clip). A row with
     text → its label + ☁ 0. Submit hovered/focused → its whole row 100, nothing else. Error
     text is warm grey (`--negative`), never red.
+  - **Sign-in is by PHONE**, not email. `splashAuthAction` normalises the row through
+    `lib/phone.ts` (E.164 out or null; a bare ten digits is read as US/Canada, and a NANP area
+    code never starts 0 or 1, so those are rejected rather than guessed at), signs in, and
+    signs up if that fails. Two things this depends on:
+      - **Supabase must have an SMS provider** (Authentication → Providers → Phone). Until then
+        every sign-up comes back `Phone signups are disabled`, which the form shows in its
+        error line. Verified against the live project — that is the current state.
+      - **display_name is passed in the sign-up metadata.** `profiles.display_name` is NOT NULL
+        and `handle_new_user` falls back to `split_part(new.email, '@', 1)` — NULL for a
+        phone sign-up, which would fail the insert and take the sign-up with it. The metadata
+        takes the trigger's first branch instead, so no migration is needed.
   - **Sign-in** — the create account/login button runs `splashAuthAction`: sign in first, and
     if that fails, sign up, so one button serves both. The profiles row comes from the
     on_auth_user_created trigger (display_name falls back to the email local part). Either way

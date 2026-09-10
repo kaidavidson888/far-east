@@ -6,6 +6,7 @@ import { redirect } from 'next/navigation';
 import { currentUser } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
 import { logAuthEvent } from '@/lib/logAuthEvent';
+import { normalisePhone } from '@/lib/phone';
 import {
   createShare, deleteReview, getCigaretteBySlug, revokeShare,
   setFavoriteNote, toggleFavorite, upsertReview,
@@ -64,46 +65,62 @@ export async function loginAction(_prev: FormState, formData: FormData): Promise
 }
 
 export type SplashAuthState =
-  | { error?: string; ok?: string; badEmail?: true; badPassword?: true }
+  | { error?: string; ok?: string; badPhone?: true; badPassword?: true }
   | null;
 
 /**
  * The splash's one button is "create account / login". There is a single field
- * pair — no confirmation, no display name, no age gate — so an address that
+ * pair — no confirmation, no display name, no age gate — so a number that
  * already has an account signs into it and anything else gets an account made
- * for it. The profiles row comes from the on_auth_user_created trigger, whose
- * display_name falls back to the local part of the email. Either way the reader
- * lands on the homepage.
+ * for it, and either way the reader lands on the homepage.
+ *
+ * This row is a PHONE number, not an email. Two consequences worth knowing:
+ *
+ *  - Supabase will not do phone auth at all until an SMS provider is set up
+ *    (Authentication → Providers → Phone). Until then sign-up comes back with
+ *    a provider error, which surfaces in the form's error line.
+ *  - profiles.display_name is NOT NULL and the on_auth_user_created trigger
+ *    falls back to split_part(new.email, '@', 1) — NULL for a phone sign-up,
+ *    which would fail the insert and take the sign-up down with it. Passing
+ *    display_name in the sign-up metadata takes the trigger's first branch
+ *    instead, so no migration is needed.
  */
 export async function splashAuthAction(
   _prev: SplashAuthState,
   formData: FormData,
 ): Promise<SplashAuthState> {
-  const email = String(formData.get('email') ?? '').trim();
+  // normalisePhone is the validator and the normaliser both: E.164 out, or
+  // null. The form flashes the box red and clears the row on null, and it is
+  // re-checked here because a server action is a public endpoint.
+  const phone = normalisePhone(String(formData.get('phone') ?? ''));
   const password = String(formData.get('password') ?? '');
 
-  // The form flashes the box red and clears the email row on this. It is
-  // checked again here because a server action is a public endpoint.
-  if (!EMAIL_RE.test(email)) return { badEmail: true };
+  if (!phone) return { badPhone: true };
   if (!password) return { error: 'Enter a password.' };
 
   const supabase = await createClient();
 
-  // Sign in first, so a returning reader is never told their own address is
+  // Sign in first, so a returning reader is never told their own number is
   // taken.
-  const signIn = await supabase.auth.signInWithPassword({ email, password });
+  const signIn = await supabase.auth.signInWithPassword({ phone, password });
   if (!signIn.error) {
-    logAuthEvent(email, 'login');
+    logAuthEvent(phone, 'login');
     redirect('/');
   }
 
-  const { data, error } = await supabase.auth.signUp({ email, password });
+  const { data, error } = await supabase.auth.signUp({
+    phone,
+    password,
+    // Read by the handle_new_user trigger; without it display_name comes out
+    // NULL for a phone sign-up and the NOT NULL insert fails.
+    options: { data: { display_name: phone } },
+  });
 
-  // Sign-in has already failed, so an address that turns out to be taken means
+  // Sign-in has already failed, so a number that turns out to be taken means
   // the password was wrong — the form flashes the box and clears that row.
-  // Supabase says so two different ways: with email confirmation off it is an
-  // error, and with it on the sign-up answers with a user carrying no
-  // identities instead, so the endpoint cannot be used to enumerate accounts.
+  // Supabase says so two different ways: with confirmation off it is an error,
+  // and with it on the sign-up answers with a user carrying no identities
+  // instead, so the endpoint cannot be used to enumerate accounts.
   const taken =
     error?.code === 'user_already_exists'
     || /already (registered|exists)/i.test(error?.message ?? '')
@@ -111,11 +128,11 @@ export async function splashAuthAction(
   if (taken) return { badPassword: true };
   if (error) return { error: error.message };
 
-  logAuthEvent(email, 'signup');
+  logAuthEvent(phone, 'signup');
 
-  // Email confirmation on → no session yet, so there is nothing to redirect to.
+  // Phone confirmation on → no session yet, so there is nothing to redirect to.
   if (!data.session) {
-    return { ok: `Almost there — confirm your address from the email we just sent to ${email}.` };
+    return { ok: `Almost there — confirm the code we just sent to ${phone}.` };
   }
 
   redirect('/');

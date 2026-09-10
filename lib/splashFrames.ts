@@ -12,7 +12,7 @@
 // 101 frames, 40ms apart — exactly the source timing, 4.00s.
 
 import {
-  SPLASH_EDGE_BANDS, SPLASH_EDGE_B64, SPLASH_ASSET_V, SPLASH_EMAIL_LABEL_ASPECT,
+  SPLASH_EDGE_BANDS, SPLASH_EDGE_B64, SPLASH_ASSET_V, SPLASH_PHONE_LABEL_ASPECT,
 } from './splashEdgeProfile';
 
 export const SPLASH_FRAME_MS = 40;
@@ -78,7 +78,7 @@ export function edgeProfileAt(ms: number, side: 0 | 1): Float32Array {
   return out;
 }
 
-// The EMAIL row's label is supplied artwork (scripts/assets/phone-label.svg →
+// The PHONE row's label is supplied artwork (scripts/assets/phone-label.svg →
 // phone-label.webp), not a slice of the baked sprite. Its width follows the
 // artwork's own aspect: SPLASH_GEOM.box is square in source pixels
 // (0.336 × 720 = 0.1511 × 1600 = 242), so a height fraction times an aspect is
@@ -108,7 +108,7 @@ export function edgeProfileAt(ms: number, side: 0 | 1): Float32Array {
 // letter. Measuring "PASSWORD's ink" from x0 0.100 picked up the rule as the
 // first thing it found, so the artwork was lined up against the wrong mark —
 // and once the rule was actually being drawn the two overlapped.
-const EMAIL_LABEL = { x0: 0.1163, y0: 0.1488, h: 0.0698 };
+const PHONE_LABEL = { x0: 0.1163, y0: 0.1488, h: 0.0698 };
 
 // Everything measured off the baked last frame (f100), as fractions.
 export const SPLASH_GEOM = {
@@ -153,7 +153,7 @@ export const SPLASH_GEOM = {
   // stretch of dashes under each ☁. y1 used to overrun dY0 by 0.002-0.003 of
   // the box, which was under half a sprite pixel at 215 and easy to miss;
   // baking the sprite at 430 doubled it and made it obvious.
-  emailLabel: { ...EMAIL_LABEL, w: EMAIL_LABEL.h * SPLASH_EMAIL_LABEL_ASPECT },
+  phoneLabel: { ...PHONE_LABEL, w: PHONE_LABEL.h * SPLASH_PHONE_LABEL_ASPECT },
   parts: {
     // cloudDx moves where the email ☁ is DRAWN without moving what is sampled
     // for it — the sprite windows otherwise use one pair of fractions for both,
@@ -163,7 +163,7 @@ export const SPLASH_GEOM = {
     // 0.3581) and moves with the label rather than away from it. No y is
     // touched: the ☁ stays on the line it was on, and dashX1 is untouched so the
     // dashes and the tick at their left end are exactly as baked.
-    email:    { x0: 0.100, labelX0: 0.1140, textX0: 0.1163, mid: 0.350, cloudX1: 0.495, cloudDx: 0.1653, dashX1: 0.900, ruleX1: 0.1140, y0: 0.146, y1: 0.218, dY0: 0.218, dY1: 0.238 },
+    phone:    { x0: 0.100, labelX0: 0.1140, textX0: 0.1163, mid: 0.350, cloudX1: 0.495, cloudDx: 0.1653, dashX1: 0.900, ruleX1: 0.1140, y0: 0.146, y1: 0.218, dY0: 0.218, dY1: 0.238 },
     password: { x0: 0.100, labelX0: 0.1093, textX0: 0.1116, mid: 0.565, cloudX1: 0.702, dashX1: 0.892, ruleX1: 0.1093, y0: 0.480, y1: 0.552, dY0: 0.552, dY1: 0.573 },
     submit:   { x0: 0.100, labelX0: 0.1116, textX0: 0.1116, mid: 0.758, cloudX1: 0.900, dashX1: 0.900, ruleX1: 0.1116, y0: 0.800, y1: 0.887, dY0: 0.887, dY1: 0.908 },
   },

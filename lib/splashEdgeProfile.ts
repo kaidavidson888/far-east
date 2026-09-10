@@ -10,4 +10,4 @@ export const SPLASH_ASSET_V = '5a2c27f9';
 
 // Width/height of phone-label.webp once trimmed to its own ink, so the
 // EMAIL row can size the artwork by height and let the width follow.
-export const SPLASH_EMAIL_LABEL_ASPECT = 5.6667;
+export const SPLASH_PHONE_LABEL_ASPECT = 5.6667;

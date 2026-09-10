@@ -369,7 +369,7 @@ await sharp(PNG.sync.write(bpng))
 // against the sprite's 0.579), but crisp edges read as bold and soft ones read
 // as thin, so the row looked heavier than the two below it.
 //
-// == SPLASH_GEOM's EMAIL_LABEL.h (0.0698 of the box) x the box crop.
+// == SPLASH_GEOM's PHONE_LABEL.h (0.0698 of the box) x the box crop.
 const PHONE_INK_H = Math.round(0.0698 * BX.height);
 // How much to thin the artwork's strokes before the downscale, in pixels of
 // the 1600-wide raster, per side. Its stems are ~51px there, so 5 takes about
@@ -450,7 +450,7 @@ for (let i = 0; i < SW * SH; i++) {
 await sharp(PNG.sync.write(phoneOut))
   .webp({ quality: 96, alphaQuality: 100 })
   .toFile('public/splash/phone-label.webp');
-const EMAIL_LABEL_ASPECT = Number((SW / SH).toFixed(4));
+const PHONE_LABEL_ASPECT = Number((SW / SH).toFixed(4));
 
 // Normalise every band against its OWN fully-grown value (the last frame), so a
 // band means "how far has the design grown here", not "how dense is the pattern
@@ -484,6 +484,6 @@ writeFileSync(
     `export const SPLASH_ASSET_V = '${ASSET_V}';\n` +
     `\n// Width/height of phone-label.webp once trimmed to its own ink, so the\n` +
     `// EMAIL row can size the artwork by height and let the width follow.\n` +
-    `export const SPLASH_EMAIL_LABEL_ASPECT = ${EMAIL_LABEL_ASPECT};\n`,
+    `export const SPLASH_PHONE_LABEL_ASPECT = ${PHONE_LABEL_ASPECT};\n`,
 );
 console.log(`wrote ${written} frames + edge/settle/blackbox/phone-label.webp + lib/splashEdgeProfile.ts (${edgeBuf.length}B)`);
