@@ -694,13 +694,40 @@ ul, ol { list-style: none; }
   touch-action: pan-y;
   cursor: grab;
   -webkit-tap-highlight-color: transparent;
+  /* nothing in here is selectable or draggable: a native image drag steals
+     the gesture and the row stops following the pointer */
+  user-select: none;
+  -webkit-user-select: none;
 }
 .cig-row:active {
   cursor: grabbing;
 }
+/* The row runs the full width, so a focus ring only ever showed as a line
+   above and below it. The owner liked that, so it is drawn deliberately now
+   rather than left to the browser: the frame's own weight and colour, and
+   pushed out so the clearance it had from the packs it now has from the
+   frame. Sized from CIG_RULE, set inline on the row. */
 .cig-row:focus-visible {
-  outline: 2px solid var(--artpage-focus, #010101);
-  outline-offset: 3px;
+  outline: none;
+}
+.cig-rule {
+  position: absolute;
+  left: 0;
+  right: 0;
+  display: block;
+  height: var(--cig-rule);
+  background: var(--cig-red);
+  pointer-events: none;
+  opacity: 0;
+}
+.cig-row:focus-visible .cig-rule {
+  opacity: 1;
+}
+.cig-rule-top {
+  top: 0;
+}
+.cig-rule-bottom {
+  bottom: 0;
 }
 .cig-track {
   position: absolute;
@@ -717,6 +744,7 @@ ul, ol { list-style: none; }
   border: 0;
   background: transparent;
   display: block;
+  -webkit-user-drag: none;
 }
 .cig-slot-picked {
   cursor: pointer;
@@ -737,7 +765,6 @@ ul, ol { list-style: none; }
    press. */
 .cig-frame {
   position: absolute;
-  top: 0;
   display: block;
   border-style: solid;
   pointer-events: none;

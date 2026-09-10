@@ -3,12 +3,15 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   CIG_BAND_H,
+  CIG_FRAME_H,
   CIG_GAP,
   CIG_HEIGHT,
   CIG_OUTLINE,
   CIG_PACKS,
+  CIG_RULE,
   PAINT_MS,
   REFERENCE_SPEED,
+  SPEED,
   cigLayout,
 } from '@/lib/cigRow';
 
@@ -33,28 +36,28 @@ import {
  * constant (PAINT_MS) if that ever wants softening.
  *
  * THE FRAME. It belongs to the pack, not to the screen: it is drawn around
- * whichever pack is nearest the middle, with the margin the design gives it
- * (8 either side, 6 above and below), so it travels with that pack and then
- * hops to the next as the lead changes. The source animation has it standing
- * still at the centre, but the packs there are half the size these are and
- * sat well inside it with room to spare; at the size the design draws them,
- * a frame pinned to the centre cuts across whichever pack is passing. The
- * margin is the part that was specified, so the margin is what is kept.
+ * whichever pack is nearest the middle, 8px clear of it on every side, so it
+ * travels with that pack and then hops to the next as the lead changes. The
+ * source animation has it standing still at the centre, but the packs there
+ * are half the size these are and sat well inside it with room to spare; at
+ * the size the design draws them, a frame pinned to the centre cuts across
+ * whichever pack is passing. The margin is the part that was specified, so
+ * the margin is what is kept.
  *
  * Its width comes from the pack for the same reason: these packs are all one
- * height but their own widths, 38 to 80, so a fixed 74 would cut into the
+ * height but their own widths, 42 to 92, so a fixed width would cut into the
  * broad ones.
  */
 const { left: LEFT, total: LAP } = cigLayout();
 
-/** How far a wheel notch pushes the row. ~100px of wheel to about one pack. */
-const WHEEL = 0.8;
+/** How far a wheel notch pushes the row, at the owner's pace. */
+const WHEEL = 0.8 * SPEED;
 /** A flick's speed decays by 1/e in this long. */
 const GLIDE_TAU = 0.45;
 /** Below this the glide is spent and the row starts settling. */
 const SETTLE_BELOW = 40;
-/** How long the settle takes to close the remaining distance. */
-const SETTLE_TAU = 0.18;
+/** How long the settle takes to close the distance — a fifth slower too. */
+const SETTLE_TAU = 0.18 / SPEED;
 /** Rendered a little past each edge so nothing pops in at the boundary. */
 const PAD = 120;
 /** A pointer that travelled further than this was scrolling, not pressing. */
@@ -227,6 +230,12 @@ export function CigScroller({ onPress }: { onPress?: (id: string) => void }) {
 
   const onPointerDown = (e: React.PointerEvent) => {
     if (e.button !== 0) return;
+    // Stop the browser picking the pack up as an image and dragging it —
+    // that hijacks the gesture and the row stops following the pointer,
+    // which makes scrolling by hand impossible. Focus has to be taken by
+    // hand as a result, since preventing the default also prevents that.
+    e.preventDefault();
+    rowRef.current?.focus({ preventScroll: true });
     draggingRef.current = true;
     velRef.current = 0;
     dragRef.current = { x: e.clientX, t: performance.now(), moved: 0 };
@@ -279,12 +288,18 @@ export function CigScroller({ onPress }: { onPress?: (id: string) => void }) {
     <div
       ref={rowRef}
       className="cig-row"
-      data-pickx={Math.round(pickX)}
-      style={{ height: `${CIG_BAND_H}px` }}
+      style={
+        {
+          height: `${CIG_BAND_H}px`,
+          '--cig-rule': `${CIG_RULE.thickness}px`,
+          '--cig-red': CIG_OUTLINE.colour,
+        } as React.CSSProperties
+      }
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={endDrag}
       onPointerCancel={endDrag}
+      onDragStart={(e) => e.preventDefault()}
       onKeyDown={onKeyDown}
       tabIndex={0}
       role="group"
@@ -342,13 +357,18 @@ export function CigScroller({ onPress }: { onPress?: (id: string) => void }) {
           aria-hidden="true"
           style={{
             left: `${Math.round(pickX) - CIG_OUTLINE.x}px`,
+            top: `${(CIG_BAND_H - CIG_FRAME_H) / 2}px`,
             width: `${pick.w + CIG_OUTLINE.x * 2}px`,
-            height: `${CIG_BAND_H}px`,
+            height: `${CIG_FRAME_H}px`,
             borderWidth: `${CIG_OUTLINE.stroke}px`,
             borderColor: CIG_OUTLINE.colour,
           }}
         />
       ) : null}
+
+      {/* the keyboard rules, above and below — see CIG_RULE */}
+      <span className="cig-rule cig-rule-top" aria-hidden="true" />
+      <span className="cig-rule cig-rule-bottom" aria-hidden="true" />
     </div>
   );
 }

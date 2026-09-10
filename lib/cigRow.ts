@@ -47,15 +47,31 @@ export const CIG_GAP = 26;
 /**
  * The selection frame, as a margin around whichever pack it holds.
  *
- * The SVG's outline is 74x104 around a 58x90 pack. The packs here are all
- * one height but their own widths, from 38 to 80, so a fixed 74 would cut
- * into the widest of them — the margin is the part that is really fixed, and
- * the frame takes its width from the pack it is holding.
+ * The SVG's outline is 74x104 around a 58x90 pack — 8 either side, 7 above
+ * and below. The owner asked for it equidistant on every side, taking the
+ * sides as the model, so it is 8 all round. The packs here are all one
+ * height but their own widths, from 42 to 92, so a fixed width would cut
+ * into the broad ones: the margin is the part that is really fixed, and the
+ * frame takes its width from the pack it is holding.
  */
-export const CIG_OUTLINE = { x: 8, y: 6, stroke: 5, colour: '#ff0000' };
+export const CIG_OUTLINE = { x: 8, y: 8, stroke: 5, colour: '#ff0000' };
 
-/** The row's own height: the outline's outer box. 92 + 6 + 6 = 104. */
-export const CIG_BAND_H = CIG_HEIGHT + CIG_OUTLINE.y * 2;
+/** The frame's outer box, vertically. 92 + 8 + 8 = 108. */
+export const CIG_FRAME_H = CIG_HEIGHT + CIG_OUTLINE.y * 2;
+
+/**
+ * The two rules that appear above and below when the row has the keyboard.
+ *
+ * They started life as the focus ring — the row runs the full width of the
+ * page, so its outline only ever showed as a line top and bottom. The owner
+ * liked that and asked for it kept, in the frame's own weight and colour,
+ * and pushed out so that the clearance they had from the packs is now the
+ * clearance they have from the frame.
+ */
+export const CIG_RULE = { thickness: CIG_OUTLINE.stroke, gap: 9 };
+
+/** The row's own height: the frame, plus room for a rule either side. */
+export const CIG_BAND_H = CIG_FRAME_H + (CIG_RULE.gap + CIG_RULE.thickness) * 2;
 
 /** Where each pack starts, and how long one lap is. */
 export type CigLayout = { left: number[]; total: number };
@@ -75,3 +91,14 @@ export const PAINT_MS = 125;
 
 /** 23.7 design px a frame at 8fps, the speed the source runs at throughout. */
 export const REFERENCE_SPEED = 189.6;
+
+/**
+ * Everything that moves the row runs at this share of what it used to.
+ *
+ * The owner asked for the scroll a fifth slower without losing the sense of
+ * it being under your hand, so this scales what a wheel notch is worth and
+ * how far a flick carries — but never the drag itself, which stays pinned
+ * 1:1 to the pointer. A drag that lagged the finger by 20% would not read as
+ * slower, it would read as broken.
+ */
+export const SPEED = 0.8;
