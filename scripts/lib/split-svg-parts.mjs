@@ -89,7 +89,23 @@ async function inkBox(svg, W, bg) {
     if (y > y1) y1 = y;
   }
   if (x1 < 0) return null;
-  return { x: x0 / SS, y: y0 / SS, w: (x1 - x0 + 1) / SS, h: (y1 - y0 + 1) / SS };
+
+  // Round outward to whole pixels.
+  //
+  // A fractional box is what makes a bitmap part soft: the part's SVG gets a
+  // fractional width, the browser reports its intrinsic size as the rounded
+  // integer, and then draws it into the fractional CSS box — a scale of
+  // 1.0005 that resamples every row. The Privacy body was 295x514 intrinsic
+  // drawn into 295x514.25. Rounding out rather than to nearest also
+  // guarantees no ink is clipped.
+  const left = Math.floor(x0 / SS);
+  const top = Math.floor(y0 / SS);
+  return {
+    x: left,
+    y: top,
+    w: Math.ceil((x1 + 1) / SS) - left,
+    h: Math.ceil((y1 + 1) / SS) - top,
+  };
 }
 
 /**

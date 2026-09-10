@@ -21,7 +21,11 @@ function styleFor(p: ArtPlacement, w: number, h: number): React.CSSProperties {
     ...(p.right !== undefined ? { right: `${p.right}px` } : null),
     ...(p.top !== undefined ? { top: `${p.top}px` } : null),
     ...(p.bottom !== undefined ? { bottom: `${p.bottom}px` } : null),
-    ...(p.centreX ? { left: '50%', transform: `translateX(-${w / 2}px)` } : null),
+    // Round the centring offset. An odd-width mark centred exactly lands on
+    // a half pixel, and the browser resamples the whole bitmap to draw it
+    // there — the softness that costs is far more visible than the half
+    // pixel of asymmetry avoiding it introduces.
+    ...(p.centreX ? { left: '50%', transform: `translateX(-${Math.round(w / 2)}px)` } : null),
   };
 }
 

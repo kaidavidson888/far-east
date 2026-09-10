@@ -83,6 +83,16 @@ artwork to fit a frame — that scales the margins with it, which is the thing b
   its generated geometry. CSS lives in the `.artpage-*` block in `globals.css`.
 - Small labels: a 9px line of text will not render solid at DPR 1 whatever the format. Prefer
   a real vector of the label; a hairline stroke on its paths is the honest last resort.
+- **Keep every part on whole pixels.** A fractional box is the quietest cause of blur: the
+  part's SVG gets a fractional width, the browser reports its intrinsic size as the rounded
+  integer, then draws it into the fractional CSS box — a scale of 1.0005 that resamples every
+  row. The Privacy body was 295x514 intrinsic drawn into 295x514.25 and looked soft for it.
+  `inkBox` rounds outward, and `ArtworkPage` rounds the centring offset so an odd-width mark
+  does not land on a half pixel. Measuring a part by drawing its SVG to a canvas will NOT
+  catch this — the canvas draws at integer coordinates. Check `getBoundingClientRect` against
+  `naturalWidth/Height` on the live page instead.
+- Routes: `/` is the landing artwork behind the sign-in splash; `/landing` is the same page
+  with no splash. `/about`, `/privacy`, `/terms` are the inner pages.
 - The form factor is resolved server-side in `lib/device.ts` so the page arrives already
   arranged. Mobile and desktop are separate placement tables even when the values match,
   so either can be re-composed alone.
