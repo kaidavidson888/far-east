@@ -613,3 +613,46 @@ ul, ol { list-style: none; }
 .artpage-hit-debug {
   outline: 1px dashed var(--artpage-focus, #fd0000);
 }
+
+/* ------------------------------------------------------------- logo menu --
+   The 遠東 logo unfolding into a nav. Sits at the stage's top-left corner,
+   over the page's own logo: the animation's first frame is that logo, baked
+   to land on it to half a pixel, so it covers rather than replaces it. It is
+   only as wide as the animation's content so its white ground cannot reach
+   the seal. Idle it draws nothing and lets the page's logo show through; the
+   button over the characters is what listens. */
+.logo-menu {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 2;
+}
+.logo-menu-canvas {
+  display: block;
+  pointer-events: none;
+  /* nothing is painted until the menu is asked for, so the page's own
+     (vector, and sharper) logo is what shows at rest */
+  opacity: 0;
+  transition: none;
+}
+.logo-menu[data-phase='forward'] .logo-menu-canvas,
+.logo-menu[data-phase='open'] .logo-menu-canvas,
+.logo-menu[data-phase='reverse'] .logo-menu-canvas {
+  opacity: 1;
+}
+.logo-menu-logo,
+.logo-menu-box {
+  position: absolute;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  display: block;
+  -webkit-tap-highlight-color: transparent;
+}
+.logo-menu-logo:focus-visible,
+.logo-menu-box:focus-visible {
+  outline: 2px solid #010101;
+  outline-offset: 2px;
+}

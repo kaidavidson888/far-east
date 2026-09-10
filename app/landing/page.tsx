@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { LANDING_SPEC } from '@/lib/landing';
 import { detectDevice, deviceOverride } from '@/lib/device';
 import { ArtworkPage } from '@/components/ArtworkPage';
+import { LogoMenu } from '@/components/LogoMenu';
 
 export const metadata: Metadata = {
   // the root layout appends " · Far East"
@@ -28,5 +29,13 @@ export default async function LandingRoute({
   const showHitboxes = dev && params.hitboxes !== undefined;
   const device = deviceOverride(params.device) ?? (await detectDevice());
 
-  return <ArtworkPage spec={LANDING_SPEC} device={device} showHitboxes={showHitboxes} />;
+  return (
+    <ArtworkPage
+      spec={LANDING_SPEC}
+      device={device}
+      showHitboxes={showHitboxes}
+      overlay={<LogoMenu />}
+      decorative={['logo']}
+    />
+  );
 }

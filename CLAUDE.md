@@ -93,6 +93,14 @@ artwork to fit a frame — that scales the margins with it, which is the thing b
   `naturalWidth/Height` on the live page instead.
 - Routes: `/` is the landing artwork behind the sign-in splash; `/landing` is the same page
   with no splash. `/about`, `/privacy`, `/terms` are the inner pages.
+- **The logo menu** (`components/LogoMenu.tsx`, `npm run build:menu`) is on the landing
+  routes only — its ground is white, so it cannot go on the red inner pages. Hovering 遠東
+  unfolds three linked boxes; pressing mid-run skips to the end; pressing the logo again or
+  anything else runs it back at 2x. Frames are baked from `scripts/assets/monkey-bar.gif`
+  because a GIF cannot be seeked, paused or reversed. The canvas covers the page's own logo
+  rather than replacing it — frame 0 IS that logo, and both put their ink at exactly 46,28,
+  which is measured in the build, not assumed. The canvas is deliberately only 300px wide so
+  its white ground cannot reach the seal at x=315.
 - The form factor is resolved server-side in `lib/device.ts` so the page arrives already
   arranged. Mobile and desktop are separate placement tables even when the values match,
   so either can be re-composed alone.

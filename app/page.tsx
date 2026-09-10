@@ -2,6 +2,7 @@ import { currentUser } from '@/lib/auth';
 import { detectDevice, deviceOverride } from '@/lib/device';
 import { LANDING_SPEC } from '@/lib/landing';
 import { ArtworkPage } from '@/components/ArtworkPage';
+import { LogoMenu } from '@/components/LogoMenu';
 import { SplashScreen } from '@/components/SplashScreen';
 
 /**
@@ -35,7 +36,13 @@ export default async function HomePage({
       {/* The splash IS the sign-in, so it would otherwise re-gate the reader on
           the very page its own button sends them to. */}
       {user || hideSplash ? null : <SplashScreen />}
-      <ArtworkPage spec={LANDING_SPEC} device={device} showHitboxes={showHitboxes} />
+      <ArtworkPage
+        spec={LANDING_SPEC}
+        device={device}
+        showHitboxes={showHitboxes}
+        overlay={<LogoMenu />}
+        decorative={['logo']}
+      />
     </>
   );
 }

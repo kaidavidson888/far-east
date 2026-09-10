@@ -77,13 +77,26 @@ export function ArtworkPage({
   spec,
   device,
   showHitboxes = false,
+  overlay,
+  decorative,
 }: {
   spec: ArtPageSpec;
   device: ArtDevice;
   showHitboxes?: boolean;
+  /** Anything that positions itself against the stage — the logo menu does. */
+  overlay?: React.ReactNode;
+  /**
+   * Parts to draw but not make pressable, because the overlay provides the
+   * control instead. The logo menu covers the logo with its own button, and
+   * two buttons on one mark would be announced twice.
+   */
+  decorative?: string[];
 }) {
-  const loose = spec.parts.filter((p) => !p.inCluster);
-  const clustered = spec.parts.filter((p) => p.inCluster);
+  const parts = decorative?.length
+    ? spec.parts.map((p) => (decorative.includes(p.id) ? { ...p, pressable: false } : p))
+    : spec.parts;
+  const loose = parts.filter((p) => !p.inCluster);
+  const clustered = parts.filter((p) => p.inCluster);
 
   return (
     <div
@@ -116,6 +129,8 @@ export function ArtworkPage({
             ))}
           </div>
         ) : null}
+
+        {overlay}
       </div>
     </div>
   );
