@@ -23,27 +23,44 @@
  *
  * BUTTONS. Standalone 54x54 files whose geometry matches the export's boxes
  * exactly, so they drop straight in, wrapped in a translate to carry the page
- * coordinates the other parts use. They are used verbatim: re-encoding their
- * embedded bitmap even at 6x the drawn size measured 7-9% softer at DPR 2
- * than the file as supplied, and on marks this small that is visible.
+ * coordinates the other parts use. Their embedded bitmaps are re-encoded near
+ * the size they are drawn at, which Chrome renders more sharply than the
+ * originals, not less — see resample-embedded.mjs for why that is the
+ * opposite of what a headless rasteriser reports.
  */
 import { readFileSync, writeFileSync } from 'node:fs';
 import sharp from 'sharp';
 import { inkBoxOnPage } from './split-svg-parts.mjs';
+import { resampleEmbedded } from './resample-embedded.mjs';
 
 /**
- * "about us" is drawn smaller than the other two labels — 43x9px against
- * 44.9x19.9 and 42x23.5 — and although its strokes measure a comparable
- * 1.35px on the page, at that size they land between pixels: only 10% of its
- * ink renders solid, where terms-of-service manages 23% and privacy-policy
- * 45%. It reads grey and mushy next to them, and no change of file format
- * fixes that, since a vector would rasterise to the same sub-pixel coverage.
+ * "about us" is drawn smaller than the other two labels — a single 43x9px
+ * line against 44.9x19.9 and 42x23.5 for two — and at that size its strokes
+ * land between pixels. Measured in Chrome it rendered 0% solid ink with a
+ * peak luminance of 218: the text never reached white at all, where
+ * terms-of-service manages 11% at 249 and privacy-policy 17% at 254. No
+ * change of file format fixes that; a vector rasterises to the same
+ * sub-pixel coverage, and resampling alone only reached 2%.
  *
- * Growing the mask by 4 source pixels — 0.087px on the page, under a tenth of
- * a pixel — brings it to 23% solid, matching its neighbour. Set to 0 to leave
- * the supplied artwork exactly as it is.
+ * Growing the mask by 12 source pixels — 0.26px on the page — brings it to
+ * 27% solid at 255, level with the other two once they are re-encoded (12%
+ * and 24%). A contrast curve on the alpha was tried and rejected: it reached
+ * a similar number by pushing the antialiasing around rather than by giving
+ * the strokes more to work with. Set to 0 to leave the artwork exactly as
+ * supplied.
+ *
+ * The real fix is upstream — this label wants to be drawn at the size of the
+ * other two.
  */
-const LABEL_THICKEN = { navAbout: 4 };
+const LABEL_THICKEN = { navAbout: 12 };
+
+/**
+ * Per-button override of how far above the drawn size the bitmap is kept.
+ * "about us" measured best at 3x in Chrome (27% solid) where the default 4x
+ * gave 23%; the ratio interacts with how the thickened strokes land on the
+ * pixel grid, so it is measured rather than reasoned about.
+ */
+const LABEL_OVERSAMPLE = { navAbout: 3 };
 
 /** Grow a mask's alpha by r pixels, as two passes of a 1-D maximum. */
 async function thicken(svgText, r) {
@@ -259,7 +276,10 @@ export async function substituteArtwork({
     const at = geometry[id];
     if (!at) throw new Error(`no geometry for ${id} to place its replacement against`);
     const r = LABEL_THICKEN[id] ?? 0;
-    const supplied = await thicken(readFileSync(file, 'utf8'), r);
+    const thickened = await thicken(readFileSync(file, 'utf8'), r);
+    const { svg: supplied, report } = await resampleEmbedded(thickened, {
+      ...(LABEL_OVERSAMPLE[id] ? { oversample: LABEL_OVERSAMPLE[id] } : null),
+    });
     const inner = supplied.slice(supplied.indexOf('>') + 1, supplied.lastIndexOf('</svg>'));
     const content = `<g transform="translate(${at.x},${at.y})">${inner}</g>`;
     const b = await writePart(id, content);
@@ -269,7 +289,10 @@ export async function substituteArtwork({
           `${at.x},${at.y} ${at.w}x${at.h} — its geometry does not match`,
       );
     }
-    log.push(`${id.padEnd(7)} supplied file${r ? `, mask grown ${r}px (${((r * b.w) / 1974).toFixed(3)}px on the page)` : ", unaltered"}, at ${b.x},${b.y} ${b.w}x${b.h}`);
+    log.push(
+      `${id.padEnd(11)} ${r ? `mask +${r}px, ` : ''}raster ${report[0]?.to ?? 'unchanged'}, ` +
+        `at ${b.x},${b.y} ${b.w}x${b.h}`,
+    );
   }
 
   return log;

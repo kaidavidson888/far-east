@@ -22,18 +22,23 @@ import sharp from 'sharp';
 /**
  * Device pixels to keep per CSS pixel.
  *
- * 3 is what a dense phone screen asks for, and it is not enough: measured
- * against the untouched export, a 3x re-encode of the footer icons scored
- * 96.7% of the original's edge sharpness at DPR 2, which reads as soft next
- * to the rest of the page. 6 measures 100.7% at DPR 2 and 99.5% at DPR 3 —
- * indistinguishable from not resampling at all — and still turns a 267KB PNG
- * into 12KB. Anything above 6 buys nothing.
+ * Measured in Chrome, which is the renderer that matters: on the About Us
+ * footer icons, 4x is as sharp as leaving the export's bitmap alone or
+ * sharper — terms-of-service goes from 11% solid ink to 12%, privacy-policy
+ * from 17% to 24% — while turning a 267KB PNG into 7KB. Chrome downscales a
+ * 2308px image into a 45px box badly; handing it something already near the
+ * drawn size avoids that path entirely.
  *
- * The re-encode is deliberately NOT palettised. It happens not to have cost
- * anything here, but these images are alpha masks: quantising a soft-edged
- * mask to 256 entries is exactly the kind of thing that would.
+ * Do not tune this against a headless rasteriser. resvg resamples far better
+ * than a browser does, so it rates the untouched bitmap best and every
+ * re-encode a loss — the opposite of what ships. That mistake is what made
+ * these buttons soft in the first place.
+ *
+ * The re-encode is deliberately NOT palettised: these images are alpha
+ * masks, and quantising a soft-edged mask to 256 entries would cost exactly
+ * the detail being protected here.
  */
-const OVERSAMPLE = 6;
+const OVERSAMPLE = 4;
 
 /** Read `matrix(a b c d e f)` / `scale(sx sy)` / `scale(s)` as [a, d]. */
 function readScale(transform) {
@@ -62,7 +67,7 @@ function rectFor(svg, patternId) {
   return best;
 }
 
-export async function resampleEmbedded(svg) {
+export async function resampleEmbedded(svg, { oversample = OVERSAMPLE } = {}) {
   let out = svg;
   const report = [];
 
@@ -87,8 +92,8 @@ export async function resampleEmbedded(svg) {
     const drawnH = Math.abs(scale[1]) * ih * rect.h;
     if (!drawnW || !drawnH) continue;
 
-    const targetW = Math.max(1, Math.ceil(drawnW * OVERSAMPLE));
-    const targetH = Math.max(1, Math.ceil(drawnH * OVERSAMPLE));
+    const targetW = Math.max(1, Math.ceil(drawnW * oversample));
+    const targetH = Math.max(1, Math.ceil(drawnH * oversample));
     if (targetW >= iw && targetH >= ih) continue; // already at or below what we keep
 
     const before = Buffer.from(data[2], 'base64');
