@@ -268,9 +268,14 @@ export function SplashScreen() {
     // weight the moment it swapped.
     const layer = inkLayerRef.current;
     if (layer) {
-      layer.style.opacity = String(
+      // Only touch the DOM when the number actually moves. The ramp is clamped
+      // at 0 for the first 36% of the run and at 1 once latched, so most frames
+      // have nothing to say — and a write here invalidates a subtree of a dozen
+      // background-image layers whether or not the value changed.
+      const next = String(
         inForm ? 1 : smooth(rampUp(p, SPLASH_FORM.fadeFrom, SPLASH_FORM.fadeTo)),
       );
+      if (layer.style.opacity !== next) layer.style.opacity = next;
     }
   }, []);
 
@@ -422,8 +427,23 @@ export function SplashScreen() {
           frame of the animation and paint() rides this wrapper's opacity, so the
           ink is never re-rendered by a different engine partway through. The
           form and its veil only appear once it has latched. */}
+      {/* The wrapper carries NO opacity in the JSX on purpose. paint() owns
+          that value and writes it every frame; declaring it here too means
+          React re-applies its own on every render of this component, so the
+          overlay blinks out on any render not immediately followed by a paint
+          — the phase flip at latch being exactly that. The ref sets the
+          starting 0 instead. */}
       {phase !== 'logo' && (
-        <div ref={inkLayerRef} style={{ opacity: 0 }}>
+        <div
+          // its own compositor layer: paint() moves this opacity every frame of
+          // the fade, and without the hint the browser re-rasterises a dozen
+          // background-image children each time instead of just re-blending
+          style={{ willChange: 'opacity' }}
+          ref={(el) => {
+            inkLayerRef.current = el;
+            if (el && !el.style.opacity) el.style.opacity = '0';
+          }}
+        >
           <SplashLoginFields
             box={box}
             live={phase === 'form'}
