@@ -32,6 +32,16 @@
  * few percent. So each crop is also offered in a trimmed form, cut to the
  * longest run of solidly-filled rows and columns.
  *
+ * Nor is that, on its own. Two dozen packs sit above a catalogue number with
+ * the drop shadow running down into it, and the shadow is as wide as the
+ * pack — so measured by coverage the rows below the box are as full as the
+ * box's own, 0.87 to 0.97, and no threshold on width finds the bottom edge.
+ * What separates them is opacity, not width: the pack is opaque, its shadow
+ * is not. `squareOff` measures against that instead, which is what finally
+ * took the numbers off. It is held to the same box-shape test as everything
+ * else, because on Fiit Menthol it otherwise cut into the box and left it
+ * at a ratio of 1.34.
+ *
  * WHICH CROP WINS. A cigarette box is a known shape — this set's own ratios
  * sit between about 0.52 and 0.71, and the design draws them at 0.58 to
  * 0.69. So a crop that comes out box-shaped has almost certainly found the
@@ -96,6 +106,12 @@ const AR_MIN = 0.45;
 const AR_MAX = 0.8;
 /** No crop may keep less of the box than this share of the largest. */
 const KEEP = 0.45;
+/** At or above this alpha a pixel is the object, not its shadow. */
+const SOLID_ALPHA = 200;
+/** A row shorter than this share of the box's own middle is not the box. */
+const SQUARE_CUT = 0.88;
+/** ...and no more than this share may be squared off either end. */
+const SQUARE_MAX = 0.18;
 
 /** Near-white, and flat enough to be a backdrop rather than a pack panel. */
 const isPaper = (d, p, tol) =>
@@ -236,14 +252,46 @@ function pieceBox(bg, w, h) {
   return box;
 }
 
+/**
+ * Which pixels are the object itself, as opposed to its shadow.
+ *
+ * This is the distinction the coverage mask cannot make. Most of these
+ * sources are cut-outs with a soft drop shadow under the pack, and on a
+ * couple of dozen of them the catalogue number sits just below that shadow.
+ * The shadow is as wide as the pack, so by coverage the rows beneath the box
+ * are every bit as full as the box's own — 0.87 to 0.97 — and no threshold
+ * on width can find the bottom edge.
+ *
+ * Opacity can. The pack is opaque, the shadow is not, and the number is
+ * opaque but narrow. Where the source has a real alpha channel that is what
+ * gets used; where it does not (the thirty photographed on paper) there is
+ * no shadow to confuse anything and the coverage mask is right already.
+ */
+function solidity(d, w, h, bg, hasAlpha) {
+  const solid = new Uint8Array(w * h);
+  for (let i = 0; i < w * h; i++) {
+    if (bg[i]) continue;
+    solid[i] = hasAlpha ? (d[i * 4 + 3] >= SOLID_ALPHA ? 1 : 0) : 1;
+  }
+  return solid;
+}
+
+/** Does this source carry a real cut-out, or is it flat on a backdrop? */
+function hasCutout(d, w, h) {
+  let clear = 0;
+  for (let p = 3; p < d.length; p += 4) if (d[p] < 24) clear++;
+  return clear / (w * h) >= 0.02;
+}
+
 /** Every crop worth considering: two tolerances, each with and without trim. */
 function candidates(d, w, h) {
   const out = [];
   for (const tol of TOLERANCES) {
+    const flood = { how: `paper>${tol}` };
     const bg = backdrop(d, w, h, tol);
     const box = pieceBox(bg, w, h);
     if (!box) continue;
-    out.push({ how: `paper>${tol}`, bg, box });
+    out.push({ how: flood.how, bg, box });
 
     const bw = box.x1 - box.x0 + 1;
     const rows = new Float32Array(h);
@@ -264,7 +312,7 @@ function candidates(d, w, h) {
     const rx = solidRun(cols, box.x0, box.x1);
     if (!rx) continue;
     out.push({
-      how: `paper>${tol}+solid`,
+      how: `${flood.how}+solid`,
       bg,
       box: { x0: rx[0], y0: ry[0], x1: rx[1], y1: ry[1] },
     });
@@ -274,6 +322,59 @@ function candidates(d, w, h) {
 
 const area = (b) => (b.x1 - b.x0 + 1) * (b.y1 - b.y0 + 1);
 const ratio = (b) => (b.x1 - b.x0 + 1) / (b.y1 - b.y0 + 1);
+
+/**
+ * Square the crop off against the box's own edges.
+ *
+ * The last thing to come off is the clipped top of a catalogue number. On
+ * a couple of dozen packs the number sits directly under the box with the
+ * drop shadow running into it, so there is no clean gap to find and no
+ * separate component to drop — the density just tapers from the box, through
+ * the shadow, into the digits, and the earlier passes keep the lot.
+ *
+ * A box is a rectangle, though. Every row through it spans essentially the
+ * same width, so the box's own median row is the reference, and the first
+ * row at either end that falls short of it is where the box stops. Rows
+ * beyond that are shadow, or a number, or the top of one.
+ *
+ * The measurement has to be made against the backdrop mask, never against
+ * the finished picture: the ground is painted the page's white, so a white
+ * pack read by colour looks like no pack at all. Measured this way the
+ * reference sits at 1.0 for almost every pack; measured by colour it fell to
+ * 0.39 for ESSE Blue and the trim ate a third of it.
+ *
+ * The cap is the safety line. Nothing here may take more than SQUARE_MAX off
+ * an end, so a pack this reasoning does not suit loses a sliver rather than
+ * a third of itself.
+ */
+function squareOff(solid, w, h, box) {
+  const bw = box.x1 - box.x0 + 1;
+  const bh = box.y1 - box.y0 + 1;
+  const dens = new Float32Array(bh);
+  for (let y = box.y0; y <= box.y1; y++) {
+    let n = 0;
+    for (let x = box.x0; x <= box.x1; x++) if (solid[y * w + x]) n++;
+    dens[y - box.y0] = n / bw;
+  }
+  // Measured against the box's own middle. These boxes are photographed with
+  // a little perspective, so the rows run about 0.99 across the middle and
+  // 0.85 at the foot, and the number's sliver below that is 0.3 or less. The
+  // cut has to sit between those, and the cap decides how far it may run.
+  const middle = [...dens.slice(Math.floor(bh * 0.2), Math.ceil(bh * 0.8))].sort((a, b) => a - b);
+  if (!middle.length) return { box, trimmed: 0 };
+  const ref = middle[Math.floor(middle.length / 2)] * SQUARE_CUT;
+  const cap = Math.floor(bh * SQUARE_MAX);
+
+  let top = 0;
+  while (top < cap && dens[top] < ref) top++;
+  let bottom = 0;
+  while (bottom < cap && dens[bh - 1 - bottom] < ref) bottom++;
+  if (!top && !bottom) return { box, trimmed: 0 };
+  return {
+    box: { x0: box.x0, y0: box.y0 + top, x1: box.x1, y1: box.y1 - bottom },
+    trimmed: top + bottom,
+  };
+}
 
 /** Of the box-shaped crops, the smallest — with a floor. See the header. */
 function chooseBox(cands) {
@@ -311,6 +412,7 @@ mkdirSync(OUT_DIR, { recursive: true });
 const manifest = [];
 let bytes = 0;
 let trimmed = 0;
+let squared = 0;
 const unresolved = [];
 
 for (const file of files) {
@@ -325,7 +427,20 @@ for (const file of files) {
 
   const cands = candidates(data, w, h);
   if (!cands.length) throw new Error(`${file}: nothing left after clearing the backdrop`);
-  const { bg, box, how, boxShaped } = chooseBox(cands);
+  const chosen = chooseBox(cands);
+  const { bg, how, boxShaped } = chosen;
+  const solid = solidity(data, w, h, bg, hasCutout(data, w, h));
+  const squaredResult = squareOff(solid, w, h, chosen.box);
+  // Squaring off is held to the same standard as the crop itself: if it
+  // takes a box-shaped crop and leaves something that is not box-shaped, it
+  // has cut into the box and is thrown away. Fiit Menthol went to 1.34
+  // without this.
+  const keepSquared =
+    squaredResult.trimmed > 0 &&
+    (ratio(squaredResult.box) >= AR_MIN && ratio(squaredResult.box) <= AR_MAX ||
+      !(ratio(chosen.box) >= AR_MIN && ratio(chosen.box) <= AR_MAX));
+  const box = keepSquared ? squaredResult.box : chosen.box;
+  if (keepSquared) squared++;
 
   // paint the backdrop the page's own white, so nothing reads as a panel
   for (let i = 0; i < bg.length; i++) {
@@ -400,7 +515,7 @@ writeFileSync(
 
 const widths = manifest.map((m) => m.w).sort((a, b) => a - b);
 console.log(`${manifest.length} packs -> ${OUT_DIR} (${Math.round(bytes / 1024)}KB)`);
-console.log(`  ${trimmed} needed more than the plain crop`);
+console.log(`  ${trimmed} needed more than the plain crop; ${squared} squared off at an edge`);
 console.log(`  widths ${widths[0]}..${widths[widths.length - 1]} at height ${DRAWN_H}`);
 if (unresolved.length) {
   console.log(`  ${unresolved.length} found no box-shaped crop and were left alone:`);
