@@ -60,7 +60,89 @@ const LABEL_THICKEN = { navAbout: 12 };
  * gave 23%; the ratio interacts with how the thickened strokes land on the
  * pixel grid, so it is measured rather than reasoned about.
  */
-const LABEL_OVERSAMPLE = { navAbout: 3 };
+const LABEL_OVERSAMPLE = {};
+
+/**
+ * Labels supplied as vector rather than as the export's bitmap mask.
+ *
+ * `ink` is the page's mark colour; `ground` is the button's own fill, which
+ * the counters inside the letters must be painted in so they still read as
+ * holes rather than filling the letters solid.
+ */
+const LABEL_VECTOR = {
+  navAbout: {
+    file: 'scripts/assets/about/nav-about-label.svg',
+    ink: '#ffffff',
+    ground: '#000000',
+    // A hairline on the strokes, in the label's own 1974-unit space: 6 there
+    // is 0.13px on the page, so 0.065px of growth a side. That is enough to
+    // take a 9px-tall line from 19% of its ink rendering solid to 31%, past
+    // both of its neighbours (12% and 24%), without reading as bolder.
+    stroke: 6,
+  },
+};
+
+/**
+ * Swaps a footer button's bitmap label for a vector one.
+ *
+ * The export drew each label as a huge PNG used as an alpha mask, and Chrome
+ * downscaling a 1974px image into a 43px box is what made "about us" soft.
+ * A traced vector of the same label has no bitmap to downscale — Chrome
+ * antialiases the paths at whatever size they land — so it sidesteps the
+ * problem rather than compensating for it.
+ *
+ * The trace paints on its own ground and in its own colours: an opaque
+ * full-canvas rectangle first, then dark paths for the strokes and pale ones
+ * for the counters inside them. The rectangle is dropped, the dark paths
+ * become the page's ink, and the pale ones become the button's own fill so
+ * they still knock holes in the letters. Judging by luminance rather than by
+ * exact value also disposes of the two stray specks the tracer leaves.
+ */
+function vectorLabel(labelFile, buttonSvg, { ink, ground, stroke = 0 }) {
+  const svg = readFileSync(labelFile, 'utf8');
+  const size = /<svg[^>]*\bwidth="(\d+)"[^>]*\bheight="(\d+)"/.exec(svg);
+  if (!size) throw new Error(`${labelFile}: no width/height on the root svg`);
+  const [W, H] = [Number(size[1]), Number(size[2])];
+
+  // where the button paints its label, read from the button rather than fixed
+  const target = /<rect x="([\d.]+)" y="([\d.]+)" width="([\d.]+)" height="([\d.]+)" fill="url\(#pattern/.exec(
+    buttonSvg,
+  );
+  if (!target) throw new Error('the button has no patterned label rect to place against');
+  const [x, y, w, h] = target.slice(1, 5).map(Number);
+
+  const paths = readPaths(svg);
+  if (!paths.length) throw new Error(`${labelFile}: no paths`);
+  const backdrop = paths.filter((p) => p.x1 - p.x0 >= W - 1 && p.y1 - p.y0 >= H - 1);
+  if (backdrop.length !== 1) {
+    throw new Error(`${labelFile}: expected one full-canvas backdrop, found ${backdrop.length}`);
+  }
+
+  const luma = (c) => {
+    const v = hex(c);
+    return v ? 0.299 * v[0] + 0.587 * v[1] + 0.114 * v[2] : 255;
+  };
+  let strokes = 0;
+  const body = paths
+    .filter((p) => p !== backdrop[0])
+    .map((p) => {
+      const dark = luma(p.fill) < 128;
+      if (dark) strokes++;
+      const paint = dark
+        ? `fill="${ink}"${stroke ? ` stroke="${ink}" stroke-width="${stroke}"` : ''}`
+        : `fill="${ground}"`;
+      return p.src.replace(/fill="[^"]+"/, paint);
+    })
+    .map((p) => p.replace(/-?\d+\.\d+/g, (n) => String(Math.round(Number(n) * 100) / 100)))
+    .join('\n');
+  if (!strokes) throw new Error(`${labelFile}: found no dark strokes to recolour`);
+
+  // the export scales the label non-uniformly into its rect; match that
+  return (
+    `<g transform="translate(${x},${y}) scale(${(w / W).toFixed(8)},${(h / H).toFixed(8)})">\n` +
+    `${body}\n</g>`
+  );
+}
 
 /** Grow a mask's alpha by r pixels, as two passes of a 1-D maximum. */
 async function thicken(svgText, r) {
@@ -275,12 +357,29 @@ export async function substituteArtwork({
   for (const [id, file] of Object.entries(navFiles)) {
     const at = geometry[id];
     if (!at) throw new Error(`no geometry for ${id} to place its replacement against`);
-    const r = LABEL_THICKEN[id] ?? 0;
-    const thickened = await thicken(readFileSync(file, 'utf8'), r);
-    const { svg: supplied, report } = await resampleEmbedded(thickened, {
-      ...(LABEL_OVERSAMPLE[id] ? { oversample: LABEL_OVERSAMPLE[id] } : null),
-    });
-    const inner = supplied.slice(supplied.indexOf('>') + 1, supplied.lastIndexOf('</svg>'));
+    const raw = readFileSync(file, 'utf8');
+    const vector = LABEL_VECTOR[id];
+    let inner;
+    let note;
+    if (vector) {
+      // the mask, the group it painted through, and the defs they needed all
+      // go; the vector label replaces the lot
+      const stripped = raw
+        .replace(/<mask id="[^"]+"[\s\S]*?<\/mask>/, '')
+        .replace(/<g mask="url\(#[^)]+\)">[\s\S]*?<\/g>/, '')
+        .replace(/<defs>[\s\S]*?<\/defs>/, '');
+      const body = stripped.slice(stripped.indexOf('>') + 1, stripped.lastIndexOf('</svg>'));
+      inner = `${body}\n${vectorLabel(vector.file, raw, vector)}`;
+      note = 'vector label';
+    } else {
+      const r = LABEL_THICKEN[id] ?? 0;
+      const thickened = await thicken(raw, r);
+      const { svg: supplied, report } = await resampleEmbedded(thickened, {
+        ...(LABEL_OVERSAMPLE[id] ? { oversample: LABEL_OVERSAMPLE[id] } : null),
+      });
+      inner = supplied.slice(supplied.indexOf('>') + 1, supplied.lastIndexOf('</svg>'));
+      note = `raster ${report[0]?.to ?? 'unchanged'}`;
+    }
     const content = `<g transform="translate(${at.x},${at.y})">${inner}</g>`;
     const b = await writePart(id, content);
     if (Math.abs(b.x - at.x) > 1 || Math.abs(b.y - at.y) > 1 || Math.abs(b.w - at.w) > 1) {
@@ -290,7 +389,7 @@ export async function substituteArtwork({
       );
     }
     log.push(
-      `${id.padEnd(11)} ${r ? `mask +${r}px, ` : ''}raster ${report[0]?.to ?? 'unchanged'}, ` +
+      `${id.padEnd(11)} ${note}, ` +
         `at ${b.x},${b.y} ${b.w}x${b.h}`,
     );
   }
