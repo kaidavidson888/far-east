@@ -675,6 +675,75 @@ ul, ol { list-style: none; }
   }
 }
 
+/* -------------------------------------------------------- cigarette row --
+   A row of packs across the middle of the page that scrolls forever, with a
+   red frame at the centre marking the one you can press.
+
+   Placed by the same rule as everything else on these pages: the design puts
+   the band 375 from the top and 375 from the bottom of an 844-high page, so
+   it is centred, and it holds its own height in real pixels at any viewport
+   rather than scaling. It spans the full width because it has no ends. */
+.cig-row {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 1;
+  overflow: hidden;
+  touch-action: pan-y;
+  cursor: grab;
+  -webkit-tap-highlight-color: transparent;
+}
+.cig-row:active {
+  cursor: grabbing;
+}
+.cig-row:focus-visible {
+  outline: 2px solid var(--artpage-focus, #010101);
+  outline-offset: 3px;
+}
+.cig-track {
+  position: absolute;
+  inset: 0;
+}
+/* Each pack is vertically centred in the band: the band is the frame's outer
+   box (92 + 6 + 6), so the 6 above and below is the frame's own margin. */
+.cig-slot {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  display: block;
+}
+.cig-slot-picked {
+  cursor: pointer;
+}
+.cig-slot-picked:focus-visible {
+  outline: none;
+}
+.cig-pack {
+  display: block;
+  width: 100%;
+  height: 100%;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+/* The frame is drawn around whichever pack is nearest the middle, at the
+   margin the design gives it, so it travels with that pack and hops to the
+   next as the lead changes. It sits over the packs, so it must not eat the
+   press. */
+.cig-frame {
+  position: absolute;
+  top: 0;
+  display: block;
+  border-style: solid;
+  pointer-events: none;
+  box-sizing: border-box;
+}
+
 /* ------------------------------------------------------------- logo menu --
    The 遠東 logo unfolding into a nav. Sits at the stage's top-left corner,
    over the page's own logo: the animation's first frame is that logo, baked

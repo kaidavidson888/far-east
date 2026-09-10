@@ -25,6 +25,8 @@ no CSS framework (tokens in `app/globals.css`). Deploys to Vercel.
 - `npm run seed` — upserts `lib/catalog.json` into the database (idempotent; never touches user data)
 - `npm run link-supabase` / `set-db-password` / `diagnose-db` — configure `.env.local` safely (hidden prompts, connection tested before saving, refuse piped input)
 - `npm run demo` — three sample accounts, LOCAL ONLY; needs the secret key
+- `npm run build:cigs` — rebuilds the 282 pack marks in `public/cigs` and `lib/cigs.json`
+  from the owner's `Cigs Images` folder (path at the top of `scripts/build-cigs.mjs`)
 
 ## Environment (`.env.local`, gitignored — never commit, never paste into chat)
 `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `DATABASE_URL`.
@@ -111,6 +113,37 @@ artwork to fit a frame — that scales the margins with it, which is the thing b
   so either can be re-composed alone.
 - Dev flags on these pages: `?hitboxes=1` outlines the buttons, `?device=mobile|desktop`
   forces an arrangement.
+
+## Pages built from the owner's artwork
+The landing, about, privacy and terms pages are not laid out by hand. Each is built from a
+supplied export by a script in `scripts/`, which measures a *render* of the artwork (never the
+Figma layer boxes — those are padded) and writes a geometry JSON that the page spec reads.
+
+**The margin rule, which the owner set and which applies to every new image they give us:**
+measure the distance from each edge of the design to the outermost ink, and hold those
+distances in real CSS pixels at every viewport. Elements keep their drawn size; the space
+between them flexes. Never scale the artwork to fit — that scales the margins with it, which is
+the thing being avoided. Mobile and desktop get the same margins and differ only in where the
+edges are. See `lib/artpage.ts`.
+
+Two rules that cost real time to learn:
+- **Tune image resampling against Chrome, not a headless rasteriser.** resvg resamples far
+  better than a browser does, so anything tuned against it ships blurry.
+- **Whole pixels.** A part drawn into a fractional CSS box makes the browser resample every
+  row (it reports a rounded intrinsic size, then draws into the fractional box). Canvas
+  measurement cannot see this because canvas draws at integer coordinates — compare
+  `getBoundingClientRect` against `naturalWidth/Height` on the live page instead.
+
+Baked animations (splash, logo menu, seal) are GIF frames rendered to WebP and scrubbed on a
+canvas, because a GIF cannot be seeked, paused or reversed. `lib/useFrameScrub.ts` is the
+shared state machine; `LogoMenu` still carries its own copy and should be folded into it.
+Flat-coloured frames must be quantised to a fixed palette and written lossless — a lossy encode
+will not keep a flat field flat, and per-frame palette choice drifts the white frame to frame.
+
+The cigarette row on the landing page is measured off two references the owner supplied, both
+kept in `scripts/assets`: a positioning SVG and an MP4 of the motion. The MP4 runs at **8fps,
+dead constant** — that stepping is deliberate and the owner likes it, so the row is driven by a
+125ms timer rather than rAF. All of it is written up in `lib/cigRow.ts`.
 
 ## Working as a team (two people, two Claude Code sessions)
 The repo is **public** on GitHub — chosen so Vercel Hobby deploys commits from either owner.

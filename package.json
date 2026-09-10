@@ -19,7 +19,8 @@
     "build:landing": "node scripts/build-landing-svg.mjs",
     "build:pages": "node scripts/build-pages.mjs",
     "build:menu": "node scripts/build-menu-frames.mjs",
-    "build:seal": "node scripts/build-seal-frames.mjs"
+    "build:seal": "node scripts/build-seal-frames.mjs",
+    "build:cigs": "node scripts/build-cigs.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.5",

@@ -3,6 +3,7 @@ import { detectDevice, deviceOverride } from '@/lib/device';
 import { LANDING_SPEC } from '@/lib/landing';
 import { ArtworkPage } from '@/components/ArtworkPage';
 import { LogoMenu } from '@/components/LogoMenu';
+import { CigScroller } from '@/components/CigScroller';
 import { SealButton } from '@/components/SealButton';
 import { SplashScreen } from '@/components/SplashScreen';
 
@@ -41,9 +42,9 @@ export default async function HomePage({
         spec={LANDING_SPEC}
         device={device}
         showHitboxes={showHitboxes}
-        overlay={<><LogoMenu /><SealButton size={LANDING_SPEC.sealSize} /></>}
+        overlay={<><CigScroller /><LogoMenu /><SealButton size={LANDING_SPEC.sealSize} /></>}
         decorative={['logo']}
-        hide={['seal']}
+      hide={['seal']}
       />
     </>
   );
