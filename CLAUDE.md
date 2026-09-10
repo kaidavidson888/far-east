@@ -16,6 +16,10 @@ no CSS framework (tokens in `app/globals.css`). Deploys to Vercel.
 ## Commands
 - `npm run dev` — local server (needs `.env.local`, see below)
 - `npm run build` — must stay clean; run it before every commit
+- `npm run build:landing` — normalises the landing artwork and cuts it into
+  `public/landing/parts/*.svg` + `lib/landing-geometry.json`. Re-run after any change to
+  `scripts/assets/landing-mobile.svg`; the landing page's layout reads that geometry, so
+  nothing is hardcoded and a re-export moves the buttons with the marks.
 - `npm run verify:db` — 29 checks against a throwaway Postgres (no network, no Supabase). Run after any schema or `lib/db.ts` change. It boots its own Postgres via `embedded-postgres`.
 - `npm run seed` — upserts `lib/catalog.json` into the database (idempotent; never touches user data)
 - `npm run link-supabase` / `set-db-password` / `diagnose-db` — configure `.env.local` safely (hidden prompts, connection tested before saving, refuse piped input)
@@ -82,7 +86,10 @@ the brand assets and review text in this repo are visible to anyone.
 6. `subscribers` table is unused (newsletter removed); drop it in a migration when convenient.
 
 ## Gotchas learned the hard way
-- Run `next build` only with the dev server stopped; both write to `.next`.
+- Run `next build` only with the dev server stopped; both write to `.next`. If you need
+  the pre-commit build while someone's dev server is up, `NEXT_DIST_DIR=.next-build npm run
+  build` sends it elsewhere — but Next rewrites `tsconfig.json` and `next-env.d.ts` to point
+  at that directory, so `git checkout --` both afterwards.
 - Restarting the dev server invalidates Server Action ids in open tabs → `POST 404`; hard-refresh.
 - Vercel Hobby blocked deploys authored by a non-owner while the repo was private; the repo was
   made public to remove that constraint. If it is ever made private again, that returns.

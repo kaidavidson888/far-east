@@ -22,8 +22,11 @@
  * with it.
  */
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { splitIntoParts } from './lib/split-landing-parts.mjs';
 
 const SRC = 'scripts/assets/landing-mobile.svg';
+const PARTS_DIR = 'public/landing/parts';
+const GEOMETRY = 'lib/landing-geometry.json';
 const LOGO = 'scripts/assets/logo-characters.svg';
 const OUT = 'public/landing/landing-mobile.svg';
 const BACKGROUND = '#ffffff';
@@ -117,3 +120,6 @@ const total = [...seen.values()].reduce((a, b) => a + b, 0);
 console.log(`flattened ${total} near-white fills to ${BACKGROUND}:`);
 for (const [c, n] of [...seen].sort((a, b) => b[1] - a[1])) console.log(`  ${c} x${n}`);
 console.log(`wrote ${OUT}`);
+
+console.log('\nper-element parts:');
+await splitIntoParts(trimmed, { outDir: PARTS_DIR, geometryFile: GEOMETRY });

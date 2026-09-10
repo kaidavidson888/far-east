@@ -11,3 +11,6 @@ tsconfig.tsbuildinfo
 
 # Claude Code local launch config (machine-specific)
 .claude/
+
+# scratch output dir for a build run alongside the dev server
+.next-build/
