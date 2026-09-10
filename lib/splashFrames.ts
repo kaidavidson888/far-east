@@ -79,11 +79,23 @@ export function edgeProfileAt(ms: number, side: 0 | 1): Float32Array {
 }
 
 // The EMAIL row's label is supplied artwork (scripts/assets/phone-label.svg →
-// phone-label.webp), not a slice of the baked sprite. It keeps the cap height
-// and top of the baked EMAIL word it replaces, and its width follows the
-// artwork's own aspect. SPLASH_GEOM.box is square in source pixels
+// phone-label.webp), not a slice of the baked sprite. Its width follows the
+// artwork's own aspect: SPLASH_GEOM.box is square in source pixels
 // (0.336 × 720 = 0.1511 × 1600 = 242), so a height fraction times an aspect is
 // a width fraction.
+//
+// h is set off the shared P. In the art the P is the tallest thing there is,
+// rows 0-272 of 273, because its stem carries a tail below the baseline (the O
+// reaches 0-255, the flat H/N/E/# only 5-249). Matching the art's full ink
+// height to PASSWORD's letters therefore matches the two Ps, which is the
+// comparison the eye makes — they are the first letter of both rows and sit
+// side by side at the left edge. PASSWORD's letters are 0.0698 of the box, NOT
+// the 0.0744 an earlier measurement gave: the label window's y1 (0.555) reaches
+// past dY0 (0.552), so the bottom rows of that window are the dashed line
+// rather than the word.
+//
+// y0 is set so the ink box still ENDS at 0.2186 where it did, keeping the P's
+// tail tucked just above the dashes; the art shrinks upward from there.
 //
 // x0 is the artwork's own left edge — the leftmost ink of its P, tail included.
 // PASSWORD's 0.1023 is the leftmost ink of its P too, so putting them on the
@@ -91,7 +103,7 @@ export function edgeProfileAt(ms: number, side: 0 | 1): Float32Array {
 // earlier pass instead aligned the P *stems*, backing x0 off by the 15 of 1538
 // columns the tail curls out over; that left the two bounding boxes a hair
 // apart, which is what actually reads.)
-const EMAIL_LABEL = { x0: 0.1023, y0: 0.1442, h: 0.0744 };
+const EMAIL_LABEL = { x0: 0.1023, y0: 0.1488, h: 0.0698 };
 
 // Everything measured off the baked last frame (f100), as fractions.
 export const SPLASH_GEOM = {
@@ -117,7 +129,7 @@ export const SPLASH_GEOM = {
     // 0.3581) and moves with the label rather than away from it. No y is
     // touched: the ☁ stays on the line it was on, and dashX1 is untouched so the
     // dashes and the tick at their left end are exactly as baked.
-    email:    { x0: 0.100, mid: 0.350, cloudX1: 0.495, cloudDx: 0.1773, dashX1: 0.900, y0: 0.146, y1: 0.220, dY0: 0.218, dY1: 0.238 },
+    email:    { x0: 0.100, mid: 0.350, cloudX1: 0.495, cloudDx: 0.1513, dashX1: 0.900, y0: 0.146, y1: 0.220, dY0: 0.218, dY1: 0.238 },
     password: { x0: 0.100, mid: 0.565, cloudX1: 0.702, dashX1: 0.892, y0: 0.480, y1: 0.555, dY0: 0.552, dY1: 0.573 },
     submit:   { x0: 0.100, mid: 0.758, cloudX1: 0.900, dashX1: 0.900, y0: 0.800, y1: 0.889, dY0: 0.887, dY1: 0.908 },
   },
