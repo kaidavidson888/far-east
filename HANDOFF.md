@@ -184,12 +184,17 @@ find the Edge crash instead, restoring the middleware is the cleaner solution.
     rect too, so moving those slides the window onto blank sprite and the ☁ disappears. The
     field underneath is untouched: still the email input, still validated as an address, so its
     `aria-label` stays "Email" and does not match the visible art.
-  - **The tick** at the left end of each dashed line is taller than the line and pokes up into
-    the label band, where the label window used to draw it. The email row lost its when the
-    label became artwork, and the submit row lost its when y1 was clipped to dY0. `tickX1` /
-    `tickY0` give it its own window at the LINE opacity — it is part of the dashes, not the
-    word, so it dims and brightens with them. The password row needs none: its tick stops at
-    dY0. Eleven windows now, not nine.
+  - **The dashed vertical RULE** that opens each row is perpendicular to the dashed line and as
+    tall as the row (sprite columns 44-48 on email, 43-46 on password, 43-47 on submit). It
+    gets its own window at the LINE opacity, `x[x0..ruleX1] y[y0..dY0]` — it belongs to the
+    dashes, not the word. Inside the label window it took the LABEL opacity and dimmed to 0.1
+    with a field focused instead of rising to 1, and on the email row it disappeared entirely
+    once the label became artwork. `labelX0` starts the label window after it so the two do not
+    composite. Twelve windows now, not nine.
+  - **0.1023 is the RULE, not the first letter.** Measuring a row's ink from x0 0.100 finds the
+    rule first, which is how the PHONE # artwork ended up aligned to the wrong mark. The actual
+    first letters start at 0.1116. The gap from rule to text is 0.0023 on every row, taken from
+    the password row as the model; the email rule is wider, so its artwork starts at 0.1163.
   - **Login box** — `SplashLoginFields` shows nine sprite windows onto `blackbox.webp`, three
     per row: `label` x[x0..mid], `☁` x[mid..cloudX1], `line` x[x0..dashX1] (all fractions of
     the box, `SPLASH_GEOM.parts`, **measured off the black baked into f100** so the overlay is

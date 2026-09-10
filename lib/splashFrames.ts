@@ -97,13 +97,18 @@ export function edgeProfileAt(ms: number, side: 0 | 1): Float32Array {
 // y0 is set so the ink box still ENDS at 0.2186 where it did, keeping the P's
 // tail tucked just above the dashes; the art shrinks upward from there.
 //
-// x0 is the artwork's own left edge — the leftmost ink of its P, tail included.
-// PASSWORD's 0.1023 is the leftmost ink of its P too, so putting them on the
-// same number lines the two glyphs' bounding boxes up on the vertical. (An
-// earlier pass instead aligned the P *stems*, backing x0 off by the 15 of 1538
-// columns the tail curls out over; that left the two bounding boxes a hair
-// apart, which is what actually reads.)
-const EMAIL_LABEL = { x0: 0.1023, y0: 0.1488, h: 0.0698 };
+// x0 is set from the dashed rule that opens the row, not from the other rows'
+// first letter directly. The password row is the model: its rule's ink ends at
+// 0.1093 and its P starts at 0.1116, a gap of 0.0023, and the submit row
+// already matches. The email rule is a little wider — sprite columns 44-48
+// against 43-46 — so its ink ends at 0.1140 and the artwork starts 0.0023 past
+// that, at 0.1163.
+//
+// Note 0.1023, which this used to be: that is where the RULE starts, not the
+// letter. Measuring "PASSWORD's ink" from x0 0.100 picked up the rule as the
+// first thing it found, so the artwork was lined up against the wrong mark —
+// and once the rule was actually being drawn the two overlapped.
+const EMAIL_LABEL = { x0: 0.1163, y0: 0.1488, h: 0.0698 };
 
 // Everything measured off the baked last frame (f100), as fractions.
 export const SPLASH_GEOM = {
@@ -120,13 +125,20 @@ export const SPLASH_GEOM = {
   // y[y0..y1]), dashed line x[x0..dashX1] y[dY0..dY1]. Typed text sits on the
   // dash: left x0, baseline just above dY0.
   //
-  // The tick at the left end of a dashed line is taller than the line itself
-  // and poked up into the label band, where the label window used to draw it.
-  // Once the EMAIL label became artwork nothing covered the email row's any
-  // more, and clipping y1 to dY0 took the submit row's as well. tickX1/tickY0
-  // give it its own window, drawn at the LINE opacity — it is part of the
-  // dashes, not of the word, so it should dim and brighten with them. The
-  // password row has none: its tick stops at dY0.
+  // Each row opens with a dashed vertical RULE, perpendicular to the dashed
+  // line and as tall as the whole row. Mapped off the sprite it is x 44-48 on
+  // email, 43-46 on password, 43-47 on submit, and it runs the full label band
+  // before carrying on into the dash band.
+  //
+  // It is part of the dashes, not of the word, so it gets its own window at the
+  // LINE opacity: x[x0..ruleX1] y[y0..dY0]. Two things were wrong before.
+  // Sitting inside the label window it took the LABEL opacity, so it dimmed to
+  // 0.1 with a field focused instead of rising to 1 with the rest of the
+  // dashes. And on the email row it vanished altogether when the label became
+  // artwork, because nothing draws the sprite in that x range any more.
+  //
+  // labelX0 starts the label window after the rule so the two do not overlap —
+  // stacked windows composite, and 0.5 over 0.5 is 0.75.
   //
   // y1 == dY0 on every row, and it has to: the windows are drawn on top of each
   // other, so any row of the sprite that sits in both the ☁ window and the line
@@ -145,9 +157,9 @@ export const SPLASH_GEOM = {
     // 0.3581) and moves with the label rather than away from it. No y is
     // touched: the ☁ stays on the line it was on, and dashX1 is untouched so the
     // dashes and the tick at their left end are exactly as baked.
-    email:    { x0: 0.100, mid: 0.350, cloudX1: 0.495, cloudDx: 0.1513, dashX1: 0.900, y0: 0.146, y1: 0.218, dY0: 0.218, dY1: 0.238, tickX1: 0.1150, tickY0: 0.2111 },
-    password: { x0: 0.100, mid: 0.565, cloudX1: 0.702, dashX1: 0.892, y0: 0.480, y1: 0.552, dY0: 0.552, dY1: 0.573 },
-    submit:   { x0: 0.100, mid: 0.758, cloudX1: 0.900, dashX1: 0.900, y0: 0.800, y1: 0.887, dY0: 0.887, dY1: 0.908, tickX1: 0.1125, tickY0: 0.8790 },
+    email:    { x0: 0.100, labelX0: 0.1140, mid: 0.350, cloudX1: 0.495, cloudDx: 0.1653, dashX1: 0.900, ruleX1: 0.1140, y0: 0.146, y1: 0.218, dY0: 0.218, dY1: 0.238 },
+    password: { x0: 0.100, labelX0: 0.1093, mid: 0.565, cloudX1: 0.702, dashX1: 0.892, ruleX1: 0.1093, y0: 0.480, y1: 0.552, dY0: 0.552, dY1: 0.573 },
+    submit:   { x0: 0.100, labelX0: 0.1116, mid: 0.758, cloudX1: 0.900, dashX1: 0.900, ruleX1: 0.1116, y0: 0.800, y1: 0.887, dY0: 0.887, dY1: 0.908 },
   },
 };
 
