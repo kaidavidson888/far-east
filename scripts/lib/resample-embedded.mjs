@@ -71,25 +71,35 @@ export async function resampleEmbedded(svg, { oversample = OVERSAMPLE } = {}) {
   let out = svg;
   const report = [];
 
-  const patterns = [...svg.matchAll(/<pattern id="([^"]+)"[\s\S]*?<\/pattern>/g)];
-  for (const [patternSrc, patternId] of patterns) {
+  // An export can stack duplicate layers — the Terms of Service one repeats
+  // its whole footer — so several patterns can share one image. Group by
+  // image and resize it once, sized for the largest place it is drawn, then
+  // rescale every pattern that uses it. Treating each pattern separately
+  // would measure the second against an image the first had already shrunk,
+  // and take a 168px icon down to 15px.
+  const users = new Map();
+  for (const [patternSrc, patternId] of svg.matchAll(/<pattern id="([^"]+)"[\s\S]*?<\/pattern>/g)) {
     const use = /<use[^>]*xlink:href="#([^"]+)"[^>]*transform="([^"]+)"[^>]*\/>/.exec(patternSrc);
     if (!use) continue;
     const [, imageId, transform] = use;
     const scale = readScale(transform);
     const rect = rectFor(svg, patternId);
     if (!scale || !rect) continue;
+    if (!users.has(imageId)) users.set(imageId, []);
+    users.get(imageId).push({ patternSrc, transform, scale, rect });
+  }
 
-    const imageRe = new RegExp(`<image id="${imageId}"[^>]*\\/>`);
-    const imageSrc = imageRe.exec(out)?.[0];
+  for (const [imageId, uses] of users) {
+    const imageSrc = new RegExp(`<image id="${imageId}"[^>]*\\/>`).exec(out)?.[0];
     if (!imageSrc) continue;
     const iw = Number(/\bwidth="(\d+)"/.exec(imageSrc)?.[1]);
     const ih = Number(/\bheight="(\d+)"/.exec(imageSrc)?.[1]);
     const data = /xlink:href="data:image\/([a-z]+);base64,([^"]+)"/.exec(imageSrc);
     if (!iw || !ih || !data) continue;
 
-    const drawnW = Math.abs(scale[0]) * iw * rect.w;
-    const drawnH = Math.abs(scale[1]) * ih * rect.h;
+    // size for the largest place it is drawn, so no user is short of pixels
+    const drawnW = Math.max(...uses.map((u) => Math.abs(u.scale[0]) * iw * u.rect.w));
+    const drawnH = Math.max(...uses.map((u) => Math.abs(u.scale[1]) * ih * u.rect.h));
     if (!drawnW || !drawnH) continue;
 
     const targetW = Math.max(1, Math.ceil(drawnW * oversample));
@@ -103,29 +113,32 @@ export async function resampleEmbedded(svg, { oversample = OVERSAMPLE } = {}) {
       .toBuffer();
     if (after.length >= before.length) continue; // no point making it bigger
 
-    const nextImage = imageSrc
-      .replace(/\bwidth="\d+"/, `width="${targetW}"`)
-      .replace(/\bheight="\d+"/, `height="${targetH}"`)
-      .replace(
-        /xlink:href="data:image\/[a-z]+;base64,[^"]+"/,
-        `xlink:href="data:image/png;base64,${after.toString('base64')}"`,
-      );
-    // hold the drawn size: a * imageWidth is what matters, so shrink a by the
-    // same ratio the image shrank
-    const nextTransform = `matrix(${(scale[0] * iw) / targetW} 0 0 ${
-      (scale[1] * ih) / targetH
-    } ${/matrix\([^)]*\)/.test(transform) ? readTranslate(transform) : '0 0'})`;
-    const nextPattern = patternSrc.replace(
-      /transform="[^"]+"/,
-      `transform="${nextTransform}"`,
+    out = out.replace(
+      imageSrc,
+      imageSrc
+        .replace(/\bwidth="\d+"/, `width="${targetW}"`)
+        .replace(/\bheight="\d+"/, `height="${targetH}"`)
+        .replace(
+          /xlink:href="data:image\/[a-z]+;base64,[^"]+"/,
+          `xlink:href="data:image/png;base64,${after.toString('base64')}"`,
+        ),
     );
 
-    out = out.replace(imageSrc, nextImage).replace(patternSrc, nextPattern);
+    // hold each drawn size: a * imageWidth is what matters, so shrink every
+    // user's a by the same ratio the image shrank
+    for (const u of uses) {
+      const nextTransform =
+        `matrix(${(u.scale[0] * iw) / targetW} 0 0 ${(u.scale[1] * ih) / targetH} ` +
+        `${/matrix\([^)]*\)/.test(u.transform) ? readTranslate(u.transform) : '0 0'})`;
+      out = out.replace(u.patternSrc, u.patternSrc.replace(/transform="[^"]+"/, `transform="${nextTransform}"`));
+    }
+
     report.push({
       imageId,
       from: `${iw}x${ih}`,
       to: `${targetW}x${targetH}`,
       drawnAt: `${drawnW.toFixed(1)}x${drawnH.toFixed(1)}`,
+      users: uses.length,
       wasOversampled: `${(iw / drawnW).toFixed(1)}x`,
       savedKB: Math.round((before.length - after.length) / 1024),
     });

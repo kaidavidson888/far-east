@@ -1,198 +1,31 @@
 /**
- * Replaces the About Us page's bitmaps with the artwork the owner supplied.
+ * About Us is the only page whose body copy is substituted.
  *
- * BODY TEXT. The export drew both text blocks as bitmaps, and the Our Focus
- * one is damaged: its last line's descenders are sliced off by the box border
- * six pixels below, so "packaging" renders as "packaqinq". The supplied
- * vector does not have that, so it is used for both blocks.
+ * The export drew its two text blocks as bitmaps, and the Our Focus one is
+ * damaged: its last line's descenders are sliced off by the box border six
+ * pixels below, so "packaging" renders as "packaqinq". The supplied vector
+ * does not have that, so it is used for both blocks.
  *
  * One vector holds both. Placed through the export's own pattern transform
  * its intro lands within 0.35px of where the bitmap's did, so that block
  * needs no adjustment. Its Our Focus paragraph does: the export drew that
- * from a separate bitmap positioned about 19.6px lower, carrying its own box.
- * Matching the two by their centres puts the vector's text exactly where the
- * bitmap's was — they agree to 0.1% in height — and the box, which the vector
- * does not include, is drawn as a rect measured off the bitmap.
+ * from a separate bitmap positioned about 19.6px lower, carrying its own
+ * box. Matching the two by their centres puts the vector's text exactly
+ * where the bitmap's was — they agree to 0.1% in height — and the box, which
+ * the vector does not include, is drawn as a rect measured off the bitmap.
  *
- * The vector is a VTracer trace, so it paints its own ground: 57% of the
- * traced intro renders as 240,6,5 against the page's 255,0,0, which shows as
- * a text box sitting on a slightly different red. The full-canvas ground path
- * is dropped and every fill within GROUND_NEAR of it is snapped to the page
- * colour, which leaves the antialiasing gradient between ground and ink
- * intact — only the flat background is touched.
+ * The vector is a trace, so it paints its own ground: 57% of the traced
+ * intro renders as 240,6,5 against the page's 255,0,0, which shows as a text
+ * box sitting on a slightly different red. The full-canvas ground path is
+ * dropped and every fill within GROUND_NEAR of it is snapped to the page
+ * colour, leaving the antialiasing gradient between ground and ink intact.
  *
- * BUTTONS. Standalone 54x54 files whose geometry matches the export's boxes
- * exactly, so they drop straight in, wrapped in a translate to carry the page
- * coordinates the other parts use. Their embedded bitmaps are re-encoded near
- * the size they are drawn at, which Chrome renders more sharply than the
- * originals, not less — see resample-embedded.mjs for why that is the
- * opposite of what a headless rasteriser reports.
+ * Privacy Policy and Terms of Service need none of this: their bodies are
+ * single unclipped bitmaps on a transparent ground.
  */
 import { readFileSync, writeFileSync } from 'node:fs';
-import sharp from 'sharp';
 import { inkBoxOnPage } from './split-svg-parts.mjs';
-import { resampleEmbedded } from './resample-embedded.mjs';
-
-/**
- * "about us" is drawn smaller than the other two labels — a single 43x9px
- * line against 44.9x19.9 and 42x23.5 for two — and at that size its strokes
- * land between pixels. Measured in Chrome it rendered 0% solid ink with a
- * peak luminance of 218: the text never reached white at all, where
- * terms-of-service manages 11% at 249 and privacy-policy 17% at 254. No
- * change of file format fixes that; a vector rasterises to the same
- * sub-pixel coverage, and resampling alone only reached 2%.
- *
- * Growing the mask by 12 source pixels — 0.26px on the page — brings it to
- * 27% solid at 255, level with the other two once they are re-encoded (12%
- * and 24%). A contrast curve on the alpha was tried and rejected: it reached
- * a similar number by pushing the antialiasing around rather than by giving
- * the strokes more to work with. Set to 0 to leave the artwork exactly as
- * supplied.
- *
- * The real fix is upstream — this label wants to be drawn at the size of the
- * other two.
- */
-const LABEL_THICKEN = { navAbout: 12 };
-
-/**
- * Per-button override of how far above the drawn size the bitmap is kept.
- * "about us" measured best at 3x in Chrome (27% solid) where the default 4x
- * gave 23%; the ratio interacts with how the thickened strokes land on the
- * pixel grid, so it is measured rather than reasoned about.
- */
-const LABEL_OVERSAMPLE = {};
-
-/**
- * Labels supplied as vector rather than as the export's bitmap mask.
- *
- * `ink` is the page's mark colour; `ground` is the button's own fill, which
- * the counters inside the letters must be painted in so they still read as
- * holes rather than filling the letters solid.
- */
-const LABEL_VECTOR = {
-  navAbout: {
-    file: 'scripts/assets/about/nav-about-label.svg',
-    ink: '#ffffff',
-    ground: '#000000',
-    // A hairline on the strokes, in the label's own 1974-unit space: 6 there
-    // is 0.13px on the page, so 0.065px of growth a side. That is enough to
-    // take a 9px-tall line from 19% of its ink rendering solid to 31%, past
-    // both of its neighbours (12% and 24%), without reading as bolder.
-    stroke: 6,
-  },
-};
-
-/**
- * Swaps a footer button's bitmap label for a vector one.
- *
- * The export drew each label as a huge PNG used as an alpha mask, and Chrome
- * downscaling a 1974px image into a 43px box is what made "about us" soft.
- * A traced vector of the same label has no bitmap to downscale — Chrome
- * antialiases the paths at whatever size they land — so it sidesteps the
- * problem rather than compensating for it.
- *
- * The trace paints on its own ground and in its own colours: an opaque
- * full-canvas rectangle first, then dark paths for the strokes and pale ones
- * for the counters inside them. The rectangle is dropped, the dark paths
- * become the page's ink, and the pale ones become the button's own fill so
- * they still knock holes in the letters. Judging by luminance rather than by
- * exact value also disposes of the two stray specks the tracer leaves.
- */
-function vectorLabel(labelFile, buttonSvg, { ink, ground, stroke = 0 }) {
-  const svg = readFileSync(labelFile, 'utf8');
-  const size = /<svg[^>]*\bwidth="(\d+)"[^>]*\bheight="(\d+)"/.exec(svg);
-  if (!size) throw new Error(`${labelFile}: no width/height on the root svg`);
-  const [W, H] = [Number(size[1]), Number(size[2])];
-
-  // where the button paints its label, read from the button rather than fixed
-  const target = /<rect x="([\d.]+)" y="([\d.]+)" width="([\d.]+)" height="([\d.]+)" fill="url\(#pattern/.exec(
-    buttonSvg,
-  );
-  if (!target) throw new Error('the button has no patterned label rect to place against');
-  const [x, y, w, h] = target.slice(1, 5).map(Number);
-
-  const paths = readPaths(svg);
-  if (!paths.length) throw new Error(`${labelFile}: no paths`);
-  const backdrop = paths.filter((p) => p.x1 - p.x0 >= W - 1 && p.y1 - p.y0 >= H - 1);
-  if (backdrop.length !== 1) {
-    throw new Error(`${labelFile}: expected one full-canvas backdrop, found ${backdrop.length}`);
-  }
-
-  const luma = (c) => {
-    const v = hex(c);
-    return v ? 0.299 * v[0] + 0.587 * v[1] + 0.114 * v[2] : 255;
-  };
-  let strokes = 0;
-  const body = paths
-    .filter((p) => p !== backdrop[0])
-    .map((p) => {
-      const dark = luma(p.fill) < 128;
-      if (dark) strokes++;
-      const paint = dark
-        ? `fill="${ink}"${stroke ? ` stroke="${ink}" stroke-width="${stroke}"` : ''}`
-        : `fill="${ground}"`;
-      return p.src.replace(/fill="[^"]+"/, paint);
-    })
-    .map((p) => p.replace(/-?\d+\.\d+/g, (n) => String(Math.round(Number(n) * 100) / 100)))
-    .join('\n');
-  if (!strokes) throw new Error(`${labelFile}: found no dark strokes to recolour`);
-
-  // the export scales the label non-uniformly into its rect; match that
-  return (
-    `<g transform="translate(${x},${y}) scale(${(w / W).toFixed(8)},${(h / H).toFixed(8)})">\n` +
-    `${body}\n</g>`
-  );
-}
-
-/** Grow a mask's alpha by r pixels, as two passes of a 1-D maximum. */
-async function thicken(svgText, r) {
-  if (!r) return svgText;
-  const m = /xlink:href="data:image\/[a-z]+;base64,([^"]+)"/.exec(svgText);
-  if (!m) throw new Error('no embedded image to thicken');
-  const { data, info } = await sharp(Buffer.from(m[1], 'base64'))
-    .ensureAlpha()
-    .raw()
-    .toBuffer({ resolveWithObject: true });
-  const { width: W, height: H, channels: C } = info;
-
-  const alpha = new Uint8Array(W * H);
-  for (let p = 0; p < W * H; p++) alpha[p] = data[p * C + 3];
-  const wide = new Uint8Array(W * H);
-  for (let y = 0; y < H; y++) {
-    for (let x = 0; x < W; x++) {
-      let max = 0;
-      for (let d = -r; d <= r; d++) {
-        const xx = x + d;
-        if (xx < 0 || xx >= W) continue;
-        if (alpha[y * W + xx] > max) max = alpha[y * W + xx];
-      }
-      wide[y * W + x] = max;
-    }
-  }
-  const out = new Uint8Array(W * H * 4);
-  for (let y = 0; y < H; y++) {
-    for (let x = 0; x < W; x++) {
-      let max = 0;
-      for (let d = -r; d <= r; d++) {
-        const yy = y + d;
-        if (yy < 0 || yy >= H) continue;
-        if (wide[yy * W + x] > max) max = wide[yy * W + x];
-      }
-      const o = (y * W + x) * 4;
-      out[o] = 255;
-      out[o + 1] = 255;
-      out[o + 2] = 255;
-      out[o + 3] = max;
-    }
-  }
-  const png = await sharp(Buffer.from(out), { raw: { width: W, height: H, channels: 4 } })
-    .png({ compressionLevel: 9 })
-    .toBuffer();
-  return svgText.replace(
-    /xlink:href="data:image\/[a-z]+;base64,[^"]+"/,
-    `xlink:href="data:image/png;base64,${png.toString('base64')}"`,
-  );
-}
+import { hex, readPaths } from './page-pipeline.mjs';
 
 /** How the export maps the body-text image onto the page. */
 const PLACE = { scale: 0.3098075, x: 50 - 0.264952008, y: 127 };
@@ -208,36 +41,6 @@ const GROUND_NEAR = 12;
  * 57.5..333.5 by 393.5..612.5, painted with a 1.25px white stroke.
  */
 const FOCUS_BOX = { x0: 57.5, y0: 393.5, x1: 333.5, y1: 612.5, stroke: 1.25 };
-
-const hex = (c) => {
-  const m = /^#([0-9a-f]{6})$/i.exec(c ?? '');
-  if (!m) return null;
-  const n = parseInt(m[1], 16);
-  return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
-};
-
-/** Paths with their absolute extents, from the coordinates and the translate. */
-function readPaths(svg) {
-  return (svg.match(/<path\b[^>]*\/>/g) ?? []).map((src) => {
-    const t = /transform="translate\(([-\d.]+),([-\d.]+)\)"/.exec(src);
-    const tx = t ? Number(t[1]) : 0;
-    const ty = t ? Number(t[2]) : 0;
-    const n = (/ d="([^"]+)"/.exec(src)?.[1] ?? '').match(/-?\d+(?:\.\d+)?/g)?.map(Number) ?? [];
-    let x0 = Infinity;
-    let y0 = Infinity;
-    let x1 = -Infinity;
-    let y1 = -Infinity;
-    for (let i = 0; i + 1 < n.length; i += 2) {
-      const x = n[i] + tx;
-      const y = n[i + 1] + ty;
-      if (x < x0) x0 = x;
-      if (x > x1) x1 = x;
-      if (y < y0) y0 = y;
-      if (y > y1) y1 = y;
-    }
-    return { src, fill: /fill="([^"]+)"/.exec(src)?.[1], x0, y0, x1, y1 };
-  });
-}
 
 const extent = (list) => ({
   x0: Math.min(...list.map((p) => p.x0)),
@@ -255,18 +58,14 @@ const toPage = (b) => ({
   y1: PLACE.y + b.y1 * PLACE.scale,
 });
 
-export async function substituteArtwork({
+export async function substituteBodyVector({
   bodyTextFile,
-  navFiles,
   partsDir,
   page,
   background,
   geometry,
 }) {
   const log = [];
-  const pageRGB = hex(background);
-  if (!pageRGB) throw new Error(`background must be #rrggbb, got ${background}`);
-
   const writePart = async (id, content) => {
     const b = await inkBoxOnPage(content, { ...page, background });
     if (!b) throw new Error(`${id}: the replacement rendered nothing`);
@@ -284,9 +83,7 @@ export async function substituteArtwork({
     return b;
   };
 
-  // ---- body text ---------------------------------------------------------
-  const vec = readFileSync(bodyTextFile, 'utf8');
-  const paths = readPaths(vec);
+  const paths = readPaths(readFileSync(bodyTextFile, 'utf8'));
   if (paths.length < 100) {
     throw new Error(`${bodyTextFile}: expected a traced vector, got ${paths.length} paths`);
   }
@@ -327,9 +124,8 @@ export async function substituteArtwork({
     `${list.map((p) => trim(recolour(p.src))).join('\n')}\n</g>`;
 
   const introBox = await writePart('intro', place(intro));
-  log.push(`intro   ${intro.length} vector paths at ${introBox.x},${introBox.y} ${introBox.w}x${introBox.h}`);
+  log.push(`intro ${intro.length} vector paths at ${introBox.x},${introBox.y} ${introBox.w}x${introBox.h}`);
 
-  // the bitmap's Our Focus sat lower than the vector's; match their centres
   const inset = FOCUS_BOX.stroke / 2;
   const bitmapText = {
     x0: FOCUS_BOX.x0 + 6.75,
@@ -348,51 +144,9 @@ export async function substituteArtwork({
     `fill="none" stroke="#ffffff" stroke-width="${FOCUS_BOX.stroke}"/>`;
   const focusBox = await writePart('focus', focusContent);
   log.push(
-    `focus   ${focus.length} vector paths shifted ${dx.toFixed(2)},${dy.toFixed(2)} + a drawn box ` +
+    `focus ${focus.length} vector paths shifted ${dx.toFixed(2)},${dy.toFixed(2)} + a drawn box ` +
       `at ${focusBox.x},${focusBox.y} ${focusBox.w}x${focusBox.h}`,
   );
-  log.push(`        snapped ${snapped} traced-ground fills to the page's ${background}`);
-
-  // ---- footer buttons, verbatim -----------------------------------------
-  for (const [id, file] of Object.entries(navFiles)) {
-    const at = geometry[id];
-    if (!at) throw new Error(`no geometry for ${id} to place its replacement against`);
-    const raw = readFileSync(file, 'utf8');
-    const vector = LABEL_VECTOR[id];
-    let inner;
-    let note;
-    if (vector) {
-      // the mask, the group it painted through, and the defs they needed all
-      // go; the vector label replaces the lot
-      const stripped = raw
-        .replace(/<mask id="[^"]+"[\s\S]*?<\/mask>/, '')
-        .replace(/<g mask="url\(#[^)]+\)">[\s\S]*?<\/g>/, '')
-        .replace(/<defs>[\s\S]*?<\/defs>/, '');
-      const body = stripped.slice(stripped.indexOf('>') + 1, stripped.lastIndexOf('</svg>'));
-      inner = `${body}\n${vectorLabel(vector.file, raw, vector)}`;
-      note = 'vector label';
-    } else {
-      const r = LABEL_THICKEN[id] ?? 0;
-      const thickened = await thicken(raw, r);
-      const { svg: supplied, report } = await resampleEmbedded(thickened, {
-        ...(LABEL_OVERSAMPLE[id] ? { oversample: LABEL_OVERSAMPLE[id] } : null),
-      });
-      inner = supplied.slice(supplied.indexOf('>') + 1, supplied.lastIndexOf('</svg>'));
-      note = `raster ${report[0]?.to ?? 'unchanged'}`;
-    }
-    const content = `<g transform="translate(${at.x},${at.y})">${inner}</g>`;
-    const b = await writePart(id, content);
-    if (Math.abs(b.x - at.x) > 1 || Math.abs(b.y - at.y) > 1 || Math.abs(b.w - at.w) > 1) {
-      throw new Error(
-        `${id}: the supplied file lands at ${b.x},${b.y} ${b.w}x${b.h}, not the export's ` +
-          `${at.x},${at.y} ${at.w}x${at.h} — its geometry does not match`,
-      );
-    }
-    log.push(
-      `${id.padEnd(11)} ${note}, ` +
-        `at ${b.x},${b.y} ${b.w}x${b.h}`,
-    );
-  }
-
+  log.push(`snapped ${snapped} traced-ground fills to the page's ${background}`);
   return log;
 }

@@ -16,11 +16,11 @@ no CSS framework (tokens in `app/globals.css`). Deploys to Vercel.
 ## Commands
 - `npm run dev` — local server (needs `.env.local`, see below)
 - `npm run build` — must stay clean; run it before every commit
-- `npm run build:landing` / `npm run build:about` — normalise a page's artwork and cut it
-  into `public/<page>/parts/*.svg` + `lib/<page>-geometry.json`. Re-run after any change to
-  the matching `scripts/assets/*.svg`; the layouts read that geometry, so nothing is
-  hardcoded and a re-export moves the buttons with the marks. See "Pages built from
-  artwork" below.
+- `npm run build:landing` / `npm run build:pages` — normalise a page's artwork and cut it
+  into `public/<page>/parts/*.svg` + `lib/<page>-geometry.json`. `build:pages` does About Us,
+  Privacy Policy and Terms of Service together. Re-run after changing the matching
+  `scripts/assets/*.svg`; the layouts read that geometry, so nothing is hardcoded and a
+  re-export moves the buttons with the marks. See "Pages built from artwork" below.
 - `npm run verify:db` — 29 checks against a throwaway Postgres (no network, no Supabase). Run after any schema or `lib/db.ts` change. It boots its own Postgres via `embedded-postgres`.
 - `npm run seed` — upserts `lib/catalog.json` into the database (idempotent; never touches user data)
 - `npm run link-supabase` / `set-db-password` / `diagnose-db` — configure `.env.local` safely (hidden prompts, connection tested before saving, refuse piped input)
@@ -54,7 +54,7 @@ overwrote this file twice during setup. `.env.example` is the template.
 - Dates are formatted server-side in `lib/format.ts` (`en-US`, `America/New_York`) and passed
   as strings — never re-format on the client.
 
-## Pages built from artwork (the landing page, About Us, and whatever follows)
+## Pages built from artwork (the landing page, About Us, Privacy Policy, Terms of Service)
 The owner supplies a Figma export; the page is built from it, not hand-typeset. **The rule
 the owner set: hold the design's edge margins in real CSS pixels at every viewport size.**
 Elements keep their drawn size and the space between them flexes. Never scale the whole
@@ -65,12 +65,24 @@ artwork to fit a frame — that scales the margins with it, which is the thing b
   `regions` map and the page's `background`. Nodes are grouped by where they sit, not by
   index. A node matching no region, matching two, or a region catching nothing is a **hard
   error** — a silently missing mark is worse than a failed build.
-- `scripts/lib/resample-embedded.mjs` brings embedded rasters down to 3x their drawn size.
-  Figma exports images at full resolution: About Us's footer icons were 46x oversampled,
-  640KB for three 54px squares.
+- `scripts/lib/resample-embedded.mjs` brings embedded rasters down to 4x their drawn size.
+  Figma exports images at full resolution: the footer icons were 46x oversampled, 640KB for
+  three 54px squares. **Tune it in Chrome, never in a headless rasteriser** — resvg
+  resamples far better than a browser, so it rates the untouched bitmap best and every
+  re-encode a loss, which is the opposite of what ships. That mistake cost two rounds.
+- `scripts/lib/page-pipeline.mjs` is the shared normalising step for the three inner pages:
+  masks into defs, the logo and the "about us" label swapped for vector, footer fills set
+  (the current page's button black, the other two red, label drawn after the fill), colours
+  snapped. `scripts/build-pages.mjs` holds one config per page.
+- **Watch for duplicated layers.** The Terms of Service export stacks two copies of its whole
+  footer. Anything that rewrites an image must group by image id first, or the second pass
+  measures against what the first already shrank (a 168px icon became 15px).
 - `lib/artpage.ts` holds the shared layout model, `components/ArtworkPage.tsx` renders a
-  spec, and each page contributes a spec (`lib/landing.ts`, `lib/about.ts`) built from its
-  generated geometry. CSS lives in the `.artpage-*` block in `globals.css`.
+  spec, `lib/innerPage.ts` builds the spec the three inner pages share, and each page
+  contributes one (`lib/landing.ts`, `lib/about.ts`, `lib/privacy.ts`, `lib/terms.ts`) from
+  its generated geometry. CSS lives in the `.artpage-*` block in `globals.css`.
+- Small labels: a 9px line of text will not render solid at DPR 1 whatever the format. Prefer
+  a real vector of the label; a hairline stroke on its paths is the honest last resort.
 - The form factor is resolved server-side in `lib/device.ts` so the page arrives already
   arranged. Mobile and desktop are separate placement tables even when the values match,
   so either can be re-composed alone.
