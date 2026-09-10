@@ -340,10 +340,20 @@ await sharp(PNG.sync.write(bpng))
 
 
 // phone-label.webp — the EMAIL row's label, supplied as vector art rather than
-// taken from the baked box. Rasterised, its white ground turned into
-// transparency the same way blackbox is, then trimmed to its own ink so
-// SPLASH_GEOM can line the artwork's edges up with the word it replaces rather
-// than with the artboard it happens to sit on.
+// taken from the baked box.
+//
+// It is baked at the SAME pixel density as blackbox.webp: its ink ends up
+// PHONE_INK_H tall, which is what the sprite's own labels are, and it goes
+// through the same sharpen and INK_GAMMA. Delivered at its native resolution
+// instead (1538 x 273) it was vector-crisp beside 15px bitmap text the frame
+// pipeline had already softened — the browser reduced the art 38x to reach the
+// screen and the sprite only 2x. The strokes measure the same width either way,
+// and Chrome's own resampling actually leaves the art LIGHTER (mean alpha 0.513
+// against the sprite's 0.579), but crisp edges read as bold and soft ones read
+// as thin, so the row looked heavier than the two below it.
+//
+// == SPLASH_GEOM's EMAIL_LABEL.h (0.0698 of the box) x the box crop.
+const PHONE_INK_H = Math.round(0.0698 * BX.height);
 const phoneRaw = await sharp(readFileSync('scripts/assets/phone-label.svg'))
   .resize({ width: 1600 })
   .flatten({ background: '#ffffff' })
@@ -351,14 +361,15 @@ const phoneRaw = await sharp(readFileSync('scripts/assets/phone-label.svg'))
   .raw()
   .toBuffer({ resolveWithObject: true });
 const PW = phoneRaw.info.width, PH = phoneRaw.info.height;
+// grey-on-white, the same space blackbox's ink is resized in — turning grey
+// into alpha only after the downscale, or sharp erodes the strokes
 const phonePng = new PNG({ width: PW, height: PH });
 let px0 = PW, py0 = PH, px1 = -1, py1 = -1;
 for (let i = 0; i < PW * PH; i++) {
-  const mx = Math.max(phoneRaw.data[i * 3], phoneRaw.data[i * 3 + 1], phoneRaw.data[i * 3 + 2]);
-  const a = Math.round(255 * clamp01(1 - mx / 255));
-  phonePng.data[i * 4] = phonePng.data[i * 4 + 1] = phonePng.data[i * 4 + 2] = 0;
-  phonePng.data[i * 4 + 3] = a;
-  if (a > 15) {
+  const v = Math.max(phoneRaw.data[i * 3], phoneRaw.data[i * 3 + 1], phoneRaw.data[i * 3 + 2]);
+  phonePng.data[i * 4] = phonePng.data[i * 4 + 1] = phonePng.data[i * 4 + 2] = v;
+  phonePng.data[i * 4 + 3] = 255;
+  if (v < 240) {
     const x = i % PW, y = (i / PW) | 0;
     if (x < px0) px0 = x;
     if (x > px1) px1 = x;
@@ -367,11 +378,24 @@ for (let i = 0; i < PW * PH; i++) {
   }
 }
 const phoneCrop = { left: px0, top: py0, width: px1 - px0 + 1, height: py1 - py0 + 1 };
-await sharp(PNG.sync.write(phonePng))
+const phoneSmall = await sharp(PNG.sync.write(phonePng))
   .extract(phoneCrop)
+  .resize({ height: PHONE_INK_H })
+  .sharpen({ sigma: 0.5 })
+  .removeAlpha()
+  .raw()
+  .toBuffer({ resolveWithObject: true });
+const SW = phoneSmall.info.width, SH = phoneSmall.info.height;
+const phoneOut = new PNG({ width: SW, height: SH });
+for (let i = 0; i < SW * SH; i++) {
+  const cov = (255 - phoneSmall.data[i * 3]) / 255;
+  phoneOut.data[i * 4] = phoneOut.data[i * 4 + 1] = phoneOut.data[i * 4 + 2] = 0;
+  phoneOut.data[i * 4 + 3] = Math.round(255 * Math.min(1, Math.pow(cov, INK_GAMMA)));
+}
+await sharp(PNG.sync.write(phoneOut))
   .webp({ quality: 96, alphaQuality: 100 })
   .toFile('public/splash/phone-label.webp');
-const EMAIL_LABEL_ASPECT = Number((phoneCrop.width / phoneCrop.height).toFixed(4));
+const EMAIL_LABEL_ASPECT = Number((SW / SH).toFixed(4));
 
 // Normalise every band against its OWN fully-grown value (the last frame), so a
 // band means "how far has the design grown here", not "how dense is the pattern

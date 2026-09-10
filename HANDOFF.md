@@ -161,6 +161,29 @@ find the Edge crash instead, restoring the middleware is the cleaner solution.
     text visibly gained weight the moment it swapped. `live` also keeps one tree shape either
     way, so React reconciles the window divs in place at the hand-off rather than rebuilding
     them. `ctx.imageSmoothingQuality` is 'high' regardless, for the frames themselves.
+  - **EMAIL row label** — supplied vector art (`scripts/assets/phone-label.svg`, reading
+    "PHONE #") baked to `phone-label.webp`, trimmed to its own ink so it lines up with the word
+    it replaces rather than with its artboard. It is baked at the SAME pixel density as
+    `blackbox.webp` — ink 15px tall, what the sprite's own labels are — through the same resize,
+    sharpen and INK_GAMMA. Left at its native 1538x273 it was vector-crisp beside 15px bitmap
+    text the pipeline had already softened: the browser reduced the art 38x to reach the screen
+    and the sprite only 2x. The strokes measure the same width either way (1.38 screen px each)
+    and Chrome actually leaves the art LIGHTER (mean alpha 0.513 against 0.579), but crisp edges
+    read bold and soft ones read thin, so the row looked heavier than the two below it.
+  - **Its size and place** come off the shared P. In the art the P is the tallest thing there is
+    (rows 0-272 of 273) because its stem carries a tail below the baseline — the O reaches
+    0-255, the flat H/N/E/# only 5-249 — so matching the art's full ink height to PASSWORD's
+    letters matches the two Ps, which is the comparison the eye makes. `EMAIL_LABEL.h` = 0.0698,
+    PASSWORD's true letter height; **not** 0.0744, which is what you measure if the label
+    window's y1 (0.555) is allowed to reach past dY0 (0.552) and the dashed line gets counted as
+    part of the word. `x0` 0.1023 is the art's own left edge, the leftmost ink of its P with the
+    tail included, which is the same thing 0.1023 is for PASSWORD's P, so the two bounding boxes
+    line up. `y0` 0.1488 leaves the ink box ending at 0.2186, tail tucked just above the dashes.
+    `parts.email.cloudDx` (0.1513) moves where the ☁ is DRAWN by the width the art adds over
+    EMAIL, keeping their gap at 0.0139 — **not** `mid`/`cloudX1`, which are the sprite SOURCE
+    rect too, so moving those slides the window onto blank sprite and the ☁ disappears. The
+    field underneath is untouched: still the email input, still validated as an address, so its
+    `aria-label` stays "Email" and does not match the visible art.
   - **Login box** — `SplashLoginFields` shows nine sprite windows onto `blackbox.webp`, three
     per row: `label` x[x0..mid], `☁` x[mid..cloudX1], `line` x[x0..dashX1] (all fractions of
     the box, `SPLASH_GEOM.parts`, **measured off the black baked into f100** so the overlay is
