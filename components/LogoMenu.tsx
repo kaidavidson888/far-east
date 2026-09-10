@@ -151,8 +151,16 @@ export function LogoMenu() {
   const reduced = () =>
     typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 
-  const open = useCallback(async () => {
-    if (phaseRef.current !== 'idle') return;
+  /**
+   * Unfold, from rest or straight out of a retraction.
+   *
+   * Resuming picks up at whatever frame the retraction had reached, so
+   * leaving and returning mid-way reads as one continuous movement rather
+   * than a restart.
+   */
+  const goForward = useCallback(async () => {
+    const now = phaseRef.current;
+    if (now !== 'idle' && now !== 'reverse') return;
     await load();
     if (reduced()) {
       posRef.current = FRAMES - 1;
@@ -164,8 +172,10 @@ export function LogoMenu() {
     run();
   }, [load, paint, run, setPhase]);
 
-  const close = useCallback(() => {
-    if (phaseRef.current !== 'open') return;
+  /** Retract from wherever it has got to. */
+  const goReverse = useCallback(() => {
+    const now = phaseRef.current;
+    if (now !== 'open' && now !== 'forward') return;
     if (reduced()) {
       posRef.current = 0;
       setPhase('idle');
@@ -176,7 +186,19 @@ export function LogoMenu() {
     run();
   }, [paint, run, setPhase]);
 
-  /** Pressing the logo: skip to the end while it runs, close once it is open. */
+  /** Straight back to rest, no movement. */
+  const snapClosed = useCallback(() => {
+    cancelAnimationFrame(rafRef.current);
+    posRef.current = 0;
+    hoverBoxRef.current = null;
+    setPhase('idle');
+    paint();
+  }, [paint, setPhase]);
+
+  /**
+   * Pressing the logo. Mid-unfold it skips to the end; once open it starts
+   * retracting; mid-retraction it turns around.
+   */
   const onLogoPress = useCallback(() => {
     const now = phaseRef.current;
     if (now === 'forward') {
@@ -187,23 +209,27 @@ export function LogoMenu() {
       return;
     }
     if (now === 'open') {
-      close();
+      goReverse();
       return;
     }
-    if (now === 'idle') void open();
-  }, [close, open, paint, setPhase]);
+    void goForward(); // idle, or turning a retraction around
+  }, [goForward, goReverse, paint, setPhase]);
 
-  /** Anything pressed elsewhere closes an open menu. */
+  /**
+   * Pressing anywhere else. An open menu retracts; one already retracting
+   * gives up and snaps shut.
+   */
   useEffect(() => {
-    if (phase !== 'open') return;
+    if (phase !== 'open' && phase !== 'reverse') return;
     const onDown = (e: PointerEvent) => {
       const el = e.target as HTMLElement | null;
-      if (el?.closest('[data-menu-root]')) return; // handled by the parts themselves
-      close();
+      if (el?.closest('[data-menu-root]')) return; // the parts handle their own
+      if (phaseRef.current === 'reverse') snapClosed();
+      else goReverse();
     };
     document.addEventListener('pointerdown', onDown, true);
     return () => document.removeEventListener('pointerdown', onDown, true);
-  }, [phase, close]);
+  }, [phase, goReverse, snapClosed]);
 
   useEffect(() => {
     paint();
@@ -245,7 +271,12 @@ export function LogoMenu() {
           height: pct(logoHit.h),
         }}
         onPointerEnter={(e) => {
-          if (e.pointerType === 'mouse') void open();
+          if (e.pointerType === 'mouse') void goForward();
+        }}
+        onPointerLeave={(e) => {
+          // Leaving mid-unfold turns it straight around. Once it is open it
+          // stays open — only a press closes that.
+          if (e.pointerType === 'mouse' && phaseRef.current === 'forward') goReverse();
         }}
         onPointerDown={(e) => {
           e.preventDefault();
