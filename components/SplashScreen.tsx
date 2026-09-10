@@ -331,7 +331,11 @@ export function SplashScreen() {
     settleRef.current = settleImage();
     measure();
 
-    // dev-only: ?splashms=2800 paints one point of the animation and holds
+    // dev-only: ?splashms=2800 paints one point of the animation and holds;
+    // ?splashplay runs it forward from the start without a held pointer, which
+    // is the only way to watch the real loop in an automated browser (a
+    // scripted pointerdown is cancelled the moment it is dispatched, so it
+    // retracts instead of holding).
     const params = new URLSearchParams(window.location.search);
     const devMs =
       process.env.NODE_ENV !== 'production' && params.has('splashms')
@@ -352,6 +356,14 @@ export function SplashScreen() {
         return;
       }
       paint(posRef.current);
+      if (process.env.NODE_ENV !== 'production' && params.has('splashplay')) {
+        pressedRef.current = true;
+        wantPlayRef.current = true;
+        dirRef.current = 1;
+        setPhase('play');
+        run();
+        return;
+      }
       if (wantPlayRef.current && pressedRef.current && !reducedRef.current) {
         dirRef.current = 1;
         setPhase('play');
