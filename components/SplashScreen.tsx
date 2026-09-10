@@ -6,9 +6,6 @@ import {
   splashFrames,
   edgeImage,
   settleImage,
-  blackboxImage,
-  blackboxBoldImage,
-  emailLabelImage,
   SPLASH_FORM,
   preloadSplashFrames,
   frameAt,
@@ -62,9 +59,7 @@ export function SplashScreen() {
   const framesRef = useRef<HTMLImageElement[]>([]);
   const edgeRef = useRef<HTMLImageElement | null>(null);
   const settleRef = useRef<HTMLImageElement | null>(null);
-  const inkRef = useRef<HTMLImageElement | null>(null);
-  const inkBoldRef = useRef<HTMLImageElement | null>(null);
-  const emailLabelRef = useRef<HTMLImageElement | null>(null);
+  const inkLayerRef = useRef<HTMLDivElement | null>(null);
   const offRef = useRef<HTMLCanvasElement | null>(null);
   const fieldOnRef = useRef(false); // a splash text field is focused
   const settleOnRef = useRef(false); // baked black dropped (one frame after the form paints)
@@ -90,65 +85,6 @@ export function SplashScreen() {
     setSeal({ x: (vw - s) / 2, y: (vh - s) / 2 + g.boxDy * r.h, s });
   }, []);
 
-  const drawFormInk = useCallback(
-    (
-      ctx: CanvasRenderingContext2D,
-      r: { x: number; w: number },
-      fy: number,
-      boxH: number,
-      ink: number,
-    ) => {
-      const plain = inkRef.current;
-      const bold = inkBoldRef.current;
-      if (!plain?.complete || !plain.naturalWidth || !bold?.complete || !bold.naturalWidth) return;
-      const g = SPLASH_GEOM;
-      const bw = (g.box.x1 - g.box.x0) * r.w;
-      const bh = (g.box.y1 - g.box.y0) * boxH;
-      const bxo = r.x + g.box.x0 * r.w + bw * SPLASH_FORM.ox;
-      const byo = fy + g.box.y0 * boxH + bh * SPLASH_FORM.oy;
-      const sw = plain.naturalWidth;
-      const sh = plain.naturalHeight;
-      // one sprite window, in the box's own fractions — the same rectangles
-      // SplashLoginFields lays out in the DOM
-      // dx shifts where the window is drawn without moving what it samples
-      const win = (
-        src: HTMLImageElement,
-        x0: number, y0: number, x1: number, y1: number,
-        idle: number, dx = 0,
-      ) => {
-        ctx.globalAlpha = idle * ink;
-        ctx.drawImage(
-          src,
-          x0 * sw, y0 * sh, (x1 - x0) * sw, (y1 - y0) * sh,
-          bxo + (x0 + dx) * bw, byo + y0 * bh, (x1 - x0) * bw, (y1 - y0) * bh,
-        );
-      };
-      const { idle } = SPLASH_FORM;
-      (['email', 'password', 'submit'] as const).forEach((row) => {
-        const p = g.parts[row];
-        if (row === 'email') {
-          // supplied artwork rather than a slice of the sprite — same rect the
-          // DOM overlay uses, so the handover stays silent
-          const art = emailLabelRef.current;
-          if (art?.complete && art.naturalWidth) {
-            const q = g.emailLabel;
-            ctx.globalAlpha = idle.label * ink;
-            ctx.drawImage(
-              art, 0, 0, art.naturalWidth, art.naturalHeight,
-              bxo + q.x0 * bw, byo + q.y0 * bh, q.w * bw, q.h * bh,
-            );
-          }
-        } else {
-          win(bold, p.x0, p.y0, p.mid, p.y1, idle.label);
-        }
-        win(plain, p.mid, p.y0, p.cloudX1, p.y1, idle.cloud, 'cloudDx' in p ? p.cloudDx : 0);
-        win(plain, p.x0, p.dY0, p.dashX1, p.dY1, idle.line);
-      });
-      ctx.globalAlpha = 1;
-    },
-    [],
-  );
-
   const paint = useCallback((ms: number) => {
     const canvas = canvasRef.current;
     const frames = framesRef.current;
@@ -163,6 +99,13 @@ export function SplashScreen() {
       canvas.height = Math.round(vh * dpr);
     }
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    // The overlay ink is handed over to DOM elements at latch, and CSS resamples
+    // a background-image far better than a default canvas drawImage does. Left at
+    // the default 'low', the 215px sprite (and especially the 1538px label art,
+    // which lands at ~43px) came out thinner on the canvas than the DOM copy it
+    // fades into, so the text appeared to gain weight the moment it latched.
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
     ctx.fillStyle = '#fcfcfc'; // matches the WebP frames' flat white
     ctx.fillRect(0, 0, vw, vh);
 
@@ -315,18 +258,21 @@ export function SplashScreen() {
     }
 
     // The login box's finished black — labels, ☁, dashed lines — is not baked
-    // into the frames any more (only the tendrils that branch toward it are), so
-    // it is drawn here instead, simply fading up from nothing over the back half
-    // of the run. It goes on last, unveiled, because the DOM overlay that takes
-    // over at latch sits above the canvas and is unveiled too. That overlay draws
-    // the same sprite windows at the same place and weight, and this stops one
-    // frame after it paints (settleOnRef), so the two are indistinguishable
-    // across the single frame they share.
-    if (!settleOnRef.current) {
-      const ink = inForm ? 1 : smooth(rampUp(p, SPLASH_FORM.fadeFrom, SPLASH_FORM.fadeTo));
-      if (ink > 0.002) drawFormInk(ctx, r, fy, r.h, ink);
+    // into the frames any more (only the tendrils that branch toward it are).
+    // The DOM overlay carries it for the whole run and this just rides its
+    // opacity up, so there is exactly one renderer from the first faint frame to
+    // the working form. Drawing a canvas copy during the fade and handing over
+    // to the DOM at latch meant two different resamplers on the same artwork —
+    // CSS filters a background-image far better than drawImage does, most of all
+    // for the 1538px label art landing at ~43px — and the text visibly gained
+    // weight the moment it swapped.
+    const layer = inkLayerRef.current;
+    if (layer) {
+      layer.style.opacity = String(
+        inForm ? 1 : smooth(rampUp(p, SPLASH_FORM.fadeFrom, SPLASH_FORM.fadeTo)),
+      );
     }
-  }, [drawFormInk]);
+  }, []);
 
   const stop = useCallback(() => {
     cancelAnimationFrame(rafRef.current);
@@ -378,9 +324,6 @@ export function SplashScreen() {
     framesRef.current = splashFrames();
     edgeRef.current = edgeImage();
     settleRef.current = settleImage();
-    inkRef.current = blackboxImage();
-    inkBoldRef.current = blackboxBoldImage();
-    emailLabelRef.current = emailLabelImage();
     measure();
 
     // dev-only: ?splashms=2800 paints one point of the animation and holds
@@ -475,8 +418,19 @@ export function SplashScreen() {
     <div className="splash" role="dialog" aria-label="Enter Far East" data-phase={phase}>
       <canvas ref={canvasRef} className="splash-canvas" aria-hidden="true" />
 
-      {phase === 'form' && (
-        <SplashLoginFields box={box} onFieldFocus={onFieldFocus} onReady={onFormReady} />
+      {/* One overlay for the whole run: the windows stay mounted from the first
+          frame of the animation and paint() rides this wrapper's opacity, so the
+          ink is never re-rendered by a different engine partway through. The
+          form and its veil only appear once it has latched. */}
+      {phase !== 'logo' && (
+        <div ref={inkLayerRef} style={{ opacity: 0 }}>
+          <SplashLoginFields
+            box={box}
+            live={phase === 'form'}
+            onFieldFocus={onFieldFocus}
+            onReady={onFormReady}
+          />
+        </div>
       )}
 
       {phase !== 'form' && (

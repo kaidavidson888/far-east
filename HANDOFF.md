@@ -148,27 +148,17 @@ find the Edge crash instead, restoring the middleware is the cleaner solution.
     buffer to it while CSS stretched the element to the real width squashed everything painted by
     ~3%, and the DOM form (laid out against the true width) landed 6px right of the ink the canvas
     had been fading in — the form appeared to teleport sideways the instant it took over.
-  - **Login box ink** — stripped from the frames, so `paint()` draws it instead, simply fading
-    up from 0 across `SPLASH_FORM.fadeFrom`..`fadeTo` (0.36 → 1 of the run, smoothstepped): it
-    starts where the frames' own black first branches into the box and finishes with the
-    animation, so the words arrive as the tendrils reach for them. Drawn **after** the vignette,
-    unveiled, at the same rectangles and idle weights the DOM overlay uses (`SPLASH_FORM`,
-    shared by both), and stops one frame after that overlay paints — so the two are the same
-    pixels and the handover is silent.
-  - **EMAIL row label** — supplied vector art (`scripts/assets/phone-label.svg`, reading
-    "PHONE #") baked to `phone-label.webp`: rasterised, its white ground turned to transparency
-    the same way blackbox is, then trimmed to its own ink so the artwork can be lined up with
-    the word it replaces rather than with its artboard. Placed at the cap height and top of the
-    baked EMAIL word (y0 0.1442, h 0.0744) with the width following the art's own
-    aspect (`SPLASH_EMAIL_LABEL_ASPECT`, written by the build). x0 is the artwork's own left edge,
-    the leftmost ink of its P with the tail included — the same thing 0.1023 is for PASSWORD's
-    P — so the two glyphs' bounding boxes line up on the vertical. The art is 0.1773 of the box
-    wider
-    than EMAIL was, so `parts.email.cloudDx` shifts where the ☁ is DRAWN by exactly that —
-    **not** `mid`/`cloudX1`, which are the sprite SOURCE rect too, so moving them slides the
-    window onto blank sprite and the ☁ disappears. The gap from label to ☁ stays 0.0139 and the
-    ☁ keeps its y. The field underneath is unchanged: still the email input, still validated as
-    an address, so its `aria-label` stays "Email" and does not match the visible art.
+  - **Login box ink** — stripped from the frames, so the DOM overlay carries it instead, and it
+    carries it for the WHOLE run: `SplashLoginFields` is mounted from the first frame of the
+    animation with `live={false}` (the same windows, no inputs and no veil), inside a wrapper
+    whose opacity `paint()` rides up each frame across `SPLASH_FORM.fadeFrom`..`fadeTo`
+    (0.36 → 1 of the run, smoothstepped). One renderer from the first faint frame to the working
+    form. It used to draw a canvas copy during the fade and hand over to the DOM at latch, which
+    meant two different resamplers on the same artwork — CSS filters a background-image far
+    better than `drawImage` does, most of all for the 1538px label art landing at ~43px — so the
+    text visibly gained weight the moment it swapped. `live` also keeps one tree shape either
+    way, so React reconciles the window divs in place at the hand-off rather than rebuilding
+    them. `ctx.imageSmoothingQuality` is 'high' regardless, for the frames themselves.
   - **Login box** — `SplashLoginFields` shows nine sprite windows onto `blackbox.webp`, three
     per row: `label` x[x0..mid], `☁` x[mid..cloudX1], `line` x[x0..dashX1] (all fractions of
     the box, `SPLASH_GEOM.parts`, **measured off the black baked into f100** so the overlay is

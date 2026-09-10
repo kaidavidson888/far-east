@@ -37,10 +37,14 @@ export function SplashLoginFields({
   box,
   onFieldFocus,
   onReady,
+  live = true,
 }: {
   box: Box;
   onFieldFocus?: (on: boolean) => void;
   onReady?: () => void;
+  /** false while the animation is still running: the same windows, drawn the
+   *  same way, but with nothing to type into and no veil. */
+  live?: boolean;
 }) {
   const [state, action] = useActionState<SplashAuthState, FormData>(splashAuthAction, null);
   const [email, setEmail] = useState('');
@@ -76,7 +80,7 @@ export function SplashLoginFields({
   // After the commit but before the browser paints — so by the time this fires
   // the form is in the DOM and *will* be in this frame. The parent hands the
   // baked black one more frame, then drops it.
-  useLayoutEffect(() => { onReady?.(); }, [onReady]);
+  useLayoutEffect(() => { if (live) onReady?.(); }, [live, onReady]);
 
   useEffect(() => { onFieldFocus?.(inField); }, [inField, onFieldFocus]);
 
@@ -178,11 +182,30 @@ export function SplashLoginFields({
     );
   };
 
+  const windows = (
+    <div>
+      {(['email', 'password', 'submit'] as const).flatMap((row) => {
+        const p = parts[row];
+        return [
+          row === 'email'
+            ? emailLabel(op('label', row))
+            : win(`${row}-label`, p.x0, p.y0, p.mid, p.y1, op('label', row), true),
+          win(`${row}-cloud`, p.mid, p.y0, p.cloudX1, p.y1, op('cloud', row), false,
+            'cloudDx' in p ? p.cloudDx : 0),
+          win(`${row}-line`, p.x0, p.dY0, p.dashX1, p.dY1, op('line', row)),
+        ];
+      })}
+    </div>
+  );
+
+  // One tree shape either way — the windows always sit in the same slot — so at
+  // the hand-off React reconciles them in place rather than tearing them down
+  // and building them again.
   return (
     <>
       {/* while a text field is in use, the red design outside the box drops to
           20% — a soft hole in the veil keeps the whole ornate red frame lit */}
-      <div
+      {!live ? null : <div
         aria-hidden
         style={{
           position: 'fixed', inset: 0, pointerEvents: 'none',
@@ -191,23 +214,11 @@ export function SplashLoginFields({
           maskImage: `radial-gradient(ellipse ${box.w * 0.92}px ${box.h * 0.92}px at ${box.x + box.w / 2}px ${box.y + box.h / 2}px, rgba(0,0,0,0) 62%, rgba(0,0,0,1) 100%)`,
           transition: 'background 240ms ease',
         }}
-      />
+      />}
 
-      <div>
-        {(['email', 'password', 'submit'] as const).flatMap((row) => {
-          const p = parts[row];
-          return [
-            row === 'email'
-              ? emailLabel(op('label', row))
-              : win(`${row}-label`, p.x0, p.y0, p.mid, p.y1, op('label', row), true),
-            win(`${row}-cloud`, p.mid, p.y0, p.cloudX1, p.y1, op('cloud', row), false,
-              'cloudDx' in p ? p.cloudDx : 0),
-            win(`${row}-line`, p.x0, p.dY0, p.dashX1, p.dY1, op('line', row)),
-          ];
-        })}
-      </div>
+      {windows}
 
-      <form
+      {!live ? null : <form
         className="splash-fields"
         action={action}
         // our own check runs instead of the browser's, which would otherwise
@@ -248,12 +259,12 @@ export function SplashLoginFields({
             {state.error ?? state.ok}
           </p>
         ) : null}
-      </form>
+      </form>}
 
       {/* Owner's call, and a deliberate exception to the spec's "red is never an
           error colour": a rejected field floods the box with the splash's own
           red, right out to the outline's own footprint so no paper shows at the edge. */}
-      <div
+      {!live ? null : <div
         aria-hidden
         style={{
           position: 'fixed',
@@ -266,7 +277,7 @@ export function SplashLoginFields({
           transition: rejected ? 'none' : 'opacity 150ms ease',
           pointerEvents: 'none',
         }}
-      />
+      />}
     </>
   );
 }
