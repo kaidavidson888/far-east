@@ -59,6 +59,7 @@ const inCluster = (id: keyof typeof parts, label: string, pressable: boolean): A
 export const LANDING_SPEC: ArtPageSpec = {
   background,
   focus: '#010101',
+  sealSize: parts.logo.h,
   minHeight: parts.recommended.y + parts.recommended.h + 80 + cluster.h + M.bottom,
   cluster: {
     w: cluster.w,

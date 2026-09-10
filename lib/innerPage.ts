@@ -73,6 +73,7 @@ export function innerPageSpec(
     background,
     // white, so a focus ring reads against the red ground
     focus: '#ffffff',
+    sealSize: parts.logo.h,
     minHeight: lastBody.y + lastBody.h + 60 + cluster.h + M.bottom,
     cluster: {
       w: cluster.w,

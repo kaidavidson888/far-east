@@ -18,7 +18,8 @@
     "diagnose-db": "node scripts/diagnose-db.mjs",
     "build:landing": "node scripts/build-landing-svg.mjs",
     "build:pages": "node scripts/build-pages.mjs",
-    "build:menu": "node scripts/build-menu-frames.mjs"
+    "build:menu": "node scripts/build-menu-frames.mjs",
+    "build:seal": "node scripts/build-seal-frames.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.5",

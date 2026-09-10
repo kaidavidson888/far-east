@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { ABOUT_SPEC } from '@/lib/about';
 import { detectDevice, deviceOverride } from '@/lib/device';
 import { ArtworkPage } from '@/components/ArtworkPage';
+import { SealButton } from '@/components/SealButton';
 
 export const metadata: Metadata = {
   // the root layout appends " · Far East"
@@ -31,5 +32,13 @@ export default async function AboutPage({
   const showHitboxes = dev && params.hitboxes !== undefined;
   const device = deviceOverride(params.device) ?? (await detectDevice());
 
-  return <ArtworkPage spec={ABOUT_SPEC} device={device} showHitboxes={showHitboxes} />;
+  return (
+    <ArtworkPage
+      spec={ABOUT_SPEC}
+      device={device}
+      showHitboxes={showHitboxes}
+      overlay={<SealButton size={ABOUT_SPEC.sealSize} />}
+      decorative={['seal']}
+    />
+  );
 }

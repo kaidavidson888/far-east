@@ -717,3 +717,38 @@ ul, ol { list-style: none; }
   outline: 2px solid #010101;
   outline-offset: 2px;
 }
+
+/* ----------------------------------------------------------- seal button --
+   The seal animates when approached. Like the logo menu, the canvas covers
+   the page's own seal rather than replacing it — the animation's first frame
+   is that seal — so it paints nothing at rest and the sharper vector shows
+   through. Anchored to the same corner the artwork puts it in. */
+.seal-button {
+  position: absolute;
+  z-index: 2;
+}
+.seal-button-canvas {
+  display: block;
+  pointer-events: none;
+  opacity: 0;
+}
+.seal-button[data-phase='forward'] .seal-button-canvas,
+.seal-button[data-phase='open'] .seal-button-canvas,
+.seal-button[data-phase='reverse'] .seal-button-canvas {
+  opacity: 1;
+}
+.seal-button-hit {
+  position: absolute;
+  inset: 0;
+  display: block;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.seal-button-hit:focus-visible {
+  outline: 2px solid var(--artpage-focus, #010101);
+  outline-offset: 3px;
+}

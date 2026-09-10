@@ -51,6 +51,13 @@ export type ArtPageSpec = {
   focus: string;
   /** below this the page scrolls rather than letting blocks overlap */
   minHeight: number;
+  /**
+   * The side of the seal button's square. The owner's rule: the seal is as
+   * tall as the character logo, keeping its own margins to the page's edges.
+   * Taken from the logo rather than written down, so a re-export moves both
+   * together.
+   */
+  sealSize: number;
   parts: ArtPart[];
   /** marks that read as one thing and move together */
   cluster?: {
