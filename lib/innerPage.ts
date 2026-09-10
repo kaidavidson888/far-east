@@ -19,6 +19,13 @@ type Geometry = {
   parts: Record<string, Box>;
 };
 
+/**
+ * Everywhere but the landing page and the splash, the 遠東 logo goes home.
+ * `/landing` rather than `/`, so a signed-out reader lands on the page
+ * rather than back behind the sign-in splash.
+ */
+export const HOME = '/landing';
+
 const NAV_IDS = ['navAbout', 'navTerms', 'navPrivacy'] as const;
 
 const NAV_LABELS: Record<(typeof NAV_IDS)[number], string> = {
@@ -42,6 +49,7 @@ export function innerPageSpec(
     label: string,
     placement: NonNullable<ArtPart['placement']>,
     pressable = true,
+    href?: string,
   ): ArtPart => ({
     id,
     label,
@@ -49,6 +57,7 @@ export function innerPageSpec(
     w: parts[id].w,
     h: parts[id].h,
     pressable,
+    href,
     placement,
   });
 
@@ -65,7 +74,7 @@ export function innerPageSpec(
       placement: both({ centreX: true, bottom: M.bottom }),
     },
     parts: [
-      anchored('logo', '遠東', both({ left: M.left, top: parts.logo.y })),
+      anchored('logo', '遠東 — home', both({ left: M.left, top: parts.logo.y }), true, HOME),
       anchored('seal', 'Seal', both({ right: M.right, top: M.top })),
       // the body is a picture of the page's own words; the buttons carry the
       // meaning, so a screen reader is not read the artwork twice

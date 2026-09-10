@@ -32,6 +32,8 @@ export type ArtPart = {
   h: number;
   /** false for marks that decorate rather than act */
   pressable: boolean;
+  /** where it goes; without one it renders as a button with no destination */
+  href?: string;
   /** set for parts that belong to the page's cluster */
   inCluster?: { left: number; top: number };
   /** set for parts placed against the stage directly */

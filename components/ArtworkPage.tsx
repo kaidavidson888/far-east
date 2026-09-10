@@ -66,6 +66,13 @@ function Placed({
       </div>
     );
   }
+  if (part.href) {
+    return (
+      <a className={`artpage-hit${debug}`} href={part.href} aria-label={part.label} style={style}>
+        <Mark part={part} />
+      </a>
+    );
+  }
   return (
     <button type="button" className={`artpage-hit${debug}`} aria-label={part.label} style={style}>
       <Mark part={part} />

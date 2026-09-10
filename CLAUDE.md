@@ -91,6 +91,11 @@ artwork to fit a frame — that scales the margins with it, which is the thing b
   does not land on a half pixel. Measuring a part by drawing its SVG to a canvas will NOT
   catch this — the canvas draws at integer coordinates. Check `getBoundingClientRect` against
   `naturalWidth/Height` on the live page instead.
+- **The logo goes home.** On every page except the landing page and the splash, the 遠東
+  logo links to `/landing` (`HOME` in `lib/innerPage.ts`) — not `/`, which puts a signed-out
+  reader back behind the splash. Give the logo part an `href` and `ArtworkPage` renders an
+  `<a>`. This holds for pages not built yet. The landing page is the exception: there the
+  logo opens the menu and is marked `decorative` so it is not also a button.
 - Routes: `/` is the landing artwork behind the sign-in splash; `/landing` is the same page
   with no splash. `/about`, `/privacy`, `/terms` are the inner pages.
 - **The logo menu** (`components/LogoMenu.tsx`, `npm run build:menu`) is on the landing
