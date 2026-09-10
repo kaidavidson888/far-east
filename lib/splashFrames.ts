@@ -119,6 +119,14 @@ export const SPLASH_GEOM = {
   // sprite windows of blackbox.webp: label x[x0..mid], ☁ x[mid..cloudX1] (both
   // y[y0..y1]), dashed line x[x0..dashX1] y[dY0..dY1]. Typed text sits on the
   // dash: left x0, baseline just above dY0.
+  //
+  // y1 == dY0 on every row, and it has to: the windows are drawn on top of each
+  // other, so any row of the sprite that sits in both the ☁ window and the line
+  // window gets painted twice — once at the ☁'s opacity 1 and once at the
+  // line's 0.5 — and comes out at 0.75 instead of 0.5. That left a darker
+  // stretch of dashes under each ☁. y1 used to overrun dY0 by 0.002-0.003 of
+  // the box, which was under half a sprite pixel at 215 and easy to miss;
+  // baking the sprite at 430 doubled it and made it obvious.
   emailLabel: { ...EMAIL_LABEL, w: EMAIL_LABEL.h * SPLASH_EMAIL_LABEL_ASPECT },
   parts: {
     // cloudDx moves where the email ☁ is DRAWN without moving what is sampled
@@ -129,9 +137,9 @@ export const SPLASH_GEOM = {
     // 0.3581) and moves with the label rather than away from it. No y is
     // touched: the ☁ stays on the line it was on, and dashX1 is untouched so the
     // dashes and the tick at their left end are exactly as baked.
-    email:    { x0: 0.100, mid: 0.350, cloudX1: 0.495, cloudDx: 0.1513, dashX1: 0.900, y0: 0.146, y1: 0.220, dY0: 0.218, dY1: 0.238 },
-    password: { x0: 0.100, mid: 0.565, cloudX1: 0.702, dashX1: 0.892, y0: 0.480, y1: 0.555, dY0: 0.552, dY1: 0.573 },
-    submit:   { x0: 0.100, mid: 0.758, cloudX1: 0.900, dashX1: 0.900, y0: 0.800, y1: 0.889, dY0: 0.887, dY1: 0.908 },
+    email:    { x0: 0.100, mid: 0.350, cloudX1: 0.495, cloudDx: 0.1513, dashX1: 0.900, y0: 0.146, y1: 0.218, dY0: 0.218, dY1: 0.238 },
+    password: { x0: 0.100, mid: 0.565, cloudX1: 0.702, dashX1: 0.892, y0: 0.480, y1: 0.552, dY0: 0.552, dY1: 0.573 },
+    submit:   { x0: 0.100, mid: 0.758, cloudX1: 0.900, dashX1: 0.900, y0: 0.800, y1: 0.887, dY0: 0.887, dY1: 0.908 },
   },
 };
 
