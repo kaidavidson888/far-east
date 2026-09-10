@@ -28,6 +28,7 @@
  *    snapped to exactly those, so no two shapes seam where they meet.
  */
 import { readFileSync } from 'node:fs';
+import sharp from 'sharp';
 
 export const BACKGROUND = '#ff0000';
 export const INK = '#ffffff';
@@ -168,6 +169,102 @@ function stripMasked(svg, found) {
     out = out.replace(new RegExp(`<image id="${found.image}"[^>]*\\/>`), '');
   }
   return out;
+}
+
+/**
+ * Grows the body copy's strokes by a fraction of a pixel.
+ *
+ * Privacy Policy and Terms of Service draw their body as a bitmap only 3.4
+ * times the size it is shown at, and the type in it is small: measured in
+ * Chrome, none of the Terms body rendered as solid ink and its text never
+ * reached white — 0% solid at a peak of 250, where the About page's vector
+ * body manages 24% at 255. Downscaling makes it worse, since there is no
+ * spare resolution to give up.
+ *
+ * Growing the alpha by one source pixel — 0.29px on the page — takes Terms
+ * to 20% solid and raises its edge sharpness from 45.5 to 63.4, the best of
+ * everything tried. Two pixels reaches 45% but starts closing the counters:
+ * "Registration" muddies. This is a correction, not a fix; a vector of the
+ * body, as supplied for About Us, would be the real one.
+ */
+export async function thickenBody(svg, radius) {
+  if (!radius) return { svg, note: 'body left as exported' };
+
+  /** The largest rect that paints itself with a given pattern. */
+  const rectFor = (patternId) => {
+    let biggest = null;
+    const re = new RegExp(`<rect\\b[^>]*fill="url\\(#${patternId}\\)"[^>]*>`, 'g');
+    for (const [tag] of svg.matchAll(re)) {
+      const w = Number(/\bwidth="([\d.]+)"/.exec(tag)?.[1]);
+      const h = Number(/\bheight="([\d.]+)"/.exec(tag)?.[1]);
+      if (!w || !h) continue;
+      if (!biggest || w * h > biggest.w * biggest.h) biggest = { w, h };
+    }
+    return biggest;
+  };
+
+  // the body is the image drawn over the largest area
+  let best = null;
+  for (const [patternSrc, patternId] of svg.matchAll(/<pattern id="([^"]+)"[\s\S]*?<\/pattern>/g)) {
+    const imageId = /href="#([^"]+)"/.exec(patternSrc)?.[1];
+    const rect = rectFor(patternId);
+    if (!imageId || !rect) continue;
+    if (!best || rect.w * rect.h > best.area) best = { imageId, area: rect.w * rect.h };
+  }
+  if (!best) throw new Error('found no patterned image to treat as the body');
+
+  const imageSrc = new RegExp(`<image id="${best.imageId}"[^>]*\\/>`).exec(svg)?.[0];
+  if (!imageSrc) throw new Error(`no <image> for ${best.imageId}`);
+  const b64 = /base64,([^"]+)"/.exec(imageSrc)?.[1];
+  if (!b64) throw new Error(`${best.imageId} carries no data`);
+
+  const { data, info } = await sharp(Buffer.from(b64, 'base64'))
+    .ensureAlpha()
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+  const { width: W, height: H, channels: C } = info;
+  const alpha = new Uint8Array(W * H);
+  for (let p = 0; p < W * H; p++) alpha[p] = data[p * C + 3];
+
+  const wide = new Uint8Array(W * H);
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      let max = 0;
+      for (let d = -radius; d <= radius; d++) {
+        const xx = x + d;
+        if (xx < 0 || xx >= W) continue;
+        if (alpha[y * W + xx] > max) max = alpha[y * W + xx];
+      }
+      wide[y * W + x] = max;
+    }
+  }
+  const out = new Uint8Array(W * H * 4);
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      let max = 0;
+      for (let d = -radius; d <= radius; d++) {
+        const yy = y + d;
+        if (yy < 0 || yy >= H) continue;
+        if (wide[yy * W + x] > max) max = wide[yy * W + x];
+      }
+      const o = (y * W + x) * 4;
+      out[o] = 255;
+      out[o + 1] = 255;
+      out[o + 2] = 255;
+      out[o + 3] = max;
+    }
+  }
+  const png = await sharp(Buffer.from(out), { raw: { width: W, height: H, channels: 4 } })
+    .png({ compressionLevel: 9 })
+    .toBuffer();
+
+  return {
+    svg: svg.replace(
+      imageSrc,
+      imageSrc.replace(/base64,[^"]+"/, `base64,${png.toString('base64')}"`),
+    ),
+    note: `body ${best.imageId} grown ${radius}px (${((radius * 276) / W).toFixed(2)}px on the page)`,
+  };
 }
 
 /** The 51x51 footer button rects, left to right. */
