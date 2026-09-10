@@ -22,7 +22,7 @@
  * with it.
  */
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
-import { splitIntoParts } from './lib/split-landing-parts.mjs';
+import { splitIntoParts } from './lib/split-svg-parts.mjs';
 
 const SRC = 'scripts/assets/landing-mobile.svg';
 const PARTS_DIR = 'public/landing/parts';
@@ -121,5 +121,26 @@ console.log(`flattened ${total} near-white fills to ${BACKGROUND}:`);
 for (const [c, n] of [...seen].sort((a, b) => b[1] - a[1])) console.log(`  ${c} x${n}`);
 console.log(`wrote ${OUT}`);
 
+/**
+ * Where each element lives, in artwork coordinates. Nodes are grouped by the
+ * region they sit in rather than by index, so a re-export that reorders the
+ * document still lands each mark in the right part.
+ */
+const REGIONS = {
+  logo: { x0: 0, x1: 110, y0: 0, y1: 140 },
+  seal: { x0: 250, x1: 390, y0: 0, y1: 100 },
+  offers: { x0: 0, x1: 390, y0: 150, y1: 205 },
+  saved: { x0: 0, x1: 390, y0: 205, y1: 235 },
+  recommended: { x0: 0, x1: 390, y0: 235, y1: 270 },
+  luck: { x0: 0, x1: 390, y0: 660, y1: 730 },
+  cloud: { x0: 0, x1: 200, y0: 730, y1: 810 },
+  square: { x0: 200, x1: 390, y0: 730, y1: 810 },
+};
+
 console.log('\nper-element parts:');
-await splitIntoParts(trimmed, { outDir: PARTS_DIR, geometryFile: GEOMETRY });
+await splitIntoParts(trimmed, {
+  outDir: PARTS_DIR,
+  geometryFile: GEOMETRY,
+  regions: REGIONS,
+  background: BACKGROUND,
+});

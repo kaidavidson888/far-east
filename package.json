@@ -16,7 +16,8 @@
     "set-db-password": "node scripts/set-db-password.mjs",
     "link-supabase": "node scripts/link-supabase.mjs",
     "diagnose-db": "node scripts/diagnose-db.mjs",
-    "build:landing": "node scripts/build-landing-svg.mjs"
+    "build:landing": "node scripts/build-landing-svg.mjs",
+    "build:about": "node scripts/build-about-svg.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.5",

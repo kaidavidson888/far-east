@@ -1,5 +1,5 @@
 import { headers } from 'next/headers';
-import type { LandingDevice } from './landing';
+import type { ArtDevice } from './artpage';
 
 /**
  * Which form factor to lay the page out for, decided on the server.
@@ -19,13 +19,13 @@ import type { LandingDevice } from './landing';
  */
 const MOBILE_UA = /Android|iPhone|iPod|iPad|Windows Phone|IEMobile|Opera Mini|Mobile Safari|Mobile\//i;
 
-export async function detectDevice(): Promise<LandingDevice> {
+export async function detectDevice(): Promise<ArtDevice> {
   const ua = (await headers()).get('user-agent') ?? '';
   return MOBILE_UA.test(ua) ? 'mobile' : 'desktop';
 }
 
 /** Dev-only `?device=mobile|desktop`, so either arrangement can be checked. */
-export function deviceOverride(value: string | string[] | undefined): LandingDevice | null {
+export function deviceOverride(value: string | string[] | undefined): ArtDevice | null {
   if (process.env.NODE_ENV === 'production') return null;
   const v = Array.isArray(value) ? value[0] : value;
   return v === 'mobile' || v === 'desktop' ? v : null;

@@ -1,0 +1,118 @@
+import type { ArtDevice, ArtPageSpec, ArtPart, ArtPlacement } from '@/lib/artpage';
+
+/**
+ * Renders a page built from a supplied design image.
+ *
+ * Each mark is its own SVG positioned against the viewport's edges, so the
+ * design's margins hold in real pixels at any width and the space between
+ * elements flexes instead. `device` decides the arrangement and comes from
+ * the server, so the page arrives already laid out rather than rearranging
+ * itself after hydration.
+ *
+ * Pressable marks are real <button>s wrapping their own artwork, so they are
+ * reachable by keyboard and announced properly; the rest are marked
+ * decorative. `showHitboxes` outlines everything in dev.
+ */
+function styleFor(p: ArtPlacement, w: number, h: number): React.CSSProperties {
+  return {
+    width: `${w}px`,
+    height: `${h}px`,
+    ...(p.left !== undefined ? { left: `${p.left}px` } : null),
+    ...(p.right !== undefined ? { right: `${p.right}px` } : null),
+    ...(p.top !== undefined ? { top: `${p.top}px` } : null),
+    ...(p.bottom !== undefined ? { bottom: `${p.bottom}px` } : null),
+    ...(p.centreX ? { left: '50%', transform: `translateX(-${w / 2}px)` } : null),
+  };
+}
+
+const boxStyle = (part: ArtPart): React.CSSProperties => ({
+  left: `${part.inCluster!.left}px`,
+  top: `${part.inCluster!.top}px`,
+  width: `${part.w}px`,
+  height: `${part.h}px`,
+});
+
+function Mark({ part }: { part: ArtPart }) {
+  return (
+    <img
+      className="artpage-mark"
+      src={part.src}
+      alt=""
+      width={part.w}
+      height={part.h}
+      draggable={false}
+    />
+  );
+}
+
+function Placed({
+  part,
+  style,
+  showHitboxes,
+}: {
+  part: ArtPart;
+  style: React.CSSProperties;
+  showHitboxes: boolean;
+}) {
+  const debug = showHitboxes ? ' artpage-hit-debug' : '';
+  if (!part.pressable) {
+    return (
+      <div className={`artpage-decor${debug}`} aria-hidden="true" style={style}>
+        <Mark part={part} />
+      </div>
+    );
+  }
+  return (
+    <button type="button" className={`artpage-hit${debug}`} aria-label={part.label} style={style}>
+      <Mark part={part} />
+    </button>
+  );
+}
+
+export function ArtworkPage({
+  spec,
+  device,
+  showHitboxes = false,
+}: {
+  spec: ArtPageSpec;
+  device: ArtDevice;
+  showHitboxes?: boolean;
+}) {
+  const loose = spec.parts.filter((p) => !p.inCluster);
+  const clustered = spec.parts.filter((p) => p.inCluster);
+
+  return (
+    <div
+      className="artpage"
+      data-device={device}
+      style={
+        {
+          '--artpage-bg': spec.background,
+          '--artpage-focus': spec.focus,
+        } as React.CSSProperties
+      }
+    >
+      <div className="artpage-stage" style={{ minHeight: `${spec.minHeight}px` }}>
+        {loose.map((p) => (
+          <Placed
+            key={p.id}
+            part={p}
+            style={styleFor(p.placement![device], p.w, p.h)}
+            showHitboxes={showHitboxes}
+          />
+        ))}
+
+        {spec.cluster ? (
+          <div
+            className="artpage-cluster"
+            style={styleFor(spec.cluster.placement[device], spec.cluster.w, spec.cluster.h)}
+          >
+            {clustered.map((p) => (
+              <Placed key={p.id} part={p} style={boxStyle(p)} showHitboxes={showHitboxes} />
+            ))}
+          </div>
+        ) : null}
+      </div>
+    </div>
+  );
+}

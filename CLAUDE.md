@@ -16,10 +16,11 @@ no CSS framework (tokens in `app/globals.css`). Deploys to Vercel.
 ## Commands
 - `npm run dev` — local server (needs `.env.local`, see below)
 - `npm run build` — must stay clean; run it before every commit
-- `npm run build:landing` — normalises the landing artwork and cuts it into
-  `public/landing/parts/*.svg` + `lib/landing-geometry.json`. Re-run after any change to
-  `scripts/assets/landing-mobile.svg`; the landing page's layout reads that geometry, so
-  nothing is hardcoded and a re-export moves the buttons with the marks.
+- `npm run build:landing` / `npm run build:about` — normalise a page's artwork and cut it
+  into `public/<page>/parts/*.svg` + `lib/<page>-geometry.json`. Re-run after any change to
+  the matching `scripts/assets/*.svg`; the layouts read that geometry, so nothing is
+  hardcoded and a re-export moves the buttons with the marks. See "Pages built from
+  artwork" below.
 - `npm run verify:db` — 29 checks against a throwaway Postgres (no network, no Supabase). Run after any schema or `lib/db.ts` change. It boots its own Postgres via `embedded-postgres`.
 - `npm run seed` — upserts `lib/catalog.json` into the database (idempotent; never touches user data)
 - `npm run link-supabase` / `set-db-password` / `diagnose-db` — configure `.env.local` safely (hidden prompts, connection tested before saving, refuse piped input)
@@ -52,6 +53,29 @@ overwrote this file twice during setup. `.env.example` is the template.
   Exception the owner chose: cinnabar is also the "Add to my shelf" CTA (the primary action).
 - Dates are formatted server-side in `lib/format.ts` (`en-US`, `America/New_York`) and passed
   as strings — never re-format on the client.
+
+## Pages built from artwork (the landing page, About Us, and whatever follows)
+The owner supplies a Figma export; the page is built from it, not hand-typeset. **The rule
+the owner set: hold the design's edge margins in real CSS pixels at every viewport size.**
+Elements keep their drawn size and the space between them flexes. Never scale the whole
+artwork to fit a frame — that scales the margins with it, which is the thing being avoided.
+- Measure margins off a *render* of the export, never off Figma layer boxes; those are
+  padded (the landing logo's was a 116x116 rect mostly empty around the characters).
+- `scripts/lib/split-svg-parts.mjs` cuts an export into one SVG per element, given a
+  `regions` map and the page's `background`. Nodes are grouped by where they sit, not by
+  index. A node matching no region, matching two, or a region catching nothing is a **hard
+  error** — a silently missing mark is worse than a failed build.
+- `scripts/lib/resample-embedded.mjs` brings embedded rasters down to 3x their drawn size.
+  Figma exports images at full resolution: About Us's footer icons were 46x oversampled,
+  640KB for three 54px squares.
+- `lib/artpage.ts` holds the shared layout model, `components/ArtworkPage.tsx` renders a
+  spec, and each page contributes a spec (`lib/landing.ts`, `lib/about.ts`) built from its
+  generated geometry. CSS lives in the `.artpage-*` block in `globals.css`.
+- The form factor is resolved server-side in `lib/device.ts` so the page arrives already
+  arranged. Mobile and desktop are separate placement tables even when the values match,
+  so either can be re-composed alone.
+- Dev flags on these pages: `?hitboxes=1` outlines the buttons, `?device=mobile|desktop`
+  forces an arrangement.
 
 ## Working as a team (two people, two Claude Code sessions)
 The repo is **public** on GitHub — chosen so Vercel Hobby deploys commits from either owner.
