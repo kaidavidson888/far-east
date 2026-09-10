@@ -36,7 +36,7 @@ export default async function TermsPage({
       device={device}
       showHitboxes={showHitboxes}
       overlay={<SealButton size={TERMS_SPEC.sealSize} />}
-      decorative={['seal']}
+      hide={['seal']}
     />
   );
 }

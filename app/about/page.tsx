@@ -38,7 +38,7 @@ export default async function AboutPage({
       device={device}
       showHitboxes={showHitboxes}
       overlay={<SealButton size={ABOUT_SPEC.sealSize} />}
-      decorative={['seal']}
+      hide={['seal']}
     />
   );
 }

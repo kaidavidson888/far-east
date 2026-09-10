@@ -37,7 +37,7 @@ export default async function PrivacyPage({
       device={device}
       showHitboxes={showHitboxes}
       overlay={<SealButton size={PRIVACY_SPEC.sealSize} />}
-      decorative={['seal']}
+      hide={['seal']}
     />
   );
 }

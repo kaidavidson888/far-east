@@ -36,7 +36,8 @@ export default async function LandingRoute({
       device={device}
       showHitboxes={showHitboxes}
       overlay={<><LogoMenu /><SealButton size={LANDING_SPEC.sealSize} /></>}
-      decorative={['logo', 'seal']}
+      decorative={['logo']}
+        hide={['seal']}
     />
   );
 }

@@ -27,7 +27,7 @@ const src = (i: number) => `/seal/frames/f${String(i).padStart(3, '0')}.webp`;
 export function SealButton({ size = placement.w }: { size?: number }) {
   // 1.8MB of frames: fetched when someone actually reaches for it, not on
   // every page load. The run starts immediately and they arrive underneath.
-  const scrub = useFrameScrub({ frames: FRAMES, frameMs, src, preload: false });
+  const scrub = useFrameScrub({ frames: FRAMES, frameMs, src, preload: false, eager: 1 });
 
   return (
     <div

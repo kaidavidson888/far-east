@@ -686,7 +686,9 @@ ul, ol { list-style: none; }
   position: absolute;
   left: 0;
   top: 0;
-  z-index: 2;
+  /* above the seal: on a narrow screen the unfolded boxes reach into the
+     seal's corner, and the seal is the static one of the two */
+  z-index: 3;
 }
 .logo-menu-canvas {
   display: block;
@@ -719,23 +721,38 @@ ul, ol { list-style: none; }
 }
 
 /* ----------------------------------------------------------- seal button --
-   The seal animates when approached. Like the logo menu, the canvas covers
-   the page's own seal rather than replacing it — the animation's first frame
-   is that seal — so it paints nothing at rest and the sharper vector shows
-   through. Anchored to the same corner the artwork puts it in. */
+   The seal animates when approached. Its first frame IS the seal, so this
+   canvas replaces the page's own seal part rather than covering it: the page
+   omits that part and this draws the mark at rest as well as in motion,
+   which keeps it one consistent size instead of growing on hover. Anchored
+   to the same corner and margins the artwork puts it in. */
 .seal-button {
   position: absolute;
   z-index: 2;
+  transition: opacity 120ms linear;
 }
+/* The menu and the seal both want the top strip, and on a narrow screen
+   there is not enough of it. The boxes are drawn out to x=290 (see
+   lib/menu-geometry.json) and the seal takes 87 plus its 30 margin off the
+   right edge, so the two collide below 290 + 117 = 407. Where they do, the
+   seal stands down for as long as the menu is out — it is the static mark,
+   and the menu is only ever out because someone asked for it.
+
+   This only became true when the seal grew to the height of the character
+   logo; at the artwork's own 45px it cleared the boxes. */
+@media (max-width: 406px) {
+  .artpage-stage:has(.logo-menu:not([data-phase='idle'])) .seal-button {
+    opacity: 0;
+    pointer-events: none;
+  }
+}
+/* Always on: the first frame IS the seal, at the size the owner asked for
+   (as tall as the character logo), so the page leaves its own smaller seal
+   out and this draws it at rest too. Hiding it until hover made the mark
+   jump size the moment you approached it. */
 .seal-button-canvas {
   display: block;
   pointer-events: none;
-  opacity: 0;
-}
-.seal-button[data-phase='forward'] .seal-button-canvas,
-.seal-button[data-phase='open'] .seal-button-canvas,
-.seal-button[data-phase='reverse'] .seal-button-canvas {
-  opacity: 1;
 }
 .seal-button-hit {
   position: absolute;

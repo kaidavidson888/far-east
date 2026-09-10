@@ -42,7 +42,8 @@ export default async function HomePage({
         device={device}
         showHitboxes={showHitboxes}
         overlay={<><LogoMenu /><SealButton size={LANDING_SPEC.sealSize} /></>}
-        decorative={['logo', 'seal']}
+        decorative={['logo']}
+        hide={['seal']}
       />
     </>
   );

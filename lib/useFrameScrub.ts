@@ -46,6 +46,7 @@ export function useFrameScrub({
   src,
   reverseRate = 2,
   preload = true,
+  eager = 0,
   decorate,
 }: {
   frames: number;
@@ -54,11 +55,19 @@ export function useFrameScrub({
   /** how much faster it comes back than it went out */
   reverseRate?: number;
   preload?: boolean;
+  /**
+   * Leading frames to fetch straight away, whatever `preload` says. The seal
+   * needs its first frame at rest, because that frame IS the seal as the
+   * page draws it — the rest can wait until someone reaches for it.
+   */
+  eager?: number;
   /** anything to draw over the frame, e.g. a pressed box */
   decorate?: (ctx: CanvasRenderingContext2D, phase: ScrubPhase) => void;
 }): FrameScrub {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const framesRef = useRef<HTMLImageElement[] | null>(null);
+  /** the handful fetched eagerly, used until the full set arrives */
+  const earlyRef = useRef<HTMLImageElement[]>([]);
   const posRef = useRef(0);
   const rafRef = useRef(0);
   const lastTsRef = useRef(0);
@@ -72,8 +81,8 @@ export function useFrameScrub({
 
   const paint = useCallback(() => {
     const canvas = canvasRef.current;
-    const list = framesRef.current;
-    if (!canvas || !list) return;
+    const list = framesRef.current ?? earlyRef.current;
+    if (!canvas || !list.length) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
     const i = Math.max(0, Math.min(frames - 1, Math.round(posRef.current)));
@@ -109,6 +118,20 @@ export function useFrameScrub({
     framesRef.current = list;
     return Promise.all(jobs).then(() => paint());
   }, [frames, paint, src]);
+
+  /** Just the first few frames, for whatever has to be on screen at rest. */
+  useEffect(() => {
+    if (!eager || framesRef.current) return;
+    const list: HTMLImageElement[] = [];
+    for (let i = 0; i < Math.min(eager, frames); i++) {
+      const img = new Image();
+      img.src = src(i);
+      list[i] = img;
+      void img.decode().catch(() => {}).then(() => paint());
+    }
+    earlyRef.current = list;
+    paint();
+  }, [eager, frames, paint, src]);
 
   useEffect(() => {
     if (!preload) return;

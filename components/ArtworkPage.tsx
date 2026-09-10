@@ -96,6 +96,7 @@ export function ArtworkPage({
   showHitboxes = false,
   overlay,
   decorative,
+  hide,
 }: {
   spec: ArtPageSpec;
   device: ArtDevice;
@@ -108,10 +109,17 @@ export function ArtworkPage({
    * two buttons on one mark would be announced twice.
    */
   decorative?: string[];
+  /**
+   * Parts to leave out altogether, because an overlay draws them instead.
+   * The seal button draws its own first frame at rest, at the larger size,
+   * so the page must not also draw the small one underneath.
+   */
+  hide?: string[];
 }) {
+  const shown = hide?.length ? spec.parts.filter((p) => !hide.includes(p.id)) : spec.parts;
   const parts = decorative?.length
-    ? spec.parts.map((p) => (decorative.includes(p.id) ? { ...p, pressable: false } : p))
-    : spec.parts;
+    ? shown.map((p) => (decorative.includes(p.id) ? { ...p, pressable: false } : p))
+    : shown;
   const loose = parts.filter((p) => !p.inCluster);
   const clustered = parts.filter((p) => p.inCluster);
 
