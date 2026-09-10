@@ -354,6 +354,13 @@ await sharp(PNG.sync.write(bpng))
 //
 // == SPLASH_GEOM's EMAIL_LABEL.h (0.0698 of the box) x the box crop.
 const PHONE_INK_H = Math.round(0.0698 * BX.height);
+// How much to thin the artwork's strokes before the downscale, in pixels of
+// the 1600-wide raster, per side. Its stems are ~51px there, so 5 takes about
+// a fifth off them. This is a judgement call, not a measurement: by stroke
+// width, ink density and Chrome's own resampling the art was already the
+// lighter of the two rows, but it rasterises hard-edged and blocky at 7px
+// where the sprite's text is soft, and that reads as weight.
+const PHONE_ERODE = 5;
 const phoneRaw = await sharp(readFileSync('scripts/assets/phone-label.svg'))
   .resize({ width: 1600 })
   .flatten({ background: '#ffffff' })
@@ -377,6 +384,31 @@ for (let i = 0; i < PW * PH; i++) {
     if (y > py1) py1 = y;
   }
 }
+// Erode the ink — in grey-on-white that is a max filter, since lighter is less
+// ink — over a round kernel, so the strokes thin evenly instead of squarely.
+if (PHONE_ERODE > 0) {
+  const src = Buffer.from(phonePng.data);
+  const R = PHONE_ERODE;
+  for (let y = py0; y <= py1; y++) {
+    for (let x = px0; x <= px1; x++) {
+      let m = 0;
+      for (let dy = -R; dy <= R; dy++) {
+        const yy = y + dy;
+        if (yy < 0 || yy >= PH) continue;
+        for (let dx = -R; dx <= R; dx++) {
+          if (dx * dx + dy * dy > R * R) continue;
+          const xx = x + dx;
+          if (xx < 0 || xx >= PW) continue;
+          const v = src[(yy * PW + xx) * 4];
+          if (v > m) m = v;
+        }
+      }
+      const o = (y * PW + x) * 4;
+      phonePng.data[o] = phonePng.data[o + 1] = phonePng.data[o + 2] = m;
+    }
+  }
+}
+
 const phoneCrop = { left: px0, top: py0, width: px1 - px0 + 1, height: py1 - py0 + 1 };
 const phoneSmall = await sharp(PNG.sync.write(phonePng))
   .extract(phoneCrop)
