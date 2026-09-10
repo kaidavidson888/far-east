@@ -171,6 +171,107 @@ function stripMasked(svg, found) {
   return out;
 }
 
+/** The image drawn over the largest area — the body copy. */
+function largestImage(svg) {
+  const rectFor = (patternId) => {
+    let biggest = null;
+    const re = new RegExp(`<rect\\b[^>]*fill="url\\(#${patternId}\\)"[^>]*>`, 'g');
+    for (const [tag] of svg.matchAll(re)) {
+      const w = Number(/\bwidth="([\d.]+)"/.exec(tag)?.[1]);
+      const h = Number(/\bheight="([\d.]+)"/.exec(tag)?.[1]);
+      if (!w || !h) continue;
+      if (!biggest || w * h > biggest.w * biggest.h) biggest = { w, h };
+    }
+    return biggest;
+  };
+  let best = null;
+  for (const [patternSrc, patternId] of svg.matchAll(/<pattern id="([^"]+)"[\s\S]*?<\/pattern>/g)) {
+    const imageId = /href="#([^"]+)"/.exec(patternSrc)?.[1];
+    const rect = rectFor(patternId);
+    if (!imageId || !rect) continue;
+    const area = rect.w * rect.h;
+    if (!best || area > best.area) best = { imageId, patternSrc, rect, area };
+  }
+  if (!best) throw new Error('found no patterned image to treat as the body');
+  return best;
+}
+
+/**
+ * Swaps the body copy for a higher-resolution export of the same artwork.
+ *
+ * The exports draw the body at 3.19x the size it is shown, which is not
+ * enough for type this small. A 4x re-export is 25% more to work with, and
+ * it needs no other change: the transform is rescaled so the image still
+ * lands in the same box at the same size.
+ *
+ * The replacement may be opaque with the page's red baked in rather than
+ * transparent — that is fine so long as the red matches exactly, which is
+ * asserted here, because the split crops to whatever differs from the page
+ * colour and would otherwise take the whole rect as ink.
+ */
+export async function swapBody(svg, file) {
+  if (!file) return { svg, note: null };
+  const body = largestImage(svg);
+  const imageSrc = new RegExp(`<image id="${body.imageId}"[^>]*\\/>`).exec(svg)?.[0];
+  if (!imageSrc) throw new Error(`no <image> for ${body.imageId}`);
+  const iw = Number(/\bwidth="(\d+)"/.exec(imageSrc)?.[1]);
+  const ih = Number(/\bheight="(\d+)"/.exec(imageSrc)?.[1]);
+
+  const png = readFileSync(file);
+  const meta = await sharp(png).metadata();
+  const { data, info } = await sharp(png).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+  const corner = [data[0], data[1], data[2], data[3]];
+  if (corner[3] > 8) {
+    const bg = hex(BACKGROUND);
+    if (!bg.every((v, i) => Math.abs(v - corner[i]) <= 2)) {
+      throw new Error(
+        `${file} is opaque and its ground is ${corner.slice(0, 3)}, not the page's ${bg} — ` +
+          `it would show as a panel of a different red`,
+      );
+    }
+  }
+
+  const scale = readScaleLocal(body.patternSrc);
+  if (!scale) throw new Error(`could not read ${body.imageId}'s pattern transform`);
+  const next = body.patternSrc.replace(
+    /transform="[^"]+"/,
+    `transform="matrix(${(scale[0] * iw) / meta.width} 0 0 ${(scale[1] * ih) / meta.height} ${scale[2]} ${scale[3]})"`,
+  );
+
+  return {
+    svg: svg
+      .replace(
+        imageSrc,
+        imageSrc
+          .replace(/\bwidth="\d+"/, `width="${meta.width}"`)
+          .replace(/\bheight="\d+"/, `height="${meta.height}"`)
+          .replace(
+            /xlink:href="data:image\/[a-z]+;base64,[^"]+"/,
+            `xlink:href="data:image/png;base64,${png.toString('base64')}"`,
+          ),
+      )
+      .replace(body.patternSrc, next),
+    note:
+      `body ${body.imageId} ${iw}x${ih} -> ${meta.width}x${meta.height} ` +
+      `(${(meta.width / body.rect.w).toFixed(2)}x the ${body.rect.w}px box, was ${(iw / body.rect.w).toFixed(2)}x)`,
+  };
+}
+
+/** matrix(a b c d e f) / scale(sx sy) as [a, d, e, f]. */
+function readScaleLocal(patternSrc) {
+  const t = /transform="([^"]+)"/.exec(patternSrc)?.[1];
+  if (!t) return null;
+  const m =
+    /matrix\(\s*([-\d.eE]+)[\s,]+[-\d.eE]+[\s,]+[-\d.eE]+[\s,]+([-\d.eE]+)[\s,]+([-\d.eE]+)[\s,]+([-\d.eE]+)/.exec(t);
+  if (m) return [Number(m[1]), Number(m[2]), Number(m[3]), Number(m[4])];
+  const s = /scale\(\s*([-\d.eE]+)(?:[\s,]+([-\d.eE]+))?\s*\)/.exec(t);
+  if (s) {
+    const sx = Number(s[1]);
+    return [sx, s[2] === undefined ? sx : Number(s[2]), 0, 0];
+  }
+  return null;
+}
+
 /**
  * Grows the body copy's strokes by a fraction of a pixel.
  *
@@ -223,8 +324,19 @@ export async function thickenBody(svg, radius) {
     .raw()
     .toBuffer({ resolveWithObject: true });
   const { width: W, height: H, channels: C } = info;
-  const alpha = new Uint8Array(W * H);
-  for (let p = 0; p < W * H; p++) alpha[p] = data[p * C + 3];
+
+  // Two kinds of body arrive here. The originals are white text on a
+  // transparent ground, where the ink is the alpha. The 4x re-exports are
+  // opaque with the page's red baked in, where the ink is how far a pixel
+  // has been pushed from red towards white — which the green and blue
+  // channels carry, since red stays at 255 either way. Growing the wrong one
+  // would turn an opaque page into a white sheet.
+  const opaque = data[3] > 247;
+  const ink = new Uint8Array(W * H);
+  for (let p = 0; p < W * H; p++) {
+    const o = p * C;
+    ink[p] = opaque ? Math.min(data[o + 1], data[o + 2]) : data[o + 3];
+  }
 
   const wide = new Uint8Array(W * H);
   for (let y = 0; y < H; y++) {
@@ -233,11 +345,16 @@ export async function thickenBody(svg, radius) {
       for (let d = -radius; d <= radius; d++) {
         const xx = x + d;
         if (xx < 0 || xx >= W) continue;
-        if (alpha[y * W + xx] > max) max = alpha[y * W + xx];
+        if (ink[y * W + xx] > max) max = ink[y * W + xx];
       }
       wide[y * W + x] = max;
     }
   }
+
+  // Write white-plus-alpha either way. Over the page's red an opaque pixel
+  // of (255, m, m) and white at alpha m are the same colour, and the alpha
+  // form has three constant channels instead of one, so it compresses to a
+  // fraction of the size.
   const out = new Uint8Array(W * H * 4);
   for (let y = 0; y < H; y++) {
     for (let x = 0; x < W; x++) {

@@ -17,7 +17,7 @@
 import { writeFileSync, mkdirSync, readFileSync } from 'node:fs';
 import { splitIntoParts } from './lib/split-svg-parts.mjs';
 import { resampleEmbedded } from './lib/resample-embedded.mjs';
-import { preparePage, thickenBody, BACKGROUND, INK } from './lib/page-pipeline.mjs';
+import { preparePage, thickenBody, swapBody, BACKGROUND, INK } from './lib/page-pipeline.mjs';
 import { substituteBodyVector } from './lib/about-artwork.mjs';
 
 /** Where the vector logo's ink has to land, measured off the raster it replaces. */
@@ -65,6 +65,7 @@ const PAGES = [
       body: { x0: 0, x1: 390, y0: 140, y1: 700 },
       ...FOOTER_REGIONS,
     },
+    bodyImage: 'scripts/assets/privacy-body.png',
     bodyThicken: 1,
   },
   {
@@ -76,6 +77,7 @@ const PAGES = [
       body: { x0: 0, x1: 390, y0: 140, y1: 700 },
       ...FOOTER_REGIONS,
     },
+    bodyImage: 'scripts/assets/terms-body.png',
     bodyThicken: 1,
   },
 ];
@@ -92,7 +94,10 @@ for (const page of PAGES) {
   });
   for (const [change, n] of snapped) console.log(`  snapped ${change} x${n}`);
 
-  const { svg: thickened, note } = await thickenBody(prepared, page.bodyThicken);
+  const swapped = await swapBody(prepared, page.bodyImage);
+  if (swapped.note) console.log(`  ${swapped.note}`);
+
+  const { svg: thickened, note } = await thickenBody(swapped.svg, page.bodyThicken);
   console.log(`  ${note}`);
 
   const { svg: out, report } = await resampleEmbedded(thickened);
