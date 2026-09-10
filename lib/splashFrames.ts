@@ -140,6 +140,12 @@ export const SPLASH_GEOM = {
   // labelX0 starts the label window after the rule so the two do not overlap —
   // stacked windows composite, and 0.5 over 0.5 is 0.75.
   //
+  // textX0 is where a row's writing begins: the rule's ink ends plus the same
+  // 0.0023 gap on every row, the top row's P against its rule being the model.
+  // Both the label art and the typed text start there, so what the reader types
+  // lands on the same left edge as the word above it. The inputs used to be
+  // laid out from x0 — the rule's LEFT edge — so typing began on top of it.
+  //
   // y1 == dY0 on every row, and it has to: the windows are drawn on top of each
   // other, so any row of the sprite that sits in both the ☁ window and the line
   // window gets painted twice — once at the ☁'s opacity 1 and once at the
@@ -157,9 +163,9 @@ export const SPLASH_GEOM = {
     // 0.3581) and moves with the label rather than away from it. No y is
     // touched: the ☁ stays on the line it was on, and dashX1 is untouched so the
     // dashes and the tick at their left end are exactly as baked.
-    email:    { x0: 0.100, labelX0: 0.1140, mid: 0.350, cloudX1: 0.495, cloudDx: 0.1653, dashX1: 0.900, ruleX1: 0.1140, y0: 0.146, y1: 0.218, dY0: 0.218, dY1: 0.238 },
-    password: { x0: 0.100, labelX0: 0.1093, mid: 0.565, cloudX1: 0.702, dashX1: 0.892, ruleX1: 0.1093, y0: 0.480, y1: 0.552, dY0: 0.552, dY1: 0.573 },
-    submit:   { x0: 0.100, labelX0: 0.1116, mid: 0.758, cloudX1: 0.900, dashX1: 0.900, ruleX1: 0.1116, y0: 0.800, y1: 0.887, dY0: 0.887, dY1: 0.908 },
+    email:    { x0: 0.100, labelX0: 0.1140, textX0: 0.1163, mid: 0.350, cloudX1: 0.495, cloudDx: 0.1653, dashX1: 0.900, ruleX1: 0.1140, y0: 0.146, y1: 0.218, dY0: 0.218, dY1: 0.238 },
+    password: { x0: 0.100, labelX0: 0.1093, textX0: 0.1116, mid: 0.565, cloudX1: 0.702, dashX1: 0.892, ruleX1: 0.1093, y0: 0.480, y1: 0.552, dY0: 0.552, dY1: 0.573 },
+    submit:   { x0: 0.100, labelX0: 0.1116, textX0: 0.1116, mid: 0.758, cloudX1: 0.900, dashX1: 0.900, ruleX1: 0.1116, y0: 0.800, y1: 0.887, dY0: 0.887, dY1: 0.908 },
   },
 };
 

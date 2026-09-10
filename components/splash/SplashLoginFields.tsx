@@ -165,9 +165,10 @@ export function SplashLoginFields({
         className="splash-field-input"
         style={{
           position: 'fixed',
-          left: bx(p.x0),
+          // starts where the row's writing starts, clear of the dashed rule
+          left: bx(p.textX0),
           top: by(p.dY0) - size - Math.max(1, size * 0.06),
-          width: bx(p.dashX1) - bx(p.x0),
+          width: bx(p.dashX1) - bx(p.textX0),
           height: size, fontSize: size, lineHeight: 1,
         }}
         name={r} type={type} autoComplete={ac} aria-label={label}
