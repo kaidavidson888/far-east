@@ -293,6 +293,18 @@ await sharp(PNG.sync.write(stpng))
 // settle.webp fades out underneath it). Box crop == SPLASH_GEOM.box.
 const BOX = { x0: 0.3312, x1: 0.6672, y0: 0.4241, y1: 0.5752 };
 const INK_GAMMA = 0.6; // < 1 thickens the overlay text
+// The box's overlay assets are written at BOX_SS x the density the frames are
+// cropped at, so a 2x display gets pixels instead of the browser's own upscale.
+// Be clear about what this is and is not: the source GIF is 720 wide, which
+// makes the box 242 source pixels, and we crop it at 215 — so there is only
+// 1.13x of REAL detail left and everything past 242 is interpolation. What it
+// buys is a better filter applied once here rather than per-viewer, not
+// recovered detail. blackbox and phone-label are both scaled by it, and the
+// artwork is rasterised at the sprite's own resolution FIRST and then carried
+// up by the same factor — rasterising the vector straight to 2x would make it
+// genuinely sharper than the sprite beside it, which is the mismatch this
+// whole thread has been about.
+const BOX_SS = 2;
 // Build the ink as grey-on-white RGB and push it through the frames' exact
 // resize + sharpen, THEN turn grey into alpha. Writing straight into an alpha
 // channel instead loses the strokes: sharp premultiplies on resize, so the
@@ -316,15 +328,20 @@ const BX = {
   width: Math.round((BOX.x1 - BOX.x0) * WIDTH),
   height: Math.round((BOX.y1 - BOX.y0) * RH),
 };
-const grey = await sharp(PNG.sync.write(ipng))
+const BXS = { width: BX.width * BOX_SS, height: BX.height * BOX_SS };
+const greyCrop = await sharp(PNG.sync.write(ipng))
   .resize({ width: WIDTH })
   .sharpen({ sigma: 0.5 })
   .extract(BX)
+  .png()
+  .toBuffer();
+const grey = await sharp(greyCrop)
+  .resize(BXS.width, BXS.height)
   .removeAlpha()
   .raw()
   .toBuffer();
-const bpng = new PNG({ width: BX.width, height: BX.height });
-for (let px = 0; px < BX.width * BX.height; px++) {
+const bpng = new PNG({ width: BXS.width, height: BXS.height });
+for (let px = 0; px < BXS.width * BXS.height; px++) {
   bpng.data[px * 4] = 0;
   bpng.data[px * 4 + 1] = 0;
   bpng.data[px * 4 + 2] = 0;
@@ -355,12 +372,12 @@ await sharp(PNG.sync.write(bpng))
 // == SPLASH_GEOM's EMAIL_LABEL.h (0.0698 of the box) x the box crop.
 const PHONE_INK_H = Math.round(0.0698 * BX.height);
 // How much to thin the artwork's strokes before the downscale, in pixels of
-// the 1600-wide raster, per side. Its stems are ~51px there, so 10 takes about
-// two fifths off them. This is a judgement call, not a measurement: by stroke
+// the 1600-wide raster, per side. Its stems are ~51px there, so 5 takes about
+// a fifth off them. This is a judgement call, not a measurement: by stroke
 // width, ink density and Chrome's own resampling the art was already the
 // lighter of the two rows, but it rasterises hard-edged and blocky at 7px
 // where the sprite's text is soft, and that reads as weight.
-const PHONE_ERODE = 10;
+const PHONE_ERODE = 5;
 const phoneRaw = await sharp(readFileSync('scripts/assets/phone-label.svg'))
   .resize({ width: 1600 })
   .flatten({ background: '#ffffff' })
@@ -410,10 +427,16 @@ if (PHONE_ERODE > 0) {
 }
 
 const phoneCrop = { left: px0, top: py0, width: px1 - px0 + 1, height: py1 - py0 + 1 };
-const phoneSmall = await sharp(PNG.sync.write(phonePng))
+const phoneAtSprite = await sharp(PNG.sync.write(phonePng))
   .extract(phoneCrop)
   .resize({ height: PHONE_INK_H })
   .sharpen({ sigma: 0.5 })
+  .png()
+  .toBuffer();
+// up by the same factor as the sprite, AFTER it has been reduced to the
+// sprite's resolution, so the two stay equally soft
+const phoneSmall = await sharp(phoneAtSprite)
+  .resize({ height: PHONE_INK_H * BOX_SS })
   .removeAlpha()
   .raw()
   .toBuffer({ resolveWithObject: true });
