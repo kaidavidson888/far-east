@@ -131,17 +131,19 @@ for (const page of PAGES) {
   }
 
   // A hover state for the two footer buttons that lead somewhere else: the
-  // same box with its red fill turned black, so the white label stays legible
-  // on top of it. Built here rather than drawn over at runtime, because the
+  // same box with its red turned black, so the white label stays legible on
+  // top of it. Built here rather than drawn over at runtime, because the
   // label would go under anything painted across the box.
+  //
+  // EVERY red goes, not just the box's fill. The "about us" label is vector,
+  // and the counters inside its letters are painted the button's resting
+  // colour so they read as background — leave those red and they show as
+  // specks inside the type the moment the box turns black.
   for (const id of ['navAbout', 'navTerms', 'navPrivacy']) {
     if (id === page.active) continue;
     const part = readFileSync(`${partsDir}/${id}.svg`, 'utf8');
-    const filled = part.replace(
-      /(<rect x="[\d.]+" y="[\d.]+" width="51" height="51" )fill="#ff0000"/g,
-      '$1fill="#000000"',
-    );
-    if (filled === part) throw new Error(`${page.id}/${id}: no red button rect to blacken`);
+    const filled = part.replace(/fill="#ff0000"/g, 'fill="#000000"');
+    if (filled === part) throw new Error(`${page.id}/${id}: no red to blacken`);
     writeFileSync(`${partsDir}/${id}-hover.svg`, filled);
   }
 

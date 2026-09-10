@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import geometry from '@/lib/menu-geometry.json';
 
@@ -285,7 +286,7 @@ export function LogoMenu() {
       />
 
       {boxes.map((box) => (
-        <a
+        <Link
           key={box.id}
           href={box.href}
           className="logo-menu-box"
@@ -301,8 +302,13 @@ export function LogoMenu() {
           }}
           onPointerEnter={() => setHover(box.id)}
           onPointerLeave={() => setHover(null)}
-          onPointerDown={() => setHover(box.id)}
-          onPointerUp={() => setHover(null)}
+          onPointerDown={() => {
+            // Shut it before the route changes. The canvas is opaque white,
+            // and the pages it leads to are red — left up during the
+            // transition it shows as a white block in the corner.
+            setHover(null);
+            snapClosed();
+          }}
           onFocus={() => setHover(box.id)}
           onBlur={() => setHover(null)}
         />

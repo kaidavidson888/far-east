@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import type { ArtDevice, ArtPageSpec, ArtPart, ArtPlacement } from '@/lib/artpage';
 import { ArtPartButton } from './ArtPartButton';
 
@@ -77,9 +78,9 @@ function Placed({
   }
   if (part.href) {
     return (
-      <a className={`artpage-hit${debug}`} href={part.href} aria-label={part.label} style={style}>
+      <Link className={`artpage-hit${debug}`} href={part.href} aria-label={part.label} style={style}>
         <Mark part={part} />
-      </a>
+      </Link>
     );
   }
   return (

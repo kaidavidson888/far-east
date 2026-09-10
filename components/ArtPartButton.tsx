@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
 import type { ArtPart } from '@/lib/artpage';
 
@@ -74,8 +75,8 @@ export function ArtPartButton({
     );
   }
   return (
-    <a href={part.href} {...shared}>
+    <Link href={part.href!} {...shared}>
       {body}
-    </a>
+    </Link>
   );
 }
