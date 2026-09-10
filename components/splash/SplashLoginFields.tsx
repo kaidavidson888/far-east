@@ -191,6 +191,11 @@ export function SplashLoginFields({
           win(`${row}-cloud`, p.mid, p.y0, p.cloudX1, p.y1, op('cloud', row),
             'cloudDx' in p ? p.cloudDx : 0),
           win(`${row}-line`, p.x0, p.dY0, p.dashX1, p.dY1, op('line', row)),
+          // the part of the left tick that stands above the dashes — same
+          // sprite, same window, same line opacity, so it behaves as one mark
+          ...('tickX1' in p
+            ? [win(`${row}-tick`, p.x0, p.tickY0, p.tickX1, p.dY0, op('line', row))]
+            : []),
         ];
       })}
     </div>

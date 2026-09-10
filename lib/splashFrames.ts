@@ -120,6 +120,14 @@ export const SPLASH_GEOM = {
   // y[y0..y1]), dashed line x[x0..dashX1] y[dY0..dY1]. Typed text sits on the
   // dash: left x0, baseline just above dY0.
   //
+  // The tick at the left end of a dashed line is taller than the line itself
+  // and poked up into the label band, where the label window used to draw it.
+  // Once the EMAIL label became artwork nothing covered the email row's any
+  // more, and clipping y1 to dY0 took the submit row's as well. tickX1/tickY0
+  // give it its own window, drawn at the LINE opacity — it is part of the
+  // dashes, not of the word, so it should dim and brighten with them. The
+  // password row has none: its tick stops at dY0.
+  //
   // y1 == dY0 on every row, and it has to: the windows are drawn on top of each
   // other, so any row of the sprite that sits in both the ☁ window and the line
   // window gets painted twice — once at the ☁'s opacity 1 and once at the
@@ -137,9 +145,9 @@ export const SPLASH_GEOM = {
     // 0.3581) and moves with the label rather than away from it. No y is
     // touched: the ☁ stays on the line it was on, and dashX1 is untouched so the
     // dashes and the tick at their left end are exactly as baked.
-    email:    { x0: 0.100, mid: 0.350, cloudX1: 0.495, cloudDx: 0.1513, dashX1: 0.900, y0: 0.146, y1: 0.218, dY0: 0.218, dY1: 0.238 },
+    email:    { x0: 0.100, mid: 0.350, cloudX1: 0.495, cloudDx: 0.1513, dashX1: 0.900, y0: 0.146, y1: 0.218, dY0: 0.218, dY1: 0.238, tickX1: 0.1150, tickY0: 0.2111 },
     password: { x0: 0.100, mid: 0.565, cloudX1: 0.702, dashX1: 0.892, y0: 0.480, y1: 0.552, dY0: 0.552, dY1: 0.573 },
-    submit:   { x0: 0.100, mid: 0.758, cloudX1: 0.900, dashX1: 0.900, y0: 0.800, y1: 0.887, dY0: 0.887, dY1: 0.908 },
+    submit:   { x0: 0.100, mid: 0.758, cloudX1: 0.900, dashX1: 0.900, y0: 0.800, y1: 0.887, dY0: 0.887, dY1: 0.908, tickX1: 0.1125, tickY0: 0.8790 },
   },
 };
 

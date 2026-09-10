@@ -184,6 +184,12 @@ find the Edge crash instead, restoring the middleware is the cleaner solution.
     rect too, so moving those slides the window onto blank sprite and the ☁ disappears. The
     field underneath is untouched: still the email input, still validated as an address, so its
     `aria-label` stays "Email" and does not match the visible art.
+  - **The tick** at the left end of each dashed line is taller than the line and pokes up into
+    the label band, where the label window used to draw it. The email row lost its when the
+    label became artwork, and the submit row lost its when y1 was clipped to dY0. `tickX1` /
+    `tickY0` give it its own window at the LINE opacity — it is part of the dashes, not the
+    word, so it dims and brightens with them. The password row needs none: its tick stops at
+    dY0. Eleven windows now, not nine.
   - **Login box** — `SplashLoginFields` shows nine sprite windows onto `blackbox.webp`, three
     per row: `label` x[x0..mid], `☁` x[mid..cloudX1], `line` x[x0..dashX1] (all fractions of
     the box, `SPLASH_GEOM.parts`, **measured off the black baked into f100** so the overlay is
