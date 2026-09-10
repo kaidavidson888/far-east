@@ -11,16 +11,4 @@
 <path d="M0 0 C43 0 86 0 131 0 C131 15 131 30 131 45 C88 45 45 45 0 45 C0 30 0 15 0 0 Z " fill="#ffffff" transform="translate(846,1371)"/>
 <path d="M0 0 C27 0 55 0 83 0 C80 4 78 8 75 11 C74 12 73 12 73 13 C68 18 63 23 57 28 C56 29 55 29 55 30 C54 31 53 31 53 32 C52 32 51 33 51 33 C48 34 47 34 44 33 C42 32 42 32 39 30 C38 29 37 29 37 28 C36 28 35 27 34 26 C33 26 32 25 31 24 C20 17 10 9 0 1 C0 1 0 0 0 0 Z " fill="#ffffff" transform="translate(1150,676)"/>
 </g>
-<defs>
-
-<clipPath id="clip0_87_99">
-<rect width="45" height="45" fill="#ffffff" transform="matrix(-1 0 0 1 360 24)"/>
-</clipPath>
-<clipPath id="clip1_87_99">
-<rect width="88" height="18" fill="#ffffff" transform="translate(48 211)"/>
-</clipPath>
-<clipPath id="clip2_87_99">
-<rect width="169" height="49" fill="#ffffff" transform="translate(111 674)"/>
-</clipPath>
-
-</defs></svg>
+</svg>

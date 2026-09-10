@@ -19,8 +19,21 @@
  */
 import sharp from 'sharp';
 
-/** Device pixels to keep per CSS pixel. 3 covers the densest phone screens. */
-const OVERSAMPLE = 3;
+/**
+ * Device pixels to keep per CSS pixel.
+ *
+ * 3 is what a dense phone screen asks for, and it is not enough: measured
+ * against the untouched export, a 3x re-encode of the footer icons scored
+ * 96.7% of the original's edge sharpness at DPR 2, which reads as soft next
+ * to the rest of the page. 6 measures 100.7% at DPR 2 and 99.5% at DPR 3 —
+ * indistinguishable from not resampling at all — and still turns a 267KB PNG
+ * into 12KB. Anything above 6 buys nothing.
+ *
+ * The re-encode is deliberately NOT palettised. It happens not to have cost
+ * anything here, but these images are alpha masks: quantising a soft-edged
+ * mask to 256 entries is exactly the kind of thing that would.
+ */
+const OVERSAMPLE = 6;
 
 /** Read `matrix(a b c d e f)` / `scale(sx sy)` / `scale(s)` as [a, d]. */
 function readScale(transform) {
@@ -81,7 +94,7 @@ export async function resampleEmbedded(svg) {
     const before = Buffer.from(data[2], 'base64');
     const after = await sharp(before)
       .resize({ width: targetW, height: targetH, fit: 'fill' })
-      .png({ compressionLevel: 9, palette: true })
+      .png({ compressionLevel: 9 })
       .toBuffer();
     if (after.length >= before.length) continue; // no point making it bigger
 

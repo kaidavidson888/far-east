@@ -13,15 +13,7 @@
 <path d="M119.43 219.82C119.61 219.94 119.61 219.94 119.73 220.11C119.77 220.39 119.75 220.51 119.61 220.75C119.39 220.95 119.28 220.98 118.99 220.98C118.65 220.83 118.65 220.83 118.55 220.62C118.5 220.1 118.5 220.1 118.7 219.85C118.98 219.71 119.13 219.73 119.43 219.82Z" fill="#ffffff"/>
 </g>
 <defs>
-
-<clipPath id="clip0_87_99">
-<rect width="45" height="45" fill="#ffffff" transform="matrix(-1 0 0 1 360 24)"/>
-</clipPath>
 <clipPath id="clip1_87_99">
 <rect width="88" height="18" fill="#ffffff" transform="translate(48 211)"/>
 </clipPath>
-<clipPath id="clip2_87_99">
-<rect width="169" height="49" fill="#ffffff" transform="translate(111 674)"/>
-</clipPath>
-
 </defs></svg>

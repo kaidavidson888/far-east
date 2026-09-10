@@ -28,7 +28,7 @@ const SRC = 'scripts/assets/landing-mobile.svg';
 const PARTS_DIR = 'public/landing/parts';
 const GEOMETRY = 'lib/landing-geometry.json';
 const LOGO = 'scripts/assets/logo-characters.svg';
-const OUT = 'public/landing/landing-mobile.svg';
+const OUT = '.artwork/landing-mobile.svg';
 const BACKGROUND = '#ffffff';
 const MIN_CHANNEL = 0xe0; // 224
 const MAX_CHROMA = 0x12; // 18
@@ -113,7 +113,7 @@ const trimmed = out.replace(/ d="([^"]+)"/g, (whole, d) =>
   ` d="${d.replace(/-?\d+\.\d+/g, (n) => String(Math.round(Number(n) * 100) / 100))}"`,
 );
 
-mkdirSync('public/landing', { recursive: true });
+mkdirSync('.artwork', { recursive: true });
 writeFileSync(OUT, trimmed);
 
 const total = [...seen.values()].reduce((a, b) => a + b, 0);

@@ -14,3 +14,6 @@ tsconfig.tsbuildinfo
 
 # scratch output dir for a build run alongside the dev server
 .next-build/
+
+# flattened full-page artwork: a build by-product, not served
+.artwork/

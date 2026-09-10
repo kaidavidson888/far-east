@@ -93,6 +93,21 @@ async function inkBox(svg, W, bg) {
 }
 
 /**
+ * The ink box of some content, measured on the page's own canvas.
+ *
+ * For substituting a part's artwork: compose the replacement in page
+ * coordinates, measure where it actually lands, and use that as the part's
+ * box — so a swapped-in mark is measured the same way the export's was
+ * rather than trusted to be where its path data says.
+ */
+export async function inkBoxOnPage(content, { w, h, background }) {
+  const svg =
+    `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" ` +
+    `width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" fill="none">${content}</svg>`;
+  return inkBox(svg, w, hex(background));
+}
+
+/**
  * Where a shape sits when it paints the page's own colour and so leaves no
  * ink. Repaint it and measure that — the same renderer either way, so the
  * answer agrees with every other box by construction. Parsing path data
