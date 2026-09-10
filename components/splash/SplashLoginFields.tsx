@@ -116,7 +116,7 @@ export function SplashLoginFields({
   // window sits without changing what it shows.
   const win = (
     key: string, x0f: number, y0f: number, x1f: number, y1f: number,
-    o: number, bold = false, dx = 0,
+    o: number, dx = 0,
   ) => (
     <div
       key={key}
@@ -124,9 +124,7 @@ export function SplashLoginFields({
       style={{
         position: 'fixed', pointerEvents: 'none',
         left: bx(x0f + dx), top: by(y0f), width: (x1f - x0f) * box.w, height: (y1f - y0f) * box.h,
-        // the label windows read from the dilated sprite, so EMAIL / PASSWORD /
-        // create account·login are bold while the ☁ and the dashes are not
-        backgroundImage: `url(${splashAsset(`blackbox${bold ? '-bold' : ''}.webp`)})`,
+        backgroundImage: `url(${splashAsset('blackbox.webp')})`,
         backgroundRepeat: 'no-repeat',
         backgroundSize: `${box.w}px ${box.h}px`,
         backgroundPosition: `${-x0f * box.w}px ${-y0f * box.h}px`,
@@ -189,8 +187,8 @@ export function SplashLoginFields({
         return [
           row === 'email'
             ? emailLabel(op('label', row))
-            : win(`${row}-label`, p.x0, p.y0, p.mid, p.y1, op('label', row), true),
-          win(`${row}-cloud`, p.mid, p.y0, p.cloudX1, p.y1, op('cloud', row), false,
+            : win(`${row}-label`, p.x0, p.y0, p.mid, p.y1, op('label', row)),
+          win(`${row}-cloud`, p.mid, p.y0, p.cloudX1, p.y1, op('cloud', row),
             'cloudDx' in p ? p.cloudDx : 0),
           win(`${row}-line`, p.x0, p.dY0, p.dashX1, p.dY1, op('line', row)),
         ];

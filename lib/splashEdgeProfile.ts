@@ -6,7 +6,7 @@ export const SPLASH_EDGE_B64 =
 
 // Content hash of every baked asset — appended to their URLs so a rebuild
 // is never served from a stale cache.
-export const SPLASH_ASSET_V = '32a1f96a';
+export const SPLASH_ASSET_V = '14b24e30';
 
 // Width/height of phone-label.webp once trimmed to its own ink, so the
 // EMAIL row can size the artwork by height and let the width follow.

@@ -113,11 +113,13 @@ find the Edge crash instead, restoring the middleware is the cleaner solution.
     `edge.webp` (the final red pattern, box reflected over — tiles horizontally, ~0.999 corr),
     `settle.webp` (`process(…, LAST, 0)` — the last frame with every black part at 0), and
     `blackbox.webp` (`acc` keeping only the ink → black-on-transparent, same resize+sharpen,
-    cropped to `SPLASH_GEOM.box`), and `blackbox-bold.webp` (the same sprite with the ink
-    dilated by a 1px round kernel **at full resolution**, before the downscale — dilating the
-    215px sprite instead fills the letter counters in). The label windows draw from the bold
-    sprite, so EMAIL / PASSWORD / create account·login are bold and the ☁ + dashes are not.
-    Commit the output; nothing decodes a GIF at runtime.
+    cropped to `SPLASH_GEOM.box`). Everything in the box — labels, ☁ and dashes — reads from
+    that one sprite. There was briefly a `blackbox-bold.webp` whose ink was dilated by a 1px
+    round kernel, and the label windows drew from it; it was dropped once the PHONE # artwork
+    went in, because a dilated sprite is 2.3–3.8x the stroke weight of art that was never
+    dilated (median stem / cap height: art 0.187, plain sprite 0.200 and 0.167, dilated 0.467
+    and 0.632) and the rows no longer matched each other. Commit the output; nothing decodes a
+    GIF at runtime.
     Every asset URL carries `SPLASH_ASSET_V` (a content hash of the whole bake, also written
     into the generated module) via `splashAsset()`. They live at fixed paths and are rewritten
     in place by each rebuild, so without it a browser holding some in cache mixes old frames
