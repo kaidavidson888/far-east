@@ -108,10 +108,41 @@ const AR_MAX = 0.8;
 const KEEP = 0.45;
 /** At or above this alpha a pixel is the object, not its shadow. */
 const SOLID_ALPHA = 200;
-/** A row shorter than this share of the box's own middle is not the box. */
-const SQUARE_CUT = 0.88;
+/** A row narrower than this share of the crop is not the pack. */
+const SQUARE_FLOOR = 0.35;
 /** ...and no more than this share may be squared off either end. */
 const SQUARE_MAX = 0.18;
+
+/**
+ * The two the reasoning above cannot reach, cropped by hand.
+ *
+ * Both are photographed on a light card with the catalogue number printed on
+ * the card below the pack, and on both the number is drawn at partial alpha
+ * — so it is neither a separate component (the card joins everything up) nor
+ * distinguishable by opacity (the test that saved the other two dozen).
+ * Fiit Menthol also has the clipped edge of the next photograph down its
+ * left side, at x=190.
+ *
+ * Rectangles in source pixels, read off a grid render of each. Everything
+ * else in this file is derived; these two are measured by eye, and they are
+ * the only numbers here a re-export would invalidate. New source images of
+ * those two packs on plain ground would make this table unnecessary.
+ */
+const HAND_CROP = {
+  '281_THIS-Plus': { x0: 370, y0: 155, x1: 740, y1: 685 },
+  '284_Fiit-Menthol': { x0: 332, y0: 227, x1: 790, y1: 618 },
+  // These two for the opposite reason: the crop was cutting into them.
+  // Mevius carries its "Smoking kills" panel as line art on transparency —
+  // a black rule and black type over nothing — so by every measure here it
+  // looks exactly like a caption, and the owner wants it kept. There is no
+  // rule that keeps this and still drops Nanjing's number, because in the
+  // source the two are drawn the same way. Its left edge is set past a
+  // column of grey tabs that are not part of the photograph.
+  '91_Mevius-Blue_6': { x0: 290, y0: 100, x1: 770, y1: 921 },
+  // A soft pack, pale down its whole upper half, which the trim read as
+  // empty and cut the silver top off.
+  '128_Septwolves-Blue_Diamond': { x0: 258, y0: 102, x1: 764, y1: 921 },
+};
 
 /** Near-white, and flat enough to be a backdrop rather than a pack panel. */
 const isPaper = (d, p, tol) =>
@@ -360,15 +391,18 @@ function squareOff(solid, w, h, box) {
   // a little perspective, so the rows run about 0.99 across the middle and
   // 0.85 at the foot, and the number's sliver below that is 0.3 or less. The
   // cut has to sit between those, and the cap decides how far it may run.
-  const middle = [...dens.slice(Math.floor(bh * 0.2), Math.ceil(bh * 0.8))].sort((a, b) => a - b);
-  if (!middle.length) return { box, trimmed: 0 };
-  const ref = middle[Math.floor(middle.length / 2)] * SQUARE_CUT;
+  // An absolute floor, not a share of the box's own middle. A catalogue
+  // number is a narrow mark — 0.2 or 0.3 of the width — while anything that
+  // is really the pack spans nearly all of it, including the white warning
+  // panel that Mevius and the Chinese packs carry along their foot. Judged
+  // against the median instead, those panels came out short of it and got
+  // cut: Mevius lost "Smoking kills" and Septwolves lost its silver top.
   const cap = Math.floor(bh * SQUARE_MAX);
 
   let top = 0;
-  while (top < cap && dens[top] < ref) top++;
+  while (top < cap && dens[top] < SQUARE_FLOOR) top++;
   let bottom = 0;
-  while (bottom < cap && dens[bh - 1 - bottom] < ref) bottom++;
+  while (bottom < cap && dens[bh - 1 - bottom] < SQUARE_FLOOR) bottom++;
   if (!top && !bottom) return { box, trimmed: 0 };
   return {
     box: { x0: box.x0, y0: box.y0 + top, x1: box.x1, y1: box.y1 - bottom },
@@ -385,6 +419,52 @@ function chooseBox(cands) {
   const kept = fits.filter((c) => area(c.box) >= floor);
   kept.sort((a, b) => area(a.box) - area(b.box));
   return { ...kept[0], boxShaped: true };
+}
+
+/**
+ * Give back anything the crop cut through.
+ *
+ * The trimmed candidates cut to the longest run of solidly-filled rows, and
+ * on a pack whose lower third is a pale warning panel that run can stop
+ * short of the pack's own foot. Mevius lost "Smoking kills" that way and
+ * Septwolves lost its silver top — the crop ended in the middle of the
+ * pack, not at the end of it.
+ *
+ * So after a box is chosen, each edge is pushed back out for as long as the
+ * next row or column along is still substantially filled. A caption stops it
+ * immediately, being narrow; the rest of a pack does not. It can never grow
+ * past the plain crop, which is the whole of the subject.
+ */
+function unclip(solid, w, h, box, limit) {
+  const rowAt = (y, x0, x1) => {
+    let n = 0;
+    for (let x = x0; x <= x1; x++) if (solid[y * w + x]) n++;
+    return n / (x1 - x0 + 1);
+  };
+  const colAt = (x, y0, y1) => {
+    let n = 0;
+    for (let y = y0; y <= y1; y++) if (solid[y * w + x]) n++;
+    return n / (y1 - y0 + 1);
+  };
+  const out = { ...box };
+  let moved = 0;
+  while (out.y0 > limit.y0 && rowAt(out.y0 - 1, out.x0, out.x1) >= SQUARE_FLOOR) {
+    out.y0--;
+    moved++;
+  }
+  while (out.y1 < limit.y1 && rowAt(out.y1 + 1, out.x0, out.x1) >= SQUARE_FLOOR) {
+    out.y1++;
+    moved++;
+  }
+  while (out.x0 > limit.x0 && colAt(out.x0 - 1, out.y0, out.y1) >= SQUARE_FLOOR) {
+    out.x0--;
+    moved++;
+  }
+  while (out.x1 < limit.x1 && colAt(out.x1 + 1, out.y0, out.y1) >= SQUARE_FLOOR) {
+    out.x1++;
+    moved++;
+  }
+  return { box: out, moved };
 }
 
 /** "12. 555 — Icy Shine Slim" -> [12, "555 — Icy Shine Slim"] */
@@ -413,6 +493,8 @@ const manifest = [];
 let bytes = 0;
 let trimmed = 0;
 let squared = 0;
+let handed = 0;
+let unclipped = 0;
 const unresolved = [];
 
 for (const file of files) {
@@ -429,18 +511,28 @@ for (const file of files) {
   if (!cands.length) throw new Error(`${file}: nothing left after clearing the backdrop`);
   const chosen = chooseBox(cands);
   const { bg, how, boxShaped } = chosen;
+  const byHand = HAND_CROP[id];
   const solid = solidity(data, w, h, bg, hasCutout(data, w, h));
-  const squaredResult = squareOff(solid, w, h, chosen.box);
+  const squaredResult = squareOff(solid, w, h, byHand ?? chosen.box);
   // Squaring off is held to the same standard as the crop itself: if it
   // takes a box-shaped crop and leaves something that is not box-shaped, it
   // has cut into the box and is thrown away. Fiit Menthol went to 1.34
   // without this.
+  const base = byHand ?? chosen.box;
   const keepSquared =
+    !byHand &&
     squaredResult.trimmed > 0 &&
     (ratio(squaredResult.box) >= AR_MIN && ratio(squaredResult.box) <= AR_MAX ||
-      !(ratio(chosen.box) >= AR_MIN && ratio(chosen.box) <= AR_MAX));
-  const box = keepSquared ? squaredResult.box : chosen.box;
+      !(ratio(base) >= AR_MIN && ratio(base) <= AR_MAX));
+  const squaredBox = keepSquared ? squaredResult.box : base;
   if (keepSquared) squared++;
+  if (byHand) handed++;
+  // a hand-measured rectangle is the answer; nothing grows it back
+  const repaired = byHand
+    ? { box: squaredBox, moved: 0 }
+    : unclip(solid, w, h, squaredBox, cands[0].box);
+  const box = repaired.box;
+  if (repaired.moved) unclipped++;
 
   // paint the backdrop the page's own white, so nothing reads as a panel
   for (let i = 0; i < bg.length; i++) {
@@ -458,7 +550,9 @@ for (const file of files) {
     width: box.x1 - box.x0 + 1,
     height: box.y1 - box.y0 + 1,
   };
-  if (!boxShaped) {
+  if (byHand) {
+    // measured by eye; the automatic reasoning does not apply
+  } else if (!boxShaped) {
     unresolved.push(
       `${id} — ${region.width}x${region.height}, ratio ${ratio(box).toFixed(2)}; left alone`,
     );
@@ -515,7 +609,7 @@ writeFileSync(
 
 const widths = manifest.map((m) => m.w).sort((a, b) => a - b);
 console.log(`${manifest.length} packs -> ${OUT_DIR} (${Math.round(bytes / 1024)}KB)`);
-console.log(`  ${trimmed} needed more than the plain crop; ${squared} squared off at an edge`);
+console.log(`  ${trimmed} needed more than the plain crop; ${squared} squared off at an edge; ${handed} cropped by hand; ${unclipped} grown back to the pack's own edge`);
 console.log(`  widths ${widths[0]}..${widths[widths.length - 1]} at height ${DRAWN_H}`);
 if (unresolved.length) {
   console.log(`  ${unresolved.length} found no box-shaped crop and were left alone:`);
