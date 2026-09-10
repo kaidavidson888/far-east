@@ -34,9 +34,15 @@ const NAV_LABELS: Record<(typeof NAV_IDS)[number], string> = {
   navPrivacy: 'Privacy policy',
 };
 
+const NAV_HREFS: Record<(typeof NAV_IDS)[number], string> = {
+  navAbout: '/about',
+  navTerms: '/terms',
+  navPrivacy: '/privacy',
+};
+
 export function innerPageSpec(
   geometry: Geometry,
-  { page, bodyIds }: { page: string; bodyIds: string[] },
+  { page, bodyIds, active }: { page: string; bodyIds: string[]; active: (typeof NAV_IDS)[number] },
 ): ArtPageSpec {
   const { viewBox, background, parts } = geometry;
   const src = (id: string) => `/${page}/parts/${id}.svg`;
@@ -87,6 +93,10 @@ export function innerPageSpec(
           w: parts[id].w,
           h: parts[id].h,
           pressable: true,
+          // the box for this page says where you are; the other two lead away
+          ...(id === active
+            ? { current: true as const }
+            : { href: NAV_HREFS[id], hoverSrc: src(`${id}-hover`) }),
           inCluster: { left: parts[id].x - cluster.x, top: parts[id].y - cluster.y },
         }),
       ),

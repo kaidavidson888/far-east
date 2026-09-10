@@ -614,6 +614,67 @@ ul, ol { list-style: none; }
   outline: 1px dashed var(--artpage-focus, #fd0000);
 }
 
+/* ------------------------------------------------------- inner page nav --
+   The three footer boxes. The one for the page you are already on goes
+   nowhere: it sits at half opacity and fades as you approach, saying where
+   you are rather than inviting a press. Pressing it anyway flashes the whole
+   square — fill and outline both — red for a quarter second.
+
+   The other two lead away. Hovering brings up a second image with the box
+   filled black behind its label (painting over the box would bury the
+   label), and drops the whole button to three-quarters opacity. */
+/* No position here: .artpage-hit is already absolute, which is its own
+   containing block for the overlays below. Setting `relative` took these
+   three out of the cluster's absolute layout and stacked them diagonally. */
+.artpage-nav {
+  transition: opacity 120ms ease-out;
+}
+.artpage-nav-hover {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  opacity: 0;
+  pointer-events: none;
+}
+.artpage-nav[data-hover] .artpage-nav-hover {
+  opacity: 1;
+}
+.artpage-nav[data-hover] {
+  opacity: 0.75;
+}
+
+/* the box for the page you are on */
+.artpage-nav-current {
+  opacity: 0.5;
+  cursor: default;
+}
+.artpage-nav-current[data-hover] {
+  opacity: 0.1;
+}
+.artpage-nav-flash {
+  position: absolute;
+  /* the outline is drawn outside the mark's box, so reach past it */
+  inset: -2px;
+  display: block;
+  background: #ff0000;
+  opacity: 0;
+  pointer-events: none;
+}
+/* The flash rides at whatever opacity the button is sitting at, so a press
+   reads as the box going from dark red to the page's red and back rather
+   than as it jumping forward. */
+.artpage-nav-current[data-flashing] .artpage-nav-flash {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .artpage-nav {
+    transition: none;
+  }
+}
+
 /* ------------------------------------------------------------- logo menu --
    The 遠東 logo unfolding into a nav. Sits at the stage's top-left corner,
    over the page's own logo: the animation's first frame is that logo, baked

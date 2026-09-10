@@ -1,4 +1,5 @@
 import type { ArtDevice, ArtPageSpec, ArtPart, ArtPlacement } from '@/lib/artpage';
+import { ArtPartButton } from './ArtPartButton';
 
 /**
  * Renders a page built from a supplied design image.
@@ -64,6 +65,14 @@ function Placed({
       <div className={`artpage-decor${debug}`} aria-hidden="true" style={style}>
         <Mark part={part} />
       </div>
+    );
+  }
+  // the footer row reacts to hover and to being pressed, so it needs state
+  if (part.current || part.hoverSrc) {
+    return (
+      <ArtPartButton part={part} style={style} className={`artpage-hit${debug}`}>
+        <Mark part={part} />
+      </ArtPartButton>
     );
   }
   if (part.href) {

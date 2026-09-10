@@ -34,6 +34,10 @@ export type ArtPart = {
   pressable: boolean;
   /** where it goes; without one it renders as a button with no destination */
   href?: string;
+  /** a second image shown while hovered — the black-filled footer boxes */
+  hoverSrc?: string;
+  /** the footer button for the page you are already on */
+  current?: boolean;
   /** set for parts that belong to the page's cluster */
   inCluster?: { left: number; top: number };
   /** set for parts placed against the stage directly */
