@@ -147,6 +147,38 @@ const HAND_CROP = {
 };
 
 /**
+ * Ten files whose names belong to the product before them.
+ *
+ * From 211 to 220 the numbering slips by one: the image in file N is the
+ * product named at N+1, the whole way along. 217 is labelled Nanjing 12
+ * Stars and is a black Baisha; 218 is labelled Baisha and is a Liqun; 219
+ * is labelled Liqun and is a Yuxi. It runs cleanly from one end to the
+ * other, which is what a single missing file does to a numbered list —
+ * Huanghelou Celebration has no photograph, and everything after it
+ * shuffled up into the gap.
+ *
+ * Keyed by the source file, valued by what it should be called. The whole
+ * run has to move together, because each new name is the next file's old
+ * one. `211_Huanghelou-Celebration` is free afterwards, and stays free
+ * until someone supplies that photograph.
+ *
+ * Checked both sides of the run and two other brand boundaries; the slip is
+ * confined to these ten. See `scripts/assets/cigs/naming-notes.md`.
+ */
+const RENUMBER = {
+  '211_Huanghelou-Celebration': '212_Nanjing-Green',
+  '212_Nanjing-Green': '213_Nanjing-Red',
+  '213_Nanjing-Red': '214_Nanjing-Gold',
+  '214_Nanjing-Gold': '215_Nanjing-Rainflower',
+  '215_Nanjing-Rainflower': '216_Nanjing-Dream',
+  '216_Nanjing-Dream': '217_Nanjing-12_Stars',
+  '217_Nanjing-12_Stars': '218_Baisha-Harmony_of_the_World',
+  '218_Baisha-Harmony_of_the_World': '219_Liqun-Classic_Red_White',
+  '219_Liqun-Classic_Red_White': '220_Yuxi-Red_Gold',
+  // 220 would become 221, which already exists — see DUPLICATES
+};
+
+/**
  * The same pack twice, under two catalogue numbers.
  *
  * The supplied set has 46 pairs of products sharing a name. Only 34 of them
@@ -199,6 +231,9 @@ const DUPLICATES = new Set([
   '112_Huanghelou-World_Famous_Tower', // keeping 78
   '103_Huangshan-New_No_1', // keeping 80
   '200_Alishan-Cherry_Blossom', // keeping 192
+  // The far end of the slip above: this file holds a 中南海 EIGHT, which is
+  // what 221 holds too. Only visible once the run is renumbered.
+  '220_Yuxi-Red_Gold', // keeping 221_Zhongnanhai-8
 ]);
 
 /** Near-white, and flat enough to be a backdrop rather than a pack panel. */
@@ -604,7 +639,10 @@ let unclipped = 0;
 const unresolved = [];
 
 for (const file of files) {
-  const id = file.replace(/\.(png|jpe?g)$/i, '');
+  const source = file.replace(/\.(png|jpe?g)$/i, '');
+  // hand crops are keyed by the source file, since that is what they were
+  // measured against; everything downstream uses the corrected name
+  const id = RENUMBER[source] ?? source;
   const number = Number(id.match(/^\d+/)?.[0] ?? NaN);
 
   const { data, info } = await sharp(`${SRC}/${file}`)
@@ -619,7 +657,7 @@ for (const file of files) {
   const subject = subjectMask(data, w, h, cutout);
   const chosen = chooseBox(cands, subject, w, h);
   const { bg, how, boxShaped } = chosen;
-  const byHand = HAND_CROP[id];
+  const byHand = HAND_CROP[source];
   const solid = solidity(data, w, h, bg, cutout);
   const squaredResult = squareOff(solid, w, h, byHand ?? chosen.box);
   // Squaring off is held to the same standard as the crop itself: if it
