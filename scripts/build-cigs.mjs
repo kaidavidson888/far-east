@@ -142,11 +142,64 @@ const HAND_CROP = {
   // A soft pack, pale down its whole upper half, which the trim read as
   // empty and cut the silver top off.
   '128_Septwolves-Blue_Diamond': { x0: 258, y0: 102, x1: 764, y1: 921 },
-  // Its last line of warning text was being cut off the bottom.
-  '02_Peel-Greek_Yogurt': { x0: 91, y0: 57, x1: 209, y1: 243 },
   // Clipped down the left: the pack's purple edge and half the ESSE mark.
   '05_ESSE-Double_Shot_Red_White_Wine': { x0: 240, y0: 106, x1: 511, y1: 610 },
 };
+
+/**
+ * The same pack twice, under two catalogue numbers.
+ *
+ * The supplied set has 46 pairs of products sharing a name. Only 34 of them
+ * are the same pack — the rest are genuinely different (More Menthol is a
+ * green 120s in one and a white 20-class in the other; Nanjing Gold is a
+ * pale floral pack and a navy one), so they stay, and their names will
+ * collide when the buttons are wired. Every pair was compared by eye; a
+ * perceptual hash could not be trusted to make the call, because the crop
+ * differences between two shots of one pack outweigh the difference between
+ * two similar packs.
+ *
+ * Of each duplicate the larger source is kept, except ESSE Change
+ * Strawberry: the bigger file there is damaged, smeared through with white
+ * streaks, so the smaller one wins.
+ *
+ * Listed by what is dropped, so the file that survives keeps its own name.
+ */
+const DUPLICATES = new Set([
+  '01_Peel-Red_Wine', // keeping 68 (1254 vs 300)
+  '02_Peel-Greek_Yogurt', // keeping 69
+  '03_ESSE-Change_Mango', // keeping 70
+  '98_ESSE-Change_Strawberry', // keeping 04 — this one is the damaged copy
+  '09_Black_Jack_Supasawa-Mango', // keeping 184
+  '10_Black_Jack_Supasawa-Lemon', // keeping 185
+  '183_Black_Jack_Supasawa-Grapefruit', // keeping 06
+  '158_555-Double_Ice', // keeping 11
+  '157_555-Icy_Shine_Slim', // keeping 12
+  '138_Alishan-Mango_Impression_Capsule', // keeping 13
+  '150_Ashima-Platinum', // keeping 15
+  '154_Baisha-Harmony_of_the_World_Dual_Mid-Size_Hard_Pack', // keeping 17
+  '147_Double_Happiness-9mg_Nanyang', // keeping 22
+  '87_Dragon_Phoenix-Deluxe_Hard_Pack', // keeping 26
+  '107_Dragon_Phoenix-Golden_Encounter', // keeping 27
+  '139_ESSE-Blue', // keeping 28
+  '140_ESSE-Change', // keeping 29
+  '141_ESSE-Menthol_5mg', // keeping 30
+  '32_Furongwang-Bloom', // keeping 146 (1024 vs 314)
+  '36_Furongwang-Hard_Pack_Mid-Size', // keeping 83
+  '46_Guiyan-Essence', // keeping 104
+  '47_Guiyan-Golden_Lily', // keeping 126
+  '50_Haomao-Everjoy_Slim', // keeping 105
+  '102_Hongtashan-Classic_Hard_Pack', // keeping 52
+  '129_Hongtashan-Classic_Heritage', // keeping 53
+  '153_Huanghelou-1916_Hard_Pack', // keeping 55
+  '88_Huanghelou-8_Degrees_Hard_Pack', // keeping 57
+  '116_Huanghelou-Blue_Hard_Pack', // keeping 58
+  '84_Huanghelou-Gold_Elegant_Aroma', // keeping 71
+  '108_Huanghelou-Gold_Ribbon_Hard_Pack', // keeping 72
+  '85_Huanghelou-Soft_Blue', // keeping 76
+  '112_Huanghelou-World_Famous_Tower', // keeping 78
+  '103_Huangshan-New_No_1', // keeping 80
+  '200_Alishan-Cherry_Blossom', // keeping 192
+]);
 
 /** Near-white, and flat enough to be a backdrop rather than a pack panel. */
 const isPaper = (d, p, tol) =>
@@ -532,6 +585,7 @@ function readMenu() {
 const menu = readMenu();
 const files = readdirSync(SRC)
   .filter((f) => /\.(png|jpe?g)$/i.test(f))
+  .filter((f) => !DUPLICATES.has(f.replace(/\.(png|jpe?g)$/i, '')))
   .sort(
     (a, b) =>
       Number(a.match(/^\d+/)?.[0] ?? 0) - Number(b.match(/^\d+/)?.[0] ?? 0) ||
@@ -662,6 +716,7 @@ writeFileSync(
 );
 
 const widths = manifest.map((m) => m.w).sort((a, b) => a - b);
+console.log(`  ${DUPLICATES.size} dropped as duplicates of another entry`);
 console.log(`${manifest.length} packs -> ${OUT_DIR} (${Math.round(bytes / 1024)}KB)`);
 console.log(`  ${trimmed} needed more than the plain crop; ${squared} squared off at an edge; ${handed} cropped by hand; ${unclipped} grown back to the pack's own edge`);
 console.log(`  widths ${widths[0]}..${widths[widths.length - 1]} at height ${DRAWN_H}`);
