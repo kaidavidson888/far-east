@@ -142,6 +142,10 @@ const HAND_CROP = {
   // A soft pack, pale down its whole upper half, which the trim read as
   // empty and cut the silver top off.
   '128_Septwolves-Blue_Diamond': { x0: 258, y0: 102, x1: 764, y1: 921 },
+  // Its last line of warning text was being cut off the bottom.
+  '02_Peel-Greek_Yogurt': { x0: 91, y0: 57, x1: 209, y1: 243 },
+  // Clipped down the left: the pack's purple edge and half the ESSE mark.
+  '05_ESSE-Double_Shot_Red_White_Wine': { x0: 240, y0: 106, x1: 511, y1: 610 },
 };
 
 /** Near-white, and flat enough to be a backdrop rather than a pack panel. */
@@ -307,6 +311,55 @@ function solidity(d, w, h, bg, hasAlpha) {
   return solid;
 }
 
+/**
+ * The subject, judged without reference to any flood.
+ *
+ * `solidity` is derived from a backdrop mask, which makes it useless for
+ * checking whether that same mask went wrong — and it does go wrong. Both
+ * ESSE Change packs have a pale bevel down the left edge that the flood
+ * reaches from the border and eats; the columns it took then look empty, so
+ * the trimmed candidate cuts them off, and because the result is still
+ * pack-shaped (0.55) nothing downstream objects. The ESSE logo ended up
+ * flush against the cut edge.
+ *
+ * Alpha does not have that problem: where the source is a cut-out, the pack
+ * is opaque whatever colour it happens to be. Where it is not a cut-out
+ * there is no alpha to use and the plain flood is the best available.
+ */
+function subjectMask(d, w, h, hasAlpha) {
+  if (!hasAlpha) {
+    const bg = backdrop(d, w, h, TOLERANCES[0]);
+    const out = new Uint8Array(w * h);
+    for (let i = 0; i < w * h; i++) out[i] = bg[i] ? 0 : 1;
+    return out;
+  }
+  const out = new Uint8Array(w * h);
+  for (let i = 0; i < w * h; i++) out[i] = d[i * 4 + 3] >= SOLID_ALPHA ? 1 : 0;
+  return out;
+}
+
+/**
+ * Does this crop end in the middle of the subject rather than at its edge?
+ *
+ * Sideways only, deliberately. What goes wrong horizontally is the flood
+ * eating a pale bevel off the side of a pack — there is nothing but pack to
+ * the left of a pack, so a filled column just outside the crop always means
+ * the crop is too narrow. Vertically it is ambiguous: below a pack there
+ * may be a catalogue number, which is exactly what the earlier passes work
+ * to remove, and testing that edge too made three packs pull their captions
+ * back in to avoid "cutting" them.
+ */
+function cutsThrough(subject, w, h, box) {
+  const colAt = (x) => {
+    let n = 0;
+    for (let y = box.y0; y <= box.y1; y++) if (subject[y * w + x]) n++;
+    return n / (box.y1 - box.y0 + 1);
+  };
+  if (box.x0 > 0 && colAt(box.x0 - 1) >= SQUARE_FLOOR) return true;
+  if (box.x1 < w - 1 && colAt(box.x1 + 1) >= SQUARE_FLOOR) return true;
+  return false;
+}
+
 /** Does this source carry a real cut-out, or is it flat on a backdrop? */
 function hasCutout(d, w, h) {
   let clear = 0;
@@ -411,14 +464,20 @@ function squareOff(solid, w, h, box) {
 }
 
 /** Of the box-shaped crops, the smallest — with a floor. See the header. */
-function chooseBox(cands) {
+function chooseBox(cands, subject, w, h) {
   const plain = cands[0];
   const fits = cands.filter((c) => ratio(c.box) >= AR_MIN && ratio(c.box) <= AR_MAX);
   if (!fits.length) return { ...plain, boxShaped: false };
   const floor = Math.max(...fits.map((c) => area(c.box))) * KEEP;
   const kept = fits.filter((c) => area(c.box) >= floor);
   kept.sort((a, b) => area(a.box) - area(b.box));
-  return { ...kept[0], boxShaped: true };
+  // Smallest wins, but only among crops that stop at the subject's edge
+  // rather than through it. Without this the ESSE packs took the crop that
+  // had lost their pale left bevel to the flood, because it was the
+  // smallest and it was still pack-shaped.
+  const clean = kept.filter((c) => !cutsThrough(subject, w, h, c.box));
+  if (clean.length) return { ...clean[0], boxShaped: true };
+  return { ...kept[kept.length - 1], boxShaped: true };
 }
 
 /**
@@ -448,14 +507,7 @@ function unclip(solid, w, h, box, limit) {
   };
   const out = { ...box };
   let moved = 0;
-  while (out.y0 > limit.y0 && rowAt(out.y0 - 1, out.x0, out.x1) >= SQUARE_FLOOR) {
-    out.y0--;
-    moved++;
-  }
-  while (out.y1 < limit.y1 && rowAt(out.y1 + 1, out.x0, out.x1) >= SQUARE_FLOOR) {
-    out.y1++;
-    moved++;
-  }
+  // sideways only, for the reason given on cutsThrough
   while (out.x0 > limit.x0 && colAt(out.x0 - 1, out.y0, out.y1) >= SQUARE_FLOOR) {
     out.x0--;
     moved++;
@@ -509,10 +561,12 @@ for (const file of files) {
 
   const cands = candidates(data, w, h);
   if (!cands.length) throw new Error(`${file}: nothing left after clearing the backdrop`);
-  const chosen = chooseBox(cands);
+  const cutout = hasCutout(data, w, h);
+  const subject = subjectMask(data, w, h, cutout);
+  const chosen = chooseBox(cands, subject, w, h);
   const { bg, how, boxShaped } = chosen;
   const byHand = HAND_CROP[id];
-  const solid = solidity(data, w, h, bg, hasCutout(data, w, h));
+  const solid = solidity(data, w, h, bg, cutout);
   const squaredResult = squareOff(solid, w, h, byHand ?? chosen.box);
   // Squaring off is held to the same standard as the crop itself: if it
   // takes a box-shaped crop and leaves something that is not box-shaped, it
@@ -530,7 +584,7 @@ for (const file of files) {
   // a hand-measured rectangle is the answer; nothing grows it back
   const repaired = byHand
     ? { box: squaredBox, moved: 0 }
-    : unclip(solid, w, h, squaredBox, cands[0].box);
+    : unclip(subject, w, h, squaredBox, cands[0].box);
   const box = repaired.box;
   if (repaired.moved) unclipped++;
 
