@@ -3,6 +3,7 @@ import { LANDING_SPEC } from '@/lib/landing';
 import { detectDevice, deviceOverride } from '@/lib/device';
 import { ArtworkPage } from '@/components/ArtworkPage';
 import { LogoMenu } from '@/components/LogoMenu';
+import cigpages from '@/lib/cigpages.json';
 import { CigScroller } from '@/components/CigScroller';
 import { SealButton } from '@/components/SealButton';
 
@@ -36,7 +37,7 @@ export default async function LandingRoute({
       spec={LANDING_SPEC}
       device={device}
       showHitboxes={showHitboxes}
-      overlay={<><CigScroller /><LogoMenu /><SealButton size={LANDING_SPEC.sealSize} /></>}
+      overlay={<><CigScroller withPages={cigpages.pages.map((p) => p.id)} /><LogoMenu /><SealButton size={LANDING_SPEC.sealSize} /></>}
       decorative={['logo']}
       hide={['seal']}
     />

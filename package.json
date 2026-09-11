@@ -20,7 +20,8 @@
     "build:pages": "node scripts/build-pages.mjs",
     "build:menu": "node scripts/build-menu-frames.mjs",
     "build:seal": "node scripts/build-seal-frames.mjs",
-    "build:cigs": "node scripts/build-cigs.mjs"
+    "build:cigs": "node scripts/build-cigs.mjs",
+    "build:cigpages": "node scripts/build-cigpages.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.5",

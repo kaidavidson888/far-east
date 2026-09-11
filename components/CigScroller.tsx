@@ -1,6 +1,7 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import Link from 'next/link';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   CIG_BAND_H,
   CIG_FRAME_H,
@@ -65,7 +66,20 @@ const SLOP = 6;
 
 type Shown = { key: string; i: number; x: number };
 
-export function CigScroller({ onPress }: { onPress?: (id: string) => void }) {
+export function CigScroller({
+  withPages,
+  onPress,
+}: {
+  /**
+   * The packs that have a page of their own. The owner supplied 227
+   * info-page vectors for 247 packs, so the rest stay unpressable rather
+   * than leading to a 404. Passed from the server so the client bundle
+   * does not have to carry the page manifest.
+   */
+  withPages?: string[];
+  onPress?: (id: string) => void;
+}) {
+  const linked = useMemo(() => new Set(withPages ?? []), [withPages]);
   const rowRef = useRef<HTMLDivElement | null>(null);
   const offsetRef = useRef(0);
   const velRef = useRef(0);
@@ -332,6 +346,30 @@ export function CigScroller({ onPress }: { onPress?: (id: string) => void }) {
               </div>
             );
           }
+          // a drag that happens to end over the pack is not a press
+          const pressed = (e: React.MouseEvent) => {
+            if (dragRef.current.moved > SLOP) {
+              e.preventDefault();
+              return;
+            }
+            onPress?.(p.id);
+          };
+          if (linked.has(p.id)) {
+            return (
+              <Link
+                key={s.key}
+                href={`/packs/${encodeURIComponent(p.id)}`}
+                className="cig-slot cig-slot-picked"
+                style={style}
+                data-cig={p.id}
+                aria-label={p.name}
+                draggable={false}
+                onClick={pressed}
+              >
+                {img}
+              </Link>
+            );
+          }
           return (
             <button
               key={s.key}
@@ -340,10 +378,7 @@ export function CigScroller({ onPress }: { onPress?: (id: string) => void }) {
               style={style}
               data-cig={p.id}
               aria-label={p.name}
-              onClick={() => {
-                if (dragRef.current.moved > SLOP) return;
-                onPress?.(p.id);
-              }}
+              onClick={pressed}
             >
               {img}
             </button>

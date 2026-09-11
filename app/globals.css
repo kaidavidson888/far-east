@@ -675,6 +675,46 @@ ul, ol { list-style: none; }
   }
 }
 
+/* ------------------------------------------------------- cigarette page --
+   One page per cigarette, built from the supplied info-page vector. The
+   body keeps its drawn size at every width and is centred, which is what
+   makes the left and right margins equal; it holds the design's own top
+   margin. The logo rides inside the body, the seal is pinned to the page's
+   right edge like everywhere else on the site. */
+.cigpage {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: #ffffff;
+  overflow: auto;
+}
+.cigpage-stage {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+.cigpage-body {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+}
+.cigpage-art {
+  display: block;
+  width: 100%;
+  height: 100%;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+.cigpage-logo {
+  position: absolute;
+  display: block;
+  -webkit-tap-highlight-color: transparent;
+}
+.cigpage-logo:focus-visible {
+  outline: 2px solid #010101;
+  outline-offset: 3px;
+}
+
 /* -------------------------------------------------------- cigarette row --
    A row of packs across the middle of the page that scrolls forever, with a
    red frame at the centre marking the one you can press.
