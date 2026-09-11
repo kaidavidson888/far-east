@@ -11,7 +11,7 @@
     "w": 42,
     "h": 86
   },
-  "count": 225,
+  "count": 235,
   "pages": [
     {
       "id": "04_ESSE-Change_Strawberry",
@@ -494,6 +494,11 @@
       "source": "Pride (Era Sunshine)"
     },
     {
+      "id": "121_Hadmen-Golden_Classic",
+      "name": "Hadmen — Golden Classic",
+      "source": "researched"
+    },
+    {
       "id": "122_Tianzi-Thousand_Li_Landscape_Slim",
       "name": "Tianzi — Thousand Li Landscape Slim",
       "source": "Tianzi (Thousand Li Slim)"
@@ -564,6 +569,11 @@
       "source": "Zhongnanhai (Ice Shine Mid)"
     },
     {
+      "id": "137_Bohem-Pearl",
+      "name": "Bohem — Pearl",
+      "source": "Bohem (Cigar Mojito)"
+    },
+    {
       "id": "142_Mevius-Option_Yellow_8",
       "name": "Mevius — Option Yellow 8",
       "source": "Mevius (Option Yellow 8)"
@@ -587,6 +597,11 @@
       "id": "146_Furongwang-Bloom",
       "name": "Furongwang — Bloom",
       "source": "Furongwang (Bloom)"
+    },
+    {
+      "id": "148_Double_Happiness-Soft_Nanyang",
+      "name": "Double Happiness — Soft Nanyang",
+      "source": "researched"
     },
     {
       "id": "151_Suyan-Eastward_Journey",
@@ -719,9 +734,19 @@
       "source": "520 (Ice Blast)"
     },
     {
+      "id": "207_Huanghelou-1916",
+      "name": "Huanghelou — 1916",
+      "source": "researched"
+    },
+    {
       "id": "208_Huanghelou-Red",
       "name": "Huanghelou — Red",
       "source": "Huanghelou (Red)"
+    },
+    {
+      "id": "209_Huanghelou-Blue",
+      "name": "Huanghelou — Blue",
+      "source": "researched"
     },
     {
       "id": "210_Huanghelou-Snow",
@@ -732,6 +757,16 @@
       "id": "212_Nanjing-Green",
       "name": "Nanjing — Green",
       "source": "Nanjing (Green)"
+    },
+    {
+      "id": "213_Nanjing-Red",
+      "name": "Nanjing — Red",
+      "source": "researched"
+    },
+    {
+      "id": "214_Nanjing-Gold",
+      "name": "Nanjing — Gold",
+      "source": "researched"
     },
     {
       "id": "215_Nanjing-Rainflower",
@@ -772,6 +807,11 @@
       "id": "222_Huanghelou-Fresh_Breeze",
       "name": "Huanghelou — Fresh Breeze",
       "source": "Huanghelou (Fresh Breeze)"
+    },
+    {
+      "id": "223_Huanghelou-1916",
+      "name": "Huanghelou — 1916",
+      "source": "researched"
     },
     {
       "id": "224_Huanghelou-Dark",
@@ -837,6 +877,16 @@
       "id": "236_Nanjing-Blue",
       "name": "Nanjing — Blue",
       "source": "Nanjing (Blue)"
+    },
+    {
+      "id": "237_Nanjing-Red",
+      "name": "Nanjing — Red",
+      "source": "researched"
+    },
+    {
+      "id": "238_Nanjing-Gold",
+      "name": "Nanjing — Gold",
+      "source": "researched"
     },
     {
       "id": "239_Nanjing-Pink",

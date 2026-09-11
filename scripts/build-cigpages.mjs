@@ -47,6 +47,14 @@ const CONTENT = { x: 39, y: 18, w: 304, h: 712 };
 /** Where the seal is drawn in the vector, so it can be taken out. */
 const SEAL_AT = { x: 316, y: 19, w: 45, h: 31 };
 
+/**
+ * The box the pack photograph is fitted into, and the centre it is fitted
+ * around. Read off all 227: the frame and the photograph are always the
+ * same rectangle, always as large as fits inside this at the pack's own
+ * aspect, always centred here.
+ */
+const FRAME = { w: 103, h: 161, cx: 100.5, cy: 348.5 };
+
 /** The logo's box, which the home link is laid over. */
 const LOGO_AT = { x: 39, y: 18, w: 42, h: 86 };
 
@@ -81,13 +89,160 @@ const MATCH = {
   'Huanghelou (Scenic Wonder New)': 'Huanghelou — Scenic Wonder New Edition Hard Pack',
   'Zhongnanhai (Ice Shine Slim)': 'Zhongnanhai — Ice Shine Slim',
   'Zhongnanhai (Ice Shine Mid)': 'Zhongnanhai — Ice Shine Mid-Size',
+  // The pack list calls this one Pearl and the vector calls it Cigar
+  // Mojito, and neither is wrong: the pack reads 宝亨 宝珠 — Bohem Pearl —
+  // with "Mojito Ball" across the capsule strip. Same cigarette.
+  'Bohem (Cigar Mojito)': 'Bohem — Pearl',
 };
 
 /** No pack to attach these to, or the owner has said to leave them. */
 const SKIP = new Set([
   'Huanghelou (Celebration)', // the pack photograph is missing from the set
-  'Bohem (Cigar Mojito)', // no Bohem Cigar Mojito in the pack list; only Bohem Pearl
 ]);
+
+/**
+ * Pages for packs the owner had no vector for, built from the template.
+ *
+ * Nine packs came with a photograph but no info page. Each gets one
+ * assembled from a supplied vector: the same template, the same type, the
+ * same everything but the eleven fields that differ between one page and
+ * the next.
+ *
+ * THE OWNER'S WORDS ONLY. Every value on these pages is one the owner
+ * already used somewhere across the 225 supplied pages — the same price
+ * bands, the same three harshness grades, a tasting note and three
+ * pairings that each appear on at least one of them. The build extracts
+ * that vocabulary from the vectors themselves and refuses a value that is
+ * not in it, so a word that is not the owner's cannot reach a page.
+ *
+ * Where the owner has already written a page for the same product under
+ * another name, that page's values are used whole — Hadmen Golden Classic
+ * is their Hadmen (Gold Classic), Double Happiness Soft Nanyang is their
+ * Double Happiness (Soft Nanyang), and the plain Huanghelou 1916 and Blue
+ * packs are the 1916 Hard, 1916 Soft and Blue Hard lines. Only Nanjing Red
+ * and Nanjing Gold have no such page; their values come from the brand's
+ * own nearest, chosen to agree with the researched strength — Nanjing Red
+ * is 13-15mg tar and 1.2-1.3mg nicotine, so it takes Nanjing (Black), the
+ * brand's other full-strength $15 pack.
+ *
+ * `from` on each entry names the page its values came from.
+ */
+const PRICE = [
+  ['$15/p', '$120/c'],
+  ['$25/p', '$200/c'],
+  ['$30/p', '$240/c'],
+];
+
+/** The supplied page every researched one is assembled from. */
+const TEMPLATE = 'Changbaishan (Soft Red).svg';
+
+const RESEARCHED = {
+  '121_Hadmen-Golden_Classic': {
+    from: 'Hadmen (Gold Classic)',
+    brand: 'Hadmen',
+    variant: 'Golden Classic',
+    price: 0,
+    notes: 'Notes of Traditional, Harsh, Smoky',
+    menthol: 'N',
+    harshness: 'hard',
+    pairings: ['Peanuts', 'Baijiu', 'Sour Diesel (Sativa)'],
+  },
+  '148_Double_Happiness-Soft_Nanyang': {
+    from: 'Double Happiness (Soft Nanyang)',
+    brand: 'Double Happiness',
+    variant: 'Soft Nanyang',
+    price: 0,
+    notes: 'Notes of Mild, Sweet, Floral',
+    menthol: 'N',
+    harshness: 'Lite',
+    pairings: ['Almond Cake', 'Oolong Tea', 'Wedding Cake (Hybrid)'],
+  },
+  '207_Huanghelou-1916': {
+    from: 'Huanghelou (1916 Hard)',
+    brand: 'Huanghelou',
+    variant: '1916',
+    price: 2,
+    notes: 'Notes of Robust, Woody, Smooth',
+    menthol: 'N',
+    harshness: 'hard',
+    pairings: ['Truffle Pasta', 'Cabernet Sauvignon', 'Hindu Kush (Indica)'],
+  },
+  '223_Huanghelou-1916': {
+    from: 'Huanghelou (1916 Soft)',
+    brand: 'Huanghelou',
+    variant: '1916',
+    price: 2,
+    notes: 'Notes of Pure, Earthy, Luxurious',
+    menthol: 'N',
+    harshness: 'Lite',
+    pairings: ['Wagyu Beef', 'Aged Scotch', 'Afghan Kush (Indica)'],
+  },
+  '209_Huanghelou-Blue': {
+    from: 'Huanghelou (Blue Hard)',
+    brand: 'Huanghelou',
+    variant: 'Blue',
+    price: 1,
+    notes: 'Notes of Classic, Toasted, Mild',
+    menthol: 'N',
+    harshness: 'Lite',
+    pairings: ['Pretzels', 'Pilsner', 'Sour Diesel (Sativa)'],
+  },
+  '213_Nanjing-Red': {
+    from: 'Nanjing (Black)',
+    brand: 'Nanjing',
+    variant: 'Red',
+    price: 0,
+    notes: 'Notes of Robust, Earthy, Toasted',
+    menthol: 'N',
+    harshness: 'hard',
+    pairings: ['BBQ Ribs', 'Amber Ale', 'OG Kush (Indica)'],
+  },
+  '237_Nanjing-Red': {
+    from: 'Nanjing (Black)',
+    brand: 'Nanjing',
+    variant: 'Red',
+    price: 0,
+    notes: 'Notes of Robust, Earthy, Toasted',
+    menthol: 'N',
+    harshness: 'hard',
+    pairings: ['BBQ Ribs', 'Amber Ale', 'OG Kush (Indica)'],
+  },
+  '214_Nanjing-Gold': {
+    from: 'Nanjing (Golden Dragon)',
+    brand: 'Nanjing',
+    variant: 'Gold',
+    price: 1,
+    notes: 'Notes of Sweet, Toasted, Aromatic',
+    menthol: 'N',
+    harshness: 'mid',
+    pairings: ['Nuts', 'Pilsner', 'Pineapple Express (Sativa)'],
+  },
+  '238_Nanjing-Gold': {
+    from: 'Nanjing (Golden Dragon)',
+    brand: 'Nanjing',
+    variant: 'Gold',
+    price: 1,
+    notes: 'Notes of Sweet, Toasted, Aromatic',
+    menthol: 'N',
+    harshness: 'mid',
+    pairings: ['Nuts', 'Pilsner', 'Pineapple Express (Sativa)'],
+  },
+};
+
+/** Which <text> in the template each field fills. Measured, not guessed. */
+const SLOT = {
+  brand: 0,
+  variant: 1,
+  full: 2,
+  pricePack: 3,
+  priceCarton: 4,
+  notes: 5,
+  menthol: 9,
+  harshness: 10,
+  pair0: 11,
+  pair1: 12,
+  pair2: 13,
+};
 
 const DROP = new Set(['pack', 'size', 'the', 'of', 'a', 'and', 'cigarettes', 'cigarette']);
 const ALIAS = {
@@ -236,6 +391,231 @@ for (const file of files) {
   pages.push({ id: pack.id, name: pack.name, source: label });
 }
 
+/** Swap the content of the nth <text>, leaving its position and size. */
+function setText(svg, nth, value, fontSize) {
+  let seen = -1;
+  return svg.replace(/(<text\b[^>]*>)([\s\S]*?)(<\/text>)/g, (whole, open, _body, close) => {
+    seen++;
+    if (seen !== nth) return whole;
+    const tag = fontSize ? open.replace(/font-size="[0-9.]+"/, `font-size="${fontSize}"`) : open;
+    return tag + String(value).replace(/&/g, '&amp;').replace(/</g, '&lt;') + close;
+  });
+}
+
+// Nearly every field is sized to its own words. The tasting note sits in a
+// fixed red strip and the owner fitted each one to it — 143 different sizes
+// across the 227, from 6.68 to 10.5, all landing at about the same width —
+// and the names, the carton price, the harshness grade and the pairings are
+// fitted the same way. The template's sizes are only right for its own
+// words: "Robust, Earthy, Toasted" at Changbaishan's 9.02 ran off both ends
+// of the strip.
+//
+// So each field takes the size the owner gave that exact phrase in that
+// slot. The only strings the owner never wrote are some of the names —
+// "Nanjing (Red)" is new — and those take the size the owner gave the
+// nearest-length string in the same slot.
+/**
+ * The two graded boxes are colour-coded, and the template only carries one
+ * of the five states. Taken verbatim from the owner's pages: the box behind
+ * the value changes with it, not just the lettering.
+ *
+ *   Menthol   N     black box, white letter
+ *             Y     white box with a black rule, black letter
+ *   Harshness Lite  black box, white word
+ *             hard  black box, RED word
+ *             mid   no fill, a black rule, black word
+ *
+ * Changbaishan is N and Lite, so seven of the ten researched pages would
+ * have come out with the wrong box had this been left to the template.
+ */
+const STATE = {
+  menthol: {
+    N: { rect: '<rect x="48" y="471.5" width="68" height="63" fill="black"/>', fill: 'white' },
+    Y: {
+      rect: '<rect x="48" y="471.5" width="68" height="63" fill="white" stroke="black" stroke-width="3"/>',
+      fill: 'black',
+    },
+  },
+  harshness: {
+    Lite: { rect: '<rect x="140" y="471.5" width="68" height="63" fill="black"/>', fill: 'white' },
+    hard: { rect: '<rect x="140" y="471.5" width="68" height="63" fill="black"/>', fill: '#FF0000' },
+    mid: {
+      rect: '<rect x="141.5" y="473" width="65" height="60" fill="none" stroke="black" stroke-width="3"/>',
+      fill: 'black',
+    },
+  },
+};
+
+/** Swap the box before the nth text, and that text's colour, together. */
+function setState(svg, nth, state) {
+  const texts = [...svg.matchAll(/<text\b[^>]*>[\s\S]*?<\/text>/g)];
+  const target = texts[nth];
+  if (!target) throw new Error(`no text at slot ${nth}`);
+  const before = svg.slice(0, target.index);
+  const rectStart = before.lastIndexOf('<rect');
+  const rectEnd = svg.indexOf('/>', rectStart) + 2;
+  if (rectStart < 0 || rectEnd < rectStart) throw new Error(`no box before slot ${nth}`);
+  const tag = target[0].replace(/fill="[^"]+"/, `fill="${state.fill}"`);
+  return svg.slice(0, rectStart) + state.rect + svg.slice(rectEnd, target.index) + tag +
+    svg.slice(target.index + target[0].length);
+}
+
+const slotSizes = new Map(Object.values(SLOT).map((i) => [i, { byText: new Map(), byLen: [] }]));
+function sizeFor(slot, value) {
+  const { byText, byLen } = slotSizes.get(slot);
+  if (byText.has(value)) return byText.get(value);
+  let best = null;
+  for (const [len, size] of byLen) {
+    if (!best || Math.abs(len - value.length) < Math.abs(best[0] - value.length)) best = [len, size];
+  }
+  return best?.[1];
+}
+
+// Every value on a researched page must be one the owner already used.
+// The vocabulary is read off the supplied vectors, slot by slot, so it is
+// whatever the owner wrote and nothing else.
+const vocabulary = Object.fromEntries(Object.keys(SLOT).map((k) => [k, new Set()]));
+for (const file of readdirSync(SRC).filter((f) => f.endsWith('.svg'))) {
+  const texts = [...readFileSync(`${SRC}/${file}`, 'utf8').matchAll(/<text\b[^>]*>([\s\S]*?)<\/text>/g)].map(
+    (m) => m[1].replace(/<[^>]+>/g, '').replace(/&amp;/g, '&').replace(/&#x27;/g, "'").replace(/\s+/g, ' ').trim(),
+  );
+  for (const [k, i] of Object.entries(SLOT)) vocabulary[k].add(texts[i]);
+  const tags = [...readFileSync(`${SRC}/${file}`, 'utf8').matchAll(/<text\b[^>]*>/g)].map((m) => m[0]);
+  for (const i of Object.values(SLOT)) {
+    const size = /font-size="([0-9.]+)"/.exec(tags[i] ?? '')?.[1];
+    if (!size || texts[i] == null) continue;
+    const rec = slotSizes.get(i);
+    if (!rec.byText.has(texts[i])) rec.byText.set(texts[i], size);
+    rec.byLen.push([texts[i].length, size]);
+  }
+}
+for (const [id, copy] of Object.entries(RESEARCHED)) {
+  const [pp, pc] = PRICE[copy.price];
+  const check = {
+    pricePack: pp,
+    priceCarton: pc,
+    notes: copy.notes,
+    menthol: copy.menthol,
+    harshness: copy.harshness,
+    pair0: copy.pairings[0],
+    pair1: copy.pairings[1],
+    pair2: copy.pairings[2],
+  };
+  for (const [k, value] of Object.entries(check)) {
+    if (!vocabulary[k].has(value)) {
+      throw new Error(`${id}: "${value}" is not a ${k} the owner has used on any supplied page`);
+    }
+  }
+}
+
+// the pages the owner had no vector for, assembled from the template
+const template = readFileSync(`${SRC}/${TEMPLATE}`, 'utf8');
+let researched = 0;
+for (const [id, copy] of Object.entries(RESEARCHED)) {
+  const pack = packs.find((p) => p.id === id);
+  if (!pack) throw new Error(`RESEARCHED has ${id}, which is not a pack`);
+  if (claimed.has(id)) throw new Error(`${id} already has a page from a vector`);
+
+  let svg = template;
+
+  // the pack's own photograph, taken from the mark already built for the
+  // landing row — it is the same crop, already checked by eye
+  const mark = readFileSync(`public/cigs/${id}.svg`, 'utf8');
+  const photo = /base64,([A-Za-z0-9+/=]+)"/.exec(mark)?.[1];
+  if (!photo) throw new Error(`${id}: no photograph in public/cigs/${id}.svg`);
+  const imgs = images(svg);
+  const seal = imgs.find(
+    (i) => near(i.x, SEAL_AT.x) && near(i.y, SEAL_AT.y) && near(i.w, SEAL_AT.w),
+  );
+  if (!seal) throw new Error(`${TEMPLATE}: no seal to strip`);
+  // the pack photograph is the one image drawn without preserving its
+  // aspect — it does not need to, because its box is already cut to it
+  const shot = imgs.find((i) => i.tag.includes('preserveAspectRatio="none"'));
+  if (!shot) throw new Error(`${TEMPLATE}: no pack photograph to replace`);
+  svg = svg.replace(seal.tag, '');
+
+  // The photograph's box is fitted to the pack, not fixed: across the 227
+  // it is always as large as fits inside 103x161 at the pack's own aspect,
+  // centred on 100.5, 348.5. The red frame is the same box. So both have
+  // to be recomputed here, or this pack would be stretched into the shape
+  // of the one the template came from.
+  const aspect = pack.w / pack.h;
+  const scale = Math.min(FRAME.w / (aspect * FRAME.h), 1);
+  const shotW = aspect * FRAME.h * scale;
+  const shotH = FRAME.h * scale;
+  const shotX = FRAME.cx - shotW / 2;
+  const shotY = FRAME.cy - shotH / 2;
+  const box = (tag) =>
+    tag
+      .replace(/\sx="[-0-9.]+"/, ` x="${shotX.toFixed(2)}"`)
+      .replace(/\sy="[-0-9.]+"/, ` y="${shotY.toFixed(2)}"`)
+      .replace(/\swidth="[-0-9.]+"/, ` width="${shotW.toFixed(2)}"`)
+      .replace(/\sheight="[-0-9.]+"/, ` height="${shotH.toFixed(2)}"`);
+
+  svg = svg.replace(shot.tag, box(shot.tag).replace(/href="[^"]*"/, `href="data:image/webp;base64,${photo}"`));
+  const frame = /<rect[^>]*stroke="#FF0000"[^>]*\/>/.exec(svg)?.[0];
+  if (!frame) throw new Error(`${TEMPLATE}: no red frame around the photograph`);
+  svg = svg.replace(frame, box(frame));
+
+  const [pp, pc] = PRICE[copy.price];
+  const notes = copy.notes;
+  const fields = {
+    brand: copy.brand,
+    variant: copy.variant,
+    full: `${copy.brand} (${copy.variant})`,
+    pricePack: pp,
+    priceCarton: pc,
+    notes,
+    menthol: copy.menthol,
+    harshness: copy.harshness,
+    pair0: copy.pairings[0],
+    pair1: copy.pairings[1],
+    pair2: copy.pairings[2],
+  };
+  for (const [k, value] of Object.entries(fields)) {
+    const size = sizeFor(SLOT[k], value);
+    if (!size) throw new Error(`${id}: no size on record for the ${k} slot`);
+    svg = setText(svg, SLOT[k], value, size);
+  }
+  // the graded boxes carry the state in their colour, not only their word
+  const mentholState = STATE.menthol[copy.menthol];
+  const harshnessState = STATE.harshness[copy.harshness];
+  if (!mentholState) throw new Error(`${id}: no box for menthol "${copy.menthol}"`);
+  if (!harshnessState) throw new Error(`${id}: no box for harshness "${copy.harshness}"`);
+  svg = setState(svg, SLOT.menthol, mentholState);
+  svg = setState(svg, SLOT.harshness, harshnessState);
+
+  // the template's own rasters still need bringing down
+  for (const img of images(svg)) {
+    if (!img.data || !img.w || !img.h) continue;
+    if (img.data === photo) continue; // already a sized WebP
+    const raw = Buffer.from(img.data, 'base64');
+    const want = { w: Math.round(img.w * OVERSAMPLE), h: Math.round(img.h * OVERSAMPLE) };
+    const meta = await sharp(raw).metadata();
+    const pipe = sharp(raw);
+    if (meta.width > want.w || meta.height > want.h) {
+      pipe.resize({ width: want.w, height: want.h, fit: 'inside' });
+    }
+    const webp = await pipe.webp({ quality: QUALITY, effort: 6 }).toBuffer();
+    if (webp.length >= raw.length) continue;
+    svg = svg.replace(
+      `data:image/${img.mime};base64,${img.data}`,
+      `data:image/webp;base64,${webp.toString('base64')}`,
+    );
+  }
+
+  svg = svg.replace(
+    /<svg\b[^>]*?>/,
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${CONTENT.w}" height="${CONTENT.h}" ` +
+      `viewBox="${CONTENT.x} ${CONTENT.y} ${CONTENT.w} ${CONTENT.h}">`,
+  );
+
+  writeFileSync(`${OUT_DIR}/${id}.svg`, svg);
+  claimed.set(id, `researched from ${TEMPLATE}`);
+  pages.push({ id, name: pack.name, source: 'researched' });
+  researched++;
+}
+
 pages.sort((a, b) => a.id.localeCompare(b.id, 'en', { numeric: true }));
 
 writeFileSync(
@@ -256,7 +636,7 @@ writeFileSync(
   )}\n`,
 );
 
-console.log(`${pages.length} pages -> ${OUT_DIR}`);
+console.log(`${pages.length} pages -> ${OUT_DIR} (${researched} assembled from the template)`);
 console.log(
   `  ${Math.round(bytesIn / 1024 / 1024)}MB of vectors -> ${Math.round(bytesOut / 1024 / 1024)}MB ` +
     `(${Math.round(bytesOut / Math.max(1, pages.length) / 1024)}KB a page)`,
