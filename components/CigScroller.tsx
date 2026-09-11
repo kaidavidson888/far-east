@@ -88,6 +88,7 @@ export function CigScroller({
   const lastTsRef = useRef(0);
   const widthRef = useRef(0);
   const dragRef = useRef({ x: 0, t: 0, moved: 0 });
+  const capturedRef = useRef(false);
 
   const [shown, setShown] = useState<Shown[]>([]);
   const [selected, setSelected] = useState(-1);
@@ -244,16 +245,15 @@ export function CigScroller({
 
   const onPointerDown = (e: React.PointerEvent) => {
     if (e.button !== 0) return;
-    // Stop the browser picking the pack up as an image and dragging it —
-    // that hijacks the gesture and the row stops following the pointer,
-    // which makes scrolling by hand impossible. Focus has to be taken by
-    // hand as a result, since preventing the default also prevents that.
-    e.preventDefault();
-    rowRef.current?.focus({ preventScroll: true });
+    // NOT preventDefault here. Doing that stops the browser picking a pack
+    // up as an image, but it also suppresses the compatibility mouse
+    // events that follow — including the click — so the pack underneath
+    // stopped being pressable at all. Dragging is held off by
+    // draggable={false} on the image and by onDragStart below, which cost
+    // nothing else; selection is held off by user-select in the CSS.
     draggingRef.current = true;
     velRef.current = 0;
     dragRef.current = { x: e.clientX, t: performance.now(), moved: 0 };
-    e.currentTarget.setPointerCapture?.(e.pointerId);
     run();
   };
   const onPointerMove = (e: React.PointerEvent) => {
@@ -264,11 +264,22 @@ export function CigScroller({
     offsetRef.current -= dx;
     dragRef.current = { x: e.clientX, t: now, moved: dragRef.current.moved + Math.abs(dx) };
     velRef.current = -dx / dt;
+    // Capture only once this is really a drag. Capturing on pointerdown
+    // retargets the compatibility mouse events to the row, so the click
+    // landed on the row instead of the pack's link and the packs were not
+    // pressable. A press that never moves never captures.
+    if (!capturedRef.current && dragRef.current.moved > SLOP) {
+      capturedRef.current = true;
+      e.currentTarget.setPointerCapture?.(e.pointerId);
+    }
   };
   const endDrag = (e: React.PointerEvent) => {
     if (!draggingRef.current) return;
     draggingRef.current = false;
-    e.currentTarget.releasePointerCapture?.(e.pointerId);
+    if (capturedRef.current) {
+      capturedRef.current = false;
+      e.currentTarget.releasePointerCapture?.(e.pointerId);
+    }
     run();
   };
 
