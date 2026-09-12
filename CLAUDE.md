@@ -578,19 +578,35 @@ the brand assets and review text in this repo are visible to anyone.
    values in `lib/seed.ts`.
 5. **Instagram link is a placeholder** — two constants at the top of `app/page.tsx`.
 6. `subscribers` table is unused (newsletter removed); drop it in a migration when convenient.
-7. **THE EMAIL PROVIDER IS STILL SWITCHED OFF, AND THE SPLASH NOW NEEDS IT.**
-   Both `signInWithPassword` and `signUp` answer `email_provider_disabled`, so the
-   box cannot sign anybody in or make anybody an account until **Authentication
-   → Providers → Email** is on. It is reported in words in the box rather than
-   as a flash, because it is not the reader's fault. Google alone is already
-   enabled with a real client id and needs nothing.
-   Also still unconfirmed: whether `http://localhost:3000/**` and the deployed
-   origin are on the Redirect URLs allow-list (Authentication → URL
-   Configuration). They are enforced at the callback, so it cannot be checked
-   without completing a real sign-in — and a missing entry sends the last hop to
-   the Site URL instead, which is what "it sent me to a Vercel login" was. It also means a signed-in press cannot be
-   verified end to end locally — the DB layer under it is covered by
-   `npm run verify:db` instead.
+7. **The email provider is ON now** (owner switched it on; verified 2026-09-12
+   against the live project). `/auth/v1/settings` lists `google, email`, a wrong
+   password answers `invalid_credentials` rather than `email_provider_disabled`,
+   and a correct one returns a real session. The splash can sign people in.
+   Three things about it that are worth knowing before debugging it:
+   - **`mailer_autoconfirm` is false.** A brand-new `signUp` lands UNCONFIRMED
+     and issues **no session** — which suits the design (Google is what verifies
+     them), but means step 4 cannot be tested by looking for a session.
+   - **GoTrue validates the address's domain at signup.** `signUp` answers
+     `email_address_invalid` for a made-up domain, so a throwaway address cannot
+     be used to test account creation. `.verify/temp-user.mjs` sidesteps this by
+     inserting into `auth.users` directly, which is why it works — it never goes
+     through GoTrue. There is no way to test the create-an-account path without
+     a real deliverable address.
+   - What the splash keys on is a `google` row in `auth.identities`, and both
+     branches are verified: without one it sends them to Google, with one it
+     lets them in.
+
+   **The Redirect URLs allow-list still cannot be checked from outside, and
+   three plausible probes all give a FALSE PASS.** Do not repeat them:
+   `/auth/v1/authorize` echoes any `redirect_to` back, including
+   `https://evil.example/steal`; `/auth/v1/recover?redirect_to=…` answers 200
+   for the same; and the `state` parameter is an opaque UUID in this GoTrue
+   version, not a JWT carrying a `referrer` claim, so nothing can be decoded out
+   of it. The list is enforced **only at the callback**, so the one real test is
+   completing a Google sign-in and seeing where the last hop lands. A missing
+   entry sends it to the Site URL instead, which is what "it sent me to a Vercel
+   login" was. That is also why a signed-in press cannot be verified end to end
+   locally — the DB layer under it is covered by `npm run verify:db` instead.
 8. **The pack shelf has no shelf page.** `/favorites` lists catalogue products
    through `favoritesWithNotes`; `pack_favorites` is a separate table and
    nothing renders it yet, so a bookmark can be added and not seen anywhere
