@@ -28,10 +28,10 @@
  * TWO ARRANGEMENTS. The owner asked for the page rearranged — the title
  * block up under the logo on the landing page's own left edge, everything
  * below it spread down the whole page rather than stopping three quarters
- * of the way — and for that arrangement to be the phone's. So each vector
- * is cut twice: the design as drawn into public/cigpages, and the rearranged
- * one into public/cigpages/mobile. scripts/lib/cigpage-layout.mjs does the
- * moving and explains how.
+ * of the way — and for that arrangement to be the desktop's. So each vector
+ * is cut twice: the design as drawn into public/cigpages, which is what a
+ * phone gets, and the rearranged one into public/cigpages/desktop.
+ * scripts/lib/cigpage-layout.mjs does the moving and explains how.
  *
  * SIZE. The vectors are 307KB each — 77MB for the set — and almost all of
  * that is one full-resolution PNG of the pack, 226KB, drawn into a 103x155
@@ -43,11 +43,11 @@
  */
 import { readdirSync, readFileSync, writeFileSync, mkdirSync, rmSync } from 'node:fs';
 import sharp from 'sharp';
-import { relayout, FRAME as PAGE_FRAME } from './lib/cigpage-layout.mjs';
+import { relayout, FRAME as PAGE_FRAME, BODY_LEFT } from './lib/cigpage-layout.mjs';
 
 const SRC = 'scripts/assets/cigpages';
 const OUT_DIR = 'public/cigpages';
-const MOBILE_DIR = 'public/cigpages/mobile';
+const DESKTOP_DIR = 'public/cigpages/desktop';
 const MANIFEST = 'lib/cigpages.json';
 const PACKS = 'lib/cigs.json';
 
@@ -321,7 +321,7 @@ const files = readdirSync(SRC)
 
 rmSync(OUT_DIR, { recursive: true, force: true });
 mkdirSync(OUT_DIR, { recursive: true });
-mkdirSync(MOBILE_DIR, { recursive: true });
+mkdirSync(DESKTOP_DIR, { recursive: true });
 
 /** Cut the page down to a frame, so it can be centred with equal margins. */
 const cropTo = (svg, box) =>
@@ -334,17 +334,17 @@ const cropTo = (svg, box) =>
 /**
  * Write both arrangements of one page. The rearranging runs on the whole
  * design, before either crop, because it works in the design's own
- * coordinates — and the desktop cut is taken first, off the untouched one.
+ * coordinates — and the phone's cut is taken first, off the untouched one.
  */
 const factors = [];
 function emit(svg, id, label) {
-  const desktop = cropTo(svg, CONTENT);
-  writeFileSync(`${OUT_DIR}/${id}.svg`, desktop);
+  const phone = cropTo(svg, CONTENT);
+  writeFileSync(`${OUT_DIR}/${id}.svg`, phone);
   const moved = relayout(svg, label);
-  const mobile = cropTo(moved.svg, PAGE_FRAME);
-  writeFileSync(`${MOBILE_DIR}/${id}.svg`, mobile);
+  const wide = cropTo(moved.svg, PAGE_FRAME);
+  writeFileSync(`${DESKTOP_DIR}/${id}.svg`, wide);
   factors.push(moved.k);
-  return desktop.length + mobile.length;
+  return phone.length + wide.length;
 }
 
 const pages = [];
@@ -688,8 +688,14 @@ writeFileSync(
       body: { w: CONTENT.w, h: CONTENT.h },
       /** The design's top margin; the sides come from centring. */
       top: CONTENT.y,
-      /** The phone's arrangement, in public/cigpages/mobile. */
-      mobile: { body: { w: PAGE_FRAME.w, h: PAGE_FRAME.h }, top: PAGE_FRAME.y },
+      /** The rearranged one, in public/cigpages/desktop. It is anchored to
+       *  the page's left margin rather than centred, so the title stays
+       *  under the logo at any width. */
+      desktop: {
+        body: { w: PAGE_FRAME.w, h: PAGE_FRAME.h },
+        top: PAGE_FRAME.y,
+        left: BODY_LEFT,
+      },
       count: pages.length,
       pages,
     },
@@ -699,12 +705,12 @@ writeFileSync(
 );
 
 console.log(
-  `${pages.length} pages -> ${OUT_DIR} + ${MOBILE_DIR} (${researched} assembled from the template)`,
+  `${pages.length} pages -> ${OUT_DIR} + ${DESKTOP_DIR} (${researched} assembled from the template)`,
 );
 if (factors.length) {
   const k = factors.slice().sort((a, b) => a - b);
   console.log(
-    `  phone gaps stretched x${k[0].toFixed(2)}..${k[k.length - 1].toFixed(2)} ` +
+    `  desktop gaps stretched x${k[0].toFixed(2)}..${k[k.length - 1].toFixed(2)} ` +
       `(median ${k[Math.floor(k.length / 2)].toFixed(2)})`,
   );
 }

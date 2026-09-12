@@ -17,12 +17,20 @@ import { SealButton } from './SealButton';
  * which is what makes the left and right margins equal at any width. It
  * holds the design's 18px top margin.
  *
- * TWO ARRANGEMENTS. The phone gets the one the owner asked for: the title
+ * TWO ARRANGEMENTS. The desktop gets the one the owner asked for: the title
  * block up under the logo on the landing page's own left edge, and
  * everything below it spread down the whole page instead of stopping three
- * quarters of the way. The desktop keeps the design as it was drawn. They
- * are two cuts of the same vector, chosen on the server so the page arrives
- * already right rather than rearranging itself after hydration.
+ * quarters of the way. The phone keeps the design as it was drawn, which is
+ * a phone-shaped page to begin with. They are two cuts of the same vector,
+ * chosen on the server so the page arrives already right rather than
+ * rearranging itself after hydration.
+ *
+ * AND THEY ARE PLACED DIFFERENTLY. The phone's is centred, which is what
+ * makes its side margins equal. The desktop's is anchored to the page's left
+ * margin instead, because its title has to stay under the logo — and the
+ * logo is pinned to the page's edge, so a centred column would carry the
+ * title away from it the moment the window grew. The space that would have
+ * been a right margin flexes between the body and the seal's corner.
  *
  * THE LOGO AND THE SEAL ARE THE PAGE'S, NOT THE ARTWORK'S. Both are taken
  * out of the vector by the build and placed here instead, against the
@@ -43,28 +51,28 @@ import { SealButton } from './SealButton';
  * wrapped in an anchor: two controls on one mark would be announced twice,
  * which is how the landing page handles its logo too.
  */
-const { body: wide, top: wideTop, mobile } = geometry;
+const { body: drawn, top: drawnTop, desktop } = geometry;
 const LOGO = landing.parts.logo;
 const SEAL_SIZE = landing.parts.logo.h;
 
 export function CigPage({ id, name, device }: { id: string; name: string; device: ArtDevice }) {
   const phone = device === 'mobile';
-  const body = phone ? mobile.body : wide;
-  const top = phone ? mobile.top : wideTop;
-  const src = phone ? `/cigpages/mobile/${id}.svg` : `/cigpages/${id}.svg`;
+  const body = phone ? drawn : desktop.body;
+  const top = phone ? drawnTop : desktop.top;
+  const src = phone ? `/cigpages/${id}.svg` : `/cigpages/desktop/${id}.svg`;
+  // centred on the phone (the stylesheet rounds the 50% to a whole pixel),
+  // held at the page's left margin on the desktop
+  const place = phone
+    ? // in pixels, not -50%: a half-pixel offset resamples the artwork
+      { transform: `translateX(-${Math.round(body.w / 2)}px)` }
+    : { left: `${desktop.left}px`, transform: 'none' };
 
   return (
     <div className="cigpage">
       <div className="cigpage-stage" style={{ minHeight: `${top + body.h + top}px` }}>
         <div
           className="cigpage-body"
-          style={{
-            width: `${body.w}px`,
-            height: `${body.h}px`,
-            top: `${top}px`,
-            // in pixels, not -50%: a half-pixel offset resamples the artwork
-            transform: `translateX(-${Math.round(body.w / 2)}px)`,
-          }}
+          style={{ width: `${body.w}px`, height: `${body.h}px`, top: `${top}px`, ...place }}
         >
           <img
             className="cigpage-art"

@@ -22,8 +22,16 @@
  * the crop were measured off the ink, moving the title would move the crop,
  * which would move the title: the alignment would chase itself. So the crop
  * is the design's own frame (x=39, the width the logo used to start at) and
- * the arithmetic is stable. At 390 wide the body lands at stage x=43, which
- * puts vector x=44 at stage x=48 — the logo's 45 plus the OFFERS 3.
+ * the arithmetic is stable.
+ *
+ * WHICH SETS WHERE THE BODY GOES. The title sits 5 in from the frame's left
+ * edge and has to reach stage 48, so the body's own left edge has to be at
+ * 43 — and it has to be there at every width, not only the design's. This
+ * arrangement is therefore anchored to the page's left margin rather than
+ * centred: a centred column on a wide window would carry the title away from
+ * a logo that stays pinned to the page's edge, and being under the logo is
+ * the whole point of it. The one the phone gets is still centred, which is
+ * what makes its side margins equal.
  */
 import { readFileSync } from 'node:fs';
 
@@ -48,6 +56,8 @@ const fromStage = (x) => x - BODY_STAGE_X + FRAME.x;
 export const TITLE_X = fromStage(LOGO_STAGE_X + (OFFERS.x - LOGO_STAGE_X)); // 44
 /** The title's ink top, likewise. */
 export const TITLE_TOP = OFFERS.y;
+/** Where the body's left edge has to sit for the title to land on OFFERS. */
+export const BODY_LEFT = OFFERS.x - (TITLE_X - FRAME.x);
 
 /** The bands, in the order they appear down the page. */
 const BANDS = [

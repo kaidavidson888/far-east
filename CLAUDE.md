@@ -175,22 +175,29 @@ landing row uses, and closes the red frame onto it with no margin, which is how
 the owner's vectors draw it (rect and image share one box). **The logo there is
 the menu, not a link** — the menu's home box is what goes back.
 
-**Each vector is cut twice.** The desktop keeps the design as drawn; the phone
-gets the owner's rearrangement — the title block up under the logo on the
-landing page's own left edge, everything below it spread down the whole page.
-`scripts/lib/cigpage-layout.mjs` does the moving, and two things in it are worth
-knowing before touching it:
+**Each vector is cut twice.** The phone keeps the design as drawn — it is a
+phone-shaped page to begin with — and is centred, which is what makes its side
+margins equal. The **desktop** gets the owner's rearrangement: the title block
+up under the logo on the landing page's own left edge, everything below it
+spread down the whole page. `scripts/lib/cigpage-layout.mjs` does the moving,
+and these are worth knowing before touching it:
 - **It moves bands, not elements.** Each vector is a flat list of rects, images
   and texts with absolute coordinates and no ids, but all 227 lay the page out
   in the same six horizontal bands, which never interleave (surveyed: two
   shapes, differing by one rect in the ratings band). So a band's run of
   elements is wrapped in a `<g translate>` and nothing inside is retyped.
-- **The phone's frame is fixed, not measured.** The body is centred while the
-  logo is pinned to the page's edge, so they only line up at the design's own
-  width — and the title has to line up with the logo. A crop measured off the
-  ink would move when the title moved, which would move the title: the
-  alignment would chase itself. The frame is the design's own (x=39, w=304),
-  which puts vector x=44 at stage x=48 — the logo's 45 plus the OFFERS 3.
+- **The frame is fixed, not measured.** A crop measured off the ink would move
+  when the title moved, which would move the title: the alignment would chase
+  itself. The frame is the design's own (x=39, w=304), which puts the title's
+  vector x=44 at stage x=48 — the logo's 45 plus the OFFERS 3.
+- **The desktop body is anchored left, not centred** (`desktop.left` = 43 in the
+  manifest). It has to be: the logo is pinned to the page's edge, so a centred
+  column would carry the title away from it the moment the window grew, and
+  being under the logo is the whole point of the arrangement. **So the desktop
+  page does not have equal side margins** — the space that would have been a
+  right margin flexes between the body and the seal's corner. That is a
+  deliberate trade the owner chose, not an oversight; do not "fix" it by
+  centring.
 - The gaps between the lower bands keep their **ratio** and are stretched by a
   common factor (~2.9) to fill the page, rather than the elements being scaled:
   the content is already at the frame's full width, so scaling up would

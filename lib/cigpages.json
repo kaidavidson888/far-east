@@ -5,12 +5,13 @@
     "h": 712
   },
   "top": 18,
-  "mobile": {
+  "desktop": {
     "body": {
       "w": 304,
       "h": 808
     },
-    "top": 18
+    "top": 18,
+    "left": 43
   },
   "count": 235,
   "pages": [
