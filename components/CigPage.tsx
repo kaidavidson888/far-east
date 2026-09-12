@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import landing from '@/lib/landing-geometry.json';
 import geometry from '@/lib/cigpages.json';
 import { SealButton } from './SealButton';
 
@@ -15,26 +16,36 @@ import { SealButton } from './SealButton';
  * centred, which is what makes the left and right margins equal at any
  * width. It holds the design's 18px top margin.
  *
- * The logo is drawn by the vector and takes a transparent link on top,
- * which is how the landing page handles its own logo. It sits inside the
- * body rather than against the page edge, so it travels with the artwork
- * when the page is wider than the design. The seal does the opposite: it is
- * the animation button, pinned to the page's own right margin like every
- * other page on the site, and the vector's drawn copy is stripped out so
- * there are not two of them.
+ * THE LOGO AND THE SEAL ARE THE PAGE'S, NOT THE ARTWORK'S. Both are taken
+ * out of the vector by the build and placed here instead, against the
+ * page's own edges rather than against the body — the margin rule, the
+ * same as every other page on the site. Two reasons beyond consistency:
+ * the vector draws its logo as a raster, which reads soft at the size it
+ * is shown, and a logo that travelled with a centred body would sit in a
+ * different place on every width.
+ *
+ * Both come from the landing page's geometry, so the mark, its size and
+ * its margins are identical wherever you are: the logo at the landing's
+ * own 45 and 28, the seal as tall as the logo at the corner it always
+ * occupies.
  */
-const { body, top, logo } = geometry;
+const { body, top } = geometry;
+const LOGO = landing.parts.logo;
+const SEAL_SIZE = landing.parts.logo.h;
 
 export function CigPage({ id, name }: { id: string; name: string }) {
   return (
     <div className="cigpage">
-      <div
-        className="cigpage-stage"
-        style={{ minHeight: `${top + body.h + top}px` }}
-      >
+      <div className="cigpage-stage" style={{ minHeight: `${top + body.h + top}px` }}>
         <div
           className="cigpage-body"
-          style={{ width: `${body.w}px`, height: `${body.h}px`, top: `${top}px` }}
+          style={{
+            width: `${body.w}px`,
+            height: `${body.h}px`,
+            top: `${top}px`,
+            // in pixels, not -50%: a half-pixel offset resamples the artwork
+            transform: `translateX(-${Math.round(body.w / 2)}px)`,
+          }}
         >
           <img
             className="cigpage-art"
@@ -44,19 +55,24 @@ export function CigPage({ id, name }: { id: string; name: string }) {
             height={body.h}
             draggable={false}
           />
-          <Link
-            className="cigpage-logo"
-            href="/landing"
-            aria-label="遠東 — home"
-            style={{
-              left: `${logo.x}px`,
-              top: `${logo.y}px`,
-              width: `${logo.w}px`,
-              height: `${logo.h}px`,
-            }}
-          />
         </div>
-        <SealButton size={logo.h} />
+
+        <Link
+          className="cigpage-logo"
+          href="/landing"
+          aria-label="遠東 — home"
+          style={{ left: `${LOGO.x}px`, top: `${LOGO.y}px` }}
+        >
+          <img
+            src="/landing/parts/logo.svg"
+            alt=""
+            width={LOGO.w}
+            height={LOGO.h}
+            draggable={false}
+          />
+        </Link>
+
+        <SealButton size={SEAL_SIZE} />
       </div>
     </div>
   );

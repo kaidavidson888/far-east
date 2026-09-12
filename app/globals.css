@@ -4,6 +4,36 @@
    ============================================================ */
 
 /* ---------- Tokens ---------- */
+/* ------------------------------------------------------------ Far East --
+   The owner's own face, supplied as a webfont and self-hosted. It is what
+   anyone types into this site: every field, on every page.
+
+   What is in the file (read straight out of it, see the notes in CLAUDE.md):
+   64 glyphs — space, 0-9, A-Z, a-z, and nothing else. No full stop, no
+   comma, no apostrophe, no @, no CJK. Whatever is not in that list is drawn
+   by the next family in the stack, which is why unicode-range is declared
+   exactly: it keeps the browser from ever consulting this face for a
+   character it does not have, and keeps the file off pages that have no
+   letters to set in it.
+
+   usWeightClass is 700 and there is one weight in the file, so the range is
+   declared 400-700 — the same drawn face at either end, rather than the
+   browser faking a bold out of it. Metrics: 1000 upem, cap 700, x-height
+   510, and a mean lowercase advance of 0.67em, which is about a third wider
+   than any fallback; nothing can metric-match it, so the file is preloaded
+   in the document head instead and swaps within a frame.
+
+   Bump the number in the filename when the file is replaced — /fonts is
+   served immutable for a year (see next.config.mjs). */
+@font-face {
+  font-family: "Far East";
+  src: url("/fonts/far-east-1.woff2") format("woff2");
+  font-weight: 400 700;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0020, U+0030-0039, U+0041-005A, U+0061-007A;
+}
+
 :root {
   /* brand */
   --cinnabar: #c1272d;
@@ -35,6 +65,9 @@
   --font-display: "Exo 2", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --font-body: "Noto Serif", Georgia, "Times New Roman", serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  /* What the reader types, and what we set new copy in. The face has letters
+     and digits only; the rest of the stack draws the punctuation. */
+  --font-typed: "Far East", var(--font-display);
 
   /* layout */
   --container: 1280px;
@@ -285,13 +318,18 @@ ul, ol { list-style: none; }
 /* ---------- Inputs ---------- */
 .field { display: block; }
 .field > .label { color: var(--muted); display: block; margin-bottom: var(--xs); }
+/* Everything typed on this site is set in the owner's own face — the fields
+   here and the splash's, which is the rule for every field added after this.
+   font-synthesis is off because the file holds one weight: let it be the
+   weight it was drawn at rather than a smeared copy of it. */
 .input, .select, .textarea {
   width: 100%; background: var(--surface); color: var(--ink);
-  font-family: var(--font-display); font-size: 15px; line-height: 1.5;
+  font-family: var(--font-typed); font-size: 15px; line-height: 1.5;
+  font-synthesis: none;
   border: 1px solid var(--hairline); border-radius: var(--r-none);
   padding: 12px 16px; height: 48px;
 }
-.textarea { height: auto; min-height: 140px; font-family: var(--font-body); line-height: 1.6; resize: vertical; }
+.textarea { height: auto; min-height: 140px; line-height: 1.6; resize: vertical; }
 .input::placeholder, .textarea::placeholder { color: var(--disabled); }
 .input:focus, .select:focus, .textarea:focus { border-color: var(--hairline-strong); }
 .select {
@@ -544,8 +582,11 @@ ul, ol { list-style: none; }
 .splash-fields { position: static; }
 .splash-field-input {
   border: 0; background: transparent; border-radius: 0;
-  font-family: "Cormorant Unicase", Georgia, "Times New Roman", serif;
+  /* the owner's own face, the same as every other field on the site; it was
+     Cormorant Unicase only as a stand-in for the box's drawn lettering */
+  font-family: var(--font-typed);
   font-weight: 700;
+  font-synthesis: none;
   line-height: 1; color: #000000;
   caret-color: transparent;
   padding: 0;
@@ -679,8 +720,14 @@ ul, ol { list-style: none; }
    One page per cigarette, built from the supplied info-page vector. The
    body keeps its drawn size at every width and is centred, which is what
    makes the left and right margins equal; it holds the design's own top
-   margin. The logo rides inside the body, the seal is pinned to the page's
-   right edge like everywhere else on the site. */
+   margin.
+
+   The logo and the seal are NOT part of that body. The build takes both
+   out of the vector and they are placed against the page's own edges
+   instead, at the landing page's margins and the landing page's size --
+   the margin rule, the same as every other page on the site. A mark that
+   travelled with a centred body would sit somewhere different on every
+   width; and the vector drew its logo as a raster, which read soft. */
 .cigpage {
   position: fixed;
   inset: 0;
@@ -693,10 +740,16 @@ ul, ol { list-style: none; }
   width: 100%;
   height: 100%;
 }
+/* Centred, on a whole pixel. An odd stage width makes 50% land on .5, and a
+   body drawn into a half-pixel box is resampled row by row — the quietest
+   cause of blur on this site, and the reason the design's own marks are
+   rounded outward everywhere else. round() puts the left edge on an integer;
+   the half-width comes off in px from the component, not as another 50%.
+   A browser without round() keeps the plain 50% above it. */
 .cigpage-body {
   position: absolute;
   left: 50%;
-  transform: translateX(-50%);
+  left: round(50%, 1px);
 }
 .cigpage-art {
   display: block;
@@ -707,8 +760,12 @@ ul, ol { list-style: none; }
 }
 .cigpage-logo {
   position: absolute;
+  z-index: 2;
   display: block;
   -webkit-tap-highlight-color: transparent;
+}
+.cigpage-logo img {
+  display: block;
 }
 .cigpage-logo:focus-visible {
   outline: 2px solid #010101;

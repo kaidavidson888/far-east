@@ -360,9 +360,15 @@ for (const file of files) {
   );
   if (!seal) throw new Error(`${label}: no seal found at ${SEAL_AT.x},${SEAL_AT.y}`);
   svg = svg.replace(seal.tag, '');
+  svg = stripLogo(svg, label);
+
+  // the row's cleaned photograph, with the frame closed around it
+  const fitted = fitPhoto(svg, pack, label);
+  svg = fitted.svg;
 
   // every remaining raster down to 3x the size it is drawn at
   for (const img of images(svg)) {
+    if (img.data === fitted.photo) continue; // already a sized WebP
     if (!img.data || !img.w || !img.h) continue;
     const want = { w: Math.round(img.w * OVERSAMPLE), h: Math.round(img.h * OVERSAMPLE) };
     const raw = Buffer.from(img.data, 'base64');
@@ -446,6 +452,68 @@ const STATE = {
   },
 };
 
+/**
+ * Put the pack's own mark in the frame, and close the frame around it.
+ *
+ * Every page takes the same photograph the landing row uses — the one
+ * already cropped to the box, cleaned of catalogue numbers and loose
+ * cigarettes, on the page's white. The vectors carry their own
+ * photographs, but those are the uncleaned originals: the owner's Nanjing
+ * Black page has "180" printed under the pack.
+ *
+ * The frame closes on it exactly. Both the photograph and the red rule are
+ * the same rectangle — as large as fits inside FRAME at the pack's own
+ * aspect, centred on FRAME's centre — so there is no margin between the
+ * two, which is how the row draws it.
+ */
+function fitPhoto(svg, pack, label) {
+  const mark = readFileSync(`public/cigs/${pack.id}.svg`, 'utf8');
+  const photo = /base64,([A-Za-z0-9+/=]+)"/.exec(mark)?.[1];
+  if (!photo) throw new Error(`${label}: no photograph in public/cigs/${pack.id}.svg`);
+
+  // the pack photograph is the one image drawn without preserving its
+  // aspect — it does not need to, because its box is already cut to it
+  const shot = images(svg).find((i) => i.tag.includes('preserveAspectRatio="none"'));
+  if (!shot) throw new Error(`${label}: no pack photograph to replace`);
+
+  const aspect = pack.w / pack.h;
+  const scale = Math.min(FRAME.w / (aspect * FRAME.h), 1);
+  const w = aspect * FRAME.h * scale;
+  const h = FRAME.h * scale;
+  const x = FRAME.cx - w / 2;
+  const y = FRAME.cy - h / 2;
+  const box = (tag) =>
+    tag
+      .replace(/\sx="[-0-9.]+"/, ` x="${x.toFixed(2)}"`)
+      .replace(/\sy="[-0-9.]+"/, ` y="${y.toFixed(2)}"`)
+      .replace(/\swidth="[-0-9.]+"/, ` width="${w.toFixed(2)}"`)
+      .replace(/\sheight="[-0-9.]+"/, ` height="${h.toFixed(2)}"`);
+
+  let out = svg.replace(
+    shot.tag,
+    box(shot.tag).replace(/href="[^"]*"/, `href="data:image/webp;base64,${photo}"`),
+  );
+  const frame = /<rect[^>]*stroke="#FF0000"[^>]*\/>/.exec(out)?.[0];
+  if (!frame) throw new Error(`${label}: no red frame around the photograph`);
+  return { svg: out.replace(frame, box(frame)), photo };
+}
+
+/**
+ * Take the logo out of the artwork.
+ *
+ * The vector draws it as a raster, and at the size it is shown that reads
+ * soft. The page puts the landing page's own vector logo in its place, at
+ * the landing page's size, pinned to the page's margin — so it is the same
+ * mark in the same spot on every page of the site, and it is sharp.
+ */
+function stripLogo(svg, label) {
+  const logo = images(svg).find(
+    (i) => near(i.x, LOGO_AT.x) && near(i.y, LOGO_AT.y) && near(i.w, LOGO_AT.w),
+  );
+  if (!logo) throw new Error(`${label}: no logo found at ${LOGO_AT.x},${LOGO_AT.y}`);
+  return svg.replace(logo.tag, '');
+}
+
 /** Swap the box before the nth text, and that text's colour, together. */
 function setState(svg, nth, state) {
   const texts = [...svg.matchAll(/<text\b[^>]*>[\s\S]*?<\/text>/g)];
@@ -518,44 +586,17 @@ for (const [id, copy] of Object.entries(RESEARCHED)) {
 
   let svg = template;
 
-  // the pack's own photograph, taken from the mark already built for the
-  // landing row — it is the same crop, already checked by eye
-  const mark = readFileSync(`public/cigs/${id}.svg`, 'utf8');
-  const photo = /base64,([A-Za-z0-9+/=]+)"/.exec(mark)?.[1];
-  if (!photo) throw new Error(`${id}: no photograph in public/cigs/${id}.svg`);
-  const imgs = images(svg);
-  const seal = imgs.find(
+  // the same treatment as every other page: seal and logo out, the row's
+  // cleaned photograph in, frame closed around it
+  const sealTag = images(svg).find(
     (i) => near(i.x, SEAL_AT.x) && near(i.y, SEAL_AT.y) && near(i.w, SEAL_AT.w),
   );
-  if (!seal) throw new Error(`${TEMPLATE}: no seal to strip`);
-  // the pack photograph is the one image drawn without preserving its
-  // aspect — it does not need to, because its box is already cut to it
-  const shot = imgs.find((i) => i.tag.includes('preserveAspectRatio="none"'));
-  if (!shot) throw new Error(`${TEMPLATE}: no pack photograph to replace`);
-  svg = svg.replace(seal.tag, '');
-
-  // The photograph's box is fitted to the pack, not fixed: across the 227
-  // it is always as large as fits inside 103x161 at the pack's own aspect,
-  // centred on 100.5, 348.5. The red frame is the same box. So both have
-  // to be recomputed here, or this pack would be stretched into the shape
-  // of the one the template came from.
-  const aspect = pack.w / pack.h;
-  const scale = Math.min(FRAME.w / (aspect * FRAME.h), 1);
-  const shotW = aspect * FRAME.h * scale;
-  const shotH = FRAME.h * scale;
-  const shotX = FRAME.cx - shotW / 2;
-  const shotY = FRAME.cy - shotH / 2;
-  const box = (tag) =>
-    tag
-      .replace(/\sx="[-0-9.]+"/, ` x="${shotX.toFixed(2)}"`)
-      .replace(/\sy="[-0-9.]+"/, ` y="${shotY.toFixed(2)}"`)
-      .replace(/\swidth="[-0-9.]+"/, ` width="${shotW.toFixed(2)}"`)
-      .replace(/\sheight="[-0-9.]+"/, ` height="${shotH.toFixed(2)}"`);
-
-  svg = svg.replace(shot.tag, box(shot.tag).replace(/href="[^"]*"/, `href="data:image/webp;base64,${photo}"`));
-  const frame = /<rect[^>]*stroke="#FF0000"[^>]*\/>/.exec(svg)?.[0];
-  if (!frame) throw new Error(`${TEMPLATE}: no red frame around the photograph`);
-  svg = svg.replace(frame, box(frame));
+  if (!sealTag) throw new Error(`${TEMPLATE}: no seal to strip`);
+  svg = svg.replace(sealTag.tag, '');
+  svg = stripLogo(svg, id);
+  const fitted = fitPhoto(svg, pack, id);
+  svg = fitted.svg;
+  const photo = fitted.photo;
 
   const [pp, pc] = PRICE[copy.price];
   const notes = copy.notes;
@@ -626,8 +667,6 @@ writeFileSync(
       body: { w: CONTENT.w, h: CONTENT.h },
       /** The design's top margin; the sides come from centring. */
       top: CONTENT.y,
-      /** The logo's box within the cropped body, for the home link. */
-      logo: { x: LOGO_AT.x - CONTENT.x, y: LOGO_AT.y - CONTENT.y, w: LOGO_AT.w, h: LOGO_AT.h },
       count: pages.length,
       pages,
     },

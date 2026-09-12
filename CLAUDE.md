@@ -27,6 +27,10 @@ no CSS framework (tokens in `app/globals.css`). Deploys to Vercel.
 - `npm run demo` — three sample accounts, LOCAL ONLY; needs the secret key
 - `npm run build:cigs` — rebuilds the 282 pack marks in `public/cigs` and `lib/cigs.json`
   from the owner's `Cigs Images` folder (path at the top of `scripts/build-cigs.mjs`)
+- `npm run build:cigpages` — rebuilds the 235 pages in `public/cigpages` and
+  `lib/cigpages.json` from the owner's info-page vectors in `scripts/assets/cigpages`.
+  **Takes about half an hour** (it re-encodes every raster in every vector), so background
+  it. Re-run it after `build:cigs`: each page carries a copy of that pack's cleaned mark.
 
 ## Environment (`.env.local`, gitignored — never commit, never paste into chat)
 `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `DATABASE_URL`.
@@ -89,8 +93,11 @@ artwork to fit a frame — that scales the margins with it, which is the thing b
   part's SVG gets a fractional width, the browser reports its intrinsic size as the rounded
   integer, then draws it into the fractional CSS box — a scale of 1.0005 that resamples every
   row. The Privacy body was 295x514 intrinsic drawn into 295x514.25 and looked soft for it.
-  `inkBox` rounds outward, and `ArtworkPage` rounds the centring offset so an odd-width mark
-  does not land on a half pixel. Measuring a part by drawing its SVG to a canvas will NOT
+  `inkBox` rounds outward, and `ArtworkPage` rounds the centring offset — but only the mark's
+  own half-width, not the `left: 50%` under it, and 50% of an odd stage width is still a .5.
+  **The artwork pages are live with that half pixel today; see Known gaps.** The cigarette
+  page is the one that has it right: `left: round(50%, 1px)`, with a plain `left: 50%`
+  declared above it as the fallback. Measuring a part by drawing its SVG to a canvas will NOT
   catch this — the canvas draws at integer coordinates. Check `getBoundingClientRect` against
   `naturalWidth/Height` on the live page instead.
 - **The logo goes home.** On every page except the landing page and the splash, the 遠東
@@ -140,10 +147,60 @@ shared state machine; `LogoMenu` still carries its own copy and should be folded
 Flat-coloured frames must be quantised to a fixed palette and written lossless — a lossy encode
 will not keep a flat field flat, and per-frame palette choice drifts the white frame to frame.
 
+A cigarette's own page (`/packs/<id>`, `npm run build:cigpages`) is built from
+one supplied vector each, cropped to its content so centring gives it equal side
+margins. **The logo and the seal are taken out of that vector by the build and
+placed against the page's own edges instead**, at the landing page's geometry —
+the margin rule. The vector drew its logo as a raster that read soft, and a mark
+travelling with a centred body would sit somewhere different on every width. The
+build also swaps the vector's own pack photograph for the cleaned one the
+landing row uses, and closes the red frame onto it with no margin, which is how
+the owner's vectors draw it (rect and image share one box).
+
 The cigarette row on the landing page is measured off two references the owner supplied, both
 kept in `scripts/assets`: a positioning SVG and an MP4 of the motion. The MP4 runs at **8fps,
 dead constant** — that stepping is deliberate and the owner likes it, so the row is driven by a
 125ms timer rather than rAF. All of it is written up in `lib/cigRow.ts`.
+
+## The owner's own face (`public/fonts/far-east-1.woff2`)
+Supplied by the owner as `Far_East_Full_Webfont.woff2`, declared as the family
+**"Far East"**, self-hosted, and reached through the `--font-typed` token.
+
+**The rule the owner set: everything typed into this site is set in this face, in
+every text field on every page, and so is any copy we write from here on** —
+unless they say otherwise for a particular piece. `--font-typed` is how you ask
+for it; do not name the family directly.
+
+What is actually in the file, read out of it rather than assumed:
+- **64 glyphs. Space, 0-9, A-Z, a-z, and nothing else.** No full stop, comma,
+  apostrophe, hyphen, colon, @, parentheses, quotes — and no CJK. Everything
+  outside that set is drawn by the next family in the stack, which is why the
+  `@font-face` declares `unicode-range` exactly: the browser then never
+  consults this face for a character it does not have. **If you write copy that
+  leans on punctuation, look at it rendered before you ship it.**
+- It is a **unicase** design — the capitals and the lowercase are largely the
+  same letterforms. That is why the splash's typed rows used Cormorant *Unicase*
+  as a stand-in before this arrived, and why they now use the real thing.
+- One weight, `usWeightClass` 700, so the face is declared `font-weight: 400 700`
+  and the fields set `font-synthesis: none` — the drawn weight at either end
+  rather than a browser-smeared bold.
+- 1000 upem · cap 700 · x-height 510 · mean lowercase advance 0.67em, about a
+  third wider than any fallback. **Nothing can metric-match it**, so do not try:
+  the file is preloaded in the document head instead and swaps within a frame.
+- `fsType` is 4 (preview & print). If this font is ever licensed from someone
+  else rather than the owner's own conversion, that bit is worth a look.
+
+**The file is already as small as it goes.** Recompressing the brotli stream at
+quality 11 and dropping the `post` table's glyph names together save 50 bytes of
+6484 — 0.8%, for a rewritten font binary. Not worth it; it has already been
+subsetted to exactly its cmap (64 glyphs, 64 codepoints, no orphans). The wins
+that were left were all in delivery, and they are done: preloaded in
+`app/layout.tsx` (with `crossOrigin`, which is **not** optional on a font
+preload even same-origin — without it the browser fetches the file twice),
+`font-display: swap`, the exact `unicode-range`, and `/fonts/:file*` served
+`immutable` for a year from `next.config.mjs`. **The version is in the
+filename** — bump `far-east-1` to `-2` when the file is replaced, in
+`globals.css` and `app/layout.tsx` together, or caches will hold the old one.
 
 ## Working as a team (two people, two Claude Code sessions)
 The repo is **public** on GitHub — chosen so Vercel Hobby deploys commits from either owner.
@@ -176,6 +233,18 @@ the brand assets and review text in this repo are visible to anyone.
    values in `lib/seed.ts`.
 5. **Instagram link is a placeholder** — two constants at the top of `app/page.tsx`.
 6. `subscribers` table is unused (newsletter removed); drop it in a migration when convenient.
+7. **The artwork pages are still centred on half pixels.** `styleFor` in
+   `ArtworkPage.tsx` rounds the mark's own half-width but leaves `left: 50%`,
+   and 50% of an odd stage width is a .5 — measured live on /about, the intro
+   and focus bodies sit at x=308.5 and the three footer buttons at 345.5 /
+   420.5 / 495.5, so every one of them is resampled row by row. This is the
+   same softness the owner reported on the cigarette pages. The cigarette page
+   fixes it with `left: round(50%, 1px)` (Chrome, Safari 15.4+, Firefox 118+,
+   with the plain 50% left above as the fallback), which cannot be written as
+   an inline style because React allows one value per property — so the fix
+   here needs the parts to carry a data attribute and let the stylesheet own
+   `left`. Small, but it touches the shared layout engine, so it is its own
+   change rather than a rider on someone else's.
 
 ## Gotchas learned the hard way
 - Run `next build` only with the dev server stopped; both write to `.next`. If you need
