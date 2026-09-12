@@ -511,7 +511,6 @@ ul, ol { list-style: none; }
    have made the smallest text the heaviest thing on the panel and closed up
    the counters in it. currentColor, so each follows whatever colour it is —
    the paragraph black, the yes white, the no black. */
-.gate-terms .body-md { -webkit-text-stroke: 0.36px currentColor; }
 .gate-panel .btn { -webkit-text-stroke: 0.3px currentColor; }
 /* The NO is stroked HEAVIER than the YES so the two look equal.
 
@@ -542,15 +541,57 @@ ul, ol { list-style: none; }
    So the padding makes up the difference rather than the rule moving: 5px at
    the sides and 2px at the foot bring all four to 7px of daylight. The numbers
    are the two line-heights' and would want re-measuring if either changed. */
+/* THE RULE HOLDS STILL AND THE TEXT SHRINKS INSIDE IT.
+
+   The daylight round the terms doubles, 9px to 18px, and it is bought by
+   making the type smaller rather than by pushing the rule outward — the rule
+   keeps the height it had, 156.7px, which is the whole point of doing it this
+   way round.
+
+   ALIGNED TO THE YES BUTTON. An outline is drawn outside the box it belongs
+   to, so this one reached 6px past its own edge — 4px of offset and 2px of
+   rule — and started 6px to the left of the button under it. The box is inset
+   by exactly that, so the rule's left edge now lands on the button's. Inset
+   on both sides, so it stays centred: 440 wide becomes 428, and the rule
+   itself is still 440 across.
+
+   THE NUMBERS ARE SOLVED, NOT PICKED. Holding the height while the gap
+   doubles fixes the type scale — there is only one that works:
+
+     156.7 = (14 - 5.0k) + (138.75k + 16) + (14 - 3.1k)   ->   k = 0.8626
+
+   where 14px is the side padding the 18px gap needs behind the 4px offset,
+   5.0px and 3.1px are the two paragraphs' half-leading (their line boxes
+   stand that much taller than their ink, measured on the page), 138.75k is
+   the six lines of text and 16px the gap between the paragraphs, which is a
+   layout token and does not scale.
+
+   So the type goes to 86.26%: 17px to 14.67, 13px to 11.21. Both line-heights
+   are unitless, so they follow. At that size the measure works out at 25.3
+   characters a line, exactly what it was at 17px in the wider box, so neither
+   paragraph reflows — still three lines each.
+
+   Re-solve all four numbers if the copy, the line-heights or the 18px change. */
 .gate-terms {
   outline: 2px solid #ffffff;
-  /* 4px, not 2: the owner asked for another 2px of daylight, and the offset
-     is the one number that adds it to all four sides at once and costs no
-     layout doing it. The padding still only corrects the leading. 9px all
-     round, measured. */
   outline-offset: 4px;
-  padding: 0 5px 2px;
+  /* margin-left/right, NOT the shorthand: .stack-md sets margin-top on this
+     and a shorthand here would silently zero it. */
+  margin-left: 6px;
+  margin-right: 6px;
+  /* 10.39 and 11.63, not the 9.69 and 11.33 the solve gave: half-leading
+     does not scale quite linearly through a font size change (hinting rounds
+     the ink), so the first pass measured 17.3 and 17.7 instead of 18. These
+     are the corrected numbers, read back off the page. Costs 0.9px of box
+     height against the 156.7 it was holding. */
+  padding: 10.39px 14px 11.63px;
 }
+.gate-terms .body-md {
+  font-size: 14.67px;
+  /* the stroke keeps its share of the em: 0.0214 x 14.67 */
+  -webkit-text-stroke: 0.31px currentColor;
+}
+.gate-terms .caption { font-size: 11.21px; }
 /* Both buttons are white rules on the red now. The YES was a red fill, which
    on a red panel is nothing at all, so it takes the same 2px white rule the
    box round the terms has — the panel has one line weight and one line
