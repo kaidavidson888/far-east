@@ -578,50 +578,65 @@ the brand assets and review text in this repo are visible to anyone.
    values in `lib/seed.ts`.
 5. **Instagram link is a placeholder** — two constants at the top of `app/page.tsx`.
 6. `subscribers` table is unused (newsletter removed); drop it in a migration when convenient.
-7. **The email provider is ON now** (owner switched it on; verified 2026-09-12
-   against the live project). `/auth/v1/settings` lists `google, email`, a wrong
-   password answers `invalid_credentials` rather than `email_provider_disabled`,
-   and a correct one returns a real session. The splash can sign people in.
-   **BUT NOBODY CAN MAKE AN ACCOUNT YET, AND IT IS ONE TOGGLE.** `signUp`
-   answers `over_email_send_rate_limit` and creates **nothing** — verified
-   against the live project with a real, MX-backed address, twice, minutes
-   apart. The chain: "Confirm email" is on, so GoTrue must send a confirmation
-   mail on every signup; there is no custom SMTP, so that goes through
-   Supabase's shared mailer, which is capped at a couple an hour; past the cap
-   `signUp` does not queue or degrade, it fails outright. **Turn "Confirm email"
-   OFF** (Authentication → Providers → Email). That mail is dead weight to this
+7. **Sign-in is wired up and working, and the Site URL is the last thing wrong.**
+   Verified end to end against the live project on 2026-09-12, with every test
+   account deleted afterwards.
+
+   **THE SITE URL POINTS AT A DEPLOYMENT-PROTECTED VERCEL URL, AND THAT IS THE
+   "it sent me to a Vercel login" BUG.** It is
+   `https://far-east-far-east.vercel.app/`, which 302s to `vercel.com/sso-api`
+   and on to `vercel.com/login`. **It should be `https://far-east-beta.vercel.app`**
+   (Authentication → URL Configuration → Site URL). It is not breaking the
+   normal paths today, because both real origins are on the allow-list — but the
+   Site URL is where GoTrue sends **anything that is not**, so every future
+   mis-typed or newly-added redirect lands on a Vercel login screen instead of
+   this site, which is a bewildering thing to debug twice.
+
+   **The two switches that had to be right are both in one panel**
+   (Authentication → Providers → Email), and it is easy to hit the wrong one —
+   it happened during this work, taking the provider off entirely and making
+   things worse than before. The target state is **provider ON, "Confirm email"
+   OFF**. Confirm email must be off because that mail is dead weight to this
    design — Google is what verifies a new account here, not an emailed link —
-   and nothing downstream changes, because the session `signUp` then returns is
-   dropped on purpose in `splashAuthAction` and Google is still the only way in.
-   `mailerSpent`/`MAILER_SPENT` in `app/actions.ts` say so in the box in plain
-   words meanwhile, rather than passing "email rate limit exceeded" through to a
-   reader whose fault it is not.
+   and with no custom SMTP it goes through Supabase's shared mailer, capped at a
+   couple an hour, past which `signUp` does not queue or degrade: it answers
+   `over_email_send_rate_limit` and creates **nothing**. `mailerSpent`/`MAILER_SPENT`
+   in `app/actions.ts` say so in plain words if it ever happens again.
 
-   Three things about it that are worth knowing before debugging it:
-   - **`mailer_autoconfirm` is false.** A brand-new `signUp` lands UNCONFIRMED
-     and issues **no session** — which suits the design (Google is what verifies
-     them), but means step 4 cannot be tested by looking for a session. This is
-     the same switch as above; turning it off is what unblocks signup.
-   - **GoTrue validates the address's domain at signup.** `signUp` answers
-     `email_address_invalid` for a made-up domain, so a throwaway address cannot
-     be used to test account creation. `.verify/temp-user.mjs` sidesteps this by
-     inserting into `auth.users` directly, which is why it works — it never goes
-     through GoTrue. There is no way to test the create-an-account path without
-     a real deliverable address.
-   - What the splash keys on is a `google` row in `auth.identities`, and both
-     branches are verified: without one it sends them to Google, with one it
-     lets them in.
+   What is now confirmed working, against the live project:
+   - `signUp` with a real address creates the account, autoconfirmed, carrying
+     only an `email` identity. The session it returns is dropped on purpose in
+     `splashAuthAction`, so Google is still the only way in.
+   - The password really is saved at signup: signing in with it afterwards
+     returns a session.
+   - Both branches of the guard: no `google` row in `auth.identities` sends them
+     to Google, one lets them through.
+   - **Redirect URLs: `http://localhost:3000/**` and
+     `https://far-east-beta.vercel.app/**` are both on the allow-list**, honoured
+     exactly, tokens delivered to `/auth/callback`.
 
-   **The Redirect URLs allow-list still cannot be checked from outside, and
-   three plausible probes all give a FALSE PASS.** Do not repeat them:
-   `/auth/v1/authorize` echoes any `redirect_to` back, including
-   `https://evil.example/steal`; `/auth/v1/recover?redirect_to=…` answers 200
-   for the same; and the `state` parameter is an opaque UUID in this GoTrue
-   version, not a JWT carrying a `referrer` claim, so nothing can be decoded out
-   of it. The list is enforced **only at the callback**, so the one real test is
-   completing a Google sign-in and seeing where the last hop lands. A missing
-   entry sends it to the Site URL instead, which is what "it sent me to a Vercel
-   login" was. That is also why a signed-in press cannot be verified end to end
+   **HOW TO TEST THE ALLOW-LIST WITHOUT A GOOGLE ACCOUNT** — worth keeping,
+   because the three obvious probes all give a FALSE PASS. Do not use these:
+   `/auth/v1/authorize` echoes any `redirect_to` straight back, including
+   `https://evil.example/steal`; `/auth/v1/recover?redirect_to=…` answers 200 for
+   the same; and `state` is an opaque UUID in this GoTrue, not a JWT carrying a
+   `referrer` claim. What DOES work: GoTrue validates every `redirect_to` against
+   one list whatever the flow, so send a **magic link** (`/auth/v1/otp`) carrying
+   the URL under test to a disposable inbox with a public API
+   (`inboxkitten.com`; read it with `mail/list?recipient=` then
+   `mail/getHtml?key=&region=` — the param is `key`, not `mailKey`), pull the
+   `/auth/v1/verify` link out of the mail, and fetch it **without following
+   redirects**. The `Location` is the answer: the URL you asked for if it is
+   allow-listed, the Site URL if it is not. **Always run the `evil.example`
+   control in the same pass** — without it, "honoured exactly" cannot be told
+   apart from GoTrue echoing blindly, which is the exact trap the first three
+   probes fell into. There is a per-address cooldown, so use a fresh address per
+   probe.
+
+   Two smaller things: GoTrue validates the address's **domain** at signup
+   (`email_address_invalid` for a made-up one), which is why
+   `.verify/temp-user.mjs` inserts into `auth.users` directly and never goes
+   through GoTrue; and a signed-in press still cannot be verified end to end
    locally — the DB layer under it is covered by `npm run verify:db` instead.
 8. **The pack shelf has no shelf page.** `/favorites` lists catalogue products
    through `favoritesWithNotes`; `pack_favorites` is a separate table and
