@@ -146,8 +146,10 @@ html { -webkit-text-size-adjust: 100%; }
    artwork pages' hit areas are transparent, the buttons ARE the artwork, so
    the pointer is the only thing saying a thing can be pressed.
 
-   grab/grabbing on the cigarette row and text in the fields are left alone.
-   Those say what the pointer can DO there, which neither cloud can. */
+   The cigarette row follows the same two states — it drags, so it is
+   pressable — and keeps grab/grabbing only as the keyword fallback. text in
+   the fields IS left alone: an I-beam says where the caret will land, which
+   neither cloud can. */
 body {
   cursor: url('/sigil-cursor.png') 0 14, auto;
   cursor: image-set(url('/sigil-cursor.png') 1x, url('/sigil-cursor@2x.png') 2x) 0 14, auto;
@@ -1212,7 +1214,14 @@ ul, ol { list-style: none; }
   z-index: 1;
   overflow: hidden;
   touch-action: pan-y;
-  cursor: grab;
+  /* The row drags, so it takes the pressable cloud like everything else you
+     can put a hand on, and holding it inverts that like everything else —
+     open hand to white cloud, closed hand to black. The hand keywords stay
+     as the fallback: if the image will not load, grab and grabbing are
+     exactly the right things to land on, because they are what the row
+     actually does. */
+  cursor: url('/sigil-cursor-press.png') 0 14, grab;
+  cursor: image-set(url('/sigil-cursor-press.png') 1x, url('/sigil-cursor-press@2x.png') 2x) 0 14, grab;
   -webkit-tap-highlight-color: transparent;
   /* nothing in here is selectable or draggable: a native image drag steals
      the gesture and the row stops following the pointer */
@@ -1220,7 +1229,8 @@ ul, ol { list-style: none; }
   -webkit-user-select: none;
 }
 .cig-row:active {
-  cursor: grabbing;
+  cursor: url('/sigil-cursor.png') 0 14, grabbing;
+  cursor: image-set(url('/sigil-cursor.png') 1x, url('/sigil-cursor@2x.png') 2x) 0 14, grabbing;
 }
 /* The row runs the full width, so a focus ring only ever showed as a line
    above and below it. The owner liked that, so it is drawn deliberately now
