@@ -565,8 +565,21 @@ ul, ol { list-style: none; }
   color: #ffffff;
   border: 5px solid #ffffff;
 }
-.gate-panel .btn-primary:hover, .gate-panel .btn-primary:active {
-  background: rgba(255, 255, 255, 0.16);
+/* Hovering fills the box rather than washing it: the yes floods black and
+   keeps its white lettering, the no floods white and keeps its black. Neither
+   label changes colour — only the ground under it does, so the press reads as
+   the shape filling in rather than as the text restating itself.
+
+   The optical correction below still points the right way on hover, and for
+   the same reason: the yes is light-on-dark before and after, the no is
+   dark-on-light before and after. Only the ground swaps.
+
+   :focus-visible gets it too, so a keyboard sees what a pointer sees. */
+.gate-panel .btn-primary:hover,
+.gate-panel .btn-primary:focus-visible,
+.gate-panel .btn-primary:active {
+  background: #010101;
+  color: #ffffff;
 }
 /* The buttons are drawn at 5px, heavier than the 2px box round the terms:
    the rules you can press are the thick ones. border-box site-wide, so the
@@ -576,7 +589,12 @@ ul, ol { list-style: none; }
   color: #010101;
   border: 5px solid #010101;
 }
-.gate-panel .btn-secondary:hover { background: rgba(0, 0, 0, 0.14); }
+.gate-panel .btn-secondary:hover,
+.gate-panel .btn-secondary:focus-visible,
+.gate-panel .btn-secondary:active {
+  background: #ffffff;
+  color: #010101;
+}
 /* Black, because a white ring on white rules would disappear. */
 .gate-panel .btn:focus-visible { outline: 2px solid #010101; outline-offset: 3px; }
 
