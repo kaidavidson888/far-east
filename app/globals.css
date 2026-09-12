@@ -941,6 +941,13 @@ ul, ol { list-style: none; }
   z-index: 100;
   background: var(--artpage-bg, #ffffff);
   overflow: auto;
+  /* THE DOCUMENT IS DECLARED color-scheme: dark, because the app shell is
+     dark by design (--canvas is #0d0d0d). These pages are not: they paint the
+     artwork own white ground over the whole viewport. Leaving them inside a
+     dark declaration is what lets a browser or OS doing auto-dark decide to
+     remap them, which turns the black marks grey and washes the page out.
+     Saying light here is the page telling the truth about what it paints. */
+  color-scheme: light;
 }
 /* The stage is the page's own area, and everything anchors to its edges. Its
    min-height (set inline, derived from the artwork) stops the top block and
@@ -1125,6 +1132,8 @@ ul, ol { list-style: none; }
   z-index: 100;
   background: #ffffff;
   overflow: auto;
+  /* white ground, so it says so — see the note on .artpage */
+  color-scheme: light;
 }
 .cigpage-stage {
   position: relative;

@@ -19,6 +19,7 @@ import {
   CIG_SPIN_SPEED,
   CIG_SPIN_LAP,
   CIG_SPIN_CATCH,
+  CIG_SPIN_PAINT_MS,
   cigPaintMs,
   REFERENCE_SPEED,
   SPEED,
@@ -438,11 +439,24 @@ export function CigScroller({
       // out after everything else has stopped.
       const owed = frameRef.current.pendingSince !== 0;
       if (draggingRef.current || velRef.current !== 0 || settling || owed) {
-        // The paint rate follows the SPEED rather than a spinning flag, so
-        // the row is already back on the owner's 8fps by the time it is going
-        // slowly enough for 8fps to be right — no switch, and nothing to see
-        // at the handover. See cigPaintMs.
-        timerRef.current = window.setTimeout(tick, cigPaintMs(velRef.current));
+        // THE WHOLE SPIN IS PAINTED SMOOTHLY, throw to standstill, not just
+        // the fast part. Handing back to the owner's 8fps at the moment the
+        // wheel starts slowing left the slowdown visibly stepping — 379px/s
+        // at 125ms is 47px a frame, half a pack at a time — and the owner
+        // called that choppy. It is: 8fps describes the idle scroll the
+        // reference recording measured, and a wheel coming to rest after a
+        // throw is not that motion.
+        //
+        // So while the spin holds the lock the row paints at
+        // CIG_SPIN_PAINT_MS, and it only returns to 8fps once the row has
+        // actually stopped — where a change of frame rate cannot be seen,
+        // because nothing is moving. Every ordinary motion still runs at
+        // PAINT_MS, because none of them take the lock. cigPaintMs is what
+        // covers those, and it returns PAINT_MS for all of them.
+        timerRef.current = window.setTimeout(
+          tick,
+          lockRef.current ? CIG_SPIN_PAINT_MS : cigPaintMs(velRef.current),
+        );
       } else {
         timerRef.current = 0;
         // The row has come to rest, which is the end of the My Saved
