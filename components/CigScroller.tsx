@@ -14,7 +14,7 @@ import {
   CIG_FLING_MAX,
   CIG_FLING_WINDOW_MS,
   CIG_FRAME_HOLD_MS,
-  cigBrake,
+  CIG_BRAKE,
   REFERENCE_SPEED,
   SPEED,
   cigLayout,
@@ -68,12 +68,13 @@ const SETTLE_BELOW = 25;
 /**
  * How long the settle takes to close the last of the distance.
  *
- * 0.28, where it was 0.18: the end of a roulette spin is the part worth
- * watching, and the wheel creeps into its slot rather than clicking into it.
- * Each tick closes about 45% of what is left, so half a pitch of travel takes
- * a little under a second — against half that before.
+ * The glide now spends its own last second crawling — at the reference
+ * wheel's rate that is the final 100px/s, about a pack a second — so the
+ * centring no longer has to supply the unhurried ending, and doing it twice
+ * read as hesitancy rather than weight. 0.2 closes about 60% of what is left
+ * each tick: enough to place the pack, quick enough not to be a second act.
  */
-const SETTLE_TAU = 0.28 / SPEED;
+const SETTLE_TAU = 0.2 / SPEED;
 /**
  * Pressing a pack that is not the one in the frame fetches it, at twice the
  * speed the row settles at — the owner's 200%.
@@ -292,14 +293,14 @@ export function CigScroller({
         }
       } else if (!draggingRef.current) {
         if (Math.abs(velRef.current) > SETTLE_BELOW) {
-          // Braking that depends on the speed, not a decay proportional to it
-          // — light while the row is flying, heavy as it comes in. See
-          // cigBrake. Position is integrated against the AVERAGE of the
-          // velocity before and after the step rather than either end of it:
-          // over one tick the rate barely changes, so that is near enough
-          // exact, where taking one end over-runs and the other falls short.
+          // One constant rate of braking, measured off the owner's reference
+          // wheel — see CIG_BRAKE. Position is integrated against the AVERAGE
+          // of the velocity before and after the step rather than either end
+          // of it: for a constant rate that is exact, where taking one end
+          // over-runs and the other falls short, each by half the step's own
+          // change in speed.
           const was = velRef.current;
-          const drop = cigBrake(was) * dt;
+          const drop = CIG_BRAKE * dt;
           velRef.current = Math.abs(was) <= drop ? 0 : was - Math.sign(was) * drop;
           offsetRef.current += ((was + velRef.current) / 2) * dt;
         } else {

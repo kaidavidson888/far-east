@@ -139,41 +139,41 @@ export const SPEED = 1;
 export const CIG_FRAME_HOLD_MS = PAINT_MS * 2;
 
 /**
- * How hard the row is braked once it is let go, in pixels per second squared,
- * as a function of how fast it is still going.
+ * How hard the row is braked once it is let go, in pixels per second squared.
  *
- * IT BRAKES LIKE A ROULETTE WHEEL, WHICH MEANS THE RATE IS NOT CONSTANT. A
- * wheel on its bearings barely loses speed while it is flying; what slows it
- * at the end is the ball dropping off the rim into the slots, where it starts
- * catching on everything. So the braking is light above the knee and heavy
- * below it, and the two are blended rather than switched, so there is no step
- * in the motion where the rule changes.
+ * MEASURED OFF THE OWNER'S OWN REFERENCE WHEEL. The gif they supplied is 185
+ * frames of a twelve-segment prize wheel coming to rest over 11.9 seconds.
+ * Cross-correlating a ring of pixels between consecutive frames gives the
+ * angle it turned through each time, so the whole speed curve comes out of it
+ * without anyone having to judge it by eye:
  *
- * That shape is the whole difference. Against a constant rate, per 125ms tick
- * from a hard throw:
+ *     t      deg/s    px/s     rate over that leg
+ *     0s      425     1360
+ *   1.4s      383     1226      96 px/s^2
+ *   3.6s      303      970     116
+ *   6.8s      234      749      69
+ *   9.6s       89      285     166
+ *  11.4s       21       67      46
+ *  11.9s        0        0     134
  *
- *   constant 600   75 75 75 75 75 75 75 75 ...          even, mechanical
- *   this           37 38 37 38 ... 37 38 | 41 45 51
- *                  57 63 70 79 88 98 109               flat, then it bites
+ * A segment of that wheel is 30 degrees and a pack of this row is about 96px,
+ * so one degree is 3.2px and the two are directly comparable: a segment
+ * passing the pointer is a pack passing the frame.
  *
- * Twenty ticks of almost nothing — two and a half seconds where it is plainly
- * still going — and then ten where it winds down hard. A hard throw runs four
- * seconds and carries 36 packs past, and is still at half speed 62% of the way
- * through it, where constant braking is half spent by halfway.
+ * IT IS ONE CONSTANT RATE. The legs above scatter between 46 and 166 with no
+ * drift up or down, and fitting a single rate to the whole spin — 1360px/s
+ * brought to rest in 11.9s — gives 114. So the wheel is not braking harder as
+ * it slows, which is what the previous version of this file assumed and built
+ * a two-rate curve around. It was wrong, and the curve is gone.
+ *
+ * The last second of the reference, which is what the owner pointed at, is
+ * this same rate: about 100px/s down to nothing, roughly a pack a second,
+ * each one visibly ticking past.
  *
  * Dividing by SPEED rather than multiplying: SPEED is how far a flick carries,
  * and less braking carries further.
  */
-export const CIG_BRAKE_FLYING = 300 / SPEED;
-export const CIG_BRAKE_CATCHING = 1000 / SPEED;
-/** Below this the ball is in the slots and the braking starts to bite. */
-export const CIG_BRAKE_KNEE = REFERENCE_SPEED * 4;
-
-/** The braking rate at a given speed. See the note above. */
-export function cigBrake(speed: number): number {
-  const caught = 1 - Math.min(1, Math.abs(speed) / CIG_BRAKE_KNEE);
-  return CIG_BRAKE_FLYING + (CIG_BRAKE_CATCHING - CIG_BRAKE_FLYING) * caught;
-}
+export const CIG_BRAKE = 115 / SPEED;
 
 /**
  * The fastest the row may be let go at, in pixels per second.
