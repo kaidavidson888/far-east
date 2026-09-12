@@ -462,19 +462,20 @@ ul, ol { list-style: none; }
    is otherwise a focus ring; on the gate it read as a third colour with
    nothing to do. Black is what the artwork pairs with the red everywhere. */
 .gate-panel {
-  background: #ffffff;
-  color: #010101;
+  background: #ff0000;
+  color: #ffffff;
   font-family: var(--font-typed);
   max-width: 520px; width: 100%; padding: var(--xl);
 }
-.gate-panel .display-sm, .gate-panel .title-lg { color: #010101; }
-.gate-panel p { color: #010101; }
-/* The health warning in the artwork’s own red — the one thing in the gate
-   that is not black, and the line the law is about. NOT --negative, which is
-   warm grey and is never a warning colour on this site, per the spec. */
-.gate-terms .caption { color: #ff0000; }
+.gate-panel .display-sm, .gate-panel .title-lg { color: #ffffff; }
+.gate-panel p { color: #ffffff; }
+/* Inside the rule the two paragraphs are told apart by colour as well as by
+   size: what the site is, in black; the health line under it in white, which
+   on this red is the one that carries furthest. */
+.gate-terms .body-md { color: #010101; }
+.gate-terms .caption { color: #ffffff; }
 .gate-panel .seal-divider span:first-child { background: #010101; }
-.gate-panel .seal-divider span:last-child { background: #ff0000; }
+.gate-panel .seal-divider span:last-child { background: #ffffff; }
 /* The face is only letters and digits (see "The owner's own face"), so the
    punctuation in this copy comes from the fallback. Kept deliberate rather
    than accidental: font-synthesis off so neither is smeared into a bold. */
@@ -484,8 +485,26 @@ ul, ol { list-style: none; }
   font-family: var(--font-typed);
   font-synthesis: none;
 }
-/* Black on #FF0000 is the higher contrast of the two (5.25:1 against white's
-   4.0:1) as well as the colour the owner asked for. */
+/* The question carries the weight, and getting it there takes a stroke.
+
+   The owner's face has exactly ONE weight drawn (usWeightClass 700), so
+   font-weight cannot make it heavier — there is nothing heavier to ask for,
+   and the declaration below only reaches the punctuation, which comes from
+   the fallback. A stroke on the glyphs is what is left. Chosen over letting
+   font-synthesis back on because it is symmetric and the amount is ours to
+   pick, where a browser's synthetic bold is a smear we do not control — and
+   the rest of the site turns synthesis off for exactly that reason. 0.6px
+   against a 28px line.
+
+   UPPERCASE ON A UNICASE FACE moves the letterforms less than it would on
+   most faces — the capitals and the lowercase are largely the same drawings,
+   which is the character of this typeface — so it reads as evenness rather
+   than as shouting. */
+.gate-panel .display-sm {
+  font-weight: 700;
+  text-transform: uppercase;
+  -webkit-text-stroke: 0.6px currentColor;
+}
 /* One rule round the two lower paragraphs: what the site is and the health
    line, together, as the terms under the question.
 
@@ -504,35 +523,38 @@ ul, ol { list-style: none; }
    the sides and 2px at the foot bring all four to 7px of daylight. The numbers
    are the two line-heights' and would want re-measuring if either changed. */
 .gate-terms {
-  outline: 2px solid #010101;
+  outline: 2px solid #ffffff;
   outline-offset: 2px;
   padding: 0 5px 2px;
 }
-/* The question carries the weight, and getting it there takes a stroke.
+/* Both buttons are white rules on the red now. The YES was a red fill, which
+   on a red panel is nothing at all, so it takes the same 2px white rule the
+   box round the terms has — the panel has one line weight and one line
+   colour, and everything drawn on it uses them.
 
-   The owner's face has exactly ONE weight drawn (usWeightClass 700), so
-   font-weight cannot make it heavier — there is nothing heavier to ask for,
-   and the declaration below only reaches the punctuation, which comes from
-   the fallback. A stroke on the glyphs is what is left. It is chosen over
-   letting font-synthesis back on because it is symmetric and the amount is
-   ours to pick, where a browser's synthetic bold is a smear we do not
-   control — and the rest of the site turns synthesis off for exactly that
-   reason. 0.6px against a 28px line.
-
-   UPPERCASE ON A UNICASE FACE barely moves the letterforms — the capitals
-   and the lowercase are largely the same drawings, which is the whole
-   character of this typeface — so it reads as a deliberate evenness rather
-   than as shouting. */
-.gate-panel .display-sm {
-  font-weight: 700;
-  text-transform: uppercase;
-  -webkit-text-stroke: 0.6px currentColor;
+   The two are told apart by colour rather than by fill: the yes takes the
+   white rule the rest of the panel is drawn in, the no takes black. The
+   spec's cinnabar CTA is for "Add to my shelf" and has no business on a
+   yes/no, so neither button is filled. */
+.gate-panel .btn-primary {
+  background: transparent;
+  color: #ffffff;
+  border: 2px solid #ffffff;
 }
-.gate-panel .btn-primary { background: #ff0000; color: #010101; }
-.gate-panel .btn-primary:hover, .gate-panel .btn-primary:active { background: #d90000; }
-.gate-panel .btn-secondary { background: transparent; color: #010101; border-color: #010101; }
-.gate-panel .btn-secondary:hover { background: #f2f2f2; }
-.gate-panel .btn:focus-visible { outline: 2px solid #010101; outline-offset: 2px; }
+.gate-panel .btn-primary:hover, .gate-panel .btn-primary:active {
+  background: rgba(255, 255, 255, 0.16);
+}
+/* The same 2px the box round the terms is drawn at, so every rule on the
+   panel reads as one weight. border-box site-wide, so the button keeps its
+   48px and only the rule thickens. */
+.gate-panel .btn-secondary {
+  background: transparent;
+  color: #010101;
+  border: 2px solid #010101;
+}
+.gate-panel .btn-secondary:hover { background: rgba(0, 0, 0, 0.14); }
+/* Black, because a white ring on white rules would disappear. */
+.gate-panel .btn:focus-visible { outline: 2px solid #010101; outline-offset: 3px; }
 
 /* ---------- Responsive ---------- */
 @media (max-width: 1024px) {
