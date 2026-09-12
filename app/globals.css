@@ -505,6 +505,14 @@ ul, ol { list-style: none; }
   text-transform: uppercase;
   -webkit-text-stroke: 0.6px currentColor;
 }
+/* The same trick at the same STRENGTH, which means a different number of
+   pixels: the title's 0.6px on a 28px line is 0.021em, so the 17px paragraph
+   takes 0.36px and the 14px buttons 0.3px. A flat 0.6px everywhere would
+   have made the smallest text the heaviest thing on the panel and closed up
+   the counters in it. currentColor, so each follows whatever colour it is —
+   the paragraph black, the yes white, the no black. */
+.gate-terms .body-md { -webkit-text-stroke: 0.36px currentColor; }
+.gate-panel .btn { -webkit-text-stroke: 0.3px currentColor; }
 /* One rule round the two lower paragraphs: what the site is and the health
    line, together, as the terms under the question.
 
@@ -539,18 +547,18 @@ ul, ol { list-style: none; }
 .gate-panel .btn-primary {
   background: transparent;
   color: #ffffff;
-  border: 2px solid #ffffff;
+  border: 5px solid #ffffff;
 }
 .gate-panel .btn-primary:hover, .gate-panel .btn-primary:active {
   background: rgba(255, 255, 255, 0.16);
 }
-/* The same 2px the box round the terms is drawn at, so every rule on the
-   panel reads as one weight. border-box site-wide, so the button keeps its
-   48px and only the rule thickens. */
+/* The buttons are drawn at 5px, heavier than the 2px box round the terms:
+   the rules you can press are the thick ones. border-box site-wide, so the
+   button keeps its 48px and only the rule thickens inward. */
 .gate-panel .btn-secondary {
   background: transparent;
   color: #010101;
-  border: 2px solid #010101;
+  border: 5px solid #010101;
 }
 .gate-panel .btn-secondary:hover { background: rgba(0, 0, 0, 0.14); }
 /* Black, because a white ring on white rules would disappear. */
