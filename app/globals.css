@@ -467,12 +467,12 @@ ul, ol { list-style: none; }
   font-family: var(--font-typed);
   max-width: 520px; width: 100%; padding: var(--xl);
 }
-.gate-panel .display-sm, .gate-panel .title-lg { color: #ffffff; }
+.gate-panel .display-sm, .gate-panel .title-lg { color: #010101; }
 .gate-panel p { color: #ffffff; }
-/* Inside the rule the two paragraphs are told apart by colour as well as by
-   size: what the site is, in black; the health line under it in white, which
-   on this red is the one that carries furthest. */
-.gate-terms .body-md { color: #010101; }
+/* Both paragraphs inside the rule are white, which is also the rule's own
+   colour — the box and what it holds read as one thing, against the black
+   question above it. */
+.gate-terms .body-md { color: #ffffff; }
 .gate-terms .caption { color: #ffffff; }
 .gate-panel .seal-divider span:first-child { background: #010101; }
 .gate-panel .seal-divider span:last-child { background: #ffffff; }
@@ -512,7 +512,7 @@ ul, ol { list-style: none; }
    the counters in it. currentColor, so each follows whatever colour it is —
    the paragraph black, the yes white, the no black. */
 .gate-panel .btn { -webkit-text-stroke: 0.3px currentColor; }
-/* The NO is stroked HEAVIER than the YES so the two look equal.
+/* The BLACK label is stroked heavier than the white one so the two look equal.
 
    They were already identical as a number -- 0.3px on 14px, 0.0214em, the
    same ratio as the title -- and still the no read lighter. That is
@@ -521,9 +521,11 @@ ul, ol { list-style: none; }
    has one of each on the same red. Type designers cut a reversed weight
    lighter for the same reason, in the other direction.
 
-   So the black label gets half again as much stroke. The number is not the
-   thing being matched here; the look is. */
-.gate-panel .btn-secondary { -webkit-text-stroke: 0.45px currentColor; }
+   So the black label gets half again as much stroke. It is the YES that is
+   black now and the NO that is white, so the heavier stroke moved with the
+   colour rather than staying with the button. The number is not the thing
+   being matched here; the look is. */
+.gate-panel .btn-primary { -webkit-text-stroke: 0.45px currentColor; }
 /* One rule round the two lower paragraphs: what the site is and the health
    line, together, as the terms under the question.
 
@@ -603,7 +605,7 @@ ul, ol { list-style: none; }
    yes/no, so neither button is filled. */
 .gate-panel .btn-primary {
   background: transparent;
-  color: #ffffff;
+  color: #010101;
   border: 5px solid #ffffff;
 }
 /* Hovering fills the box rather than washing it: the yes floods black and
@@ -619,22 +621,22 @@ ul, ol { list-style: none; }
 .gate-panel .btn-primary:hover,
 .gate-panel .btn-primary:focus-visible,
 .gate-panel .btn-primary:active {
-  background: #010101;
-  color: #ffffff;
+  background: #ffffff;
+  color: #010101;
 }
 /* The buttons are drawn at 5px, heavier than the 2px box round the terms:
    the rules you can press are the thick ones. border-box site-wide, so the
    button keeps its 48px and only the rule thickens inward. */
 .gate-panel .btn-secondary {
   background: transparent;
-  color: #010101;
+  color: #ffffff;
   border: 5px solid #010101;
 }
 .gate-panel .btn-secondary:hover,
 .gate-panel .btn-secondary:focus-visible,
 .gate-panel .btn-secondary:active {
-  background: #ffffff;
-  color: #010101;
+  background: #010101;
+  color: #ffffff;
 }
 /* Black, because a white ring on white rules would disappear. */
 .gate-panel .btn:focus-visible { outline: 2px solid #010101; outline-offset: 3px; }
