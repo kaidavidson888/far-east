@@ -78,9 +78,19 @@ export function edgeProfileAt(ms: number, side: 0 | 1): Float32Array {
   return out;
 }
 
-// The PHONE row's label is supplied artwork (scripts/assets/phone-label.svg →
-// phone-label.webp), not a slice of the baked sprite. Its width follows the
-// artwork's own aspect: SPLASH_GEOM.box is square in source pixels
+// THE TOP ROW IS THE EMAIL ROW AGAIN. It takes an email address, and Google
+// authenticates from there, so the word above it has to be EMAIL — which is
+// still baked into blackbox.webp, exactly where it always was. The label is a
+// plain sprite window again, like the other two rows, and parts.email.cloudDx
+// is back to 0 because the ☁ no longer has to move out of a wider word's way.
+//
+// The supplied PHONE # artwork and everything measured for it are kept below,
+// undrawn: if the top row ever takes a phone number again, SplashLoginFields
+// draws SPLASH_GEOM.phoneLabel in place of the email label window and cloudDx
+// goes back to 0.1653. Nothing about the asset or its measurements has been
+// thrown away.
+//
+// The artwork's width follows its own aspect: SPLASH_GEOM.box is square in source pixels
 // (0.336 × 720 = 0.1511 × 1600 = 242), so a height fraction times an aspect is
 // a width fraction.
 //
@@ -153,17 +163,16 @@ export const SPLASH_GEOM = {
   // stretch of dashes under each ☁. y1 used to overrun dY0 by 0.002-0.003 of
   // the box, which was under half a sprite pixel at 215 and easy to miss;
   // baking the sprite at 430 doubled it and made it obvious.
+  /** The supplied PHONE # artwork. Not drawn while the top row takes an email. */
   phoneLabel: { ...PHONE_LABEL, w: PHONE_LABEL.h * SPLASH_PHONE_LABEL_ASPECT },
   parts: {
-    // cloudDx moves where the email ☁ is DRAWN without moving what is sampled
-    // for it — the sprite windows otherwise use one pair of fractions for both,
-    // so shifting the window slides it onto blank sprite. It is the width the
-    // artwork adds over the word it replaces, so the gap from label to ☁ stays
-    // the 0.0139 it was (baked EMAIL ink ended at 0.3442, the ☁ ink starts at
-    // 0.3581) and moves with the label rather than away from it. No y is
-    // touched: the ☁ stays on the line it was on, and dashX1 is untouched so the
-    // dashes and the tick at their left end are exactly as baked.
-    phone:    { x0: 0.100, labelX0: 0.1140, textX0: 0.1163, mid: 0.350, cloudX1: 0.495, cloudDx: 0.1653, dashX1: 0.900, ruleX1: 0.1140, y0: 0.146, y1: 0.218, dY0: 0.218, dY1: 0.238 },
+    // cloudDx moves where a row's ☁ is DRAWN without moving what is sampled for
+    // it — the sprite windows otherwise use one pair of fractions for both, so
+    // shifting the window slides it onto blank sprite. It was 0.1653 while the
+    // supplied PHONE # artwork stood in for the baked EMAIL word, that being
+    // exactly how much wider the artwork is; with the baked word back the ☁ sits
+    // where it was baked and needs no nudge at all.
+    email:    { x0: 0.100, labelX0: 0.1140, textX0: 0.1163, mid: 0.350, cloudX1: 0.495, cloudDx: 0, dashX1: 0.900, ruleX1: 0.1140, y0: 0.146, y1: 0.218, dY0: 0.218, dY1: 0.238 },
     password: { x0: 0.100, labelX0: 0.1093, textX0: 0.1116, mid: 0.565, cloudX1: 0.702, dashX1: 0.892, ruleX1: 0.1093, y0: 0.480, y1: 0.552, dY0: 0.552, dY1: 0.573 },
     submit:   { x0: 0.100, labelX0: 0.1116, textX0: 0.1116, mid: 0.758, cloudX1: 0.900, dashX1: 0.900, ruleX1: 0.1116, y0: 0.800, y1: 0.887, dY0: 0.887, dY1: 0.908 },
   },

@@ -31,6 +31,22 @@ export async function siteOrigin(): Promise<string> {
 }
 
 /**
+ * Where a signed-out reader is sent when they reach for something that needs
+ * an account.
+ *
+ * THE SPLASH IS THE SIGN-IN SCREEN. `/` is the landing artwork with the splash
+ * over it, and the splash's box IS the login form — so the gate is the front
+ * door rather than a separate page. `/login` still exists and still works; it
+ * is just not where somebody gets sent for pressing a bookmark.
+ *
+ * `next` rides along so the reader is put back where they were rather than on
+ * the landing page, and comes back through `safeNext` at both ends.
+ */
+export function signInGate(next: string): string {
+  return `/?next=${encodeURIComponent(next)}`;
+}
+
+/**
  * A redirect target that cannot leave this site.
  *
  * `next` rides through the OAuth handshake in a query string, which means it

@@ -6,8 +6,7 @@ import { redirect } from 'next/navigation';
 import { currentUser } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
 import { logAuthEvent } from '@/lib/logAuthEvent';
-import { normalisePhone } from '@/lib/phone';
-import { safeNext, siteOrigin } from '@/lib/siteUrl';
+import { safeNext, signInGate, siteOrigin } from '@/lib/siteUrl';
 import { pageFor } from '@/lib/cigPages';
 import {
   createShare, deleteReview, getCigaretteBySlug, revokeShare, savePack,
@@ -106,77 +105,69 @@ export async function loginAction(_prev: FormState, formData: FormData): Promise
 }
 
 export type SplashAuthState =
-  | { error?: string; ok?: string; badPhone?: true; badPassword?: true }
+  | { error?: string; ok?: string; badEmail?: true }
   | null;
 
 /**
- * The splash's one button is "create account / login". There is a single field
- * pair — no confirmation, no display name, no age gate — so a number that
- * already has an account signs into it and anything else gets an account made
- * for it, and either way the reader lands on the homepage.
+ * The splash IS the sign-in screen, and Google does the authenticating.
  *
- * This row is a PHONE number, not an email. Two consequences worth knowing:
+ * The reader types their email into the top row of the box and presses create
+ * account / log in. That address is handed to Google as a `login_hint`, so they
+ * arrive at their own account rather than at an account picker, and Google
+ * decides whether this is a new account or one they already have — we never
+ * find out, and we do not need to. **No password is asked for here and none is
+ * stored anywhere.** The identity, and the name and picture on it, are Google's;
+ * all this site keeps is the profiles row the signup trigger writes from what
+ * Google sends (migration 0004).
  *
- *  - Supabase will not do phone auth at all until an SMS provider is set up
- *    (Authentication → Providers → Phone). Until then sign-up comes back with
- *    a provider error, which surfaces in the form's error line.
- *  - profiles.display_name is NOT NULL and the on_auth_user_created trigger
- *    falls back to split_part(new.email, '@', 1) — NULL for a phone sign-up,
- *    which would fail the insert and take the sign-up down with it. Passing
- *    display_name in the sign-up metadata takes the trigger's first branch
- *    instead, so no migration is needed.
+ * The box's PASSWORD row is still drawn, because it is baked into the frames
+ * and is part of the picture the owner made. It is not typed into.
+ *
+ * Same PKCE flow as the button on /login — see signInWithGoogleAction for why
+ * this has to be an action rather than a link — and the same callback catches
+ * them coming back.
+ *
+ * `next` is where they were when they were stopped, so pressing the bookmark on
+ * a cigarette's page puts them back on that page rather than on the landing
+ * page. It came from a query string, so it is checked again here: a server
+ * action is a public endpoint.
  */
 export async function splashAuthAction(
   _prev: SplashAuthState,
   formData: FormData,
 ): Promise<SplashAuthState> {
-  // normalisePhone is the validator and the normaliser both: E.164 out, or
-  // null. The form flashes the box red and clears the row on null, and it is
-  // re-checked here because a server action is a public endpoint.
-  const phone = normalisePhone(String(formData.get('phone') ?? ''));
-  const password = String(formData.get('password') ?? '');
+  const email = String(formData.get('email') ?? '').trim();
+  const back = safeNext(formData.get('next'), '/');
 
-  if (!phone) return { badPhone: true };
-  if (!password) return { error: 'Enter a password.' };
+  // The form flashes the row red and clears it on a rejection. Checked here as
+  // well as in the overlay, which is where the flash is decided.
+  if (!EMAIL_RE.test(email)) return { badEmail: true };
 
+  const origin = await siteOrigin();
   const supabase = await createClient();
 
-  // Sign in first, so a returning reader is never told their own number is
-  // taken.
-  const signIn = await supabase.auth.signInWithPassword({ phone, password });
-  if (!signIn.error) {
-    logAuthEvent(phone, 'login');
-    redirect('/');
-  }
-
-  const { data, error } = await supabase.auth.signUp({
-    phone,
-    password,
-    // Read by the handle_new_user trigger; without it display_name comes out
-    // NULL for a phone sign-up and the NOT NULL insert fails.
-    options: { data: { display_name: phone } },
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: {
+      redirectTo: `${origin}/auth/callback?next=${encodeURIComponent(back)}`,
+      // Google's own parameters, passed straight through. login_hint puts the
+      // address they typed into Google's form; select_account means somebody
+      // signed into two Google accounts still gets to choose, rather than being
+      // silently taken into whichever one the browser happens to hold.
+      queryParams: { login_hint: email, prompt: 'select_account' },
+    },
   });
 
-  // Sign-in has already failed, so a number that turns out to be taken means
-  // the password was wrong — the form flashes the box and clears that row.
-  // Supabase says so two different ways: with confirmation off it is an error,
-  // and with it on the sign-up answers with a user carrying no identities
-  // instead, so the endpoint cannot be used to enumerate accounts.
-  const taken =
-    error?.code === 'user_already_exists'
-    || /already (registered|exists)/i.test(error?.message ?? '')
-    || (!!data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0);
-  if (taken) return { badPassword: true };
-  if (error) return { error: error.message };
-
-  logAuthEvent(phone, 'signup');
-
-  // Phone confirmation on → no session yet, so there is nothing to redirect to.
-  if (!data.session) {
-    return { ok: `Almost there — confirm the code we just sent to ${phone}.` };
+  // Nearly always the provider being switched off in the Supabase dashboard,
+  // which reads as validation_failed rather than as anything about Google.
+  if (error || !data.url) {
+    return { error: 'Google sign-in is not available at the moment. Please try again shortly.' };
   }
 
-  redirect('/');
+  // NOT logged here: the reader has not signed in yet, only been handed to
+  // Google. app/auth/callback/route.ts logs them when they come back, and it
+  // can tell a new account from a returning one.
+  redirect(data.url);
 }
 
 export async function logoutAction() {
@@ -208,7 +199,7 @@ export async function cancelShareAction(): Promise<void> {
 export async function toggleFavoriteAction(formData: FormData) {
   const user = await currentUser();
   const slug = String(formData.get('slug') ?? '');
-  if (!user) redirect(`/login?next=${encodeURIComponent(`/cigarette/${slug}`)}`);
+  if (!user) redirect(signInGate(`/cigarette/${slug}`));
 
   const cig = await getCigaretteBySlug(slug);
   if (!cig) return;
@@ -240,7 +231,7 @@ export async function savePackAction(formData: FormData) {
   if (!page) return;
 
   const user = await currentUser();
-  if (!user) redirect(`/login?next=${encodeURIComponent(`/packs/${id}`)}`);
+  if (!user) redirect(signInGate(`/packs/${id}`));
 
   await savePack(user.id, page.id);
   revalidatePath(`/packs/${id}`);

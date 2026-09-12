@@ -319,6 +319,37 @@ preload even same-origin — without it the browser fetches the file twice),
 filename** — bump `far-east-1` to `-2` when the file is replaced, in
 `globals.css` and `app/layout.tsx` together, or caches will hold the old one.
 
+## The splash is the sign-in screen
+A signed-out reader who reaches for something needing an account — the bookmark
+on a cigarette's page, the shelf button in the catalogue — is sent to `/`, not
+to `/login`. `signInGate()` in `lib/siteUrl.ts` builds that address;
+`/?next=<where they were>` carries them back afterwards, and `safeNext()` checks it
+at both ends because it travels through a query string and an OAuth handshake.
+Somebody already signed in who lands on `/?next=…` goes straight through.
+`/login` still exists, still works, and is still what the header links to.
+
+**GOOGLE DOES THE AUTHENTICATING, FROM THE BOX ITSELF.** The reader types their
+email into the top row and presses create account / log in; `splashAuthAction`
+hands them to Google with that address as a `login_hint`, so they land on their
+own account rather than an account picker. **No password is asked for and none
+is stored** — the identity, the name and the picture are Google's, and all this
+site keeps is the profiles row the trigger writes from what Google sends. Google
+decides whether this is a new account or a returning one; we never find out.
+There is **no Google button** on the splash: the control that does it is the one
+the owner already drew.
+
+**The top row is the EMAIL row again.** It was EMAIL, the owner supplied PHONE #
+artwork to replace it (a6c4c0c), and it takes an email once more — so the baked
+EMAIL word in `blackbox.webp` is drawn again as an ordinary sprite window, and
+`parts.email.cloudDx` is back to 0 because the ☁ no longer has to clear a wider
+word. **Nothing was thrown away**: `phone-label.webp`, `SPLASH_GEOM.phoneLabel` and
+the `phoneLabel()` renderer are all still there. To go back, draw `phoneLabel()`
+for the top row's label instead of the window and set `cloudDx` to 0.1653.
+
+**The PASSWORD row is still drawn and no longer typed into.** It is baked into
+the frames, so it cannot come out without re-baking, and it is part of the
+picture. It keeps every opacity rule it had; there is simply no input over it.
+
 ## Signing in with Google
 **Google is not an alternative to Supabase Auth — it is a provider inside it.**
 The handshake produces the same `auth.users` row, the same session cookie and the
@@ -401,7 +432,11 @@ the brand assets and review text in this repo are visible to anyone.
    values in `lib/seed.ts`.
 5. **Instagram link is a placeholder** — two constants at the top of `app/page.tsx`.
 6. `subscribers` table is unused (newsletter removed); drop it in a migration when convenient.
-7. **Email and phone sign-in are both switched off.** A password sign-in comes
+7. **The password row on the splash is decorative.** Google does the
+   authenticating, so the box asks for an email and nothing else, but PASSWORD
+   is baked into the frames and still drawn. Re-baking the splash without it is
+   a job for whenever the owner next revises that artwork.
+8. **Email and phone sign-in are both switched off.** A password sign-in comes
    back `email_provider_disabled` and the splash's phone sign-in needs an SMS
    provider that is not configured (Authentication -> Providers). **Google is
    the way in** — it is already enabled with a real client id, and it needs
@@ -411,12 +446,12 @@ the brand assets and review text in this repo are visible to anyone.
    phone, so a reader who lands on `/` has to reach `/login` to get in. It also means a signed-in press cannot be
    verified end to end locally — the DB layer under it is covered by
    `npm run verify:db` instead.
-8. **The pack shelf has no shelf page.** `/favorites` lists catalogue products
+9. **The pack shelf has no shelf page.** `/favorites` lists catalogue products
    through `favoritesWithNotes`; `pack_favorites` is a separate table and
    nothing renders it yet, so a bookmark can be added and not seen anywhere
    else, and not removed. `savedPackIds()` in `lib/db.ts` is the query that
    page will want.
-9. **The artwork pages are still centred on half pixels.** `styleFor` in
+10. **The artwork pages are still centred on half pixels.** `styleFor` in
    `ArtworkPage.tsx` rounds the mark's own half-width but leaves `left: 50%`,
    and 50% of an odd stage width is a .5 — measured live on /about, the intro
    and focus bodies sit at x=308.5 and the three footer buttons at 345.5 /

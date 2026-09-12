@@ -45,7 +45,10 @@ const viewport = () => ({
  * content back over it — pixel-exact, from blackbox.webp — and settle.webp then
  * drops the baked copy, so the handover to the working form is invisible.
  */
-export function SplashScreen() {
+export function SplashScreen({ next = '' }: {
+  /** Where the reader was when they were stopped, for the form to send them back to. */
+  next?: string;
+}) {
   const [phase, setPhaseState] = useState<Phase>('logo');
   const [ready, setReady] = useState(false);
   const [box, setBox] = useState({ x: 0, y: 0, w: 0, h: 0 });
@@ -458,6 +461,7 @@ export function SplashScreen() {
         >
           <SplashLoginFields
             box={box}
+            next={next}
             live={phase === 'form'}
             onFieldFocus={onFieldFocus}
             onReady={onFormReady}
