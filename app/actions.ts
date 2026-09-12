@@ -3,19 +3,18 @@
 import { randomBytes } from 'node:crypto';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
+import { EMAIL_RE, MIN_PASSWORD } from '@/lib/authPolicy';
 import { currentUser } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
 import { logAuthEvent } from '@/lib/logAuthEvent';
 import { safeNext, signInGate, siteOrigin } from '@/lib/siteUrl';
 import { pageFor } from '@/lib/cigPages';
 import {
-  createShare, deleteReview, getCigaretteBySlug, revokeShare, savePack,
+  accountState, createShare, deleteReview, getCigaretteBySlug, revokeShare, savePack,
   setFavoriteNote, toggleFavorite, upsertReview,
 } from '@/lib/db';
 
 export type FormState = { error?: string; ok?: string } | null;
-
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 /* ---------- Account ---------- */
 export async function registerAction(_prev: FormState, formData: FormData): Promise<FormState> {
@@ -105,68 +104,126 @@ export async function loginAction(_prev: FormState, formData: FormData): Promise
 }
 
 export type SplashAuthState =
-  | { error?: string; ok?: string; badEmail?: true }
+  | { error?: string; ok?: string; badEmail?: true; badPassword?: true }
   | null;
 
 /**
- * The splash IS the sign-in screen, and Google does the authenticating.
+ * The splash IS the sign-in screen. Email and password, with Google used once.
  *
- * The reader types their email into the top row of the box and presses create
- * account / log in. That address is handed to Google as a `login_hint`, so they
- * arrive at their own account rather than at an account picker, and Google
- * decides whether this is a new account or one they already have — we never
- * find out, and we do not need to. **No password is asked for here and none is
- * stored anywhere.** The identity, and the name and picture on it, are Google's;
- * all this site keeps is the profiles row the signup trigger writes from what
- * Google sends (migration 0004).
+ * WHAT THE BOX DOES, in the order it decides:
  *
- * The box's PASSWORD row is still drawn, because it is baked into the frames
- * and is part of the picture the owner made. It is not typed into.
+ *   1. The address has to look like an address, and the password has to be
+ *      long enough. Either failing flashes that row red and empties it.
+ *   2. Try to sign in with the pair. If it works AND the account has been
+ *      through Google, they are in and go where they were headed. **Google is
+ *      not shown again — this is the path nearly every sign-in takes.**
+ *   3. Sign-in failed and the address already has an account: the password is
+ *      wrong. Flash the PASSWORD row and empty it, leaving the address alone,
+ *      because the address is the half that was right.
+ *   4. Sign-in failed and the address has no account: make one with this
+ *      password, then hand them to Google to verify it. That is the one time
+ *      Google is involved.
  *
- * Same PKCE flow as the button on /login — see signInWithGoogleAction for why
- * this has to be an action rather than a link — and the same callback catches
- * them coming back.
+ * An account that has a password but never finished at Google is not finished:
+ * step 2 sends it back to Google rather than letting it in, so closing the tab
+ * on Google's screen cannot be used to skip verification.
  *
- * `next` is where they were when they were stopped, so pressing the bookmark on
- * a cigarette's page puts them back on that page rather than on the landing
- * page. It came from a query string, so it is checked again here: a server
- * action is a public endpoint.
+ * THE PASSWORD GOES TO SUPABASE AUTH AND NOWHERE ELSE. It is bcrypt in
+ * auth.users.encrypted_password, which is what signUp does with it. It is not
+ * written to profiles, not put in a cookie, not carried through the Google
+ * round trip, and never logged — logAuthEvent takes the address and the event
+ * and nothing else.
+ *
+ * REQUIRES THE EMAIL PROVIDER. Both signInWithPassword and signUp answer
+ * email_provider_disabled while it is switched off in Authentication →
+ * Providers, so the box cannot work at all until it is on. That case is
+ * reported in words rather than as a flash, because it is not the reader's
+ * fault and no amount of retyping will fix it.
  */
 export async function splashAuthAction(
   _prev: SplashAuthState,
   formData: FormData,
 ): Promise<SplashAuthState> {
-  const email = String(formData.get('email') ?? '').trim();
-  const back = safeNext(formData.get('next'), '/');
+  const email = String(formData.get('email') ?? '').trim().toLowerCase();
+  const password = String(formData.get('password') ?? '');
+  const back = safeNext(formData.get('next'), '/landing');
 
-  // The form flashes the row red and clears it on a rejection. Checked here as
-  // well as in the overlay, which is where the flash is decided.
+  // Checked again here even though the overlay checks it: a server action is a
+  // public endpoint.
   if (!EMAIL_RE.test(email)) return { badEmail: true };
+  if (password.length < MIN_PASSWORD) {
+    return { badPassword: true, error: `Passwords need at least ${MIN_PASSWORD} characters.` };
+  }
 
+  const supabase = await createClient();
+
+  // ---- 1. the ordinary case: they have been here before --------------------
+  const signIn = await supabase.auth.signInWithPassword({ email, password });
+
+  if (offline(signIn.error)) return { error: PROVIDER_OFF };
+
+  if (!signIn.error) {
+    // Signed in — but an account that never finished at Google is not finished.
+    const { googleLinked } = await accountState(email);
+    if (googleLinked) {
+      logAuthEvent(email, 'login');
+      redirect(back);
+    }
+    return handToGoogle(email, back);
+  }
+
+  // ---- 2. it did not work: whose fault is it? -----------------------------
+  const { exists } = await accountState(email);
+  if (exists) return { badPassword: true };
+
+  // ---- 3. nobody has this address: make the account, then verify it -------
+  const signUp = await supabase.auth.signUp({ email, password });
+  if (offline(signUp.error)) return { error: PROVIDER_OFF };
+  if (signUp.error) return { error: signUp.error.message };
+
+  // If confirmation is on there is no session; if it is off there is one, and
+  // it is dropped on purpose. Either way the only way in is through Google,
+  // which is what "verify your account" has to mean to be worth anything.
+  if (signUp.data.session) await supabase.auth.signOut();
+
+  logAuthEvent(email, 'signup');
+  return handToGoogle(email, back);
+}
+
+/** What Supabase says when the email provider is switched off. */
+const PROVIDER_OFF =
+  'Signing in is not available at the moment. Please try again shortly.';
+
+const offline = (e: { code?: string; message?: string } | null): boolean =>
+  e?.code === 'email_provider_disabled' || /provider is disabled|logins are disabled/i.test(e?.message ?? '');
+
+/**
+ * Hand the reader to Google, carrying the address they typed.
+ *
+ * `login_hint` puts it into Google's own form so they land on their own
+ * account; `expect` rides on our callback so the account that comes back can be
+ * checked against the one that went out — picking a different Google account
+ * at the prompt would otherwise quietly sign them into someone else's address.
+ *
+ * Returns a state rather than redirecting when it cannot start, so the box can
+ * say so; the redirect itself throws, as redirects do, and is the last thing.
+ */
+async function handToGoogle(email: string, back: string): Promise<SplashAuthState> {
   const origin = await siteOrigin();
   const supabase = await createClient();
 
+  const params = new URLSearchParams({ next: back, expect: email });
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
     options: {
-      redirectTo: `${origin}/auth/callback?next=${encodeURIComponent(back)}`,
-      // Google's own parameters, passed straight through. login_hint puts the
-      // address they typed into Google's form; select_account means somebody
-      // signed into two Google accounts still gets to choose, rather than being
-      // silently taken into whichever one the browser happens to hold.
+      redirectTo: `${origin}/auth/callback?${params}`,
       queryParams: { login_hint: email, prompt: 'select_account' },
     },
   });
 
-  // Nearly always the provider being switched off in the Supabase dashboard,
-  // which reads as validation_failed rather than as anything about Google.
   if (error || !data.url) {
     return { error: 'Google sign-in is not available at the moment. Please try again shortly.' };
   }
-
-  // NOT logged here: the reader has not signed in yet, only been handed to
-  // Google. app/auth/callback/route.ts logs them when they come back, and it
-  // can tell a new account from a returning one.
   redirect(data.url);
 }
 

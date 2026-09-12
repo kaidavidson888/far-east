@@ -31,6 +31,15 @@ import { SplashScreen } from '@/components/SplashScreen';
  * `?nosplash=1` skips the sign-in splash, and `?device=mobile|desktop` forces
  * either arrangement. The buttons have no destinations yet.
  */
+/**
+ * What came back wrong, in words a reader can act on. Only 'mismatch' reaches
+ * here today: they typed one address and then chose a different Google account
+ * at the prompt, so nothing was signed in and nothing was changed.
+ */
+const TROUBLE: Record<string, string> = {
+  mismatch: 'That is not the address you started with. Nothing has been changed — try again.',
+};
+
 export default async function HomePage({
   searchParams,
 }: {
@@ -41,6 +50,9 @@ export default async function HomePage({
   // '' rather than a page, so an ordinary visit to / stays on /
   const next = safeNext(params.next, '');
   if (user && next) redirect(next);
+  // Something the reader needs told, from a round trip that ended here rather
+  // than where it meant to — see app/auth/callback/route.ts.
+  const notice = typeof params.error === 'string' ? (TROUBLE[params.error] ?? null) : null;
   const dev = process.env.NODE_ENV !== 'production';
   const showHitboxes = dev && params.hitboxes !== undefined;
   const hideSplash = dev && params.nosplash !== undefined;
@@ -50,7 +62,7 @@ export default async function HomePage({
     <>
       {/* The splash IS the sign-in, so it would otherwise re-gate the reader on
           the very page its own button sends them to. */}
-      {user || hideSplash ? null : <SplashScreen next={next} />}
+      {user || hideSplash ? null : <SplashScreen next={next} notice={notice} />}
       <ArtworkPage
         spec={LANDING_SPEC}
         device={device}

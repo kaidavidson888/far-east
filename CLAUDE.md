@@ -328,15 +328,46 @@ at both ends because it travels through a query string and an OAuth handshake.
 Somebody already signed in who lands on `/?next=…` goes straight through.
 `/login` still exists, still works, and is still what the header links to.
 
-**GOOGLE DOES THE AUTHENTICATING, FROM THE BOX ITSELF.** The reader types their
-email into the top row and presses create account / log in; `splashAuthAction`
-hands them to Google with that address as a `login_hint`, so they land on their
-own account rather than an account picker. **No password is asked for and none
-is stored** — the identity, the name and the picture are Google's, and all this
-site keeps is the profiles row the trigger writes from what Google sends. Google
-decides whether this is a new account or a returning one; we never find out.
-There is **no Google button** on the splash: the control that does it is the one
-the owner already drew.
+**EMAIL AND PASSWORD, WITH GOOGLE USED ONCE.** Both rows are typed into, as the
+box is drawn. `splashAuthAction` decides in this order:
+
+1. The address must look like one and the password must be long enough
+   (`MIN_PASSWORD`, 8). Either failing flashes THAT row red and empties it,
+   leaving the other row's text alone — the flash the owner drew, reused.
+2. Try the pair. If it signs in **and the account has been through Google**,
+   they are in and go where they were headed. **Google is not shown.** This is
+   the path nearly every sign-in takes.
+3. Sign-in failed but the address already has an account → the password is the
+   wrong half. Flash the PASSWORD row, empty it, leave the address.
+4. Sign-in failed and the address has no account → make one with that password,
+   then hand them to Google to verify it. **The only time Google appears.**
+
+An account with a password that never finished at Google is **not finished**:
+step 2 sends it back to Google rather than letting it in, so closing the tab on
+Google's screen cannot be used to skip verification. `accountState()` in
+`lib/db.ts` is what knows — it reads `auth.identities` for a google row.
+
+**THE PASSWORD GOES TO SUPABASE AUTH AND NOWHERE ELSE.** `signUp` bcrypts it into
+`auth.users.encrypted_password`. It is **not** written to `profiles` — a password in
+an application table is a defect however it is stored, and `profiles` is read
+and joined all over this app. It is not put in a cookie, not carried through the
+Google round trip, and never logged: `logAuthEvent` takes an address and an event
+and nothing else, which is the rule for this site.
+
+**The callback checks who came back.** Google shows an account chooser, so
+somebody who typed one address and then picked a different Google account would
+otherwise be signed into that one — leaving the address they typed as an account
+with a password and nobody attached. `expect=` rides on the callback URL and a
+mismatch signs them straight back out.
+
+There is **no Google button** on the splash: the control is the one the owner
+already drew.
+
+**This tells an existing address from a new one, which is account enumeration.**
+Type an address and the box behaves differently depending on whether somebody
+has an account here. That is inherent in what was asked for — the two cases have
+to look different — and it is worth knowing it is the trade. Supabase rate-limits
+its own auth calls; `accountState()` is ours and is not rate-limited.
 
 **The top row is the EMAIL row again.** It was EMAIL, the owner supplied PHONE #
 artwork to replace it (a6c4c0c), and it takes an email once more — so the baked
@@ -432,26 +463,25 @@ the brand assets and review text in this repo are visible to anyone.
    values in `lib/seed.ts`.
 5. **Instagram link is a placeholder** — two constants at the top of `app/page.tsx`.
 6. `subscribers` table is unused (newsletter removed); drop it in a migration when convenient.
-7. **The password row on the splash is decorative.** Google does the
-   authenticating, so the box asks for an email and nothing else, but PASSWORD
-   is baked into the frames and still drawn. Re-baking the splash without it is
-   a job for whenever the owner next revises that artwork.
-8. **Email and phone sign-in are both switched off.** A password sign-in comes
-   back `email_provider_disabled` and the splash's phone sign-in needs an SMS
-   provider that is not configured (Authentication -> Providers). **Google is
-   the way in** — it is already enabled with a real client id, and it needs
-   neither. Whether the deployed origin and localhost are on the Redirect URLs
-   allow-list has not been confirmed; that is the one thing that cannot be
-   checked without completing a real sign-in. The splash still offers only
-   phone, so a reader who lands on `/` has to reach `/login` to get in. It also means a signed-in press cannot be
+7. **THE EMAIL PROVIDER IS STILL SWITCHED OFF, AND THE SPLASH NOW NEEDS IT.**
+   Both `signInWithPassword` and `signUp` answer `email_provider_disabled`, so the
+   box cannot sign anybody in or make anybody an account until **Authentication
+   → Providers → Email** is on. It is reported in words in the box rather than
+   as a flash, because it is not the reader's fault. Google alone is already
+   enabled with a real client id and needs nothing.
+   Also still unconfirmed: whether `http://localhost:3000/**` and the deployed
+   origin are on the Redirect URLs allow-list (Authentication → URL
+   Configuration). They are enforced at the callback, so it cannot be checked
+   without completing a real sign-in — and a missing entry sends the last hop to
+   the Site URL instead, which is what "it sent me to a Vercel login" was. It also means a signed-in press cannot be
    verified end to end locally — the DB layer under it is covered by
    `npm run verify:db` instead.
-9. **The pack shelf has no shelf page.** `/favorites` lists catalogue products
+8. **The pack shelf has no shelf page.** `/favorites` lists catalogue products
    through `favoritesWithNotes`; `pack_favorites` is a separate table and
    nothing renders it yet, so a bookmark can be added and not seen anywhere
    else, and not removed. `savedPackIds()` in `lib/db.ts` is the query that
    page will want.
-10. **The artwork pages are still centred on half pixels.** `styleFor` in
+9. **The artwork pages are still centred on half pixels.** `styleFor` in
    `ArtworkPage.tsx` rounds the mark's own half-width but leaves `left: 50%`,
    and 50% of an odd stage width is a .5 — measured live on /about, the intro
    and focus bodies sit at x=308.5 and the three footer buttons at 345.5 /
@@ -465,6 +495,17 @@ the brand assets and review text in this repo are visible to anyone.
    change rather than a rider on someone else's.
 
 ## Gotchas learned the hard way
+- **A `'use server'` module may only export async functions.** Exporting a plain
+  `const` from `app/actions.ts` does not fail the build and does not fail
+  `tsc --noEmit` — it silently strips EVERY export from the module, and the first
+  sign is a runtime error in the browser saying "the module has no exports at
+  all" for an action that was obviously there. `lib/authPolicy.ts` exists because
+  of this: `EMAIL_RE` and `MIN_PASSWORD` are shared by the splash overlay and the
+  action, so they live in a plain module both can import.
+- **Run `next build` with the dev server STOPPED** — both write to `.next`, and
+  doing it live leaves the dev server serving Internal Server Error until `.next`
+  is deleted and it is restarted. `NEXT_DIST_DIR=.next-build` is the way round it,
+  but then `git checkout -- tsconfig.json next-env.d.ts` afterwards.
 - **Heredocs on this machine eat one level of backslash.** Writing file content
   straight into `cat > f <<'EOF'` is fine, but a JS *string literal* containing
   `\s` or `\b` inside a heredoc arrives as `s`, which the string literal then

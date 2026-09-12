@@ -320,6 +320,44 @@ export async function setFavoriteNote(userId: string, cigaretteId: number, note:
   `;
 }
 
+/* ---------- Who already has an account ---------- */
+
+/**
+ * What the splash needs to know about an email before it decides what to do.
+ *
+ * Supabase deliberately gives no way to ask "does this address have an
+ * account" — that is an enumeration endpoint and they will not build one. This
+ * reads the auth schema directly, which it can because the app connects as the
+ * database owner. It is the only place outside supabase/migrations that touches
+ * `auth.` anything, and it reads: no writes, and nothing about the password,
+ * which is bcrypt in `auth.users.encrypted_password` and is never read, logged
+ * or copied anywhere by this application.
+ *
+ * `googleLinked` is what makes "verify with Google once" stick. An account can
+ * exist with a password and no Google identity — somebody signed up and then
+ * closed the tab on Google's screen — and that account is not finished. The
+ * splash sends them back to Google rather than letting them in.
+ *
+ * NOTE that telling an existing address apart from a new one is exactly what
+ * account enumeration is, and the owner asked for it so the two cases can look
+ * different in the box. See CLAUDE.md.
+ */
+export type AccountState = { exists: boolean; googleLinked: boolean };
+
+export async function accountState(email: string): Promise<AccountState> {
+  const sql = db();
+  const [row] = await sql<{ google: boolean }[]>`
+    SELECT EXISTS (
+      SELECT 1 FROM auth.identities i
+      WHERE i.user_id = u.id AND i.provider = 'google'
+    ) AS google
+    FROM auth.users u
+    WHERE lower(u.email) = lower(${email})
+    LIMIT 1
+  `;
+  return { exists: Boolean(row), googleLinked: Boolean(row?.google) };
+}
+
 /* ---------- The pack shelf ----------
  * The bookmark on a cigarette's own page, which is a different shelf from the
  * one above. `favorites` keys on a catalogue row and the catalogue is still

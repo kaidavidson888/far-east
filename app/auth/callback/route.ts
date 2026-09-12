@@ -41,12 +41,28 @@ export async function GET(request: Request) {
   const code = url.searchParams.get('code');
   if (!code) return NextResponse.redirect(`${origin}/login?error=provider`);
 
+  // Who the splash expected to come back. It is only set when the round trip
+  // started from the box, where the reader typed an address and had an account
+  // made for it — see splashAuthAction.
+  const expect = (url.searchParams.get('expect') ?? '').trim().toLowerCase();
+
   const supabase = await createClient();
   const { data, error } = await supabase.auth.exchangeCodeForSession(code);
 
   // A stale or replayed code, or a verifier cookie that is gone — the reader
   // cleared their cookies mid-handshake, or came back to an old tab.
   if (error || !data.session) return NextResponse.redirect(`${origin}/login?error=expired`);
+
+  // THE ACCOUNT THAT CAME BACK HAS TO BE THE ONE THAT WENT OUT. Google shows
+  // an account chooser, so somebody who typed one address and then picked a
+  // different Google account would otherwise be signed into that one instead —
+  // leaving the address they typed behind as an account with a password and
+  // nobody attached, and signing them into an identity they did not ask for.
+  // The session is dropped and they are sent back to try again.
+  if (expect && (data.user.email ?? '').toLowerCase() !== expect) {
+    await supabase.auth.signOut();
+    return NextResponse.redirect(`${origin}/?error=mismatch`);
+  }
 
   // Which event this was, for the owner's log. A brand-new account has its
   // first sign-in stamped at the same moment it is created, so the two

@@ -2,29 +2,24 @@
 
 import { useActionState, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { splashAuthAction, type SplashAuthState } from '@/app/actions';
+import { EMAIL_RE, MIN_PASSWORD } from '@/lib/authPolicy';
 import { SPLASH_GEOM, SPLASH_FORM, splashAsset } from '@/lib/splashFrames';
 
 type Box = { x: number; y: number; w: number; h: number };
 type Row = 'email' | 'password';
 type Kind = 'line' | 'label' | 'cloud';
 
-/**
- * GOOGLE DOES THE AUTHENTICATING, so only the top row is typed into.
+/*
+ * BOTH ROWS ARE TYPED INTO: an email and a password, as the box is drawn.
  *
- * The reader puts in their email and presses create account / log in; the
- * action hands them to Google carrying that address as a login_hint, so they
- * land on their own account rather than on an account picker. No password is
- * asked for here and none is stored anywhere — the identity is Google's.
+ * Google is asked for once, when the account is made, and never again — see
+ * splashAuthAction for the order it decides in. Every later sign-in is this
+ * pair and nothing else.
  *
- * THE PASSWORD ROW IS STILL DRAWN AND NO LONGER TYPED INTO. It is baked into
- * the box, so it cannot be taken out without re-baking the frames, and it is
- * part of the picture the owner drew. It keeps its label, its ☁ and its dashes
- * at the same opacities as ever; there is simply no input over it.
- *
- * Kept shallow on purpose: the same check runs again in the action, because a
- * server action is a public endpoint.
+ * EMAIL_RE and MIN_PASSWORD come from lib/authPolicy.ts rather than from the
+ * action, because a 'use server' module may only export async functions — a
+ * const exported from one silently strips every export it has.
  */
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const REJECT_MS = 500;
 
@@ -52,6 +47,7 @@ const TYPED_SCALE: Record<Row, number> = { email: 1.1, password: 1 };
 export function SplashLoginFields({
   box,
   next = '',
+  notice = null,
   onFieldFocus,
   onReady,
   live = true,
@@ -59,6 +55,8 @@ export function SplashLoginFields({
   box: Box;
   /** Where to go once they are in — see signInGate in lib/siteUrl.ts. */
   next?: string;
+  /** Something to say on arrival, before they have submitted anything. */
+  notice?: string | null;
   onFieldFocus?: (on: boolean) => void;
   onReady?: () => void;
   /** false while the animation is still running: the same windows, drawn the
@@ -67,19 +65,22 @@ export function SplashLoginFields({
 }) {
   const [state, action] = useActionState<SplashAuthState, FormData>(splashAuthAction, null);
   const [email, setEmail] = useState('');
+  const [pw, setPw] = useState('');
   const [focus, setFocus] = useState<Row | null>(null);
   const [submitActive, setSubmitActive] = useState(false);
   const [rejected, setRejected] = useState(false);
   const rejectTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
-  const inField = focus === 'email';
+  const inField = focus === 'email' || focus === 'password';
 
-  // A rejection fills the box red for half a second and clears the row, so the
-  // reader is left looking at one empty line to try again on. There is one row
-  // to reject now: an address that is not an address. Whether that address has
-  // an account is Google's business and not something this form ever learns.
+  // A rejection fills the box red for half a second and empties the row that
+  // was wrong, so the reader is left looking at one blank line to try again on
+  // — and the row that was RIGHT keeps what they typed. A wrong password with a
+  // known address clears the password and leaves the address sitting there,
+  // which is the whole point of clearing one row rather than both.
   const reject = useCallback((row: Row) => {
     if (row === 'email') setEmail('');
+    else setPw('');
     setRejected(true);
     clearTimeout(rejectTimer.current);
     rejectTimer.current = setTimeout(() => setRejected(false), REJECT_MS);
@@ -91,6 +92,7 @@ export function SplashLoginFields({
   // endpoint; either way the form answers the same way.
   useEffect(() => {
     if (state?.badEmail) reject('email');
+    else if (state?.badPassword) reject('password');
   }, [state, reject]);
 
   // After the commit but before the browser paints — so by the time this fires
@@ -111,7 +113,7 @@ export function SplashLoginFields({
   const labelSize = box.h * 0.0825;
 
   const op = (kind: Kind, row: Row | 'submit'): number => {
-    const rowTyped = row === 'email' && email.length > 0;
+    const rowTyped = (row === 'email' && email.length > 0) || (row === 'password' && pw.length > 0);
     if (kind === 'cloud') {
       if (row === 'submit') return submitActive ? 1 : inField ? 0.8 : 1;
       if (rowTyped) return 0;
@@ -245,16 +247,22 @@ export function SplashLoginFields({
         // block the submit with a bubble before the box could flash
         noValidate
         onSubmit={(e) => {
+          // the address first: it is the row the reader fills in first, and a
+          // password cannot be judged here at all beyond its length
           if (!EMAIL_RE.test(email.trim())) {
             e.preventDefault();
             reject('email');
+            return;
+          }
+          if (pw.length < MIN_PASSWORD) {
+            e.preventDefault();
+            reject('password');
           }
         }}
       >
         <input type="hidden" name="next" value={next} />
         {field('email', email, setEmail, 'email', 'email', 'Email address')}
-        {/* no password field: Google does the authenticating. The row above is
-            drawn by {windows} and is part of the picture, not a control. */}
+        {field('password', pw, setPw, 'password', 'current-password', 'Password')}
 
         <button
           type="submit"
@@ -273,12 +281,12 @@ export function SplashLoginFields({
           <span className="sr-only">Create account or log in</span>
         </button>
 
-        {state?.error || state?.ok ? (
+        {state?.error || state?.ok || notice ? (
           <p
             className="splash-fields-error"
             style={{ position: 'fixed', left: box.x, top: box.y + box.h + 10, width: box.w }}
           >
-            {state.error ?? state.ok}
+            {state?.error ?? state?.ok ?? notice}
           </p>
         ) : null}
       </form>}
