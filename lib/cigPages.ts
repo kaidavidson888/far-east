@@ -72,5 +72,39 @@ export function pageFor(id: string): Page | null {
  */
 export const INFO_BOX = { left: 5, top: 143, width: 299, height: 569 };
 
+/**
+ * The bookmark, which the page draws rather than the vector.
+ *
+ * The owner asked for it to be a button: black at rest, red under the
+ * pointer, red for good once it has been pressed. An SVG loaded through
+ * <img> cannot be reached by the page's CSS, so the mark comes out of the
+ * artwork the way the logo and the seal already do, and is drawn here
+ * instead. The build strips it — see stripBookmark in
+ * scripts/build-cigpages.mjs — and it is the same shape in all 227 supplied
+ * vectors, to the character.
+ *
+ * All four numbers are the design's own, moved into the body's coordinates
+ * by the crop (x-39, y-18) and rounded outward, so nothing lands on a half
+ * pixel. In the vector:
+ *
+ *   box   <rect x="182" y="331.5" width="68" height="63" stroke-width="3">
+ *         which the 3px stroke straddles, so it occupies 180.5..251.5 and
+ *         330..396 — 141.5..212.5 and 312..378 on the body
+ *   mark  <path d="M199 344 H233 V382 L216 369 L199 382 Z">
+ *         160..194 and 326..364 on the body, 34 by 38
+ *
+ * THE BOX IS THE BUTTON, not the mark: it is what the design draws as a
+ * control, it is what the plus beside it is, and a 34px target is under the
+ * 44px a finger wants. The mark is what changes colour.
+ */
+export const BOOKMARK = {
+  /** The drawn box, outer edge of its rule. The hit area. */
+  box: { left: 141, top: 312, width: 72, height: 66 },
+  /** The mark inside it, in the body's coordinates. */
+  mark: { left: 160, top: 326, width: 34, height: 38 },
+  /** The same path, moved to its own origin so the svg needs no viewBox maths. */
+  d: 'M0 0 H34 V38 L17 25 L0 38 Z',
+};
+
 /** The rule's weight, which globals.css draws and the page has to allow for. */
 export const RULE = 5;

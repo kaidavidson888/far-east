@@ -1,6 +1,7 @@
 import landing from '@/lib/landing-geometry.json';
 import geometry from '@/lib/cigpages.json';
 import { INFO_BOX, RULE } from '@/lib/cigPages';
+import { CigBookmark } from './CigBookmark';
 import { LogoMenu } from './LogoMenu';
 import { SealButton } from './SealButton';
 
@@ -33,6 +34,13 @@ import { SealButton } from './SealButton';
  * own 45 and 28, the seal as tall as the logo at the corner it always
  * occupies.
  *
+ * THE BOOKMARK IS A BUTTON, and it is drawn here for the same reason the
+ * logo is: the artwork had it as a filled path inside an <img>, where no
+ * stylesheet can reach it. The build takes it out and CigBookmark puts the
+ * same path back at the same coordinates — inside the body, so it travels
+ * with the artwork rather than with the page's edges. The box round it is
+ * still the artwork's; only the mark changes colour.
+ *
  * THE LOGO IS THE MENU HERE, not a link home. It unfolds the same monkey
  * bar the landing page's does, with one more box on the end — home — and
  * that box is what carries you back. So the mark below is drawn and not
@@ -43,7 +51,20 @@ const { body, top } = geometry;
 const LOGO = landing.parts.logo;
 const SEAL_SIZE = landing.parts.logo.h;
 
-export function CigPage({ id, name, gap }: { id: string; name: string; gap: number }) {
+export function CigPage({
+  id,
+  name,
+  gap,
+  packId,
+  saved,
+}: {
+  id: string;
+  name: string;
+  gap: number;
+  /** The id in the address, which is the page's own except for the twelve twins. */
+  packId: string;
+  saved: boolean;
+}) {
   // The rule stands off the info by the page's own brand-to-flavour gap, so
   // it reaches below the artwork; the stage grows to keep the design's own
   // margin underneath it rather than letting it sit on the page's edge. The
@@ -76,6 +97,9 @@ export function CigPage({ id, name, gap }: { id: string; name: string; gap: numb
             height={body.h}
             draggable={false}
           />
+
+          {/* the artwork's own bookmark, given back as a control */}
+          <CigBookmark id={packId} name={name} saved={saved} />
 
           {/* a rule round the info, inside the body so it travels with it */}
           <div

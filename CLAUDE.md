@@ -235,6 +235,35 @@ knowing before touching it:
   push it off the edge. The clamp only bites below about 370px.
   The red is the artwork's own `#FF0000`. **Not `--negative`** — that token is
   warm grey and is never an error colour, per the spec.
+- **The bookmark is the one control inside the artwork.** The owner asked for
+  it to be a button: black at rest, red under the pointer, red for good once
+  it is pressed, and pressing it puts that cigarette on your shelf. A page
+  loaded through `<img>` is out of CSS's reach, so the mark comes out of the
+  vector the way the logo and the seal already do — `stripBookmark` in the
+  build — and `components/CigBookmark.tsx` draws the same path back at the
+  same coordinates, where a stylesheet can colour it. `BOOKMARK` in
+  `lib/cigPages.ts` carries the geometry, taken off the vector and rounded
+  outward so nothing lands on a half pixel. **The box round it stays in the
+  artwork**: that is the outline of the control and it never changes.
+  **The box is the button, the mark is what reddens** — the design draws it as
+  a control, the plus beside it is plainly one too, and it gives a 72x66
+  target rather than a 34px one.
+  It is **add-only, not a toggle**, which is what "red permanently" means: once
+  saved it stops being a button at all and becomes a `<span>` carrying the
+  state, rather than a dead control that still invites a press. Taking
+  something back off is the shelf's job, and **the shelf page does not show
+  packs yet** — see Known gaps.
+- **The pack shelf is a different table from the catalogue shelf.**
+  `favorites.cigarette_id` is a foreign key into `cigarettes`, which holds 32
+  placeholder products from `lib/catalog.json`; these 235 pages are the owner's
+  own vectors, keyed by the pack's source filename. Putting one in `favorites`
+  would mean inventing a brand, a country, a tar figure and a verdict for each.
+  So `public.pack_favorites` keys on `pack_id` — text, deliberately not a
+  foreign key, because the pack list lives in `lib/cigs.json` and is rebuilt
+  from the owner's image folder rather than seeded. **What is saved is the
+  PAGE's id, not the pressed pack's**, so the twelve name-twins save as the one
+  cigarette they are. Migration `0003_pack_favorites.sql`, **already applied to
+  the shared Supabase project** — do not apply it again.
 - **The menu canvas is cut to 360px on the cigarette pages**, which is exactly
   a 360px phone. The bar with the home box reaches x=354, and `SLACK` in
   `build-menu-frames.mjs` is 6 rather than 10 for that reason: at 10 the canvas
@@ -321,7 +350,23 @@ the brand assets and review text in this repo are visible to anyone.
    values in `lib/seed.ts`.
 5. **Instagram link is a placeholder** — two constants at the top of `app/page.tsx`.
 6. `subscribers` table is unused (newsletter removed); drop it in a migration when convenient.
-7. **The artwork pages are still centred on half pixels.** `styleFor` in
+7. **Nobody can sign in to this site right now.** The Supabase project has the
+   email provider switched off — a password sign-in comes back
+   `email_provider_disabled`, so `/login` and `/register` cannot work — and the
+   splash's phone sign-in needs an SMS provider that is not configured either
+   (Authentication -> Providers). Everything that reads is fine, because
+   nothing on this site needs an account to browse; everything that writes is
+   unreachable until one of the two is turned on. That includes the new
+   bookmark: pressing it signed out correctly sends you to `/login`, and
+   `/login` is currently a dead end. It also means a signed-in press cannot be
+   verified end to end locally — the DB layer under it is covered by
+   `npm run verify:db` instead.
+8. **The pack shelf has no shelf page.** `/favorites` lists catalogue products
+   through `favoritesWithNotes`; `pack_favorites` is a separate table and
+   nothing renders it yet, so a bookmark can be added and not seen anywhere
+   else, and not removed. `savedPackIds()` in `lib/db.ts` is the query that
+   page will want.
+9. **The artwork pages are still centred on half pixels.** `styleFor` in
    `ArtworkPage.tsx` rounds the mark's own half-width but leaves `left: 50%`,
    and 50% of an odd stage width is a .5 — measured live on /about, the intro
    and focus bodies sit at x=308.5 and the three footer buttons at 345.5 /

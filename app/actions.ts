@@ -7,8 +7,9 @@ import { currentUser } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
 import { logAuthEvent } from '@/lib/logAuthEvent';
 import { normalisePhone } from '@/lib/phone';
+import { pageFor } from '@/lib/cigPages';
 import {
-  createShare, deleteReview, getCigaretteBySlug, revokeShare,
+  createShare, deleteReview, getCigaretteBySlug, revokeShare, savePack,
   setFavoriteNote, toggleFavorite, upsertReview,
 } from '@/lib/db';
 
@@ -176,6 +177,33 @@ export async function toggleFavoriteAction(formData: FormData) {
   revalidatePath('/favorites');
   revalidatePath('/catalog');
   revalidatePath('/');
+}
+
+/**
+ * The bookmark on a cigarette's own page.
+ *
+ * ADD-ONLY, not a toggle: the owner asked for the mark to go red permanently
+ * once it is pressed, so a second press is not an undo. `savePack` is
+ * idempotent, so a double submit cannot make a second row either.
+ *
+ * What is saved is the PAGE's id, which is not always the id in the address:
+ * twelve packs share a name with another and open that one's page, and the
+ * two are the same cigarette, so they save as one. `pageFor` resolves it,
+ * and a pack that resolves to nothing is not saved rather than guessed at.
+ *
+ * This is a different shelf from /favorites, which keys on a catalogue row —
+ * see supabase/migrations/0003_pack_favorites.sql.
+ */
+export async function savePackAction(formData: FormData) {
+  const id = String(formData.get('pack') ?? '');
+  const page = pageFor(id);
+  if (!page) return;
+
+  const user = await currentUser();
+  if (!user) redirect(`/login?next=${encodeURIComponent(`/packs/${id}`)}`);
+
+  await savePack(user.id, page.id);
+  revalidatePath(`/packs/${id}`);
 }
 
 export async function saveNoteAction(_prev: FormState, formData: FormData): Promise<FormState> {

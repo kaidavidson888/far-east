@@ -792,6 +792,63 @@ ul, ol { list-style: none; }
   width: calc(var(--w) * 1px + 2 * var(--stand));
   height: calc(var(--h) * 1px + 2 * var(--stand));
 }
+/* ------------------------------------------------------- the bookmark --
+   The one control inside the artwork. The design draws it as a filled mark
+   in a box; the build takes the mark out of the vector, because an SVG
+   loaded through <img> is out of CSS's reach, and the page draws it back at
+   the same coordinates so it can be coloured. The box stays in the artwork
+   — it is the outline of the control and it never changes.
+
+   Black at rest, red under the pointer, red for good once it is saved. The
+   red is the artwork's own #FF0000, not --negative: that token is warm grey
+   and is never an error colour, per the spec.
+
+   Placed against the body rather than the stage, so it travels with the
+   artwork it belongs to. Every number comes from BOOKMARK in
+   lib/cigPages.ts and lands on a whole pixel. */
+.cigpage-bookmark {
+  position: absolute;
+  z-index: 2;
+  display: block;
+  margin: 0;
+  color: #010101;
+}
+.cigpage-bookmark[data-saved] {
+  color: #ff0000;
+}
+/* Fills the form, which is what carries the placement. */
+.cigpage-bookmark-hit {
+  position: absolute;
+  inset: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.cigpage-bookmark-hit:hover,
+.cigpage-bookmark-hit[data-pressed] {
+  color: #ff0000;
+}
+/* Black, like the menu's boxes — this sits on the same white artwork, and
+   the cobalt the rest of the site uses would be the only cobalt on the page. */
+.cigpage-bookmark-hit:focus-visible {
+  outline: 2px solid #010101;
+  outline-offset: 2px;
+  color: #ff0000;
+}
+/* Positioned from the same measurement as the box, so the mark cannot drift
+   inside it. currentColor is the whole point: one property carries all three
+   states down from whichever element is holding them. */
+.cigpage-bookmark-mark {
+  position: absolute;
+  display: block;
+  fill: currentColor;
+  pointer-events: none;
+}
+
 /* Against the stage, not the body: 45 and 28 are the landing page's own
    margins, and the mark is the landing page's own vector at its own 40x87 —
    the artwork's copy was a raster and read soft at this size. It is drawn,

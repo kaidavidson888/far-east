@@ -18,6 +18,14 @@
  * margins equal by construction, at any width, which is the same rule the
  * rest of the site's pages follow.
  *
+ * THE BOOKMARK COMES OUT TOO, for a different reason: the owner asked for
+ * it to be a button — black, red under the pointer, red for good once
+ * pressed — and CSS cannot reach inside an <img>. So the page draws it,
+ * from BOOKMARK in lib/cigPages.ts, and the box it sits in stays in the
+ * artwork where it was drawn. It is the one <path> in every file and the
+ * same seventeen characters in all 227, which is what makes taking it out
+ * by its own d attribute safe.
+ *
  * THE SEAL COMES OUT. It is drawn into the vector at 316,19, but on every
  * page of this site the seal is the animation button, which draws its own
  * first frame. Leaving the vector's copy in would put two seals on the
@@ -64,6 +72,16 @@ const FRAME = { w: 103, h: 161, cx: 100.5, cy: 348.5 };
 
 /** The logo's box, which the home link is laid over. */
 const LOGO_AT = { x: 39, y: 18, w: 42, h: 86 };
+
+/**
+ * The bookmark's own outline, which the page redraws as a button.
+ *
+ * Byte for byte the same in all 227 vectors, and the only <path> any of them
+ * contains — so it is matched on the d attribute rather than on position, and
+ * anything but exactly one match is an error. BOOKMARK in lib/cigPages.ts
+ * carries the same coordinates for the page to draw it back at.
+ */
+const BOOKMARK_D = 'M199 344 H233 V382 L216 369 L199 382 Z';
 
 /** Embedded rasters are kept at this multiple of their drawn size. */
 const OVERSAMPLE = 3;
@@ -404,6 +422,7 @@ for (const file of files) {
   if (!seal) throw new Error(`${label}: no seal found at ${SEAL_AT.x},${SEAL_AT.y}`);
   svg = svg.replace(seal.tag, '');
   svg = stripLogo(svg, label);
+  svg = stripBookmark(svg, label);
 
   // the row's cleaned photograph, with the frame closed around it
   const fitted = fitPhoto(svg, pack, label);
@@ -550,6 +569,22 @@ function stripLogo(svg, label) {
   return svg.replace(logo.tag, '');
 }
 
+/**
+ * Take the bookmark out of the artwork.
+ *
+ * It becomes a button on the page — red under the pointer, red for good once
+ * pressed — and an SVG loaded through <img> is out of CSS's reach. The box it
+ * sits in is left where it was drawn: that is the control's outline, and it
+ * does not change.
+ */
+function stripBookmark(svg, label) {
+  const marks = [...svg.matchAll(/<path\b[^>]*\/>/g)].filter((m) => m[0].includes(BOOKMARK_D));
+  if (marks.length !== 1) {
+    throw new Error(`${label}: ${marks.length} bookmarks found, expected exactly 1`);
+  }
+  return svg.replace(marks[0][0], '');
+}
+
 /** Swap the box before the nth text, and that text's colour, together. */
 function setState(svg, nth, state) {
   const texts = [...svg.matchAll(/<text\b[^>]*>[\s\S]*?<\/text>/g)];
@@ -630,6 +665,7 @@ for (const [id, copy] of Object.entries(RESEARCHED)) {
   if (!sealTag) throw new Error(`${TEMPLATE}: no seal to strip`);
   svg = svg.replace(sealTag.tag, '');
   svg = stripLogo(svg, id);
+  svg = stripBookmark(svg, id);
   const fitted = fitPhoto(svg, pack, id);
   svg = fitted.svg;
   const photo = fitted.photo;

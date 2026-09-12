@@ -9,7 +9,7 @@
 <rect x="182" y="268.5" width="68" height="48" fill="white" stroke="black" stroke-width="3"/><rect x="273" y="268.5" width="68" height="48" fill="white" stroke="black" stroke-width="3"/>
 <text x="216" y="300" class="fe" font-size="19.00" fill="#FF0000" text-anchor="middle">$30/p</text>
 <text x="307" y="300" class="fe" font-size="16.66" fill="#FF0000" text-anchor="middle">$240/c</text>
-<rect x="182" y="331.5" width="68" height="63" fill="white" stroke="black" stroke-width="3"/><rect x="273" y="331.5" width="68" height="63" fill="white" stroke="black" stroke-width="3"/><path d="M199 344 H233 V382 L216 369 L199 382 Z" fill="black"/><rect x="286.5" y="358" width="41" height="8" fill="black"/><rect x="303" y="341.5" width="8" height="41" fill="black"/>
+<rect x="182" y="331.5" width="68" height="63" fill="white" stroke="black" stroke-width="3"/><rect x="273" y="331.5" width="68" height="63" fill="white" stroke="black" stroke-width="3"/><rect x="286.5" y="358" width="41" height="8" fill="black"/><rect x="303" y="341.5" width="8" height="41" fill="black"/>
 <rect x="180.5" y="408" width="162.5" height="24" fill="#FF0000"/>
 <text x="261.75" y="424" class="fe" font-size="7.73" fill="white" text-anchor="middle">Notes of Sweet, Toasted, Aromatic</text>
 <text x="82" y="457" class="fe" font-size="11.50" fill="#FF0000" text-anchor="middle">Menthol</text>

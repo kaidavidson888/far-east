@@ -1,5 +1,7 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
+import { currentUser } from '@/lib/auth';
+import { packIsSaved } from '@/lib/db';
 import { pageFor } from '@/lib/cigPages';
 import { CigPage } from '@/components/CigPage';
 
@@ -14,6 +16,12 @@ import { CigPage } from '@/components/CigPage';
  * cigarette *name*, and twelve packs carry a name another pack already has.
  * Those open their twin's page — see lib/cigPages.ts — so every pack on the
  * landing row leads somewhere.
+ *
+ * Reading whether the bookmark is already pressed makes this route dynamic,
+ * which it has to be: the answer is different for every reader. A signed-out
+ * one asks the database nothing — there is nobody to have saved it — and the
+ * bookmark renders black, which is also what it looks like to somebody who
+ * has simply not pressed it yet.
  */
 
 export async function generateMetadata({
@@ -29,7 +37,20 @@ export async function generateMetadata({
 
 export default async function PackPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const page = pageFor(decodeURIComponent(id));
+  const packId = decodeURIComponent(id);
+  const page = pageFor(packId);
   if (!page) notFound();
-  return <CigPage id={page.id} name={page.name} gap={page.gap} />;
+
+  const user = await currentUser();
+  const saved = user ? await packIsSaved(user.id, page.id) : false;
+
+  return (
+    <CigPage
+      id={page.id}
+      name={page.name}
+      gap={page.gap}
+      packId={packId}
+      saved={saved}
+    />
+  );
 }
