@@ -1450,3 +1450,56 @@ input[type='radio'],
   cursor: url('/sigil-cursor-press.png') 0 14, pointer;
   cursor: image-set(url('/sigil-cursor-press.png') 1x, url('/sigil-cursor-press@2x.png') 2x) 0 14, pointer;
 }
+
+/* ---------- Held down ----------
+   Pressing inverts whatever the pointer is at that moment, so the mark flips
+   under your finger and flips back when you let go. Resting black goes white;
+   the pressable white goes black.
+
+   *:active carries the first half. :active matches the element being pressed
+   AND its ancestors, so pressing anywhere at all makes this true somewhere up
+   the tree — but the cursor drawn is the one belonging to the element actually
+   under the pointer, which is what makes a plain paragraph inherit it and a
+   button not.
+
+   The second half has to exist because of that: without it a pressed button
+   would take *:active's white and simply stay white, having already been
+   white. Listing the pressable selectors again at :active gives them
+   specificity over *:active and hands them back the black one.
+
+   Both rules sit after the pressable rule above, so the ties go the right way:
+   *:active (0,1,0) draws with .btn (0,1,0) and wins on order, and
+   .btn:active (0,2,0) beats them both. :disabled is untouched by either and
+   keeps not-allowed. */
+*:active {
+  cursor: url('/sigil-cursor-press.png') 0 14, pointer;
+  cursor: image-set(url('/sigil-cursor-press.png') 1x, url('/sigil-cursor-press@2x.png') 2x) 0 14, pointer;
+}
+a[href]:active,
+area[href]:active,
+button:active,
+summary:active,
+select:active,
+label[for]:active,
+[role='button']:active,
+input[type='button']:active,
+input[type='submit']:active,
+input[type='reset']:active,
+input[type='checkbox']:active,
+input[type='radio']:active,
+.btn:active,
+.btn-icon:active,
+.tab:active,
+.chip:active,
+.rating-scale button:active,
+.splash-hit:active,
+.splash-field-submit:active,
+.artpage-hit:active,
+.cigpage-bookmark-hit:active,
+.cig-slot-picked:active,
+.logo-menu-logo:active,
+.logo-menu-box:active,
+.seal-button-hit:active {
+  cursor: url('/sigil-cursor.png') 0 14, pointer;
+  cursor: image-set(url('/sigil-cursor.png') 1x, url('/sigil-cursor@2x.png') 2x) 0 14, pointer;
+}
