@@ -338,6 +338,69 @@ kept in `scripts/assets`: a positioning SVG and an MP4 of the motion. The MP4 ru
 dead constant** — that stepping is deliberate and the owner likes it, so the row is driven by a
 125ms timer rather than rAF. All of it is written up in `lib/cigRow.ts`.
 
+**MY SAVED SPINS THE ROW LIKE A ROULETTE WHEEL AND SWAPS THE PACKS MID-SPIN.**
+Pressing it throws the row at `CIG_SPIN_SPEED` (10,290px/s, 54x the pace the
+owner's recording runs at), and after exactly ONE LAP of the catalogue —
+`CIG_SPIN_LAP`, 20,580px, derived from `cigLayout()` so it moves if the row
+does — the packs are replaced by the reader's own shelf, the velocity is set
+back to `CIG_FLING_MAX`, and **the rest is not animation code at all**: it is
+the same `CIG_BRAKE` and the same settle that end every other throw. The
+owner asked for the momentum to return to normal and the rest to play out as
+it normally would, and the way to honour that is to hand back to the physics
+rather than to script an ending.
+
+- **The swap is hidden by the speed, not by a cut.** The row never stops and
+  nothing fades. At spin speed the packs are a smear, so there is no frame in
+  which a reader could see one set become another.
+- **The shelf is fetched while the wheel is already turning.**
+  `savedPacksAction` is called on the press and the spin starts in the same
+  breath, so the round trip happens INSIDE the animation. If it is slow the row
+  keeps spinning past one lap and swaps on the frame after it lands — it never
+  swaps early and never stops to wait, because both would show the seam.
+- **It is unskippable, which the owner asked for.** `lockRef` is set for the
+  whole animation and every input checks it — wheel, drag, arrow keys, and
+  pressing a pack. It comes off in exactly one place: where the tick decides
+  the row has come to rest.
+- **THE ROW'S CONTENTS ARE NO LONGER A MODULE CONSTANT.** `LEFT`/`LAP` used to
+  be computed once at import; they are now `layoutRef`, recomputed when the
+  packs change, because a shelf is a different number of packs of different
+  widths. Anything reading `CIG_PACKS` inside the component is a bug — read
+  `packsRef.current` in the tick and `packs` in the render.
+- **The spin is the one place the 8fps rule is set aside**, and only while it
+  is spinning (`CIG_SPIN_PAINT_MS`, 25ms). At 125ms a single frame covers
+  1,286px — about fifteen packs — so consecutive frames share nothing and the
+  row reads as static noise rather than as something turning. That is aliasing,
+  not the owner's stepping. Set it to `PAINT_MS` to put it back on 8fps.
+- **The button is reached by delegation.** `ArtworkPage` draws My Saved as a
+  plain button with no destination and is rendered by a SERVER component, so a
+  handler cannot be passed down. `CigScroller` listens on the document in
+  capture phase for `[data-part="saved"]` instead — the same hook the
+  stylesheet uses — rather than restructuring that boundary for one button.
+- **An empty shelf is left alone**, so the spin plays out on the catalogue and
+  the reader ends up where they started. It is not broken, but it does not say
+  "you have not saved anything" either, and there is nowhere on this artwork to
+  say it without inventing UI. **The owner's call.**
+- **Getting back to the full catalogue is a reload.** Nothing was asked for, so
+  nothing was invented.
+- Verifying it needs a signed-in reader with a shelf: `node .verify/temp-user.mjs`
+  then `node .verify/spin-fixture.mjs` gives the throwaway user a google
+  identity (so the splash lets them straight in) and six packs spread across the
+  row. `node .verify/temp-user.mjs delete` cascades it all away.
+  **The motion cannot be timed in the Browser pane** — it throttles timers, so
+  the spin takes about four times its real length there. Distance is right,
+  wall-clock is not.
+
+**OFFERS, My Saved and RECOMMENDED answer a pointer the same way**: the whole
+button drops to 75%, and a 5px dash appears one space after the word. Pressed,
+both go to 50%. The dash is a `::after` INSIDE the button, so the button's own
+opacity carries it — which is what "the same opacity as the text" means at both
+steps without either number being written twice. The gap is each label's OWN
+space, because the three are drawn at different sizes (51.5, 18.9 and 18.1px):
+a space is 0.32em in the owner's face, and the dash sits on the middle of the
+x-height measured from that label's baseline. All of it is off the ink in
+`scripts/assets/far-east-ink.json`, like everything else on these pages. The
+block is in `globals.css` under "the three landing labels".
+
 ## The owner's own face (`public/fonts/far-east-1.woff2`)
 Supplied by the owner as `Far_East_Full_Webfont.woff2`, declared as the family
 **"Far East"**, self-hosted, and reached through the `--font-typed` token.

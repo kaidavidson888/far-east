@@ -9,9 +9,10 @@ import { createClient } from '@/lib/supabase/server';
 import { logAuthEvent } from '@/lib/logAuthEvent';
 import { safeNext, signInGate, siteOrigin } from '@/lib/siteUrl';
 import { pageFor } from '@/lib/cigPages';
+import { CIG_PACKS } from '@/lib/cigRow';
 import {
   accountState, createShare, deleteReview, getCigaretteBySlug, revokeShare, savePack,
-  setFavoriteNote, toggleFavorite, upsertReview,
+  savedPackIds, setFavoriteNote, toggleFavorite, upsertReview,
 } from '@/lib/db';
 
 export type FormState = { error?: string; ok?: string } | null;
@@ -317,6 +318,30 @@ export async function savePackAction(formData: FormData) {
 
   await savePack(user.id, page.id);
   revalidatePath(`/packs/${id}`);
+}
+
+/**
+ * The packs on the reader's shelf, for the My Saved spin on the landing page.
+ *
+ * Returns ids rather than rendering anything: the row is already on the page
+ * and the spin swaps what it is showing, so all the client needs is the list.
+ * The order is `savedPackIds`' own — most recently saved first.
+ *
+ * Signed out goes to the splash, the same gate the bookmark uses. It is a
+ * redirect rather than an empty list because an empty list is a real answer
+ * here (a shelf with nothing on it) and the two must not look alike.
+ *
+ * Ids are filtered against the packs the row can actually draw. A shelf holds
+ * PAGE ids, and every one of the 235 pages is also a pack on the row, so today
+ * this drops nothing — but a page that ever stops having a pack would
+ * otherwise spin the row down to a gap.
+ */
+export async function savedPacksAction(): Promise<{ ids: string[] }> {
+  const user = await currentUser();
+  if (!user) redirect(signInGate('/landing'));
+  const ids = await savedPackIds(user.id);
+  const onRow = new Set(CIG_PACKS.map((p) => p.id));
+  return { ids: ids.filter((id) => onRow.has(id)) };
 }
 
 export async function saveNoteAction(_prev: FormState, formData: FormData): Promise<FormState> {

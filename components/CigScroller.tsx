@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { savedPacksAction } from '@/app/actions';
 import {
   CIG_BAND_H,
   CIG_FRAME_H,
@@ -15,9 +16,13 @@ import {
   CIG_FLING_WINDOW_MS,
   CIG_FRAME_HOLD_MS,
   CIG_BRAKE,
+  CIG_SPIN_SPEED,
+  CIG_SPIN_LAP,
+  CIG_SPIN_PAINT_MS,
   REFERENCE_SPEED,
   SPEED,
   cigLayout,
+  type CigPack,
 } from '@/lib/cigRow';
 
 /**
@@ -53,7 +58,12 @@ import {
  * height but their own widths, 42 to 92, so a fixed width would cut into the
  * broad ones.
  */
-const { left: LEFT, total: LAP } = cigLayout();
+/**
+ * THE ROW'S CONTENTS ARE NOT FIXED, so its layout cannot be a module
+ * constant any more. Pressing My Saved swaps the catalogue for the reader's
+ * own shelf mid-spin, and the shelf is a different number of packs of
+ * different widths — so `left` and the lap length both change with it. Both
+ * live in a ref that the tick reads, alongside the state the render reads.
 
 /** How far a wheel notch pushes the row, at the owner's pace. */
 const WHEEL = 0.8 * SPEED;
@@ -106,6 +116,17 @@ export function CigScroller({
   onPress?: (id: string) => void;
 }) {
   const linked = useMemo(() => new Set(withPages ?? []), [withPages]);
+
+  /**
+   * What the row is showing: the whole catalogue, or the reader's shelf after
+   * a My Saved spin. The ref is what the tick reads — it has to see the swap
+   * the instant it happens, in the middle of a frame — and the state is what
+   * the render reads. They are set together and never diverge.
+   */
+  const [packs, setPacks] = useState<CigPack[]>(CIG_PACKS);
+  const packsRef = useRef<CigPack[]>(CIG_PACKS);
+  const layoutRef = useRef(cigLayout(CIG_PACKS));
+
   const rowRef = useRef<HTMLDivElement | null>(null);
   const offsetRef = useRef(0);
   const velRef = useRef(0);
@@ -150,19 +171,45 @@ export function CigScroller({
    */
   const seekRef = useRef<number | null>(null);
 
+  /**
+   * The My Saved spin, or null when the row is behaving normally.
+   *
+   * `travelled` counts the distance covered since the throw, so the swap can
+   * happen after exactly one lap rather than after a wall-clock guess.
+   * `ids` is the shelf, which arrives from the server WHILE the wheel is
+   * already turning — the round trip happens inside the spin instead of in
+   * front of it, so the press answers instantly and the network is free.
+   *
+   * If the shelf is slow the row keeps spinning past one lap and swaps on the
+   * next frame after it lands. It never swaps early, and it never stops to
+   * wait: both would show the reader the seam this is built to hide.
+   */
+  const spinRef = useRef<{ travelled: number; ids: string[] | null } | null>(null);
+
+  /**
+   * Set for the whole of the My Saved animation, which the owner asked to be
+   * unskippable. Every input the row has — wheel, drag, arrow keys, and
+   * pressing a pack — checks it and does nothing. It is cleared in one place
+   * only: where the tick decides the row has come to rest.
+   */
+  const lockRef = useRef(false);
+  const [locked, setLocked] = useState(false);
+
   /** Everything that lands on screen at the current offset, and the pick. */
   const compute = useCallback(() => {
     const w = widthRef.current;
     if (!w) return null;
+    const list = packsRef.current;
+    const { left: LEFT, total: LAP } = layoutRef.current;
     const start = ((offsetRef.current % LAP) + LAP) % LAP;
     const laps = Math.ceil((w + PAD * 2) / LAP) + 1;
     const out: Shown[] = [];
     for (let lap = -1; lap <= laps; lap++) {
       const base = lap * LAP - start;
-      for (let i = 0; i < CIG_PACKS.length; i++) {
+      for (let i = 0; i < list.length; i++) {
         const x = base + LEFT[i];
         if (x > w + PAD) break; // packs are in order, so nothing later fits
-        if (x + CIG_PACKS[i].w >= -PAD) out.push({ key: `${lap}:${i}`, i, x });
+        if (x + list[i].w >= -PAD) out.push({ key: `${lap}:${i}`, i, x });
       }
     }
     const mid = w / 2;
@@ -170,7 +217,7 @@ export function CigScroller({
     let pickAt = 0;
     let best = Infinity;
     for (const s of out) {
-      const d = Math.abs(s.x + CIG_PACKS[s.i].w / 2 - mid);
+      const d = Math.abs(s.x + list[s.i].w / 2 - mid);
       if (d < best) {
         best = d;
         pick = s.i;
@@ -210,7 +257,7 @@ export function CigScroller({
     let best = Infinity;
     for (const s of m.out) {
       if (s.i !== f.i) continue;
-      const d = Math.abs(s.x + CIG_PACKS[s.i].w / 2 - m.w / 2);
+      const d = Math.abs(s.x + packsRef.current[s.i].w / 2 - m.w / 2);
       if (d < best) {
         best = d;
         at = s.x;
@@ -260,8 +307,38 @@ export function CigScroller({
   const offCentre = useCallback(() => {
     const m = compute();
     if (!m || m.pick < 0) return 0;
-    return m.pickAt + CIG_PACKS[m.pick].w / 2 - m.w / 2;
+    return m.pickAt + packsRef.current[m.pick].w / 2 - m.w / 2;
   }, [compute]);
+
+  /**
+   * Put a different set of packs on the row, mid-spin.
+   *
+   * The shelf holds ids; the row needs the packs themselves, in the shelf's
+   * own order — most recently saved first, which is what `savedPackIds`
+   * returns. Anything the row cannot draw is already filtered server-side.
+   *
+   * AN EMPTY SHELF IS LEFT ALONE. A row of nothing has no packs to frame and
+   * no lap to travel, so the spin plays out on the catalogue instead and the
+   * reader is put back where they started. See the note in the header about
+   * what that says and does not say.
+   */
+  const swapTo = useCallback((ids: string[]) => {
+    const byId = new Map(CIG_PACKS.map((p) => [p.id, p] as const));
+    const next = ids.map((id) => byId.get(id)).filter((p): p is CigPack => !!p);
+    if (!next.length) return;
+
+    packsRef.current = next;
+    layoutRef.current = cigLayout(next);
+    setPacks(next);
+
+    // The offset is taken modulo the lap and the lap has just changed length,
+    // so it is reset rather than carried across. Nothing on screen is legible
+    // at spin speed, so there is no continuity to protect — and starting from
+    // zero means where the row finally stops depends only on the physics,
+    // which makes it the same every time.
+    offsetRef.current = 0;
+    frameRef.current = { i: -1, pendingSince: 0 };
+  }, []);
 
   /**
    * The clock.
@@ -281,7 +358,25 @@ export function CigScroller({
       lastTsRef.current = now;
 
       let settling = false;
-      if (!draggingRef.current && seekRef.current !== null) {
+      const spin = spinRef.current;
+      if (spin) {
+        // The wheel is thrown: one constant speed, no braking, until a whole
+        // lap has gone by AND the shelf has arrived. Nothing else in the tick
+        // gets a say while this is true — that is what unskippable means
+        // here, and it is why this branch is first.
+        const v = velRef.current;
+        offsetRef.current += v * dt;
+        spin.travelled += v * dt;
+        if (spin.travelled >= CIG_SPIN_LAP && spin.ids) {
+          swapTo(spin.ids);
+          spinRef.current = null;
+          // Momentum back to the ordinary amount, and from here the row is
+          // braked by CIG_BRAKE and centred by the settle exactly as it is
+          // after any other throw. The rest of the animation is not animation
+          // code at all — it is the physics that were already here.
+          velRef.current = CIG_FLING_MAX;
+        }
+      } else if (!draggingRef.current && seekRef.current !== null) {
         // fetching a pressed pack: aim at the fixed target, ignore the settle
         const rest = seekRef.current - offsetRef.current;
         if (Math.abs(rest) > 0.5) {
@@ -324,13 +419,22 @@ export function CigScroller({
       // out after everything else has stopped.
       const owed = frameRef.current.pendingSince !== 0;
       if (draggingRef.current || velRef.current !== 0 || settling || owed) {
-        timerRef.current = window.setTimeout(tick, PAINT_MS);
+        // The spin paints faster than the row's usual 8fps, and only while it
+        // is spinning — see CIG_SPIN_PAINT_MS for why that is not a breach of
+        // the stepping the owner asked for.
+        timerRef.current = window.setTimeout(tick, spinRef.current ? CIG_SPIN_PAINT_MS : PAINT_MS);
       } else {
         timerRef.current = 0;
+        // The row has come to rest, which is the end of the My Saved
+        // animation and the only place the lock comes off.
+        if (lockRef.current) {
+          lockRef.current = false;
+          setLocked(false);
+        }
       }
     };
     timerRef.current = window.setTimeout(tick, PAINT_MS);
-  }, [offCentre, paint]);
+  }, [offCentre, paint, swapTo]);
 
   const nudge = useCallback(
     (dx: number) => {
@@ -356,11 +460,64 @@ export function CigScroller({
       const m = compute();
       if (!m) return;
       velRef.current = 0;
-      seekRef.current = offsetRef.current + (x + CIG_PACKS[i].w / 2 - m.w / 2);
+      seekRef.current = offsetRef.current + (x + packsRef.current[i].w / 2 - m.w / 2);
       run();
     },
     [compute, run],
   );
+
+  /**
+   * Throw the wheel. This is the whole My Saved animation.
+   *
+   * The spin starts on the press, and the shelf is fetched alongside it, so
+   * the wheel is already turning while the server answers. By the time a lap
+   * has gone by the list is almost always there; if it is not, the tick keeps
+   * spinning and swaps on the frame after it lands.
+   */
+  const startSpin = useCallback(() => {
+    if (lockRef.current) return; // already running, and it cannot be skipped
+    lockRef.current = true;
+    setLocked(true);
+    seekRef.current = null;
+    draggingRef.current = false;
+    spinRef.current = { travelled: 0, ids: null };
+    velRef.current = CIG_SPIN_SPEED;
+    run();
+
+    savedPacksAction()
+      .then(({ ids }) => {
+        if (spinRef.current) spinRef.current.ids = ids;
+      })
+      .catch(() => {
+        // A signed-out reader is redirected to the splash by the action, and
+        // that rejects here as the navigation takes over. Anything else that
+        // fails still has to let the spin end rather than turn forever, so
+        // either way the row comes back to the catalogue.
+        if (spinRef.current) spinRef.current.ids = [];
+      });
+  }, [run]);
+
+  /**
+   * My Saved lives in the page's artwork, not in this component.
+   *
+   * `ArtworkPage` draws it as a plain button with no destination, and it is
+   * rendered by a SERVER component, so a handler cannot be handed down to it.
+   * Rather than restructure that boundary for one button, the row listens for
+   * the press itself: the mark carries `data-part="saved"`, which is the same
+   * hook the stylesheet uses for it. Capture phase, so the press is claimed
+   * before anything else can act on it.
+   */
+  useEffect(() => {
+    const onDocClick = (e: MouseEvent) => {
+      const t = e.target;
+      if (!(t instanceof Element)) return;
+      if (!t.closest('[data-part="saved"]')) return;
+      e.preventDefault();
+      startSpin();
+    };
+    document.addEventListener('click', onDocClick, true);
+    return () => document.removeEventListener('click', onDocClick, true);
+  }, [startSpin]);
 
   /** Width, and the first paint. */
   useEffect(() => {
@@ -374,7 +531,7 @@ export function CigScroller({
         // whichever one an offset of zero happens to leave nearest, so the
         // page looks the same on every load and at every width — which is
         // what the design's own still shows.
-        offsetRef.current = CIG_PACKS[0].w / 2 - widthRef.current / 2;
+        offsetRef.current = packsRef.current[0].w / 2 - widthRef.current / 2;
         first = false;
       } else if (!timerRef.current && !draggingRef.current) {
         // a resize moves the middle; bring the framed pack back to it
@@ -395,6 +552,7 @@ export function CigScroller({
     const el = rowRef.current;
     if (!el) return;
     const onWheel = (e: WheelEvent) => {
+      if (lockRef.current) return; // the My Saved spin is unskippable
       const d = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
       if (!d) return;
       e.preventDefault();
@@ -413,6 +571,7 @@ export function CigScroller({
 
   const onPointerDown = (e: React.PointerEvent) => {
     if (e.button !== 0) return;
+    if (lockRef.current) return; // the My Saved spin is unskippable
     // NOT preventDefault here. Doing that stops the browser picking a pack
     // up as an image, but it also suppresses the compatibility mouse
     // events that follow — including the click — so the pack underneath
@@ -483,11 +642,13 @@ export function CigScroller({
    */
   const stepBy = (dir: 1 | -1) => {
     if (selected < 0) return CIG_GAP * dir;
-    const n = CIG_PACKS.length;
+    const list = packsRef.current;
+    const n = list.length;
     const from = dir === 1 ? selected : (selected - 1 + n) % n;
-    return (CIG_PACKS[from].w + CIG_GAP) * dir;
+    return (list[from].w + CIG_GAP) * dir;
   };
   const onKeyDown = (e: React.KeyboardEvent) => {
+    if (lockRef.current) return; // the My Saved spin is unskippable
     if (e.key === 'ArrowRight') {
       e.preventDefault();
       nudge(stepBy(1));
@@ -497,7 +658,7 @@ export function CigScroller({
     }
   };
 
-  const pick = selected >= 0 ? CIG_PACKS[selected] : null;
+  const pick = selected >= 0 ? (packs[selected] ?? null) : null;
 
   return (
     <div
@@ -520,10 +681,15 @@ export function CigScroller({
       role="group"
       aria-roledescription="carousel"
       aria-label="Cigarettes"
+      aria-busy={locked || undefined}
+      data-spinning={locked || undefined}
     >
       <div className="cig-track">
         {shown.map((s) => {
-          const p = CIG_PACKS[s.i];
+          const p = packs[s.i];
+          // One render can arrive between a swap and the paint that follows
+          // it, and the old indices do not all exist in the new list.
+          if (!p) return null;
           const style: React.CSSProperties = {
             left: `${Math.round(s.x)}px`,
             width: `${p.w}px`,
@@ -551,6 +717,10 @@ export function CigScroller({
             // already standing on would be worse than none, and the arrow keys
             // already move the selection a pack at a time.
             const fetch = (e: React.MouseEvent) => {
+              if (lockRef.current) {
+                e.preventDefault();
+                return;
+              }
               if (dragRef.current.moved > SLOP) {
                 e.preventDefault();
                 return;
@@ -574,6 +744,10 @@ export function CigScroller({
           }
           // a drag that happens to end over the pack is not a press
           const pressed = (e: React.MouseEvent) => {
+            if (lockRef.current) {
+              e.preventDefault();
+              return;
+            }
             if (dragRef.current.moved > SLOP) {
               e.preventDefault();
               return;

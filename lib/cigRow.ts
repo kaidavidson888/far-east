@@ -216,3 +216,59 @@ export const CIG_FLING_MAX = REFERENCE_SPEED * 2;
  */
 export const CIG_FLING_WINDOW_MS = 80;
 
+/* ------------------------------------------------ the My Saved spin ------
+ * Pressing My Saved spins the row like a roulette wheel, swaps the packs for
+ * the reader's own shelf while it is going too fast to read, and lets the
+ * ordinary physics bring it to rest. Three numbers below, and one of them
+ * bends a rule elsewhere in this file on purpose — see CIG_SPIN_PAINT_MS.
+ */
+
+/**
+ * How fast the row is spun, in pixels per second.
+ *
+ * One lap of the catalogue is 20,580px (247 packs at their own widths plus
+ * the 26px gap), and the swap happens after exactly one lap, so this number
+ * IS the length of the spin:
+ *
+ *   3,000px/s    6.9s     too long to hold anyone
+ *  10,290px/s    2.0s     this
+ *  20,580px/s    1.0s     over before it reads as a spin
+ *
+ * Two seconds is long enough to register as a wheel being thrown and short
+ * enough that nobody is waiting. It is 54x the pace the owner's recording
+ * runs at, which is the point: at this speed the packs are a smear, and a
+ * smear is what makes the swap invisible. Nothing is hidden by a cut here —
+ * the row genuinely never stops.
+ */
+export const CIG_SPIN_SPEED = 10290;
+
+/**
+ * One lap: the distance the row travels before the packs are swapped.
+ *
+ * Derived, not typed in — `cigLayout()` already totals the row, so a pack
+ * added to or dropped from `cigs.json` moves this with it. "After one cycle"
+ * means one cycle of the whole catalogue, so it is the full lap rather than a
+ * screenful.
+ */
+export const CIG_SPIN_LAP = cigLayout().total;
+
+/**
+ * How often the row repaints WHILE IT IS SPINNING, in milliseconds.
+ *
+ * THIS IS THE ONE PLACE THE 8FPS RULE IS SET ASIDE, and it is worth saying
+ * why rather than discovering it later. The row paints every 125ms because
+ * the owner's reference MP4 runs at 8fps and that stepping is the design. But
+ * that recording is of the gentle idle scroll, and 8fps describes it honestly.
+ * At spin speed one 125ms frame covers 1,286px — about fifteen packs — so
+ * consecutive frames share nothing, and the row reads as static noise rather
+ * than as something turning. That is not the owner's stepping, it is aliasing.
+ *
+ * 25ms (40fps) puts a frame every 257px, which still smears but smears
+ * CONTINUOUSLY, which is what a wheel at speed looks like. The instant the
+ * spin hands back to the ordinary physics the row is back on PAINT_MS, so
+ * every motion the reference actually measured is untouched.
+ *
+ * Set this to PAINT_MS to put the spin back on 8fps and see the difference.
+ */
+export const CIG_SPIN_PAINT_MS = 25;
+

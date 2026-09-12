@@ -979,6 +979,73 @@ ul, ol { list-style: none; }
   outline: 1px dashed var(--artpage-focus, #fd0000);
 }
 
+/* ---------------------------------------------- the three landing labels --
+   OFFERS, My Saved and RECOMMENDED answer a pointer the same way: the whole
+   button drops a quarter, and a dash appears one space after the word.
+
+   THE DASH IS A CHILD OF THE BUTTON, so the button's own opacity carries it.
+   That is what "the same opacity as the text" means at both steps — 75% on
+   hover, 50% pressed — without either number being written twice or the two
+   drifting apart later.
+
+   The gap is that label's OWN space, not one shared number. The three are
+   drawn at 51.5, 18.9 and 18.1px (their ink heights divided by the ink
+   extents of the letters actually in them), and a space is 0.32em in the
+   owner's face — advance 320 at 1000 upem, from scripts/assets/far-east-ink.json.
+   The dash sits on the middle of the x-height (510/1000) measured from each
+   label's own baseline, so it reads as sitting on the line of type rather
+   than floating above or below it. Measured off the ink like everything else
+   on these pages, not guessed. */
+.artpage-hit[data-part='offers'],
+.artpage-hit[data-part='saved'],
+.artpage-hit[data-part='recommended'] {
+  transition: opacity 120ms ease-out;
+}
+.artpage-hit[data-part='offers'] {
+  --dash-gap: 16.5px;
+  --dash-top: 23.1px;
+}
+.artpage-hit[data-part='saved'] {
+  --dash-gap: 6px;
+  --dash-top: 8.8px;
+}
+.artpage-hit[data-part='recommended'] {
+  --dash-gap: 5.8px;
+  --dash-top: 8.1px;
+}
+.artpage-hit[data-part='offers']:hover,
+.artpage-hit[data-part='saved']:hover,
+.artpage-hit[data-part='recommended']:hover {
+  opacity: 0.75;
+}
+.artpage-hit[data-part='offers']:active,
+.artpage-hit[data-part='saved']:active,
+.artpage-hit[data-part='recommended']:active {
+  opacity: 0.5;
+}
+.artpage-hit[data-part='offers']::after,
+.artpage-hit[data-part='saved']::after,
+.artpage-hit[data-part='recommended']::after {
+  content: '';
+  position: absolute;
+  left: calc(100% + var(--dash-gap));
+  top: var(--dash-top);
+  width: 5px;
+  height: 2px;
+  background: var(--artpage-focus, #010101);
+  opacity: 0;
+  transition: opacity 120ms ease-out;
+}
+/* :active as well as :hover — a touch or a keyboard press never hovers. */
+.artpage-hit[data-part='offers']:hover::after,
+.artpage-hit[data-part='saved']:hover::after,
+.artpage-hit[data-part='recommended']:hover::after,
+.artpage-hit[data-part='offers']:active::after,
+.artpage-hit[data-part='saved']:active::after,
+.artpage-hit[data-part='recommended']:active::after {
+  opacity: 1;
+}
+
 /* ------------------------------------------------------- inner page nav --
    The three footer boxes. The one for the page you are already on goes
    nowhere: it sits at half opacity and fades as you approach, saying where
