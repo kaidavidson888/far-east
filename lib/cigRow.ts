@@ -108,15 +108,66 @@ export const SPEED = 1;
  * How much longer the red frame stays on a pack after another one has taken
  * the middle of the row.
  *
- * Without it the frame belongs to whichever pack is nearest the centre at
- * that instant, which means it changes hands the moment two packs cross —
- * several times a second on a flick, and twice in quick succession every time
- * the row settles past a boundary and back. The owner asked for it to hold on
- * half a second longer, so a pack keeps the frame until another has been
- * nearest for this long without interruption.
+ * Without it the frame belongs to whichever pack is nearest the centre at that
+ * instant, so it changes hands the moment two packs cross — several times a
+ * second on a flick, and twice in quick succession every time the row settles
+ * past a boundary and back. A pack keeps the frame until another has been
+ * nearest for this long WITHOUT INTERRUPTION, so one that takes the middle and
+ * loses it again inside the window never gets the frame at all.
  *
- * The frame travels with the pack it is holding, so during that half second it
- * slides off the centre rather than sitting still — which is the point: it
- * stays ON THE IMAGE, and the image is moving.
+ * TWO FRAMES, AND THE NUMBER IS MEASURED. Sampling which pack was nearest the
+ * middle through a gentle, a firm and a hard flick, how long each one held it
+ * falls into three groups:
+ *
+ *   126-146ms   packs flying past mid-glide — the flicker
+ *   256-385ms   the last one or two as the row slows
+ *   512-767ms   the pack it finally settles on
+ *
+ * So the window that kills the first group and keeps the second is 150 to
+ * 250ms. It cannot be finer than that anyway: the row paints on a 125ms beat,
+ * so the hold expires on a tick boundary whatever it is set to, and anything
+ * from 126 to 250 behaves identically — it lands on the second tick.
+ *
+ * Hence two frames. 500ms was the first attempt and was too sticky: it
+ * suppressed the 256-385ms group as well, which are real changes, and left the
+ * frame riding a pack most of the way to the edge before handing over.
+ *
+ * The frame travels with the pack it is holding, so through those two frames it
+ * slides off the centre rather than sitting still. That is the point: it stays
+ * ON THE IMAGE, and the image is moving.
  */
-export const CIG_FRAME_HOLD_MS = 500;
+export const CIG_FRAME_HOLD_MS = PAINT_MS * 2;
+
+/**
+ * ...and how far the held pack may carry the frame from the middle before it
+ * lets go regardless of the clock.
+ *
+ * A hold measured only in time is unbounded in distance: how far the pack gets
+ * in two frames is however hard the row was thrown. Uncapped, a gentle wheel
+ * carried the frame 226px off centre and a firm one 490px — half the width of
+ * the row, the frame out at the edge riding a pack while the middle moved on
+ * without it. Sticky, but not smooth, which is half of what was asked for.
+ *
+ * SO THE HOLD ENDS ON WHICHEVER COMES FIRST, the two frames or this distance.
+ *
+ * THE TWO PULL AGAINST EACH OTHER and the number is the balance. The flicker
+ * worth suppressing happens while the row is FAST — that is what makes those
+ * tenures 126-146ms — so holding through it necessarily means holding a pack
+ * that is moving, which necessarily means drift. Tightening this until the
+ * drift vanished (0.75, about 70px) also suppressed nothing at all: the frame
+ * tracked the nearest pack one for one, exactly as it did before the hold
+ * existed. Measured across a gentle, a firm and a hard flick:
+ *
+ *   slack   handovers suppressed   worst drift
+ *   none    2 of 4                 490px
+ *   0.75    0 of 4                  66px
+ *   2.5     1 of 4                 144px
+ *
+ * 2.5 keeps one handover's worth of stickiness on every gesture and bounds the
+ * frame inside the middle sixth of the row. It settles dead centre either way.
+ *
+ * It is a share of the pack's OWN width plus the gap, not a fixed number of
+ * pixels, because the packs run 42 to 108 wide — a constant that let a slim
+ * pack drift politely would let a wide one hang half off the centre.
+ */
+export const CIG_FRAME_HOLD_SLACK = 2.5;

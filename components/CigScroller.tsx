@@ -12,6 +12,7 @@ import {
   CIG_RULE,
   PAINT_MS,
   CIG_FRAME_HOLD_MS,
+  CIG_FRAME_HOLD_SLACK,
   REFERENCE_SPEED,
   SPEED,
   cigLayout,
@@ -184,8 +185,7 @@ export function CigScroller({
 
     // Where that pack is now. It has kept moving while the frame held it, and
     // it can be on screen more than once, so take the instance nearest the
-    // middle. If it has gone entirely, there is nothing to hold on to and the
-    // frame hands over at once rather than pointing off the edge.
+    // middle.
     let at = null;
     let best = Infinity;
     for (const s of m.out) {
@@ -196,7 +196,15 @@ export function CigScroller({
         at = s.x;
       }
     }
-    if (at === null) {
+
+    // Let go early if it has carried the frame too far. The clock alone is
+    // unbounded in distance — how far the pack gets in two frames is however
+    // hard the row was thrown — and a frame out at the edge is not stickiness,
+    // it is the frame losing the row. Whichever limit comes first wins.
+    // A missing position is the same thing taken to its end: the pack has left
+    // the screen, so there is nothing left to hold on to at all.
+    const slack = (CIG_PACKS[f.i]?.w ?? 0) * CIG_FRAME_HOLD_SLACK + CIG_GAP;
+    if (at === null || best > slack) {
       f.i = m.pick;
       f.pendingSince = 0;
       at = m.pickAt;
