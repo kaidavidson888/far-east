@@ -482,6 +482,9 @@ export function SplashScreen({ next = '', notice = null }: {
           onPointerUp={release}
           onPointerCancel={release}
           onLostPointerCapture={release}
+          // a hold on a phone is a long-press, and a long-press opens the
+          // browser's callout or starts a selection — which ends the hold
+          onContextMenu={(e) => e.preventDefault()}
         />
       )}
     </div>

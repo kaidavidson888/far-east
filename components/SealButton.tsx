@@ -62,6 +62,7 @@ export function SealButton({ size = placement.w }: { size?: number }) {
         className="seal-button-hit"
         aria-label="Seal"
         aria-expanded={scrub.phase === 'open'}
+        onContextMenu={(e) => e.preventDefault()}
         onPointerEnter={(e) => {
           if (e.pointerType === 'mouse') scrub.enter();
         }}

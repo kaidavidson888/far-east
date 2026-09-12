@@ -284,6 +284,7 @@ export function CigQuantity({
         onPointerCancel={release}
         onWheel={roll(which)}
         onKeyDown={key(which)}
+        onContextMenu={(e) => e.preventDefault()}
       >
         <span className="cigpage-wheel-window" style={{ top: px(W.window), height: px(W.pitch) }} aria-hidden="true" />
         {slots(which, w.pos).map((s) => (
@@ -314,6 +315,7 @@ export function CigQuantity({
         aria-haspopup="dialog"
         aria-expanded={mode === 'open'}
         disabled={pending}
+        onContextMenu={(e) => e.preventDefault()}
         onPointerEnter={(e) => {
           if (e.pointerType === 'mouse' && mode === 'closed') setMode('preview');
         }}

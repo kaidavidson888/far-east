@@ -889,6 +889,15 @@ ul, ol { list-style: none; }
   position: fixed; inset: 0; z-index: 200;
   overflow: hidden; background: #fcfcfc;
   touch-action: none;
+  /* THE WAY IN IS A HOLD, AND ON A PHONE A HOLD IS A LONG-PRESS. Left alone,
+     iOS answers a long-press with a callout and Android with a selection
+     handle — the mark "highlights", the browser takes the gesture, and the
+     hold never completes. The owner found the door would not open. So
+     nothing on the splash is selectable or calls out; the typed rows get
+     selection back below, because a field has to be editable. */
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
 }
 .splash-canvas {
   position: absolute; inset: 0; width: 100%; height: 100%;
@@ -900,12 +909,19 @@ ul, ol { list-style: none; }
   position: fixed;
   margin: 0; padding: 0; background: transparent; border: 0;
   cursor: pointer; -webkit-tap-highlight-color: transparent;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
 }
 .splash-hit:focus-visible { outline: 2px solid #ff0000; outline-offset: 6px; }
 
 .splash-fields { position: static; }
 .splash-field-input {
   border: 0; background: transparent; border-radius: 0;
+  /* editable, so selectable — the splash above turns selection off */
+  user-select: text;
+  -webkit-user-select: text;
   /* the owner's own face, the same as every other field on the site; it was
      Cormorant Unicase only as a stand-in for the box's drawn lettering */
   font-family: var(--font-typed);
@@ -1266,6 +1282,11 @@ ul, ol { list-style: none; }
   cursor: pointer;
   touch-action: none;
   -webkit-tap-highlight-color: transparent;
+  /* the press that opens the menu can go on to pull the wheels — a long-press
+     must not become a callout or a selection */
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
 }
 .cigpage-plus-hit:focus-visible {
   outline: 2px solid #010101;
@@ -1306,6 +1327,7 @@ ul, ol { list-style: none; }
   touch-action: none;
   user-select: none;
   -webkit-user-select: none;
+  -webkit-touch-callout: none;
   outline: none;
 }
 .cigpage-wheel:focus-visible {
@@ -1828,10 +1850,83 @@ html:has(.cigpage) {
   background: transparent;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
+  /* pressed and held on a phone while its animation runs: no callout, no
+     selection, no double-tap zoom */
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
 }
 .seal-button-hit:focus-visible {
   outline: 2px solid var(--artpage-focus, #010101);
   outline-offset: 3px;
+}
+
+/* ---------- Pressable, on a phone ----------
+   A finger held on anything pressable must stay a press. Left alone, iOS
+   answers a long-press on a link, a button or an image with a callout (open
+   in new tab, save image) and Android starts a text selection with handles,
+   and either one takes the gesture — the splash's hold could not complete,
+   and the owner found the door would not open. So every pressable on the
+   site, and every image inside one, declines all three: no callout, no
+   selection, no tap flash. Holds and drags (the splash, the seal, the plus
+   and its wheels, the cigarette row) also cancel the contextmenu event, since
+   a long-press on Android raises it whatever the CSS says. The list is the
+   pressable-pointer list below, kept in step with it. Fields are exempt:
+   selecting the text in one is how it is edited. */
+a[href],
+area[href],
+button,
+summary,
+label[for],
+[role='button'],
+input[type='button'],
+input[type='submit'],
+input[type='reset'],
+.btn,
+.btn-icon,
+.tab,
+.chip,
+.rating-scale button,
+.splash-hit,
+.splash-field-submit,
+.artpage-hit,
+.artpage-decor,
+.cigpage-bookmark-hit,
+.cigpage-plus-hit,
+.cigpage-wheel,
+.cig-row,
+.cig-slot,
+.cig-slot-picked,
+.cig-reset,
+.logo-menu,
+.logo-menu-logo,
+.logo-menu-box,
+.seal-button,
+.seal-button-hit,
+.shelf-logo,
+.shelf-bookmark-hit,
+.shelf-box-form {
+  -webkit-touch-callout: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+/* the marks inside them: no callout, and not draggable as an image */
+a[href] img,
+button img,
+[role='button'] img,
+.artpage-hit img,
+.artpage-decor img,
+.cig-slot img,
+.shelf-logo img,
+.shelf-pack img,
+.shelf-cloud,
+canvas {
+  -webkit-touch-callout: none;
+  -webkit-user-drag: none;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 /* ---------- The pressable pointer ----------

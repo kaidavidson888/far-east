@@ -760,6 +760,9 @@ export function CigScroller({
       onPointerUp={endDrag}
       onPointerCancel={endDrag}
       onDragStart={(e) => e.preventDefault()}
+      // a drag on a phone begins as a long-press, which raises a contextmenu
+      // on Android whatever the CSS says; the row's gestures are its own
+      onContextMenu={(e) => e.preventDefault()}
       onKeyDown={onKeyDown}
       tabIndex={0}
       role="group"
