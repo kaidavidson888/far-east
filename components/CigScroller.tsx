@@ -59,6 +59,16 @@ const GLIDE_TAU = 0.45;
 const SETTLE_BELOW = 40;
 /** How long the settle takes to close the distance — a fifth slower too. */
 const SETTLE_TAU = 0.18 / SPEED;
+/**
+ * Pressing a pack that is not the one in the frame fetches it, at twice the
+ * speed the row settles at — the owner's 200%.
+ *
+ * Half the time constant is twice the speed: both are the same exponential
+ * approach, and tau is how long it takes to close 1/e of what is left. It is
+ * deliberately the settle's own curve rather than a new easing, so arriving
+ * looks like the row coming to rest, which is what it is doing.
+ */
+const SEEK_TAU = SETTLE_TAU / 2;
 /** Rendered a little past each edge so nothing pops in at the boundary. */
 const PAD = 120;
 /** A pointer that travelled further than this was scrolling, not pressing. */
@@ -94,6 +104,18 @@ export function CigScroller({
   const [selected, setSelected] = useState(-1);
   /** Where the frame goes: the picked pack's own left edge on screen. */
   const [pickX, setPickX] = useState(0);
+  /**
+   * An offset the row is travelling to, set by pressing a pack that is not
+   * the picked one. Null the rest of the time.
+   *
+   * It has to be an absolute target rather than a distance, because the
+   * settle below recomputes from wherever the row IS on every tick and always
+   * aims at whatever pack is nearest the middle. Aiming at a fixed number is
+   * what stops the two fighting over which pack is being fetched — and when
+   * the seek lands, the pack it fetched IS the nearest one, so the settle
+   * agrees with it and has nothing left to do.
+   */
+  const seekRef = useRef<number | null>(null);
 
   /** Everything that lands on screen at the current offset, and the pick. */
   const compute = useCallback(() => {
@@ -158,7 +180,17 @@ export function CigScroller({
       lastTsRef.current = now;
 
       let settling = false;
-      if (!draggingRef.current) {
+      if (!draggingRef.current && seekRef.current !== null) {
+        // fetching a pressed pack: aim at the fixed target, ignore the settle
+        const rest = seekRef.current - offsetRef.current;
+        if (Math.abs(rest) > 0.5) {
+          offsetRef.current += rest * Math.min(1, dt / SEEK_TAU);
+          settling = true;
+        } else {
+          offsetRef.current = seekRef.current;
+          seekRef.current = null;
+        }
+      } else if (!draggingRef.current) {
         if (Math.abs(velRef.current) > SETTLE_BELOW) {
           offsetRef.current += velRef.current * dt;
           velRef.current *= Math.exp(-dt / GLIDE_TAU);
@@ -189,10 +221,32 @@ export function CigScroller({
 
   const nudge = useCallback(
     (dx: number) => {
+      // a hand on the row outranks a seek it did not ask for
+      seekRef.current = null;
       offsetRef.current += dx;
       run();
     },
     [run],
+  );
+
+  /**
+   * Bring a pack that is not the picked one into the frame.
+   *
+   * The distance is the one on screen: the slot pressed is a particular
+   * instance of that pack on a particular lap, so centring THAT instance is
+   * always the short way round. Working from the pack's index instead would
+   * have to choose a lap, and could send the row most of the way across the
+   * set to reach a pack sitting just off the edge of the frame.
+   */
+  const seekTo = useCallback(
+    (x: number, i: number) => {
+      const m = compute();
+      if (!m) return;
+      velRef.current = 0;
+      seekRef.current = offsetRef.current + (x + CIG_PACKS[i].w / 2 - m.w / 2);
+      run();
+    },
+    [compute, run],
   );
 
   /** Width, and the first paint. */
@@ -351,10 +405,35 @@ export function CigScroller({
             />
           );
           if (s.i !== selected) {
+            // Pressing a pack that is not in the frame fetches it rather than
+            // opening it: one press to bring it in, a second to go to it.
+            //
+            // A button, so a pointer gets the right semantics and the press
+            // cursor — but tabIndex -1 and aria-hidden, because the ROW is the
+            // control as far as a keyboard and a screen reader are concerned.
+            // Fifteen more tab stops that each only scroll the thing you are
+            // already standing on would be worse than none, and the arrow keys
+            // already move the selection a pack at a time.
+            const fetch = (e: React.MouseEvent) => {
+              if (dragRef.current.moved > SLOP) {
+                e.preventDefault();
+                return;
+              }
+              seekTo(s.x, s.i);
+            };
             return (
-              <div key={s.key} className="cig-slot" style={style} aria-hidden="true">
+              <button
+                key={s.key}
+                type="button"
+                tabIndex={-1}
+                className="cig-slot"
+                style={style}
+                data-cig={p.id}
+                aria-hidden="true"
+                onClick={fetch}
+              >
                 {img}
-              </div>
+              </button>
             );
           }
           // a drag that happens to end over the pack is not a press

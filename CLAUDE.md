@@ -309,6 +309,30 @@ carries a copy of that pack's cleaned mark (`fitPhoto` reads `public/cigs/<id>.s
 so `npm run build:cigpages` has to follow `npm run build:cigs` or the row and the
 page will disagree about the same cigarette.
 
+**Pressing a pack that is not in the frame fetches it, rather than opening it.**
+One press brings it to the middle, a second goes to its page. The travel uses
+the settle’s own exponential at half the time constant — the owner’s 200% — so
+arriving reads as the row coming to rest, which is what it is doing.
+
+It aims at an ABSOLUTE offset, not a distance: the settle recomputes from
+wherever the row is on every tick and always targets whatever pack is nearest
+the middle, so a moving target would have the two fighting over which pack is
+being fetched. When the seek lands, the pack it fetched IS the nearest, so the
+settle agrees and has nothing to do. Any wheel, drag or key cancels it — a hand
+on the row outranks a seek it did not ask for.
+
+The distance is the one ON SCREEN, taken from the slot pressed. That slot is a
+particular instance of the pack on a particular lap, so centring it is always
+the short way round; working from the pack’s index would have to pick a lap and
+could send the row most of the way across the set to reach something sitting
+just off the edge of the frame.
+
+The unpicked packs are buttons with `tabIndex={-1}` and `aria-hidden`, so a pointer
+gets the semantics and the pressable cursor while the ROW stays the single
+control for a keyboard and a screen reader. Fifteen more tab stops that each
+only scroll the thing you are already standing on would be worse than none, and
+the arrow keys already move the selection a pack at a time.
+
 The cigarette row on the landing page is measured off two references the owner supplied, both
 kept in `scripts/assets`: a positioning SVG and an MP4 of the motion. The MP4 runs at **8fps,
 dead constant** — that stepping is deliberate and the owner likes it, so the row is driven by a
