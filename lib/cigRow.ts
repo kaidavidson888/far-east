@@ -139,40 +139,41 @@ export const SPEED = 1;
 export const CIG_FRAME_HOLD_MS = PAINT_MS * 2;
 
 /**
- * How hard the row is braked once it is let go, in pixels per second squared.
+ * How hard the row is braked once it is let go, in pixels per second squared,
+ * as a function of how fast it is still going.
  *
- * IT DECELERATES AT A CONSTANT RATE, which is what friction does. The glide
- * used to decay exponentially — v *= exp(-dt/tau) — and that is viscous drag,
- * the physics of something moving through a fluid: the braking force falls
- * away with the speed, so the row never quite stops, it only gets slower and
- * slower until a threshold gives up on it. It is why naive momentum scrolling
- * feels floaty.
+ * IT BRAKES LIKE A ROULETTE WHEEL, WHICH MEANS THE RATE IS NOT CONSTANT. A
+ * wheel on its bearings barely loses speed while it is flying; what slows it
+ * at the end is the ball dropping off the rim into the slots, where it starts
+ * catching on everything. So the braking is light above the knee and heavy
+ * below it, and the two are blended rather than switched, so there is no step
+ * in the motion where the rule changes.
  *
- * Something sliding on a surface is braked by a force that does not care how
- * fast it is going, so it sheds speed at a steady rate and comes to a real
- * stop at a definite moment. Two consequences you can feel:
+ * That shape is the whole difference. Against a constant rate, per 125ms tick
+ * from a hard throw:
  *
- *   stopping distance   v^2 / 2a   quadratic, not linear. Throw it twice as
- *                                  hard and it goes four times as far, which
- *                                  is what the hand expects.
- *   stopping time       v / a      finite. The row stops rather than fades.
+ *   constant 600   75 75 75 75 75 75 75 75 ...          even, mechanical
+ *   this           37 38 37 38 ... 37 38 | 41 45 51
+ *                  57 63 70 79 88 98 109               flat, then it bites
  *
- * IT IS SET FOR A ROULETTE WHEEL, which is a heavy mass on low-friction
- * bearings: it flies at first, winds down over seconds, and creeps into its
- * slot rather than snapping to it. 600 against a cap of ten times the
- * reference pace gives a hard throw 3.2 seconds and about 31 packs of travel —
- * long enough to watch it wind down and wonder where it will stop.
+ * Twenty ticks of almost nothing — two and a half seconds where it is plainly
+ * still going — and then ten where it winds down hard. A hard throw runs four
+ * seconds and carries 36 packs past, and is still at half speed 62% of the way
+ * through it, where constant braking is half spent by halfway.
  *
- * Constant braking is the right shape for that quite apart from being what
- * friction does: speed falls linearly, so the PROPORTION lost each second
- * grows, and the last half second is where the winding-down reads. An
- * exponential decay does the opposite — it sheds most of its speed at the
- * start and then crawls, which is the floaty tail this replaced.
- *
- * Divided by SPEED rather than multiplied: SPEED is how far a flick carries,
+ * Dividing by SPEED rather than multiplying: SPEED is how far a flick carries,
  * and less braking carries further.
  */
-export const CIG_GLIDE_FRICTION = 600 / SPEED;
+export const CIG_BRAKE_FLYING = 300 / SPEED;
+export const CIG_BRAKE_CATCHING = 1000 / SPEED;
+/** Below this the ball is in the slots and the braking starts to bite. */
+export const CIG_BRAKE_KNEE = REFERENCE_SPEED * 4;
+
+/** The braking rate at a given speed. See the note above. */
+export function cigBrake(speed: number): number {
+  const caught = 1 - Math.min(1, Math.abs(speed) / CIG_BRAKE_KNEE);
+  return CIG_BRAKE_FLYING + (CIG_BRAKE_CATCHING - CIG_BRAKE_FLYING) * caught;
+}
 
 /**
  * The fastest the row may be let go at, in pixels per second.
@@ -184,12 +185,15 @@ export const CIG_GLIDE_FRICTION = 600 / SPEED;
  * several seconds. The row did not feel unbraked because the braking was too
  * gentle; it felt unbraked because it was being thrown impossibly hard.
  *
- * Ten times the pace of the owner's own recording: fast enough to read as a
+ * Eight times the pace of the owner's own recording: fast enough to read as a
  * wheel being spun rather than a row being nudged, and still slow enough that
  * the packs are packs and not a smear. It is the same shape of limit the wheel
  * already had, which is now written as half of this.
+ *
+ * It was briefly ten. The owner's answer to that: the deceleration is the
+ * issue, not the initial velocity. Quite right — see cigBrake.
  */
-export const CIG_FLING_MAX = REFERENCE_SPEED * 10;
+export const CIG_FLING_MAX = REFERENCE_SPEED * 8;
 
 /**
  * How far back a release looks to decide how fast it was going.

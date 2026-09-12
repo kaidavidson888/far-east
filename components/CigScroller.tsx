@@ -14,7 +14,7 @@ import {
   CIG_FLING_MAX,
   CIG_FLING_WINDOW_MS,
   CIG_FRAME_HOLD_MS,
-  CIG_GLIDE_FRICTION,
+  cigBrake,
   REFERENCE_SPEED,
   SPEED,
   cigLayout,
@@ -292,14 +292,14 @@ export function CigScroller({
         }
       } else if (!draggingRef.current) {
         if (Math.abs(velRef.current) > SETTLE_BELOW) {
-          // Friction: a constant rate of braking, not a decay proportional to
-          // the speed. Position is integrated against the AVERAGE of the
-          // velocity before and after the step rather than either end of it —
-          // for a constant acceleration that is exact, where taking one end
-          // over-runs and the other falls short, each by half the step's own
-          // change in speed.
+          // Braking that depends on the speed, not a decay proportional to it
+          // — light while the row is flying, heavy as it comes in. See
+          // cigBrake. Position is integrated against the AVERAGE of the
+          // velocity before and after the step rather than either end of it:
+          // over one tick the rate barely changes, so that is near enough
+          // exact, where taking one end over-runs and the other falls short.
           const was = velRef.current;
-          const drop = CIG_GLIDE_FRICTION * dt;
+          const drop = cigBrake(was) * dt;
           velRef.current = Math.abs(was) <= drop ? 0 : was - Math.sign(was) * drop;
           offsetRef.current += ((was + velRef.current) / 2) * dt;
         } else {
