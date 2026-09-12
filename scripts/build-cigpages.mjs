@@ -25,6 +25,14 @@
  * part. The logo stays drawn and takes a transparent link on top, which is
  * how the landing page handles its logo too.
  *
+ * TWO ARRANGEMENTS. The owner asked for the page rearranged — the title
+ * block up under the logo on the landing page's own left edge, everything
+ * below it spread down the whole page rather than stopping three quarters
+ * of the way — and for that arrangement to be the phone's. So each vector
+ * is cut twice: the design as drawn into public/cigpages, and the rearranged
+ * one into public/cigpages/mobile. scripts/lib/cigpage-layout.mjs does the
+ * moving and explains how.
+ *
  * SIZE. The vectors are 307KB each — 77MB for the set — and almost all of
  * that is one full-resolution PNG of the pack, 226KB, drawn into a 103x155
  * box. Every embedded image is re-encoded to WebP at three times the size
@@ -35,9 +43,11 @@
  */
 import { readdirSync, readFileSync, writeFileSync, mkdirSync, rmSync } from 'node:fs';
 import sharp from 'sharp';
+import { relayout, FRAME as PAGE_FRAME } from './lib/cigpage-layout.mjs';
 
 const SRC = 'scripts/assets/cigpages';
 const OUT_DIR = 'public/cigpages';
+const MOBILE_DIR = 'public/cigpages/mobile';
 const MANIFEST = 'lib/cigpages.json';
 const PACKS = 'lib/cigs.json';
 
@@ -311,6 +321,31 @@ const files = readdirSync(SRC)
 
 rmSync(OUT_DIR, { recursive: true, force: true });
 mkdirSync(OUT_DIR, { recursive: true });
+mkdirSync(MOBILE_DIR, { recursive: true });
+
+/** Cut the page down to a frame, so it can be centred with equal margins. */
+const cropTo = (svg, box) =>
+  svg.replace(
+    /<svg\b[^>]*?>/,
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${box.w}" height="${box.h}" ` +
+      `viewBox="${box.x} ${box.y} ${box.w} ${box.h}">`,
+  );
+
+/**
+ * Write both arrangements of one page. The rearranging runs on the whole
+ * design, before either crop, because it works in the design's own
+ * coordinates — and the desktop cut is taken first, off the untouched one.
+ */
+const factors = [];
+function emit(svg, id, label) {
+  const desktop = cropTo(svg, CONTENT);
+  writeFileSync(`${OUT_DIR}/${id}.svg`, desktop);
+  const moved = relayout(svg, label);
+  const mobile = cropTo(moved.svg, PAGE_FRAME);
+  writeFileSync(`${MOBILE_DIR}/${id}.svg`, mobile);
+  factors.push(moved.k);
+  return desktop.length + mobile.length;
+}
 
 const pages = [];
 const unmatched = [];
@@ -385,15 +420,7 @@ for (const file of files) {
     );
   }
 
-  // crop to the content, so the page can centre it and the margins match
-  svg = svg.replace(
-    /<svg\b[^>]*?>/,
-    `<svg xmlns="http://www.w3.org/2000/svg" width="${CONTENT.w}" height="${CONTENT.h}" ` +
-      `viewBox="${CONTENT.x} ${CONTENT.y} ${CONTENT.w} ${CONTENT.h}">`,
-  );
-
-  writeFileSync(`${OUT_DIR}/${pack.id}.svg`, svg);
-  bytesOut += svg.length;
+  bytesOut += emit(svg, pack.id, label);
   pages.push({ id: pack.id, name: pack.name, source: label });
 }
 
@@ -645,13 +672,7 @@ for (const [id, copy] of Object.entries(RESEARCHED)) {
     );
   }
 
-  svg = svg.replace(
-    /<svg\b[^>]*?>/,
-    `<svg xmlns="http://www.w3.org/2000/svg" width="${CONTENT.w}" height="${CONTENT.h}" ` +
-      `viewBox="${CONTENT.x} ${CONTENT.y} ${CONTENT.w} ${CONTENT.h}">`,
-  );
-
-  writeFileSync(`${OUT_DIR}/${id}.svg`, svg);
+  bytesOut += emit(svg, id, id);
   claimed.set(id, `researched from ${TEMPLATE}`);
   pages.push({ id, name: pack.name, source: 'researched' });
   researched++;
@@ -667,6 +688,8 @@ writeFileSync(
       body: { w: CONTENT.w, h: CONTENT.h },
       /** The design's top margin; the sides come from centring. */
       top: CONTENT.y,
+      /** The phone's arrangement, in public/cigpages/mobile. */
+      mobile: { body: { w: PAGE_FRAME.w, h: PAGE_FRAME.h }, top: PAGE_FRAME.y },
       count: pages.length,
       pages,
     },
@@ -675,7 +698,16 @@ writeFileSync(
   )}\n`,
 );
 
-console.log(`${pages.length} pages -> ${OUT_DIR} (${researched} assembled from the template)`);
+console.log(
+  `${pages.length} pages -> ${OUT_DIR} + ${MOBILE_DIR} (${researched} assembled from the template)`,
+);
+if (factors.length) {
+  const k = factors.slice().sort((a, b) => a - b);
+  console.log(
+    `  phone gaps stretched x${k[0].toFixed(2)}..${k[k.length - 1].toFixed(2)} ` +
+      `(median ${k[Math.floor(k.length / 2)].toFixed(2)})`,
+  );
+}
 console.log(
   `  ${Math.round(bytesIn / 1024 / 1024)}MB of vectors -> ${Math.round(bytesOut / 1024 / 1024)}MB ` +
     `(${Math.round(bytesOut / Math.max(1, pages.length) / 1024)}KB a page)`,

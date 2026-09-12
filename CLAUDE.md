@@ -108,13 +108,30 @@ artwork to fit a frame — that scales the margins with it, which is the thing b
 - Routes: `/` is the landing artwork behind the sign-in splash; `/landing` is the same page
   with no splash. `/about`, `/privacy`, `/terms` are the inner pages.
 - **The logo menu** (`components/LogoMenu.tsx`, `npm run build:menu`) is on the landing
-  routes only — its ground is white, so it cannot go on the red inner pages. Hovering 遠東
-  unfolds three linked boxes; pressing mid-run skips to the end; pressing the logo again or
-  anything else runs it back at 2x. Frames are baked from `scripts/assets/monkey-bar.gif`
-  because a GIF cannot be seeked, paused or reversed. The canvas covers the page's own logo
-  rather than replacing it — frame 0 IS that logo, and both put their ink at exactly 46,28,
-  which is measured in the build, not assumed. The canvas is deliberately only 300px wide so
-  its white ground cannot reach the seal at x=315.
+  routes and the cigarette pages — its ground is white, so it cannot go on the red inner
+  pages. Hovering 遠東 unfolds the linked boxes; pressing mid-run skips to the end; pressing
+  the logo again or anything else runs it back at 2x. Frames are baked from
+  `scripts/assets/monkey-bar.gif` because a GIF cannot be seeked, paused or reversed. The
+  canvas covers the page's own logo rather than replacing it — frame 0 IS that logo, and both
+  put their ink at exactly 46,28, which is measured in the build, not assumed. The canvas is
+  cut to the animation's own content so its white ground cannot reach the seal.
+- **The menu has a fourth box the gif never drew.** The cigarette pages need a way home, and
+  there the logo is the menu's switch rather than a link, so home had to be a box. It is not
+  hand-drawn: the bake measured that the gif unfolds **one box every 40 frames exactly** (box
+  1's connector at f51, box 2's at f91, box 3's at f131) and that each label is a **linear
+  fade over its last ten frames** — the ink's extent never moves, only its darkness. So frame
+  170+k is frame 169 with the strip carrying box 3's cycle (x 226..290) copied from frame
+  130+k and moved 64px right, its label dropped, and the word "home" faded in at whatever
+  alpha box 3's label was wearing. f169 and f170 are byte-identical, so the join is invisible.
+  **`stops` in `lib/menu-geometry.json` is how a page says how far to play**: `base` is the
+  170 frames the gif drew (the landing page), `home` is all 210. One set of frames, two
+  lengths — do not bake a second set.
+- The home label is `scripts/assets/menu-home-label.png`, a coverage map rendered **in Chrome**
+  from the owner's own webfont. It has to be checked in because librsvg — which is what sharp
+  rasterises SVG with — ignores an `@font-face` even with the font embedded as a data URI, and
+  there is no 'h' anywhere in the three existing labels to cut one from. It is sized the way
+  the owner sizes the others: every label block is ~42px wide whatever its word count, so the
+  type size falls out of that (13.6px for one short word).
 - The form factor is resolved server-side in `lib/device.ts` so the page arrives already
   arranged. Mobile and desktop are separate placement tables even when the values match,
   so either can be re-composed alone.
@@ -148,14 +165,36 @@ Flat-coloured frames must be quantised to a fixed palette and written lossless �
 will not keep a flat field flat, and per-frame palette choice drifts the white frame to frame.
 
 A cigarette's own page (`/packs/<id>`, `npm run build:cigpages`) is built from
-one supplied vector each, cropped to its content so centring gives it equal side
-margins. **The logo and the seal are taken out of that vector by the build and
-placed against the page's own edges instead**, at the landing page's geometry —
-the margin rule. The vector drew its logo as a raster that read soft, and a mark
+one supplied vector each, cut to a frame so centring gives it equal side margins.
+**The logo and the seal are taken out of that vector by the build and placed
+against the page's own edges instead**, at the landing page's geometry — the
+margin rule. The vector drew its logo as a raster that read soft, and a mark
 travelling with a centred body would sit somewhere different on every width. The
 build also swaps the vector's own pack photograph for the cleaned one the
 landing row uses, and closes the red frame onto it with no margin, which is how
-the owner's vectors draw it (rect and image share one box).
+the owner's vectors draw it (rect and image share one box). **The logo there is
+the menu, not a link** — the menu's home box is what goes back.
+
+**Each vector is cut twice.** The desktop keeps the design as drawn; the phone
+gets the owner's rearrangement — the title block up under the logo on the
+landing page's own left edge, everything below it spread down the whole page.
+`scripts/lib/cigpage-layout.mjs` does the moving, and two things in it are worth
+knowing before touching it:
+- **It moves bands, not elements.** Each vector is a flat list of rects, images
+  and texts with absolute coordinates and no ids, but all 227 lay the page out
+  in the same six horizontal bands, which never interleave (surveyed: two
+  shapes, differing by one rect in the ratings band). So a band's run of
+  elements is wrapped in a `<g translate>` and nothing inside is retyped.
+- **The phone's frame is fixed, not measured.** The body is centred while the
+  logo is pinned to the page's edge, so they only line up at the design's own
+  width — and the title has to line up with the logo. A crop measured off the
+  ink would move when the title moved, which would move the title: the
+  alignment would chase itself. The frame is the design's own (x=39, w=304),
+  which puts vector x=44 at stage x=48 — the logo's 45 plus the OFFERS 3.
+- The gaps between the lower bands keep their **ratio** and are stretched by a
+  common factor (~2.9) to fill the page, rather than the elements being scaled:
+  the content is already at the frame's full width, so scaling up would
+  overflow it.
 
 The cigarette row on the landing page is measured off two references the owner supplied, both
 kept in `scripts/assets`: a positioning SVG and an MP4 of the motion. The MP4 runs at **8fps,

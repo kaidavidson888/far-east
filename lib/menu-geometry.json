@@ -5,7 +5,7 @@
     "h": 138,
     "scale": 2
   },
-  "frames": 170,
+  "frames": 210,
   "frameMs": 46,
   "shiftedBy": 0,
   "logoHit": {
@@ -41,6 +41,36 @@
       "y": 45,
       "w": 55,
       "h": 55
+    },
+    {
+      "id": "home",
+      "label": "Home",
+      "href": "/landing",
+      "x": 299,
+      "y": 45,
+      "w": 55,
+      "h": 55
     }
-  ]
+  ],
+  "stops": {
+    "base": {
+      "frames": 170,
+      "viewW": 300,
+      "boxes": [
+        "about",
+        "privacy",
+        "terms"
+      ]
+    },
+    "home": {
+      "frames": 210,
+      "viewW": 364,
+      "boxes": [
+        "about",
+        "privacy",
+        "terms",
+        "home"
+      ]
+    }
+  }
 }

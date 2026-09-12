@@ -758,18 +758,29 @@ ul, ol { list-style: none; }
   user-select: none;
   -webkit-user-drag: none;
 }
+/* Against the stage, not the body: 45 and 28 are the landing page's own
+   margins, and the mark is the landing page's own vector at its own 40x87 —
+   the artwork's copy was a raster and read soft at this size. It is drawn,
+   not pressed: the menu's canvas sits over it and owns the hit. */
 .cigpage-logo {
   position: absolute;
   z-index: 2;
   display: block;
-  -webkit-tap-highlight-color: transparent;
+  pointer-events: none;
 }
 .cigpage-logo img {
   display: block;
 }
-.cigpage-logo:focus-visible {
-  outline: 2px solid #010101;
-  outline-offset: 3px;
+/* The menu and the seal both want the top strip. Here the bar runs one box
+   further than on the landing page — out to x=354, with home on the end —
+   and the seal takes 87 plus its 30 margin off the right edge, so the two
+   collide below 354 + 117 = 471. Where they do, the seal stands down for as
+   long as the menu is out, exactly as it does on the landing page. */
+@media (max-width: 480px) {
+  .cigpage-stage:has(.logo-menu:not([data-phase='idle'])) .seal-button {
+    opacity: 0;
+    pointer-events: none;
+  }
 }
 
 /* -------------------------------------------------------- cigarette row --
@@ -882,6 +893,11 @@ ul, ol { list-style: none; }
   /* above the seal: on a narrow screen the unfolded boxes reach into the
      seal's corner, and the seal is the static one of the two */
   z-index: 3;
+  /* The box is as wide as the whole bar even at rest, and on a narrow screen
+     it reaches over the seal's corner — an invisible div is still hit-
+     testable, so without this it would eat presses meant for the seal. The
+     parts below take their own hits back. */
+  pointer-events: none;
 }
 .logo-menu-canvas {
   display: block;
@@ -905,6 +921,7 @@ ul, ol { list-style: none; }
   background: transparent;
   cursor: pointer;
   display: block;
+  pointer-events: auto;
   -webkit-tap-highlight-color: transparent;
 }
 .logo-menu-logo:focus-visible,

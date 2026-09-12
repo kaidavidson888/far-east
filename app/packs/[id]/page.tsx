@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import geometry from '@/lib/cigpages.json';
+import { detectDevice, deviceOverride } from '@/lib/device';
 import { CigPage } from '@/components/CigPage';
 
 /**
@@ -13,6 +14,11 @@ import { CigPage } from '@/components/CigPage';
  * Not every pack has a page: the owner supplied 227 info-page vectors for
  * 247 packs. A pack without one is left unpressable on the landing page
  * rather than linking here to a 404.
+ *
+ * The form factor is resolved here, on the server, the same way the artwork
+ * pages resolve theirs: the phone and the desktop get different cuts of the
+ * vector, and choosing on the client would rearrange the page after it had
+ * already been seen. `?device=mobile|desktop` forces either one in dev.
  */
 const pages = new Map(geometry.pages.map((p) => [p.id, p]));
 
@@ -27,9 +33,16 @@ export async function generateMetadata({
   return page ? { title: page.name } : {};
 }
 
-export default async function PackPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function PackPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const { id } = await params;
   const page = pages.get(decodeURIComponent(id));
   if (!page) notFound();
-  return <CigPage id={page.id} name={page.name} />;
+  const device = deviceOverride((await searchParams).device) ?? (await detectDevice());
+  return <CigPage id={page.id} name={page.name} device={device} />;
 }

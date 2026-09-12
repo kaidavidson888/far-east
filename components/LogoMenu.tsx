@@ -20,16 +20,19 @@ import geometry from '@/lib/menu-geometry.json';
  * WHY IT PAINTS OVER THE LOGO. The first frame IS the logo, baked to land on
  * the page's own to half a pixel, so the canvas can simply cover it while
  * open rather than the two having to be swapped. Its white ground would
- * cover the seal too, so it is only as wide as the animation's content —
- * everything is drawn by x=289.
+ * cover the seal too, so it is only as wide as the animation's content.
+ *
+ * HOW FAR IT PLAYS. The bake carries a fourth box, home, which the cigarette
+ * pages need because there the logo is this switch rather than a link. The
+ * landing page does not want it and simply stops one box earlier: `stop`
+ * picks the length, and `stops` in the geometry carries the frame count,
+ * the canvas width that length needs, and which boxes are in it.
  */
 type Phase = 'idle' | 'forward' | 'open' | 'reverse';
+export type MenuStop = keyof typeof geometry.stops;
 
-const { frame, frames: FRAMES, frameMs, logoHit, boxes } = geometry;
+const { frame, frameMs, logoHit, boxes, stops } = geometry;
 const SCALE = frame.scale;
-
-/** Wide enough for the animation, narrow enough to leave the seal alone. */
-const VIEW_W = 300;
 const VIEW_H = frame.h;
 
 /** Backwards runs at twice the speed it went forwards. */
@@ -37,7 +40,10 @@ const REVERSE_RATE = 2;
 
 const src = (i: number) => `/menu/frames/f${String(i).padStart(3, '0')}.webp`;
 
-export function LogoMenu() {
+export function LogoMenu({ stop = 'base' }: { stop?: MenuStop } = {}) {
+  const { frames: FRAMES, viewW: VIEW_W, boxes: inPlay } = stops[stop];
+  const shown = boxes.filter((b) => (inPlay as readonly string[]).includes(b.id));
+
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const framesRef = useRef<HTMLImageElement[] | null>(null);
   const pressedRef = useRef<Record<string, HTMLImageElement>>({});
@@ -72,11 +78,12 @@ export function LogoMenu() {
     // the pressed state only exists once the boxes are fully drawn
     const hovered = hoverBoxRef.current;
     if (hovered && phaseRef.current === 'open') {
-      const box = boxes.find((b) => b.id === hovered);
+      const box = shown.find((b) => b.id === hovered);
       const overlay = box ? pressedRef.current[box.id] : null;
       if (box && overlay?.complete) ctx.drawImage(overlay, box.x * SCALE, box.y * SCALE);
     }
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- stop never changes for a mounted menu
+  }, [FRAMES]);
 
   /** Load every frame once, off the critical path. */
   const load = useCallback(() => {
@@ -90,7 +97,7 @@ export function LogoMenu() {
       list[i] = img;
       jobs.push(img.decode().catch(() => {}));
     }
-    for (const box of boxes) {
+    for (const box of shown) {
       const img = new Image();
       img.src = `/menu/${box.id}-pressed.webp`;
       pressedRef.current[box.id] = img;
@@ -101,7 +108,8 @@ export function LogoMenu() {
       setReady(true);
       paint();
     });
-  }, [paint]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- stop never changes for a mounted menu
+  }, [paint, FRAMES]);
 
   useEffect(() => {
     // 294KB of frames: worth having ready before the first hover, not worth
@@ -145,7 +153,7 @@ export function LogoMenu() {
       rafRef.current = requestAnimationFrame(step);
     };
     rafRef.current = requestAnimationFrame(step);
-  }, [paint, setPhase]);
+  }, [paint, setPhase, FRAMES]);
 
   useEffect(() => () => cancelAnimationFrame(rafRef.current), []);
 
@@ -171,7 +179,7 @@ export function LogoMenu() {
     }
     setPhase('forward');
     run();
-  }, [load, paint, run, setPhase]);
+  }, [load, paint, run, setPhase, FRAMES]);
 
   /** Retract from wherever it has got to. */
   const goReverse = useCallback(() => {
@@ -214,7 +222,7 @@ export function LogoMenu() {
       return;
     }
     void goForward(); // idle, or turning a retraction around
-  }, [goForward, goReverse, paint, setPhase]);
+  }, [goForward, goReverse, paint, setPhase, FRAMES]);
 
   /**
    * Pressing anywhere else. An open menu retracts; one already retracting
@@ -283,9 +291,18 @@ export function LogoMenu() {
           e.preventDefault();
           onLogoPress();
         }}
+        // A pointer opens it on pointerdown, which is preventDefault-ed and so
+        // never becomes a click. The keyboard has no pointerdown at all, and on
+        // the cigarette pages this menu is the only way home — so Enter and
+        // Space are handled here rather than left to a click that will not come.
+        onKeyDown={(e) => {
+          if (e.key !== 'Enter' && e.key !== ' ') return;
+          e.preventDefault();
+          onLogoPress();
+        }}
       />
 
-      {boxes.map((box) => (
+      {shown.map((box) => (
         <Link
           key={box.id}
           href={box.href}
@@ -302,10 +319,18 @@ export function LogoMenu() {
           }}
           onPointerEnter={() => setHover(box.id)}
           onPointerLeave={() => setHover(null)}
-          onPointerDown={() => {
+          onClick={() => {
             // Shut it before the route changes. The canvas is opaque white,
             // and the pages it leads to are red — left up during the
             // transition it shows as a white block in the corner.
+            //
+            // On CLICK, not pointerdown. Closing sets this link's
+            // pointer-events to none, and React flushes a discrete event's
+            // state before the browser dispatches the click that follows —
+            // so from pointerdown the link was already untouchable by the
+            // time the click looked for it, and the menu simply never went
+            // anywhere. The navigation runs from this same handler chain
+            // rather than from another hit test, so here it is safe.
             setHover(null);
             snapClosed();
           }}

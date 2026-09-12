@@ -1,6 +1,7 @@
-import Link from 'next/link';
 import landing from '@/lib/landing-geometry.json';
 import geometry from '@/lib/cigpages.json';
+import type { ArtDevice } from '@/lib/artpage';
+import { LogoMenu } from './LogoMenu';
 import { SealButton } from './SealButton';
 
 /**
@@ -12,9 +13,16 @@ import { SealButton } from './SealButton';
  * keeps its drawn size at every viewport and the space around it flexes,
  * never scaling to fit.
  *
- * The body is cropped to its own content (see `npm run build:cigpages`) and
- * centred, which is what makes the left and right margins equal at any
- * width. It holds the design's 18px top margin.
+ * The body is cropped to a frame (see `npm run build:cigpages`) and centred,
+ * which is what makes the left and right margins equal at any width. It
+ * holds the design's 18px top margin.
+ *
+ * TWO ARRANGEMENTS. The phone gets the one the owner asked for: the title
+ * block up under the logo on the landing page's own left edge, and
+ * everything below it spread down the whole page instead of stopping three
+ * quarters of the way. The desktop keeps the design as it was drawn. They
+ * are two cuts of the same vector, chosen on the server so the page arrives
+ * already right rather than rearranging itself after hydration.
  *
  * THE LOGO AND THE SEAL ARE THE PAGE'S, NOT THE ARTWORK'S. Both are taken
  * out of the vector by the build and placed here instead, against the
@@ -28,12 +36,23 @@ import { SealButton } from './SealButton';
  * its margins are identical wherever you are: the logo at the landing's
  * own 45 and 28, the seal as tall as the logo at the corner it always
  * occupies.
+ *
+ * THE LOGO IS THE MENU HERE, not a link home. It unfolds the same monkey
+ * bar the landing page's does, with one more box on the end — home — and
+ * that box is what carries you back. So the mark below is drawn and not
+ * wrapped in an anchor: two controls on one mark would be announced twice,
+ * which is how the landing page handles its logo too.
  */
-const { body, top } = geometry;
+const { body: wide, top: wideTop, mobile } = geometry;
 const LOGO = landing.parts.logo;
 const SEAL_SIZE = landing.parts.logo.h;
 
-export function CigPage({ id, name }: { id: string; name: string }) {
+export function CigPage({ id, name, device }: { id: string; name: string; device: ArtDevice }) {
+  const phone = device === 'mobile';
+  const body = phone ? mobile.body : wide;
+  const top = phone ? mobile.top : wideTop;
+  const src = phone ? `/cigpages/mobile/${id}.svg` : `/cigpages/${id}.svg`;
+
   return (
     <div className="cigpage">
       <div className="cigpage-stage" style={{ minHeight: `${top + body.h + top}px` }}>
@@ -49,7 +68,7 @@ export function CigPage({ id, name }: { id: string; name: string }) {
         >
           <img
             className="cigpage-art"
-            src={`/cigpages/${id}.svg`}
+            src={src}
             alt={name}
             width={body.w}
             height={body.h}
@@ -57,12 +76,8 @@ export function CigPage({ id, name }: { id: string; name: string }) {
           />
         </div>
 
-        <Link
-          className="cigpage-logo"
-          href="/landing"
-          aria-label="遠東 — home"
-          style={{ left: `${LOGO.x}px`, top: `${LOGO.y}px` }}
-        >
+        {/* the mark the menu's own first frame is baked to sit on, to the pixel */}
+        <span className="cigpage-logo" style={{ left: `${LOGO.x}px`, top: `${LOGO.y}px` }}>
           <img
             src="/landing/parts/logo.svg"
             alt=""
@@ -70,8 +85,9 @@ export function CigPage({ id, name }: { id: string; name: string }) {
             height={LOGO.h}
             draggable={false}
           />
-        </Link>
+        </span>
 
+        <LogoMenu stop="home" />
         <SealButton size={SEAL_SIZE} />
       </div>
     </div>
