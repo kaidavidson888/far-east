@@ -1,6 +1,6 @@
 import landing from '@/lib/landing-geometry.json';
 import geometry from '@/lib/cigpages.json';
-import { INFO_BOX } from '@/lib/cigPages';
+import { INFO_BOX, RULE } from '@/lib/cigPages';
 import { LogoMenu } from './LogoMenu';
 import { SealButton } from './SealButton';
 
@@ -43,10 +43,21 @@ const { body, top } = geometry;
 const LOGO = landing.parts.logo;
 const SEAL_SIZE = landing.parts.logo.h;
 
-export function CigPage({ id, name }: { id: string; name: string }) {
+export function CigPage({ id, name, gap }: { id: string; name: string; gap: number }) {
+  // The rule stands off the info by the page's own brand-to-flavour gap, so
+  // it reaches below the artwork; the stage grows to keep the design's own
+  // margin underneath it rather than letting it sit on the page's edge. The
+  // stand-off itself is worked out in CSS, which is the only place that knows
+  // how much room the window has — see .cigpage-frame. This is the roomy case,
+  // so a narrow screen simply ends up with a little more air at the foot.
+  const foot = INFO_BOX.top + INFO_BOX.height + gap + RULE;
+
   return (
     <div className="cigpage">
-      <div className="cigpage-stage" style={{ minHeight: `${top + body.h + top}px` }}>
+      <div
+        className="cigpage-stage"
+        style={{ minHeight: `${top + Math.max(body.h, foot) + top}px` }}
+      >
         <div
           className="cigpage-body"
           style={{
@@ -69,12 +80,15 @@ export function CigPage({ id, name }: { id: string; name: string }) {
           {/* a rule round the info, inside the body so it travels with it */}
           <div
             className="cigpage-frame"
-            style={{
-              left: `${INFO_BOX.left}px`,
-              top: `${INFO_BOX.top}px`,
-              width: `${INFO_BOX.width}px`,
-              height: `${INFO_BOX.height}px`,
-            }}
+            style={
+              {
+                '--x': INFO_BOX.left,
+                '--y': INFO_BOX.top,
+                '--w': INFO_BOX.width,
+                '--h': INFO_BOX.height,
+                '--gap': gap,
+              } as React.CSSProperties
+            }
           />
         </div>
 

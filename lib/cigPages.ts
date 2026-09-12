@@ -71,3 +71,6 @@ export function pageFor(id: string): Page | null {
  * If any of those move, move these with them.
  */
 export const INFO_BOX = { left: 5, top: 143, width: 299, height: 569 };
+
+/** The rule's weight, which globals.css draws and the page has to allow for. */
+export const RULE = 5;

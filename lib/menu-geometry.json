@@ -55,7 +55,7 @@
   "stops": {
     "base": {
       "frames": 170,
-      "viewW": 300,
+      "viewW": 296,
       "boxes": [
         "about",
         "privacy",
@@ -64,7 +64,7 @@
     },
     "home": {
       "frames": 210,
-      "viewW": 364,
+      "viewW": 360,
       "boxes": [
         "about",
         "privacy",

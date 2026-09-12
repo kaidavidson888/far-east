@@ -41,7 +41,7 @@
  */
 import { readdirSync, readFileSync, writeFileSync, mkdirSync, rmSync } from 'node:fs';
 import sharp from 'sharp';
-import { alignTitle } from './lib/cigpage-layout.mjs';
+import { alignTitle, titleGap } from './lib/cigpage-layout.mjs';
 
 const SRC = 'scripts/assets/cigpages';
 const OUT_DIR = 'public/cigpages';
@@ -342,12 +342,17 @@ const cropTo = (svg, box) =>
  * kilobytes of geometry.
  */
 const moves = [];
+const gaps = [];
 function emit(svg, id, label) {
   const aligned = alignTitle(svg, label);
   moves.push(aligned.dy);
   const out = cropTo(aligned.svg, CONTENT);
   writeFileSync(`${OUT_DIR}/${id}.svg`, out);
-  return out.length;
+  // measured on what actually ships, so the page's rule can stand off the
+  // info by the same distance the brand line stands off the flavour
+  const gap = +titleGap(aligned.svg, label).toFixed(2);
+  gaps.push(gap);
+  return { bytes: out.length, gap };
 }
 
 const pages = [];
@@ -423,8 +428,9 @@ for (const file of files) {
     );
   }
 
-  bytesOut += emit(svg, pack.id, label);
-  pages.push({ id: pack.id, name: pack.name, source: label });
+  const made = emit(svg, pack.id, label);
+  bytesOut += made.bytes;
+  pages.push({ id: pack.id, name: pack.name, source: label, gap: made.gap });
 }
 
 /** Swap the content of the nth <text>, leaving its position and size. */
@@ -675,9 +681,10 @@ for (const [id, copy] of Object.entries(RESEARCHED)) {
     );
   }
 
-  bytesOut += emit(svg, id, id);
+  const made = emit(svg, id, id);
+  bytesOut += made.bytes;
   claimed.set(id, `researched from ${TEMPLATE}`);
-  pages.push({ id, name: pack.name, source: 'researched' });
+  pages.push({ id, name: pack.name, source: 'researched', gap: made.gap });
   researched++;
 }
 
@@ -702,8 +709,13 @@ writeFileSync(
 console.log(`${pages.length} pages -> ${OUT_DIR} (${researched} assembled from the template)`);
 if (moves.length) {
   const d = moves.slice().sort((a, b) => a - b);
+  const g = gaps.slice().sort((a, b) => a - b);
   console.log(
     `  title lifted ${(-d[d.length - 1]).toFixed(1)}..${(-d[0]).toFixed(1)}px onto the landing page's own line`,
+  );
+  console.log(
+    `  brand-to-flavour gap ${g[0].toFixed(1)}..${g[g.length - 1].toFixed(1)}px ` +
+      `(median ${g[Math.floor(g.length / 2)].toFixed(1)}) — the rule's stand-off`,
   );
 }
 console.log(

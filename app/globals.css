@@ -739,6 +739,8 @@ ul, ol { list-style: none; }
   position: relative;
   width: 100%;
   height: 100%;
+  /* the rule round the info measures its stand-off against this */
+  container-type: inline-size;
 }
 /* Centred, on a whole pixel. An odd stage width makes 50% land on .5, and a
    body drawn into a half-pixel box is resampled row by row — the quietest
@@ -762,11 +764,33 @@ ul, ol { list-style: none; }
    comment panels — and not round the logo and the seal, which are the page's
    furniture rather than the cigarette's. An outline rather than a border so
    it draws outside the box it is given and cannot move the artwork inside it
-   by a pixel. Its box is INFO_BOX in lib/cigPages.ts. */
+   by a pixel.
+
+   It stands off the info by the same distance the brand line stands off the
+   flavour, which is a different number on every page — every line here is
+   sized to its own phrase, so that gap runs 14 to 28px across the set. The
+   build measures it; the page reads it off the manifest. Box: INFO_BOX in
+   lib/cigPages.ts, grown by that gap.
+
+   The red is the artwork's own #FF0000, not --negative: that token is warm
+   grey and is never an error colour, per the spec. */
 .cigpage-frame {
   position: absolute;
-  outline: 5px solid #010101;
+  outline: 5px solid #ff0000;
   pointer-events: none;
+
+  /* The stand-off is the page's own brand-to-flavour gap, until there is not
+     room for it. The rule is the widest thing on the page, so on a narrow
+     phone the widest of these gaps (28px) would push it past the edge and
+     scroll the page sideways — 314 is the info's 299 plus the rule's 5 at
+     each end, and what is left over is what the stand-off may have half of.
+     It only bites below about 370px, and only on the handful of pages whose
+     brand and flavour sit furthest apart. */
+  --stand: max(0px, min(var(--gap) * 1px, (100cqw - 314px) / 2));
+  left: calc(var(--x) * 1px - var(--stand));
+  top: calc(var(--y) * 1px - var(--stand));
+  width: calc(var(--w) * 1px + 2 * var(--stand));
+  height: calc(var(--h) * 1px + 2 * var(--stand));
 }
 /* Against the stage, not the body: 45 and 28 are the landing page's own
    margins, and the mark is the landing page's own vector at its own 40x87 —

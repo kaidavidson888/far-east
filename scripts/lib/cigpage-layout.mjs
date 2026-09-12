@@ -194,3 +194,25 @@ export function alignTitle(svg, label = 'page') {
     svg.slice(title.to);
   return { svg: moved, dx, dy };
 }
+
+/**
+ * The gap between the brand line and the flavour line of the title block.
+ *
+ * The owner asked for the rule round the info to stand off it by the same
+ * distance, and that distance is not a constant: every line on these pages is
+ * sized to its own phrase, so the gap runs from 14px to 28px across the set
+ * (median 19). So it is measured per page rather than picked once.
+ *
+ * Ink to ink — the bottom of the brand's lowest descender to the top of the
+ * flavour's tallest ascender — because that is the gap you actually see.
+ */
+export function titleGap(svg, label = 'page') {
+  const bands = readBands(svg, label);
+  const title = bands.get('title');
+  if (!title) throw new Error(`${label}: no title band`);
+  const lines = title.els
+    .filter((el) => el.name === 'text' && el.ext)
+    .sort((a, b) => a.ext.top - b.ext.top);
+  if (lines.length < 2) throw new Error(`${label}: the title block has ${lines.length} line(s)`);
+  return lines[1].ext.top - lines[0].ext.bottom;
+}

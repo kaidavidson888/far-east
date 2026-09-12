@@ -31,5 +31,5 @@ export default async function PackPage({ params }: { params: Promise<{ id: strin
   const { id } = await params;
   const page = pageFor(decodeURIComponent(id));
   if (!page) notFound();
-  return <CigPage id={page.id} name={page.name} />;
+  return <CigPage id={page.id} name={page.name} gap={page.gap} />;
 }

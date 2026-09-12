@@ -207,12 +207,26 @@ knowing before touching it:
   go dead again. If the owner ever settles those names into genuinely
   different products, each will claim its own vector and this finds nothing
   to do.
-- **The 5px rule round the info** is `INFO_BOX` in the same file, drawn by the
-  page rather than baked into the vector. It frames the title block down to
+- **The 5px red rule round the info** is `INFO_BOX` in the same file, drawn by
+  the page rather than baked into the vector. It frames the title block down to
   the foot of the comment panels and deliberately leaves the logo and the seal
-  outside it — they are the page's furniture, not the cigarette's. Its numbers
-  are only constant across all 235 pages because the build puts the title on
-  the landing page's own line, so its ink top is 161 whatever the brand name.
+  outside it — they are the page's furniture, not the cigarette's. That box is
+  only constant across all 235 pages because the build puts the title on the
+  landing page's own line, so its ink top is 161 whatever the brand name.
+  **It stands off the info by that page's own brand-to-flavour gap**, which is
+  not a constant — every line on these pages is sized to its own phrase, so the
+  gap runs 14 to 28px (median 19). `titleGap()` measures it on the file that
+  actually ships and the build records it as `pages[].gap`.
+  **CSS clamps the stand-off to the room there is** (`.cigpage-frame`): the rule
+  is the widest thing on the page, and on a 360px phone the widest gaps would
+  push it off the edge. The clamp only bites below about 370px.
+  The red is the artwork's own `#FF0000`. **Not `--negative`** — that token is
+  warm grey and is never an error colour, per the spec.
+- **The menu canvas is cut to 360px on the cigarette pages**, which is exactly
+  a 360px phone. The bar with the home box reaches x=354, and `SLACK` in
+  `build-menu-frames.mjs` is 6 rather than 10 for that reason: at 10 the canvas
+  was 364 and scrolled those pages sideways by four pixels. It is transparent
+  at rest but its box still counts.
 - `scripts/assets/far-east-ink.json` is the per-character ink extent of the
   owner's face, measured once in Chrome. It is what lets the build know where a
   line of text actually starts and stops, which is what the title's ink top is

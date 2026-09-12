@@ -268,7 +268,11 @@ for (const box of BOXES) {
  * is opaque white, so it is cut to the animation's own content and no wider —
  * on the landing page that is what keeps it off the seal at x=315.
  */
-const SLACK = 10;
+// Enough that the white ground does not stop dead on the last box's outline,
+// and no more: with the home box the bar reaches 354, and a 360px phone — the
+// commonest Android width there is — has exactly that much room. At 10 the
+// canvas was 364 and scrolled those pages sideways by four pixels.
+const SLACK = 6;
 const STOPS = {
   base: {
     frames: N,
