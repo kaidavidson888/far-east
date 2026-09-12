@@ -112,6 +112,24 @@ const SOLID_ALPHA = 200;
 const SQUARE_FLOOR = 0.35;
 /** ...and no more than this share may be squared off either end. */
 const SQUARE_MAX = 0.18;
+/**
+ * A line this white, this consistently, at the edge of a crop is ground.
+ *
+ * Some of the supplied cut-outs are not tight: the alpha runs past the pack
+ * into a margin of the photograph's own white paper, opaque and included, and
+ * on the Lotus / Nanjing / Taishan block that margin is a tenth of the width
+ * down the right-hand side. Nothing upstream removes it — the subject IS the
+ * alpha when the source is a cut-out, so the crop is exactly as loose as the
+ * cut-out was — and `squareOff` only ever looks at the top and bottom.
+ *
+ * 245 rather than pure white because the paper is photographed, not painted;
+ * 0.995 rather than 1 for the same reason, so one stray speck of dust in a
+ * column does not save a column of paper.
+ */
+const EDGE_WHITE = 245;
+const EDGE_SHARE = 0.97;
+/** ...and no more than this share may be peeled off any one side. */
+const EDGE_MAX = 0.2;
 
 /**
  * The two the reasoning above cannot reach, cropped by hand.
@@ -551,6 +569,70 @@ function squareOff(solid, w, h, box) {
   };
 }
 
+/**
+ * Peel the photograph's own paper off the edges of a crop.
+ *
+ * WHY THIS IS NOT A COLOUR KEY, which the header rightly forbids. It only ever
+ * eats INWARD FROM AN EDGE and it stops at the first line that is not paper, so
+ * a pack's own white panel — which is enclosed by the pack, and so is always
+ * behind at least one line of print, bevel or shadow — can never be reached. A
+ * pack whose outermost column really is unbroken paper for a fifth of its width
+ * does not exist in this set: checked against all 247, and the most any of them
+ * gives up is the Taishan Qingxiu's 55px of margin.
+ *
+ * It is held to the same standard as squareOff: if peeling takes a crop that
+ * was box-shaped and leaves something that is not, it has eaten the pack and is
+ * thrown away whole.
+ *
+ * The share is measured over the crop's own opaque pixels, not over its full
+ * height, so a line that is half transparent and half paper still counts as
+ * paper rather than being diluted into looking like content.
+ */
+function tighten(data, w, h, box) {
+  const paper = (i) => {
+    const p = i * 4;
+    return data[p + 3] <= SOLID_ALPHA
+      || (data[p] >= EDGE_WHITE && data[p + 1] >= EDGE_WHITE && data[p + 2] >= EDGE_WHITE);
+  };
+  // a handful of pixels in a line may disagree — dust, a compression artefact
+  const colShare = (x) => {
+    let n = 0;
+    for (let y = box.y0; y <= box.y1; y++) if (paper(y * w + x)) n++;
+    return n / (box.y1 - box.y0 + 1);
+  };
+  const rowShare = (y) => {
+    let n = 0;
+    for (let x = box.x0; x <= box.x1; x++) if (paper(y * w + x)) n++;
+    return n / (box.x1 - box.x0 + 1);
+  };
+  const bw = box.x1 - box.x0 + 1;
+  const bh = box.y1 - box.y0 + 1;
+  const capX = Math.floor(bw * EDGE_MAX);
+  const capY = Math.floor(bh * EDGE_MAX);
+
+  let left = 0;
+  while (left < capX && colShare(box.x0 + left) >= EDGE_SHARE) left++;
+  let right = 0;
+  while (right < capX && colShare(box.x1 - right) >= EDGE_SHARE) right++;
+  let top = 0;
+  while (top < capY && rowShare(box.y0 + top) >= EDGE_SHARE) top++;
+  let bottom = 0;
+  while (bottom < capY && rowShare(box.y1 - bottom) >= EDGE_SHARE) bottom++;
+
+  const peeled = left + right + top + bottom;
+  if (!peeled) return { box, peeled: 0 };
+  return {
+    box: {
+      x0: box.x0 + left,
+      y0: box.y0 + top,
+      x1: box.x1 - right,
+      y1: box.y1 - bottom,
+    },
+    peeled,
+    sides: { left, right, top, bottom },
+  };
+}
+
 /** Of the box-shaped crops, the smallest — with a floor. See the header. */
 function chooseBox(cands, subject, w, h) {
   const plain = cands[0];
@@ -617,9 +699,23 @@ function readMenu() {
   return byNumber;
 }
 
+/**
+ * CIGS_ONLY=<substring> rebuilds just the sources whose filename contains it,
+ * and prints what the reasoning decided for each instead of the usual tally.
+ *
+ * A full run takes minutes and wipes the output folder, which makes looking
+ * at one pack's crop a slow way to spend an afternoon. In this mode nothing
+ * is wiped and the manifest is left alone — it would otherwise be rewritten
+ * with one entry in it — so the marks it writes land beside the existing set
+ * and the manifest still describes all of them. Re-run the full build before
+ * committing anything that changes a crop.
+ */
+const ONLY = process.env.CIGS_ONLY ?? '';
+
 const menu = readMenu();
 const files = readdirSync(SRC)
   .filter((f) => /\.(png|jpe?g)$/i.test(f))
+  .filter((f) => !ONLY || f.includes(ONLY))
   .filter((f) => !DUPLICATES.has(f.replace(/\.(png|jpe?g)$/i, '')))
   .sort(
     (a, b) =>
@@ -627,13 +723,16 @@ const files = readdirSync(SRC)
       a.localeCompare(b),
   );
 
-rmSync(OUT_DIR, { recursive: true, force: true });
+if (!ONLY) rmSync(OUT_DIR, { recursive: true, force: true });
 mkdirSync(OUT_DIR, { recursive: true });
 
 const manifest = [];
 let bytes = 0;
 let trimmed = 0;
 let squared = 0;
+let peeledCount = 0;
+/** Every crop that gave up paper, so an outlier is visible rather than silent. */
+const peels = [];
 let handed = 0;
 let unclipped = 0;
 const unresolved = [];
@@ -670,7 +769,28 @@ for (const file of files) {
     squaredResult.trimmed > 0 &&
     (ratio(squaredResult.box) >= AR_MIN && ratio(squaredResult.box) <= AR_MAX ||
       !(ratio(base) >= AR_MIN && ratio(base) <= AR_MAX));
-  const squaredBox = keepSquared ? squaredResult.box : base;
+  const afterSquare = keepSquared ? squaredResult.box : base;
+  // Take the photograph's paper off the edges. Held to the same standard as
+  // squaring off: a peel that leaves something no longer box-shaped has eaten
+  // the pack, and is dropped whole. Hand crops are measured by eye and are the
+  // answer already.
+  const tightened = byHand ? { box: afterSquare, peeled: 0 } : tighten(data, w, h, afterSquare);
+  const keepTight =
+    tightened.peeled > 0 &&
+    (ratio(tightened.box) >= AR_MIN && ratio(tightened.box) <= AR_MAX ||
+      !(ratio(afterSquare) >= AR_MIN && ratio(afterSquare) <= AR_MAX));
+  const squaredBox = keepTight ? tightened.box : afterSquare;
+  if (keepTight) {
+    peeledCount++;
+    const side = tightened.sides;
+    const bw = afterSquare.x1 - afterSquare.x0 + 1;
+    const bh = afterSquare.y1 - afterSquare.y0 + 1;
+    peels.push({
+      id,
+      deepest: Math.max(side.left / bw, side.right / bw, side.top / bh, side.bottom / bh),
+      text: `${id} — L${side.left} R${side.right} T${side.top} B${side.bottom} of ${bw}x${bh}`,
+    });
+  }
   if (keepSquared) squared++;
   if (byHand) handed++;
   // a hand-measured rectangle is the answer; nothing grows it back
@@ -710,6 +830,36 @@ for (const file of files) {
   // rounded so the drawn box lands on whole pixels
   const drawnW = Math.max(1, Math.round((region.width / region.height) * DRAWN_H));
 
+  if (ONLY) {
+    const solid = { x0: w, x1: -1, y0: h, y1: -1 };
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        if (data[(y * w + x) * 4 + 3] > SOLID_ALPHA) {
+          if (x < solid.x0) solid.x0 = x;
+          if (x > solid.x1) solid.x1 = x;
+          if (y < solid.y0) solid.y0 = y;
+          if (y > solid.y1) solid.y1 = y;
+        }
+      }
+    }
+    const sw = solid.x1 - solid.x0 + 1;
+    const sh = solid.y1 - solid.y0 + 1;
+    const fmt = (b) => `${b.x0},${b.y0} ${b.x1 - b.x0 + 1}x${b.y1 - b.y0 + 1} r=${ratio(b).toFixed(3)}`;
+    console.log(`\n${id}`);
+    console.log(`  cutout            ${cutout}`);
+    console.log(`  solid alpha bbox  ${solid.x0},${solid.y0} ${sw}x${sh} r=${(sw / sh).toFixed(3)}`);
+    console.log(`  widest candidate  ${fmt(cands[0].box)}  (${cands[0].how})`);
+    console.log(`  chosen            ${fmt(chosen.box)}  (${chosen.how}, boxShaped=${boxShaped})`);
+    console.log(`  squareOff         ${fmt(squaredResult.box)}  trimmed=${squaredResult.trimmed} kept=${keepSquared}`);
+    console.log(`  tighten           ${fmt(tightened.box)}  peeled=${JSON.stringify(tightened.sides ?? {})} kept=${keepTight}`);
+    console.log(`  unclip moved      ${repaired.moved}`);
+    console.log(`  REGION            ${region.left},${region.top} ${region.width}x${region.height} r=${(region.width / region.height).toFixed(3)}`);
+    console.log(`  drawn             ${drawnW}x${DRAWN_H}`);
+    const slackR = region.left + region.width - 1 - solid.x1;
+    const slackL = solid.x0 - region.left;
+    console.log(`  slack around pack L=${slackL} R=${slackR} T=${solid.y0 - region.top} B=${region.top + region.height - 1 - solid.y1}`);
+  }
+
   const webp = await sharp(data, { raw: { width: w, height: h, channels: 4 } })
     .extract(region)
     .resize({ width: drawnW * SS, height: DRAWN_H * SS, fit: 'fill' })
@@ -738,6 +888,11 @@ for (const file of files) {
   });
 }
 
+if (ONLY) {
+  console.log('\nCIGS_ONLY: manifest and the rest of public/cigs left untouched.');
+  process.exit(0);
+}
+
 writeFileSync(
   MANIFEST,
   `${JSON.stringify(
@@ -757,6 +912,16 @@ const widths = manifest.map((m) => m.w).sort((a, b) => a - b);
 console.log(`  ${DUPLICATES.size} dropped as duplicates of another entry`);
 console.log(`${manifest.length} packs -> ${OUT_DIR} (${Math.round(bytes / 1024)}KB)`);
 console.log(`  ${trimmed} needed more than the plain crop; ${squared} squared off at an edge; ${handed} cropped by hand; ${unclipped} grown back to the pack's own edge`);
+console.log(`  ${peeledCount} had the photograph's own paper peeled off an edge`);
+if (peels.length) {
+  // deepest first: a peel much bigger than the rest is the one to look at, and
+  // the cap means a crop sitting exactly at 20% probably wanted to go further
+  peels.sort((a, b) => b.deepest - a.deepest);
+  for (const p of peels.slice(0, 12)) {
+    console.log(`    ${(p.deepest * 100).toFixed(1)}%  ${p.text}`);
+  }
+  if (peels.length > 12) console.log(`    ... and ${peels.length - 12} smaller`);
+}
 console.log(`  widths ${widths[0]}..${widths[widths.length - 1]} at height ${DRAWN_H}`);
 if (unresolved.length) {
   console.log(`  ${unresolved.length} found no box-shaped crop and were left alone:`);

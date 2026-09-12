@@ -26,7 +26,12 @@ no CSS framework (tokens in `app/globals.css`). Deploys to Vercel.
 - `npm run link-supabase` / `set-db-password` / `diagnose-db` — configure `.env.local` safely (hidden prompts, connection tested before saving, refuse piped input)
 - `npm run demo` — three sample accounts, LOCAL ONLY; needs the secret key
 - `npm run build:cigs` — rebuilds the 282 pack marks in `public/cigs` and `lib/cigs.json`
-  from the owner's `Cigs Images` folder (path at the top of `scripts/build-cigs.mjs`)
+  from the owner's `Cigs Images` folder (path at the top of `scripts/build-cigs.mjs`).
+  `CIGS_ONLY=<substring> node scripts/build-cigs.mjs` rebuilds just the matching
+  sources and prints what the reasoning decided for each — the crop candidates,
+  what squaring off and peeling did, and the region that ends up being drawn.
+  It leaves the manifest and the rest of the folder alone, so it is for looking,
+  not for shipping: **re-run the full build before committing a crop change.**
 - `npm run build:cigpages` — rebuilds the 235 pages in `public/cigpages` and
   `lib/cigpages.json` from the owner's info-page vectors in `scripts/assets/cigpages`.
   **Takes about half an hour** (it re-encodes every raster in every vector), so background
@@ -273,6 +278,33 @@ knowing before touching it:
   owner's face, measured once in Chrome. It is what lets the build know where a
   line of text actually starts and stops, which is what the title's ink top is
   measured from. Regenerate it the same way if the face ever changes.
+
+**Some of the supplied cut-outs are not tight, and the crop has to peel them.**
+The alpha on the Lotus / Nanjing / Taishan / Huanghelou block (ids 222-242) runs
+past the pack into a margin of the photograph's own white paper — opaque, so it
+came along, up to a ninth of the pack's width down the right-hand side. Nothing
+upstream removed it: when a source is a cut-out the subject IS the alpha, so the
+crop is exactly as loose as the cut-out was, and `squareOff` only ever looks at
+the top and bottom. `tighten()` peels near-white lines inward from each edge.
+
+It is **not a colour key**, which is forbidden here for good reason — a pack's own
+white panels would go with it. It only ever eats INWARD FROM AN EDGE and stops at
+the first line that is not paper, and a pack's white panel is enclosed by the
+pack, always behind at least one line of print, bevel or shadow. It is capped at
+a fifth of a side and held to the same standard as squaring off: a peel that
+leaves something no longer box-shaped has eaten the pack and is dropped whole.
+
+**Where it declines to peel, that is the answer, not a failure.** On a pale pack —
+Lotus Silver, Taishan Baisha, Nanjing Blue — the boundary between the pack's own
+cream surface and the paper beside it is exactly the thing not to guess at, so
+those keep their margin. The instruction has always been that the box wins over
+the tidier crop. The build lists every peel, deepest first, so an outlier is
+visible rather than silent.
+
+**A crop change means rebuilding the pages too.** Each of the 235 info pages
+carries a copy of that pack's cleaned mark (`fitPhoto` reads `public/cigs/<id>.svg`),
+so `npm run build:cigpages` has to follow `npm run build:cigs` or the row and the
+page will disagree about the same cigarette.
 
 The cigarette row on the landing page is measured off two references the owner supplied, both
 kept in `scripts/assets`: a positioning SVG and an MP4 of the motion. The MP4 runs at **8fps,
