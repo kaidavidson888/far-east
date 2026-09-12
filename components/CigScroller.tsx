@@ -11,6 +11,7 @@ import {
   CIG_PACKS,
   CIG_RULE,
   PAINT_MS,
+  CIG_FRAME_HOLD_MS,
   REFERENCE_SPEED,
   SPEED,
   cigLayout,
@@ -105,6 +106,17 @@ export function CigScroller({
   /** Where the frame goes: the picked pack's own left edge on screen. */
   const [pickX, setPickX] = useState(0);
   /**
+   * Which pack the FRAME is on, which is not always the one nearest the
+   * middle — see CIG_FRAME_HOLD_MS. `pendingSince` is when some other pack
+   * first took the middle, or 0 if none has.
+   *
+   * A ref rather than state because the tick reads it to decide whether to
+   * keep running, and a handover that has not landed yet is a reason to keep
+   * painting even when nothing else is moving.
+   */
+  const frameRef = useRef({ i: -1, pendingSince: 0 });
+
+  /**
    * An offset the row is travelling to, set by pressing a pack that is not
    * the picked one. Null the rest of the time.
    *
@@ -151,8 +163,47 @@ export function CigScroller({
     const m = compute();
     if (!m) return;
     setShown(m.out);
-    setSelected(m.pick);
-    setPickX(m.pickAt);
+
+    // The frame keeps its pack until another has held the middle for
+    // CIG_FRAME_HOLD_MS without interruption. A pack that takes the middle
+    // and loses it again inside that window never gets the frame at all,
+    // which is what stops it flickering as the row settles across a boundary.
+    const now = performance.now();
+    const f = frameRef.current;
+    if (f.i < 0) {
+      f.i = m.pick;
+      f.pendingSince = 0;
+    } else if (m.pick === f.i) {
+      f.pendingSince = 0;
+    } else if (f.pendingSince === 0) {
+      f.pendingSince = now;
+    } else if (now - f.pendingSince >= CIG_FRAME_HOLD_MS) {
+      f.i = m.pick;
+      f.pendingSince = 0;
+    }
+
+    // Where that pack is now. It has kept moving while the frame held it, and
+    // it can be on screen more than once, so take the instance nearest the
+    // middle. If it has gone entirely, there is nothing to hold on to and the
+    // frame hands over at once rather than pointing off the edge.
+    let at = null;
+    let best = Infinity;
+    for (const s of m.out) {
+      if (s.i !== f.i) continue;
+      const d = Math.abs(s.x + CIG_PACKS[s.i].w / 2 - m.w / 2);
+      if (d < best) {
+        best = d;
+        at = s.x;
+      }
+    }
+    if (at === null) {
+      f.i = m.pick;
+      f.pendingSince = 0;
+      at = m.pickAt;
+    }
+
+    setSelected(f.i);
+    setPickX(at);
   }, [compute]);
 
   /** How far the row is from having the nearest pack dead centre. */
@@ -210,7 +261,11 @@ export function CigScroller({
 
       paint();
 
-      if (draggingRef.current || velRef.current !== 0 || settling) {
+      // A handover that has not landed yet is a reason to keep painting, even
+      // with the row at a standstill: the half second has to be able to run
+      // out after everything else has stopped.
+      const owed = frameRef.current.pendingSince !== 0;
+      if (draggingRef.current || velRef.current !== 0 || settling || owed) {
         timerRef.current = window.setTimeout(tick, PAINT_MS);
       } else {
         timerRef.current = 0;

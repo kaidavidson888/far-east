@@ -103,3 +103,20 @@ export const REFERENCE_SPEED = 189.6;
  * slower, it would read as broken.
  */
 export const SPEED = 1;
+
+/**
+ * How much longer the red frame stays on a pack after another one has taken
+ * the middle of the row.
+ *
+ * Without it the frame belongs to whichever pack is nearest the centre at
+ * that instant, which means it changes hands the moment two packs cross —
+ * several times a second on a flick, and twice in quick succession every time
+ * the row settles past a boundary and back. The owner asked for it to hold on
+ * half a second longer, so a pack keeps the frame until another has been
+ * nearest for this long without interruption.
+ *
+ * The frame travels with the pack it is holding, so during that half second it
+ * slides off the centre rather than sitting still — which is the point: it
+ * stays ON THE IMAGE, and the image is moving.
+ */
+export const CIG_FRAME_HOLD_MS = 500;
