@@ -327,9 +327,15 @@ export function SplashScreen({ next = '', notice = null }: {
   useEffect(() => {
     reducedRef.current =
       typeof window !== 'undefined' &&
-      (!!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ||
-        (process.env.NODE_ENV !== 'production' &&
-          new URLSearchParams(window.location.search).has('splashform')));
+      // THE HOLD IS THE DOOR, FOR EVERYONE. This used to include
+      // prefers-reduced-motion, so a press jumped straight to the form on any
+      // device asking for less motion — which most phones do — and once the
+      // long-press was fixed, a tap on a phone went through in a frame with no
+      // hold at all. The owner's rule is four seconds on the seal, the whole
+      // animation, to reach the login box, on every device. Only the dev flag
+      // skips it now.
+      process.env.NODE_ENV !== 'production' &&
+      new URLSearchParams(window.location.search).has('splashform');
 
     framesRef.current = splashFrames();
     edgeRef.current = edgeImage();

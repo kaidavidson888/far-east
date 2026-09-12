@@ -555,6 +555,16 @@ has an account here. That is inherent in what was asked for — the two cases ha
 to look different — and it is worth knowing it is the trade. Supabase rate-limits
 its own auth calls; `accountState()` is ours and is not rate-limited.
 
+**THE HOLD IS THE DOOR ON EVERY DEVICE — four seconds on the seal, the whole
+animation, to reach the login box.** The splash used to skip straight to the
+form on a press when the device asked for `prefers-reduced-motion`, which most
+phones do; that path never showed while a phone's long-press was still being
+taken by the browser (see the gotcha at the foot of this file), and the moment
+that was fixed a tap on a phone went through in one frame. The owner's rule
+is the hold, so reduced motion no longer skips it; only the dev-only
+`?splashform` flag does. A press before the frames have loaded is remembered
+and starts the run when they arrive — but only if the finger is still down.
+
 **The top row is the EMAIL row again.** It was EMAIL, the owner supplied PHONE #
 artwork to replace it (a6c4c0c), and it takes an email once more — so the baked
 EMAIL word in `blackbox.webp` is drawn again as an ordinary sprite window, and
