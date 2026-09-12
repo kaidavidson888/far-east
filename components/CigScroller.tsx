@@ -11,6 +11,8 @@ import {
   CIG_PACKS,
   CIG_RULE,
   PAINT_MS,
+  CIG_FLING_MAX,
+  CIG_FLING_WINDOW_MS,
   CIG_FRAME_HOLD_MS,
   CIG_GLIDE_FRICTION,
   REFERENCE_SPEED,
@@ -97,7 +99,13 @@ export function CigScroller({
   const timerRef = useRef(0);
   const lastTsRef = useRef(0);
   const widthRef = useRef(0);
-  const dragRef = useRef({ x: 0, t: 0, moved: 0 });
+  const dragRef = useRef<{
+    x: number;
+    t: number;
+    moved: number;
+    /** The tail of the gesture, for working out how fast it was let go. */
+    hist: { t: number; x: number }[];
+  }>({ x: 0, t: 0, moved: 0, hist: [] });
   const capturedRef = useRef(false);
 
   const [shown, setShown] = useState<Shown[]>([]);
@@ -379,8 +387,9 @@ export function CigScroller({
       const by = d * WHEEL;
       offsetRef.current += by;
       // a wheel is already a series of shoves, so the glide only carries the
-      // tail of it — enough that it does not stop dead under the finger
-      const cap = REFERENCE_SPEED * 4;
+      // tail of it — enough that it does not stop dead under the finger. Half
+      // what a deliberate fling may reach: a notch is not a throw.
+      const cap = CIG_FLING_MAX / 2;
       velRef.current = Math.max(-cap, Math.min(cap, by * 6));
       run();
     };
@@ -398,17 +407,39 @@ export function CigScroller({
     // nothing else; selection is held off by user-select in the CSS.
     draggingRef.current = true;
     velRef.current = 0;
-    dragRef.current = { x: e.clientX, t: performance.now(), moved: 0 };
+    dragRef.current = {
+      x: e.clientX,
+      t: performance.now(),
+      moved: 0,
+      hist: [{ t: performance.now(), x: e.clientX }],
+    };
     run();
   };
   const onPointerMove = (e: React.PointerEvent) => {
     if (!draggingRef.current) return;
     const now = performance.now();
     const dx = e.clientX - dragRef.current.x;
-    const dt = Math.max(1, now - dragRef.current.t) / 1000;
     offsetRef.current -= dx;
-    dragRef.current = { x: e.clientX, t: now, moved: dragRef.current.moved + Math.abs(dx) };
-    velRef.current = -dx / dt;
+
+    // Keep the tail of the gesture and take the speed across the whole of it,
+    // not from the last pair of points. Pointer events do not arrive evenly,
+    // and one short gap between two of them is enough to report a throw twice
+    // as fast as the hand really moved.
+    const hist = dragRef.current.hist;
+    hist.push({ t: now, x: e.clientX });
+    while (hist.length > 2 && now - hist[0].t > CIG_FLING_WINDOW_MS) hist.shift();
+
+    dragRef.current = {
+      x: e.clientX,
+      t: now,
+      moved: dragRef.current.moved + Math.abs(dx),
+      hist,
+    };
+
+    const first = hist[0];
+    const span = (now - first.t) / 1000;
+    const v = span > 0 ? -(e.clientX - first.x) / span : 0;
+    velRef.current = Math.max(-CIG_FLING_MAX, Math.min(CIG_FLING_MAX, v));
     // Capture only once this is really a drag. Capturing on pointerdown
     // retargets the compatibility mouse events to the row, so the click
     // landed on the row instead of the pack's link and the packs were not

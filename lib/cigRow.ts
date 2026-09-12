@@ -164,5 +164,32 @@ export const CIG_FRAME_HOLD_MS = PAINT_MS * 2;
  * Divided by SPEED rather than multiplied: SPEED is how far a flick carries,
  * and less braking carries further.
  */
-export const CIG_GLIDE_FRICTION = 700 / SPEED;
+export const CIG_GLIDE_FRICTION = 1400 / SPEED;
+
+/**
+ * The fastest the row may be let go at, in pixels per second.
+ *
+ * WITHOUT THIS THERE IS EFFECTIVELY NO FRICTION, whatever the braking is set
+ * to. A drag used to take its parting speed from the last pointer move alone —
+ * one sample, whatever it happened to be — and a move of 40px in 8ms is
+ * 5000px/s, which even at a firm brake glides for thousands of pixels and
+ * several seconds. The row did not feel unbraked because the braking was too
+ * gentle; it felt unbraked because it was being thrown impossibly hard.
+ *
+ * Eight times the pace of the owner's own recording is about as fast as the
+ * row can move and still read as a row of cigarettes rather than a smear, and
+ * it is the same shape of limit the wheel already had at four times.
+ */
+export const CIG_FLING_MAX = REFERENCE_SPEED * 8;
+
+/**
+ * How far back a release looks to decide how fast it was going.
+ *
+ * One sample is the instantaneous speed between two moves, which is mostly
+ * noise: pointer events do not arrive evenly, and a single 4ms gap doubles the
+ * answer. Averaging over the tail of the gesture is what every real fling
+ * does, and it is also the more honest measurement — the speed of a throw is
+ * the speed of the hand over the throw, not over its last millisecond.
+ */
+export const CIG_FLING_WINDOW_MS = 80;
 
