@@ -11,7 +11,7 @@ import { safeNext, signInGate, siteOrigin } from '@/lib/siteUrl';
 import { pageFor } from '@/lib/cigPages';
 import { CIG_PACKS } from '@/lib/cigRow';
 import {
-  accountState, createShare, deleteReview, getCigaretteBySlug, revokeShare, savePack,
+  accountState, createShare, deleteReview, getCigaretteBySlug, removePack, revokeShare, savePack,
   savedPackIds, setFavoriteNote, setPackQuantity, toggleFavorite, upsertReview,
 } from '@/lib/db';
 
@@ -317,6 +317,23 @@ export async function savePackAction(formData: FormData) {
   if (!user) redirect(signInGate(`/packs/${id}`));
 
   await savePack(user.id, page.id);
+  revalidatePath(`/packs/${id}`);
+}
+
+/**
+ * Take a pack off the shelf — the shelf's bookmark. The cigarette page's
+ * bookmark only ever adds, so this is the one place a pack leaves.
+ */
+export async function removePackAction(formData: FormData) {
+  const id = String(formData.get('pack') ?? '');
+  const page = pageFor(id);
+  if (!page) return;
+
+  const user = await currentUser();
+  if (!user) redirect(signInGate('/shelf'));
+
+  await removePack(user.id, page.id);
+  revalidatePath('/shelf');
   revalidatePath(`/packs/${id}`);
 }
 

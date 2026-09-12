@@ -400,6 +400,17 @@ export type { PackUnit };
 /** A shelf entry: the pack, and how much of it if the reader said. */
 export type SavedPack = { packId: string; amount: number | null; unit: PackUnit | null };
 
+/**
+ * Take a pack off the shelf. The bookmark on a cigarette's page is add-only
+ * ("red permanently"); taking something back off is the shelf's job, and
+ * this is it. The quantity goes with the row — a pack you no longer have is
+ * not a pack you have three cartons of.
+ */
+export async function removePack(userId: string, packId: string): Promise<void> {
+  const sql = db();
+  await sql`DELETE FROM pack_favorites WHERE user_id = ${userId} AND pack_id = ${packId}`;
+}
+
 /** One pack's shelf entry, or null if it is not on the shelf. What a cigarette's page asks. */
 export async function packEntry(userId: string, packId: string): Promise<SavedPack | null> {
   const sql = db();

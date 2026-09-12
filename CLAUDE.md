@@ -671,23 +671,52 @@ design (`scripts/assets/shelf-mobile.svg`). Three pieces, one rule between them
   ink height: `size = inkHeight / (ascent/1000)`, ascents from
   `far-east-ink.json`, and placed by baseline (0.825 of the size in a
   line-height:1 box, measured in Chrome).
-- **Packs are centred on the character logo's centre line**, at the row's own
-  red rule, one pack height for all (aspect from `cigs.json`). The design centres
-  them on ~73; the owner asked for the logo (65), so the row is shifted by `DX`.
-- **The margins are symmetric, and everything meets the right one.** The owner's
-  rule: the aligned right edge holds the same margin from the page's right as the
-  logo holds from its left (`SHELF_MARGIN` = the logo's own left, 45). The logo
-  is left-anchored in real px, so the right must be too — `--aligned-right` is
-  `width - MARGIN`, measured live by `components/ShelfStage.tsx`, not a fixed
-  design x. The header box and the $240 **move** (not scale — "keep the same
-  ratios") to hang from that edge; the divider spans margin to margin; and each
-  **row scales up** so its right edge (the clouds) lands on it (`--row-scale`,
-  `rowScaleFor`), as one transform **anchored on the logo's centre** so the packs
-  stay centred. Past `SHELF_MAX_WIDTH` (440, just over the widest phone) the
-  width is held and the shelf becomes a left-anchored column, the way every
-  mobile-design page here behaves on a desktop — without it "scale up to fit"
-  would make the packs enormous on a monitor. `SHELF_DEFAULTS` are the
-  design-width values, used for first paint before the measure.
+- **Every pack's rule starts on the left margin** (`SHELF_MARGIN`, the logo's own
+  left, 45), at the row's own red rule, one pack height for all (aspect from
+  `cigs.json`); a wider pack grows to the right. The design draws them on its
+  own logo's left too, so the row is shifted by `DX` (1px). An earlier version
+  centred them on the logo's centre line — the design satisfies both at 1x — but
+  that pushed the packs off the page's left edge once the rows were scaled up,
+  and the owner's instruction is the LEFT EDGE.
+- **The margins are symmetric, and everything meets the right one, at any
+  width.** The owner's rule: the aligned right edge holds the same margin from
+  the page's right as the logo holds from its left. The logo is left-anchored in
+  real px, so the right must be too — `--aligned-right` is `width - MARGIN`,
+  measured live by `components/ShelfStage.tsx`, not a fixed design x. The header
+  box and the $240 **move** (not scale — "keep the same ratios") to hang from
+  that edge; the divider spans margin to margin; and the rows **scale up** as one
+  block so their right edge (the clouds) lands on it (`--row-scale`,
+  `rowScaleFor`). **There is no cap** — the owner asked for the mirror at their
+  own width, so a desktop gets big rows; that is the instruction.
+- **The rows are scaled with `zoom`, NOT `transform: scale`.** A transform
+  scales finished pixels, and at 2x the type, the rules and the packs all went
+  soft — the owner saw it. `zoom` lays the block out again at the new size, so
+  type is set at the size it shows at, rules draw at their zoomed weight, and
+  the packs come from their 3x rasters. `zoom` multiplies the block's OWN
+  offsets too, so `.shelf-rows` has its `top` divided out to stay put and its
+  `left` set so the left margin is the point that does not move
+  (`A(1-z)/z`). The stage's height grows with the zoom. Chrome floors a zoomed
+  border (3px at 2.58 draws 7, not 7.74), so inset marks can sit <1px off.
+- **Inside a ruled box, children sit inside the rule.** An absolutely placed
+  child of a bordered box is positioned from the padding edge, so a mark
+  measured from the box's OUTER corner needs the rule's width taken off its
+  offset (`inside()` in `ShelfPage.tsx`) — or it lands 3px too far in, which is
+  what the owner saw on the plus and the bookmark.
+- **The reset's `img { max-width: 100% }` collapses an image whose absolute
+  parent has no width.** The row is a set of absolutely placed marks with no
+  width of its own, so the clouds went to 0 wide and vanished; `.shelf-cloud`
+  and `.shelf-pack img` set `max-width: none`.
+- **The document does not scroll under a fixed page.** The root layout's
+  1000px footer sits in the flow beneath every artwork page, so the html grew
+  its own scrollbar behind the page's — two bars stacked, 30px of dead space on
+  the right of every desktop view, on the landing and cigarette pages too.
+  `html:has(.artpage), html:has(.cigpage), html:has(.shelf)` → `overflow:
+  hidden`; the fixed page scrolls itself.
+- **The controls work.** The plus opens the same quantity wheels in the row's
+  own box (`SHELF_QUANTITY_FRAME`: from the plus box's corner to the panel's
+  far corner, three slots tall, `CigQuantity` takes a `frame`); the bookmark is
+  a form on `removePackAction` — the cigarette page's bookmark only ever adds,
+  so the shelf's is where a pack leaves, with its quantity.
 - **The red divider between header and shelf is an addition**, not in the export
   (the only red there is the pack rules and the header caption). It is the
   site's red rule (5px `#FF0000`) from the left margin to `--aligned-right`.
@@ -700,12 +729,21 @@ design (`scripts/assets/shelf-mobile.svg`). Three pieces, one rule between them
 artwork's (byte-identical in all 235 built pages, checked); only the hit area is
 the page's. Hovering shows the menu at 50% (`pointer-events:none`), pressing
 opens it solid at 100% over everything below — which cannot be pressed while it
-is open. Two white stripes are wheels: 1-9 left, C or P right, both in the face.
-**One captured gesture can do it all** — press the plus, slide onto a stripe and
-pull, across to the other, lift — or open it and work the wheels by drag, wheel
-or arrow keys. A chosen value turns white on the red middle-slot window; the
-rest of its stripe drops to 75%. Both chosen + pointer up → save and close;
-press outside or Escape → close without saving.
+is open. It grows out of the top-left corner of the outline, out and down
+(`clip-path` animation — clipping, not scaling, so nothing smears), with a black
+rule the plus box's own weight (3px) so it reads as that outline extending. Two
+white stripes are wheels: 1-9 left, C or P right, both in the face, **full
+height** so they touch the red top and bottom. **They loop**: a wheel's position
+is a continuous, unbounded number and the values map by modulo — 9 is followed
+by 1, C and P alternate — so the neighbours above and below the window are the
+other options in view, and you can pull either way as far as you like. **One
+captured gesture can do it all** — press the plus, slide onto a stripe and pull,
+across to the other, lift — or open it and work the wheels by drag, wheel or
+arrow keys. The value in the centred window is white from the start (it sits on
+the red, cut through the stripe); touching a wheel is what counts as choosing,
+and drops the OTHER values to 75%. Both chosen + pointer up → save and close;
+press outside or Escape → close without saving. The drag reads the stripe's
+real on-screen height so it tracks the finger under the shelf's zoom.
 - **C = Carton, P = Pack**, stored on `pack_favorites.amount`/`unit` (migration
   0005; amount and unit are nullable TOGETHER, so a bookmark-only row is valid).
   `setPackQuantity` saves the pack too if it was not already saved. `amount` is

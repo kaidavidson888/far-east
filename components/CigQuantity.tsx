@@ -1,8 +1,8 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState, useTransition } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import { setPackQuantityAction } from '@/app/actions';
-import { PLUS, QUANTITY_MENU, WHEEL, type PackUnit } from '@/lib/cigPages';
+import { PAGE_QUANTITY_FRAME, wheelFor, type PackUnit, type QuantityFrame } from '@/lib/cigPages';
 
 /**
  * The plus on a cigarette's page, and the menu it opens: how many of this
@@ -14,57 +14,77 @@ import { PLUS, QUANTITY_MENU, WHEEL, type PackUnit } from '@/lib/cigPages';
  * been chosen and the finger or the button is let go, the menu closes and the
  * answer is kept with the cigarette on the shelf.
  *
+ * THE WHEELS LOOP. Each stripe runs the full height of the menu and touches
+ * its red ground top and bottom, so the values above and below the chosen
+ * one are in view as the other options. A wheel's position is a continuous
+ * number with no ends: pull it either way as far as you like and the values
+ * come round again — 9 is followed by 1, and C and P simply alternate. The
+ * value in the centred window is the choice.
+ *
  * ONE GESTURE CAN DO THE WHOLE THING. The press that opens the menu keeps
  * hold of the pointer, so on a phone you can press the plus, slide onto the
  * left stripe and pull it to a number, slide across to the right stripe and
  * pull it to a letter, and lift — and it is saved. A mouse can do the same,
  * or open it and work the wheels one at a time, or roll them. A wheel counts
  * as chosen once it has been touched: tapping a stripe accepts what is in
- * its window, so "1" and "C" do not have to be pulled away from and back.
+ * its window.
  *
- * THE WINDOW IS RED. A stripe is white and its type is black, so a chosen
- * value turning white would vanish — unless it is sitting on red. The
- * middle slot of each stripe is cut through to the menu behind it, which is
- * where the chosen value sits: white on red, exactly as asked, and the rest
- * of the stripe's values drop to three quarters.
+ * THE WINDOW IS RED, AND THE VALUE IN IT IS WHITE. A stripe is white and
+ * its type is black, so the value in the window would vanish if it went
+ * white on white — so the centred slot of each stripe is cut through to the
+ * red menu behind it, and the value sitting there is white on red. Choosing
+ * (touching the wheel) is what drops the OTHER values to three quarters.
  *
- * The menu is solid and sits above everything under it, so while it is open
- * nothing underneath can be pressed. Pressing the page outside it, or
- * Escape, closes it without saving.
+ * The menu grows out of the top-left corner of the outline, out and down,
+ * with a black rule the same weight as the plus box's own, so it reads as
+ * that outline extending into the menu. It is solid and sits above
+ * everything under it, so while it is open nothing underneath can be
+ * pressed. Pressing the page outside it, or Escape, closes it without
+ * saving.
+ *
+ * `frame` says where all this lives. The cigarette page passes nothing and
+ * gets its own; the shelf passes a frame built from its row, so the same
+ * menu opens there in the row's own small box.
  */
 const AMOUNTS = [1, 2, 3, 4, 5, 6, 7, 8, 9] as const;
 const UNITS: readonly PackUnit[] = ['C', 'P'];
 
 type Which = 'amount' | 'unit';
 type Wheel = {
-  /** the item in the window once settled */
-  index: number;
-  /** how far the stripe has been pulled from there, in px, mid-gesture */
-  drag: number;
+  /** where the wheel is, in items — continuous, unbounded, wraps by modulo */
+  pos: number;
   /** touched at all — a wheel that has not been is not a choice */
   picked: boolean;
 };
-const fresh = (): Wheel => ({ index: 0, drag: 0, picked: false });
 
 const px = (n: number) => `${n}px`;
+const mod = (i: number, n: number) => ((i % n) + n) % n;
+
+/** The value a wheel's window holds at position `pos`. */
+const valueAt = (which: Which, pos: number) =>
+  which === 'amount' ? AMOUNTS[mod(Math.round(pos), AMOUNTS.length)] : UNITS[mod(Math.round(pos), UNITS.length)];
 
 export function CigQuantity({
   id,
   name,
   amount,
   unit,
+  frame = PAGE_QUANTITY_FRAME,
 }: {
   /** The address's pack id; the action resolves it to the page's own. */
   id: string;
   name: string;
   amount: number | null;
   unit: PackUnit | null;
+  frame?: QuantityFrame;
 }) {
+  const W = useMemo(() => wheelFor(frame.menu, frame.stroke, frame.pitch), [frame]);
+
   const [mode, setMode] = useState<'closed' | 'preview' | 'open'>('closed');
   const [wheels, setWheels] = useState<Record<Which, Wheel>>(() => ({
     // open on what the shelf already says, if it says anything
-    amount: { ...fresh(), index: amount ? amount - 1 : 0 },
-    unit: { ...fresh(), index: unit === 'P' ? 1 : 0 },
+    amount: { pos: amount ? amount - 1 : 0, picked: false },
+    unit: { pos: unit === 'P' ? 1 : 0, picked: false },
   }));
   const wheelsRef = useRef(wheels);
   wheelsRef.current = wheels;
@@ -72,7 +92,8 @@ export function CigQuantity({
   const [pending, startTransition] = useTransition();
 
   const menuRef = useRef<HTMLDivElement | null>(null);
-  const stripeRefs = { amount: useRef<HTMLDivElement | null>(null), unit: useRef<HTMLDivElement | null>(null) };
+  const amountRef = useRef<HTMLDivElement | null>(null);
+  const unitRef = useRef<HTMLDivElement | null>(null);
   /** The gesture in progress: which stripe the pointer is over, and where it last was. */
   const gestureRef = useRef<{ which: Which | null; y: number } | null>(null);
   const settleRef = useRef(0);
@@ -83,13 +104,11 @@ export function CigQuantity({
     setWheels(next);
   }, []);
 
-  /** Let a pulled stripe come to rest on the nearest item, and count it chosen. */
+  /** Let a pulled stripe come to rest on the nearest value, and count it chosen. */
   const snap = useCallback(
     (which: Which) => {
       const w = wheelsRef.current[which];
-      const n = which === 'amount' ? AMOUNTS.length : UNITS.length;
-      const index = Math.max(0, Math.min(n - 1, Math.round(w.index - w.drag / WHEEL.pitch)));
-      update(which, { index, drag: 0, picked: true });
+      update(which, { pos: Math.round(w.pos), picked: true });
     },
     [update],
   );
@@ -104,8 +123,8 @@ export function CigQuantity({
   const commitIfDone = useCallback(() => {
     const { amount: a, unit: u } = wheelsRef.current;
     if (!a.picked || !u.picked) return false;
-    const chosenAmount = AMOUNTS[a.index];
-    const chosenUnit = UNITS[u.index];
+    const chosenAmount = valueAt('amount', a.pos) as number;
+    const chosenUnit = valueAt('unit', u.pos) as PackUnit;
     close();
     startTransition(() => setPackQuantityAction(id, chosenAmount, chosenUnit));
     return true;
@@ -113,16 +132,29 @@ export function CigQuantity({
 
   /** Which stripe a point on the screen is over, if any. */
   const stripeAt = useCallback((x: number, y: number): Which | null => {
-    for (const which of ['amount', 'unit'] as const) {
-      const el = stripeRefs[which].current;
+    for (const [which, ref] of [['amount', amountRef], ['unit', unitRef]] as const) {
+      const el = ref.current;
       if (!el) continue;
       const r = el.getBoundingClientRect();
       if (x >= r.left && x <= r.right && y >= r.top && y <= r.bottom) return which;
     }
     return null;
-    // the refs are stable objects; only their .current changes
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  /**
+   * How many screen pixels one slot is. The shelf zooms its rows, so a slot
+   * there is bigger on screen than `pitch` says; reading the stripe's real
+   * height keeps a pull tracking the finger under any zoom.
+   */
+  const screenPitch = useCallback(
+    (which: Which) => {
+      const el = (which === 'amount' ? amountRef : unitRef).current;
+      if (!el) return W.pitch;
+      const r = el.getBoundingClientRect();
+      return r.height ? (r.height / W.height) * W.pitch : W.pitch;
+    },
+    [W.height, W.pitch],
+  );
 
   /** Pointer moved while held: pull whichever stripe it is over. */
   const follow = useCallback(
@@ -137,11 +169,12 @@ export function CigQuantity({
         return;
       }
       if (over) {
-        update(over, { drag: wheelsRef.current[over].drag + (y - g.y) });
+        // pulling the stripe down brings the values above it into the window
+        update(over, { pos: wheelsRef.current[over].pos - (y - g.y) / screenPitch(over) });
         gestureRef.current = { which: over, y };
       }
     },
-    [snap, stripeAt, update],
+    [screenPitch, snap, stripeAt, update],
   );
 
   /** Pointer lifted: settle what was being pulled, and finish if both are chosen. */
@@ -176,7 +209,7 @@ export function CigQuantity({
   /** Rolling a stripe with a mouse wheel: pull it, and settle once the rolling stops. */
   const roll = (which: Which) => (e: React.WheelEvent) => {
     e.preventDefault();
-    update(which, { drag: wheelsRef.current[which].drag - e.deltaY });
+    update(which, { pos: wheelsRef.current[which].pos + e.deltaY / screenPitch(which) });
     window.clearTimeout(settleRef.current);
     settleRef.current = window.setTimeout(() => {
       snap(which);
@@ -186,12 +219,10 @@ export function CigQuantity({
 
   /** Arrow keys on a focused stripe, for a keyboard. */
   const key = (which: Which) => (e: React.KeyboardEvent) => {
-    const n = which === 'amount' ? AMOUNTS.length : UNITS.length;
     const w = wheelsRef.current[which];
     if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
       e.preventDefault();
-      const index = Math.max(0, Math.min(n - 1, w.index + (e.key === 'ArrowDown' ? 1 : -1)));
-      update(which, { index, drag: 0, picked: true });
+      update(which, { pos: Math.round(w.pos) + (e.key === 'ArrowDown' ? 1 : -1), picked: true });
     } else if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
       update(which, { picked: true });
@@ -209,20 +240,42 @@ export function CigQuantity({
     update(which, { picked: true }); // a tap accepts what is in the window
   };
 
-  const stripe = (which: Which, values: readonly (number | string)[], label: string, i: 0 | 1) => {
+  /**
+   * The values in view for a stripe at position `pos`: every integer index
+   * whose slot lands inside the stripe, each mapped onto the looping list.
+   * The stripe's centre is the window; index i sits (i - pos) slots from it.
+   */
+  const slots = (which: Which, pos: number) => {
+    const values: readonly (number | string)[] = which === 'amount' ? AMOUNTS : UNITS;
+    const centre = W.height / 2;
+    const reach = Math.ceil(centre / W.pitch) + 1;
+    const c = Math.round(pos);
+    const out: { i: number; value: number | string; top: number; centred: boolean }[] = [];
+    for (let k = -reach; k <= reach; k++) {
+      const i = c + k;
+      out.push({
+        i,
+        value: values[mod(i, values.length)],
+        top: centre + (i - pos) * W.pitch - W.pitch / 2,
+        centred: i === c,
+      });
+    }
+    return out;
+  };
+
+  const stripe = (which: Which, label: string, i: 0 | 1, ref: React.RefObject<HTMLDivElement | null>) => {
     const w = wheels[which];
-    const trackTop = WHEEL.window - w.index * WHEEL.pitch + w.drag;
     return (
       <div
-        ref={stripeRefs[which]}
+        ref={ref}
         className="cigpage-wheel"
         role="listbox"
         aria-label={label}
-        aria-activedescendant={w.picked ? `qty-${which}-${w.index}` : undefined}
+        aria-activedescendant={w.picked ? `qty-${which}-${Math.round(w.pos)}` : undefined}
         tabIndex={0}
         data-picked={w.picked ? '' : undefined}
         data-dragging={dragging === which ? '' : undefined}
-        style={{ left: px(WHEEL.lefts[i]), top: px(WHEEL.top), width: px(WHEEL.width), height: px(WHEEL.height) }}
+        style={{ left: px(W.lefts[i]), top: px(W.top), width: px(W.width), height: px(W.height) }}
         onPointerDown={stripeDown(which)}
         onPointerMove={(e) => {
           if (gestureRef.current) follow(e.clientX, e.clientY);
@@ -232,22 +285,21 @@ export function CigQuantity({
         onWheel={roll(which)}
         onKeyDown={key(which)}
       >
-        <span className="cigpage-wheel-window" style={{ top: px(WHEEL.window), height: px(WHEEL.pitch) }} aria-hidden="true" />
-        <div className="cigpage-wheel-track" style={{ transform: `translateY(${trackTop}px)` }}>
-          {values.map((v, k) => (
-            <span
-              key={String(v)}
-              id={`qty-${which}-${k}`}
-              role="option"
-              aria-selected={w.picked && k === w.index}
-              className="cigpage-wheel-item"
-              data-selected={w.picked && k === w.index ? '' : undefined}
-              style={{ height: px(WHEEL.pitch) }}
-            >
-              {v}
-            </span>
-          ))}
-        </div>
+        <span className="cigpage-wheel-window" style={{ top: px(W.window), height: px(W.pitch) }} aria-hidden="true" />
+        {slots(which, w.pos).map((s) => (
+          <span
+            key={s.i}
+            id={`qty-${which}-${s.i}`}
+            role="option"
+            aria-selected={w.picked && s.centred}
+            className="cigpage-wheel-item"
+            data-centred={s.centred ? '' : undefined}
+            data-selected={w.picked && s.centred ? '' : undefined}
+            style={{ top: px(s.top), height: px(W.pitch), fontSize: px(frame.fontSize) }}
+          >
+            {s.value}
+          </span>
+        ))}
       </div>
     );
   };
@@ -257,7 +309,7 @@ export function CigQuantity({
       <button
         type="button"
         className="cigpage-plus-hit"
-        style={{ left: px(PLUS.box.left), top: px(PLUS.box.top), width: px(PLUS.box.width), height: px(PLUS.box.height) }}
+        style={{ left: px(frame.plus.left), top: px(frame.plus.top), width: px(frame.plus.width), height: px(frame.plus.height) }}
         aria-label={`How many ${name} you have`}
         aria-haspopup="dialog"
         aria-expanded={mode === 'open'}
@@ -295,10 +347,16 @@ export function CigQuantity({
           role="dialog"
           aria-label={`How many ${name} you have`}
           aria-hidden={mode === 'preview' || undefined}
-          style={{ left: px(QUANTITY_MENU.left), top: px(QUANTITY_MENU.top), width: px(QUANTITY_MENU.width), height: px(QUANTITY_MENU.height) }}
+          style={{
+            left: px(frame.menu.left),
+            top: px(frame.menu.top),
+            width: px(frame.menu.width),
+            height: px(frame.menu.height),
+            borderWidth: px(frame.stroke),
+          }}
         >
-          {stripe('amount', AMOUNTS, 'How many', 0)}
-          {stripe('unit', UNITS, 'Cartons or packs', 1)}
+          {stripe('amount', 'How many', 0, amountRef)}
+          {stripe('unit', 'Cartons or packs', 1, unitRef)}
         </div>
       ) : null}
     </>

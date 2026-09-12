@@ -127,6 +127,8 @@ export type PackUnit = 'C' | 'P';
  */
 export const PLUS = {
   box: { left: 232, top: 312, width: 72, height: 66 },
+  /** The box's own rule, from the vector: stroke-width="3". The menu borrows it. */
+  stroke: 3,
 };
 
 /**
@@ -143,6 +145,13 @@ export const QUANTITY_MENU = {
   top: INFO_BOX.top,
   width: INFO_BOX.width,
   height: 414 - INFO_BOX.top,
+  /**
+   * A black rule round it, the same weight as the plus box's own, so it reads
+   * as that outline having grown out into the menu — the owner's image for it.
+   * Drawn inside the box (border-box), so the outer edge is still the corner
+   * the menu grows from.
+   */
+  stroke: PLUS.stroke,
 };
 
 /**
@@ -154,17 +163,50 @@ export const QUANTITY_MENU = {
  * they sit across it. Three item slots tall, the middle one being the window
  * the chosen value sits in.
  */
-export const WHEEL = (() => {
-  const width = Math.round(QUANTITY_MENU.width / 5);
-  const gap = (QUANTITY_MENU.width - width * 2) / 3;
-  const pitch = 50;
+export type QuantityBox = { left: number; top: number; width: number; height: number };
+
+/**
+ * The wheels for a menu of a given box: two stripes a fifth of the inner width
+ * each, the three gaps sharing what is left, full inner height so they touch
+ * the red top and bottom, and the window the centred slot. Laid out on the
+ * area INSIDE the menu's rule — an absolutely placed child sits inside the
+ * border, so these are the numbers it actually uses. A function rather than
+ * a constant because the shelf opens the same menu in a much smaller box.
+ */
+export function wheelFor(menu: QuantityBox, stroke: number, pitch: number) {
+  const innerW = menu.width - stroke * 2;
+  const innerH = menu.height - stroke * 2;
+  const width = Math.round(innerW / 5);
+  const gap = (innerW - width * 2) / 3;
   return {
     width,
     pitch,
-    height: pitch * 3,
-    top: Math.round(gap),
+    height: innerH,
+    top: 0,
     lefts: [Math.round(gap), Math.round(gap * 2 + width)] as const,
-    /** The window: the middle slot. */
-    window: pitch,
+    /** The window — the centred slot the chosen value sits in, cut to the red. */
+    window: Math.round(innerH / 2 - pitch / 2),
   };
-})();
+}
+export const WHEEL = wheelFor(QUANTITY_MENU, QUANTITY_MENU.stroke, 50);
+
+/**
+ * Everything the quantity menu needs to know about where it lives: the plus
+ * that opens it, the box it fills, the rule it borrows, and how big its
+ * values are. The cigarette page's is the original; the shelf makes its own
+ * from its row, in the row's coordinates.
+ */
+export type QuantityFrame = {
+  plus: QuantityBox;
+  menu: QuantityBox;
+  stroke: number;
+  pitch: number;
+  fontSize: number;
+};
+export const PAGE_QUANTITY_FRAME: QuantityFrame = {
+  plus: PLUS.box,
+  menu: { left: QUANTITY_MENU.left, top: QUANTITY_MENU.top, width: QUANTITY_MENU.width, height: QUANTITY_MENU.height },
+  stroke: QUANTITY_MENU.stroke,
+  pitch: 50,
+  fontSize: 40,
+};
