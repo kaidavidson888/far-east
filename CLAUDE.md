@@ -582,10 +582,26 @@ the brand assets and review text in this repo are visible to anyone.
    against the live project). `/auth/v1/settings` lists `google, email`, a wrong
    password answers `invalid_credentials` rather than `email_provider_disabled`,
    and a correct one returns a real session. The splash can sign people in.
+   **BUT NOBODY CAN MAKE AN ACCOUNT YET, AND IT IS ONE TOGGLE.** `signUp`
+   answers `over_email_send_rate_limit` and creates **nothing** — verified
+   against the live project with a real, MX-backed address, twice, minutes
+   apart. The chain: "Confirm email" is on, so GoTrue must send a confirmation
+   mail on every signup; there is no custom SMTP, so that goes through
+   Supabase's shared mailer, which is capped at a couple an hour; past the cap
+   `signUp` does not queue or degrade, it fails outright. **Turn "Confirm email"
+   OFF** (Authentication → Providers → Email). That mail is dead weight to this
+   design — Google is what verifies a new account here, not an emailed link —
+   and nothing downstream changes, because the session `signUp` then returns is
+   dropped on purpose in `splashAuthAction` and Google is still the only way in.
+   `mailerSpent`/`MAILER_SPENT` in `app/actions.ts` say so in the box in plain
+   words meanwhile, rather than passing "email rate limit exceeded" through to a
+   reader whose fault it is not.
+
    Three things about it that are worth knowing before debugging it:
    - **`mailer_autoconfirm` is false.** A brand-new `signUp` lands UNCONFIRMED
      and issues **no session** — which suits the design (Google is what verifies
-     them), but means step 4 cannot be tested by looking for a session.
+     them), but means step 4 cannot be tested by looking for a session. This is
+     the same switch as above; turning it off is what unblocks signup.
    - **GoTrue validates the address's domain at signup.** `signUp` answers
      `email_address_invalid` for a made-up domain, so a throwaway address cannot
      be used to test account creation. `.verify/temp-user.mjs` sidesteps this by

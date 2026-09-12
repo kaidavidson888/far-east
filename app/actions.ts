@@ -179,6 +179,7 @@ export async function splashAuthAction(
   // ---- 3. nobody has this address: make the account, then verify it -------
   const signUp = await supabase.auth.signUp({ email, password });
   if (offline(signUp.error)) return { error: PROVIDER_OFF };
+  if (mailerSpent(signUp.error)) return { error: MAILER_SPENT };
   if (signUp.error) return { error: signUp.error.message };
 
   // If confirmation is on there is no session; if it is off there is one, and
@@ -196,6 +197,30 @@ const PROVIDER_OFF =
 
 const offline = (e: { code?: string; message?: string } | null): boolean =>
   e?.code === 'email_provider_disabled' || /provider is disabled|logins are disabled/i.test(e?.message ?? '');
+
+/**
+ * The built-in mailer has run out, so NOBODY CAN MAKE AN ACCOUNT.
+ *
+ * This only happens because "Confirm email" is on. The confirmation mail it
+ * insists on sending is dead weight to this design — Google is what verifies a
+ * new account here, not an emailed link — and with no custom SMTP it goes
+ * through Supabase's shared mailer, which is capped at a couple an hour. Past
+ * the cap `signUp` does not queue or degrade: it fails and creates NOTHING, so
+ * the reader is simply turned away.
+ *
+ * Turning "Confirm email" off (Authentication → Providers → Email) sends no
+ * mail at all and lifts the cap. Nothing downstream changes: the session that
+ * then comes back from `signUp` is dropped a few lines above, on purpose, and
+ * Google is still the only way in.
+ *
+ * Worth saying plainly rather than passing Supabase's own words through: "email
+ * rate limit exceeded" reads as the reader's fault, and it is not.
+ */
+const mailerSpent = (e: { code?: string; message?: string } | null): boolean =>
+  e?.code === 'over_email_send_rate_limit' || /email rate limit/i.test(e?.message ?? '');
+
+const MAILER_SPENT =
+  'We could not finish setting up your account just now. Please try again in a little while.';
 
 /**
  * Hand the reader to Google, carrying the address they typed.
