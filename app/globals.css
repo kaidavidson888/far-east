@@ -140,19 +140,22 @@ html { -webkit-text-size-adjust: 100%; }
    line at parse time and keeps the plain url above it. Same pattern as
    round(50%, 1px) further down.
 
-   WHAT IS DELIBERATELY LEFT ALONE: every cursor: pointer on the site. On the
-   artwork pages the hit areas are transparent — the buttons ARE the artwork —
-   so the hand is the only thing telling a reader that something is pressable.
-   Replacing it would make the landing page's controls undiscoverable. Same
-   for grab/grabbing on the cigarette row and text on the fields: those say
-   what the pointer can do there, which a cloud cannot. */
+   PRESSABLE THINGS INVERT IT — white cloud, black keyline — which is the rule
+   at the foot of this file. That is how the affordance survives losing the
+   operating system's hand, and it matters here more than on most sites: the
+   artwork pages' hit areas are transparent, the buttons ARE the artwork, so
+   the pointer is the only thing saying a thing can be pressed.
+
+   grab/grabbing on the cigarette row and text in the fields are left alone.
+   Those say what the pointer can DO there, which neither cloud can. */
 body {
   cursor: url('/sigil-cursor.png') 0 14, auto;
   cursor: image-set(url('/sigil-cursor.png') 1x, url('/sigil-cursor@2x.png') 2x) 0 14, auto;
 }
-/* cursor: default means "the ordinary pointer", and the ordinary pointer is
-   the cloud now — without this the one box that is not a link pops back to an
-   arrow. */
+/* The box for the page you are already on is not pressable, so it keeps the
+   resting cloud: cursor: default means "the ordinary pointer", and the
+   ordinary pointer is this. Without it the one box that is not a link would
+   pop back to an arrow. */
 .artpage-nav-current {
   cursor: url('/sigil-cursor.png') 0 14, auto;
   cursor: image-set(url('/sigil-cursor.png') 1x, url('/sigil-cursor@2x.png') 2x) 0 14, auto;
@@ -1397,4 +1400,53 @@ ul, ol { list-style: none; }
 .seal-button-hit:focus-visible {
   outline: 2px solid var(--artpage-focus, #010101);
   outline-offset: 3px;
+}
+
+/* ---------- The pressable pointer ----------
+   Everything you can press inverts the cursor: white cloud, black keyline,
+   the same silhouette to the pixel so the swap reads as a colour change
+   rather than as a different mark arriving. Same hotspot, so nothing moves.
+
+   THIS RULE GOES LAST ON PURPOSE. Most of the selectors below already say
+   cursor: pointer somewhere above, at the same specificity, so it is source
+   order that settles it — anything that wants the hand back has to come
+   after this, and nothing does.
+
+   The keyword fallback is pointer, not auto: if the image will not load, the
+   hand is the right thing to fall back to, because the element really is
+   pressable.
+
+   :disabled is not in here and does not need to be — .btn:disabled carries
+   not-allowed at a specificity this cannot reach, which is correct, since a
+   disabled control is exactly the thing that is NOT pressable.
+
+   The element selectors catch what the classes miss: a plain link in the
+   footer, a native select, a summary. */
+a[href],
+area[href],
+button,
+summary,
+select,
+label[for],
+[role='button'],
+input[type='button'],
+input[type='submit'],
+input[type='reset'],
+input[type='checkbox'],
+input[type='radio'],
+.btn,
+.btn-icon,
+.tab,
+.chip,
+.rating-scale button,
+.splash-hit,
+.splash-field-submit,
+.artpage-hit,
+.cigpage-bookmark-hit,
+.cig-slot-picked,
+.logo-menu-logo,
+.logo-menu-box,
+.seal-button-hit {
+  cursor: url('/sigil-cursor-press.png') 0 14, pointer;
+  cursor: image-set(url('/sigil-cursor-press.png') 1x, url('/sigil-cursor-press@2x.png') 2x) 0 14, pointer;
 }

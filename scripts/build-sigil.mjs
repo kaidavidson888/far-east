@@ -120,27 +120,40 @@ writeFileSync(OUT, webp);
 const CURSOR_W = 32;
 const KEYLINE = 1.5; // in final pixels
 
-async function cursor(scale) {
+/**
+ * Two of these get made: the resting pointer and the pressable one.
+ *
+ * THE PRESSABLE ONE IS THE RESTING ONE INVERTED — white cloud, black
+ * keyline — which is how the site can keep the affordance without keeping
+ * the operating system's hand. It matters here more than on most sites: the
+ * artwork pages' hit areas are transparent, the buttons ARE the artwork, so
+ * the pointer is the only thing that says a thing can be pressed.
+ *
+ * Both are built the same way from the same silhouette, so they are the same
+ * shape to the pixel and swapping between them reads as a colour change
+ * rather than as a different mark arriving.
+ */
+async function cursor(scale, { ink: inkHex, line: lineHex, name }) {
   const w = CURSOR_W * scale;
   const h = Math.round(w / aspect);
   const pad = Math.ceil(KEYLINE * scale);
 
-  const ink = await sharp(lifted.data, { raw: { width: inkW, height: inkH, channels: 4 } })
+  // the silhouette, at size, as an alpha mask — everything below is this
+  // shape in one colour or the other
+  const shape = await sharp(lifted.data, { raw: { width: inkW, height: inkH, channels: 4 } })
     .resize({ width: w, height: h, fit: 'fill' })
     .png()
     .toBuffer();
+  const alpha = await sharp(shape).extractChannel('alpha').raw().toBuffer();
 
-  // The same shape in white, built from the ink's own alpha rather than by
-  // recolouring it: white RGB joined to that alpha IS the silhouette, and it
-  // carries the antialiasing across unchanged, so the keyline's edge is as
-  // smooth as the ink's.
-  const alpha = await sharp(ink).extractChannel('alpha').raw().toBuffer();
-  const white = await sharp({
-    create: { width: w, height: h, channels: 3, background: '#ffffff' },
-  })
-    .joinChannel(alpha, { raw: { width: w, height: h, channels: 1 } })
-    .png()
-    .toBuffer();
+  const paint = async (hex) =>
+    sharp({ create: { width: w, height: h, channels: 3, background: hex } })
+      .joinChannel(alpha, { raw: { width: w, height: h, channels: 1 } })
+      .png()
+      .toBuffer();
+
+  const ink = await paint(inkHex);
+  const white = await paint(lineHex);
 
   const offsets = [];
   for (let dx = -pad; dx <= pad; dx++) {
@@ -157,7 +170,7 @@ async function cursor(scale) {
     .png({ compressionLevel: 9 })
     .toBuffer();
 
-  const path = scale === 1 ? 'public/sigil-cursor.png' : `public/sigil-cursor@${scale}x.png`;
+  const path = scale === 1 ? `public/${name}.png` : `public/${name}@${scale}x.png`;
   writeFileSync(path, out);
 
   // THE HOTSPOT IS MEASURED, not assumed. The cloud's tail is the only part
@@ -180,14 +193,22 @@ async function cursor(scale) {
   return { path, bytes: out.length, w: w + pad * 2, h: h + pad * 2, hotspot };
 }
 
-const c1 = await cursor(1);
-const c2 = await cursor(2);
+const REST = { ink: '#010101', line: '#ffffff', name: 'sigil-cursor' };
+const PRESS = { ink: '#ffffff', line: '#010101', name: 'sigil-cursor-press' };
+
+const c1 = await cursor(1, REST);
+const c2 = await cursor(2, REST);
+const p1 = await cursor(1, PRESS);
+const p2 = await cursor(2, PRESS);
 
 const before = readFileSync(SRC).length;
 console.log(`${SRC} ${Math.round(before / 1024)}KB -> ${OUT} ${(webp.length / 1024).toFixed(1)}KB`);
 console.log(`  ink ${inkW}x${inkH} at full size, aspect ${aspect.toFixed(4)}`);
 console.log(`  drawn ${drawnW}x${DRAWN_H}, stored ${drawnW * SS}x${DRAWN_H * SS} (${SS}x)`);
-console.log(`  cursor 1x ${c1.w}x${c1.h} ${(c1.bytes / 1024).toFixed(1)}KB, hotspot ${c1.hotspot.join(',')}`);
-console.log(`  cursor 2x ${c2.w}x${c2.h} ${(c2.bytes / 1024).toFixed(1)}KB`);
+console.log(`  cursor      1x ${c1.w}x${c1.h} ${(c1.bytes / 1024).toFixed(1)}KB, 2x ${(c2.bytes / 1024).toFixed(1)}KB, hotspot ${c1.hotspot.join(',')}`);
+console.log(`  pressable   1x ${p1.w}x${p1.h} ${(p1.bytes / 1024).toFixed(1)}KB, 2x ${(p2.bytes / 1024).toFixed(1)}KB, hotspot ${p1.hotspot.join(',')}`);
+if (c1.hotspot.join() !== p1.hotspot.join()) {
+  throw new Error('the two cursors disagree about the hotspot — they must be the same shape');
+}
 console.log(`\n  the hotspot below goes in .site-cursor in globals.css, by hand:`);
 console.log(`    cursor: url('/sigil-cursor.png') ${c1.hotspot.join(' ')}, auto;`);

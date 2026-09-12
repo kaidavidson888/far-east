@@ -501,12 +501,27 @@ of the shape that comes to a point and it sits about three quarters of the way
 down the left edge. The build measures it off the finished pixels and prints the
 CSS line; take it from there if the mark is recut.
 
-**Every `cursor: pointer` on the site is deliberately left alone.** On the artwork
-pages the hit areas are transparent — the buttons ARE the artwork — so the hand
-is the only thing telling a reader something is pressable. Replacing it would
-make the landing page's controls undiscoverable. `grab`/`grabbing` on the cigarette
-row and `text` in the fields stay for the same reason: they say what the pointer
-can do there, which a cloud cannot.
+**Pressable things invert it** — white cloud, black keyline, the same silhouette
+to the pixel and the same hotspot, so the swap reads as a colour change rather
+than as a different mark arriving. The build asserts the two hotspots match.
+
+That is how the affordance survives losing the operating system's hand, and it
+matters here more than on most sites: the artwork pages' hit areas are
+transparent, the buttons ARE the artwork, so the pointer is the only thing
+saying a thing can be pressed.
+
+The rule is **the last one in `app/globals.css`, on purpose** — most of those
+selectors already say `cursor: pointer` further up at the same specificity, so it
+is source order that settles it, and anything wanting the hand back would have
+to come after it. Its keyword fallback is `pointer` rather than `auto`: if the
+image will not load, the hand is the right thing to land on, because the
+element really is pressable.
+
+`:disabled` is deliberately NOT in that rule. `.btn:disabled` keeps `not-allowed` at
+a specificity it cannot reach, which is correct — a disabled control is exactly
+the thing that is not pressable. `grab`/`grabbing` on the cigarette row and `text`
+in the fields stay for the same reason: they say what the pointer can DO there,
+which neither cloud can.
 
 ## Working as a team (two people, two Claude Code sessions)
 The repo is **public** on GitHub — chosen so Vercel Hobby deploys commits from either owner.
