@@ -4,7 +4,6 @@ import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   CIG_BAND_H,
-  CIG_FRAME_DRAG_MS,
   CIG_FRAME_H,
   CIG_GAP,
   CIG_HEIGHT,
@@ -93,19 +92,8 @@ export function CigScroller({
 
   const [shown, setShown] = useState<Shown[]>([]);
   const [selected, setSelected] = useState(-1);
-  /**
-   * Where the frame goes: the middle of the row, always.
-   *
-   * It used to be the picked pack's own left edge, which meant it crept along
-   * with that pack and then threw itself back the other way the moment the
-   * next one came nearer the middle — a sawtooth, against the flow of the
-   * packs, several times a second. Standing still is also what the owner's
-   * own recording shows: the outline never moves, it is a frame at the centre
-   * that packs pass through. So the only thing left to move is its width, and
-   * the row settles the picked pack dead centre anyway, so at rest it holds
-   * that pack exactly as snugly as before.
-   */
-  const [mid, setMid] = useState(0);
+  /** Where the frame goes: the picked pack's own left edge on screen. */
+  const [pickX, setPickX] = useState(0);
 
   /** Everything that lands on screen at the current offset, and the pick. */
   const compute = useCallback(() => {
@@ -142,7 +130,7 @@ export function CigScroller({
     if (!m) return;
     setShown(m.out);
     setSelected(m.pick);
-    setMid(m.w / 2);
+    setPickX(m.pickAt);
   }, [compute]);
 
   /** How far the row is from having the nearest pack dead centre. */
@@ -413,17 +401,14 @@ export function CigScroller({
         <span
           className="cig-frame"
           aria-hidden="true"
-          style={
-            {
-              left: `${Math.round(mid - (pick.w + CIG_OUTLINE.x * 2) / 2)}px`,
-              top: `${(CIG_BAND_H - CIG_FRAME_H) / 2}px`,
-              width: `${pick.w + CIG_OUTLINE.x * 2}px`,
-              height: `${CIG_FRAME_H}px`,
-              borderWidth: `${CIG_OUTLINE.stroke}px`,
-              borderColor: CIG_OUTLINE.colour,
-              '--cig-drag': `${CIG_FRAME_DRAG_MS}ms`,
-            } as React.CSSProperties
-          }
+          style={{
+            left: `${Math.round(pickX) - CIG_OUTLINE.x}px`,
+            top: `${(CIG_BAND_H - CIG_FRAME_H) / 2}px`,
+            width: `${pick.w + CIG_OUTLINE.x * 2}px`,
+            height: `${CIG_FRAME_H}px`,
+            borderWidth: `${CIG_OUTLINE.stroke}px`,
+            borderColor: CIG_OUTLINE.colour,
+          }}
         />
       ) : null}
 

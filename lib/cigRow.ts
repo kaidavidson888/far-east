@@ -93,26 +93,6 @@ export const PAINT_MS = 125;
 export const REFERENCE_SPEED = 189.6;
 
 /**
- * How long the frame takes to take up a new pack's width.
- *
- * The frame holds the middle of the row and never travels: packs pass through
- * it, which is what the owner's own recording shows. The only thing about it
- * that changes is its width, because the packs are 42 to 92 wide and the 8px
- * margin is the part that is fixed. That change is eased over two of the
- * row's own 125ms steps rather than stepped with them.
- *
- * It is the one thing on this row that is not stepped, and deliberately: the
- * stepping is the packs' character, and a frame breathing gently against it
- * is what the owner asked for when they asked it to drag.
- *
- * An earlier version put the frame on the picked pack's own left edge, so it
- * crept along with that pack and then threw itself back the other way as soon
- * as the next came nearer the middle — a sawtooth against the flow, several
- * times a second, and worse once eased. Don't go back to it.
- */
-export const CIG_FRAME_DRAG_MS = PAINT_MS * 2;
-
-/**
  * Everything that moves the row runs at this share of what it used to.
  *
  * The owner asked for the scroll a fifth slower without losing the sense of
