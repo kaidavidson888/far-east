@@ -467,15 +467,19 @@ ul, ol { list-style: none; }
   font-family: var(--font-typed);
   max-width: 520px; width: 100%; padding: var(--xl);
 }
-.gate-panel .display-sm, .gate-panel .title-lg { color: #010101; }
+.gate-panel .display-sm, .gate-panel .title-lg { color: #ffffff; }
 .gate-panel p { color: #ffffff; }
 /* Both paragraphs inside the rule are white, which is also the rule's own
    colour — the box and what it holds read as one thing, against the black
    question above it. */
 .gate-terms .body-md { color: #ffffff; }
 .gate-terms .caption { color: #ffffff; }
-.gate-panel .seal-divider span:first-child { background: #010101; }
-.gate-panel .seal-divider span:last-child { background: #ffffff; }
+/* One solid black bar at 3px, not the site's 5px two-tone rule. Both halves are set
+   rather than the parent, because .seal-divider colours its spans and leaves
+   the element itself transparent. */
+.gate-panel .seal-divider { height: 3px; }
+.gate-panel .seal-divider span:first-child,
+.gate-panel .seal-divider span:last-child { background: #010101; }
 /* The face is only letters and digits (see "The owner's own face"), so the
    punctuation in this copy comes from the fallback. Kept deliberate rather
    than accidental: font-synthesis off so neither is smeared into a bold. */
@@ -504,6 +508,19 @@ ul, ol { list-style: none; }
   font-weight: 700;
   text-transform: uppercase;
   -webkit-text-stroke: 0.6px currentColor;
+  /* THE QUESTION SITS EQUIDISTANT between the bar and the rule below it, and
+     the two stack gaps have to differ to manage it, because what is being
+     centred is the INK and neither neighbour is where it looks.
+
+     Above, the line box stands 4.8px taller than the letters (half-leading).
+     Below, the outline is drawn 6px outside the box it belongs to — 4px of
+     offset and 2px of rule — so it reaches up past its own edge.
+
+     Measured: 93.2px between the bar's foot and the rule's top, 57.6px of
+     that is the two lines of ink, so 35.6px is free and each side wants
+     17.8px. That is 17.8 - 4.8 = 13px above, and 17.8 + 6 - 4.8 = 19px
+     below. Same 93.2 total, so nothing else on the panel moves. */
+  margin-top: 13px;
 }
 /* The same trick at the same STRENGTH, which means a different number of
    pixels: the title's 0.6px on a 28px line is 0.021em, so the 17px paragraph
@@ -579,6 +596,10 @@ ul, ol { list-style: none; }
   outline-offset: 4px;
   /* margin-left/right, NOT the shorthand: .stack-md sets margin-top on this
      and a shorthand here would silently zero it. */
+  /* 19px, not the stack's 16: the other half of centring the question. See
+     the note on .gate-panel .display-sm. Written with the panel in the
+     selector so it beats .stack-md on specificity rather than on file
+     order. */
   margin-left: 6px;
   margin-right: 6px;
   /* 10.39 and 11.63, not the 9.69 and 11.33 the solve gave: half-leading
@@ -588,6 +609,7 @@ ul, ol { list-style: none; }
      height against the 156.7 it was holding. */
   padding: 10.39px 14px 11.63px;
 }
+.gate-panel .gate-terms { margin-top: 19px; }
 .gate-terms .body-md {
   font-size: 14.67px;
   /* the stroke keeps its share of the em: 0.0214 x 14.67 */
@@ -650,6 +672,16 @@ ul, ol { list-style: none; }
   -webkit-text-stroke-width: 0.45px;
 }
 /* Black, because a white ring on white rules would disappear. */
+/* Reaching for one button stands the other down to half. :has() on the row
+   so it works in both directions from one rule, and the same selector counts
+   :focus-visible, so tabbing between them dims the one you are not on exactly
+   as hovering does.
+
+   Opacity rather than a colour: the pair are each other's negative, so any
+   colour that dimmed one would be the other's own. */
+.gate-panel .row:has(.btn:hover, .btn:focus-visible) .btn:not(:hover):not(:focus-visible) {
+  opacity: 0.5;
+}
 .gate-panel .btn:focus-visible { outline: 2px solid #010101; outline-offset: 3px; }
 
 /* ---------- Responsive ---------- */
