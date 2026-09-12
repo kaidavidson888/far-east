@@ -604,39 +604,50 @@ ul, ol { list-style: none; }
    spec's cinnabar CTA is for "Add to my shelf" and has no business on a
    yes/no, so neither button is filled. */
 .gate-panel .btn-primary {
-  background: transparent;
+  background: #ffffff;
   color: #010101;
   border: 5px solid #ffffff;
 }
-/* Hovering fills the box rather than washing it: the yes floods black and
-   keeps its white lettering, the no floods white and keeps its black. Neither
-   label changes colour — only the ground under it does, so the press reads as
-   the shape filling in rather than as the text restating itself.
+/* SOLID AT REST, AND HOVERING TURNS EACH ONE INSIDE OUT. The yes is a white
+   block with black letters and the no a black block with white ones; hovering
+   swaps every part of that — ground, rule and lettering all cross over, so
+   the yes becomes black-on-white's mirror and the no likewise. The rule is
+   the same colour as the ground it sits on in both states, so it never reads
+   as an outline; it is kept only because the 5px is inside the button's 48px
+   and dropping it would move the lettering.
 
-   The optical correction below still points the right way on hover, and for
-   the same reason: the yes is light-on-dark before and after, the no is
-   dark-on-light before and after. Only the ground swaps.
+   THE OPTICAL CORRECTION HAS TO SWAP TOO. Black on white reads thinner than
+   white on black, so the heavier 0.45px stroke belongs to whichever label is
+   black at that moment — and now that both invert, that changes on hover. So
+   each hover rule restates the stroke: the yes drops to 0.3px as it goes
+   white-on-black, the no climbs to 0.45px as it goes black-on-white. Without
+   it the pair would look mismatched in exactly one of the two states.
 
-   :focus-visible gets it too, so a keyboard sees what a pointer sees. */
+   :focus-visible gets it all, so a keyboard sees what a pointer sees. */
 .gate-panel .btn-primary:hover,
 .gate-panel .btn-primary:focus-visible,
 .gate-panel .btn-primary:active {
-  background: #ffffff;
-  color: #010101;
+  background: #010101;
+  border-color: #010101;
+  color: #ffffff;
+  /* the correction swaps with the colours — see the note further up */
+  -webkit-text-stroke-width: 0.3px;
 }
 /* The buttons are drawn at 5px, heavier than the 2px box round the terms:
    the rules you can press are the thick ones. border-box site-wide, so the
    button keeps its 48px and only the rule thickens inward. */
 .gate-panel .btn-secondary {
-  background: transparent;
+  background: #010101;
   color: #ffffff;
   border: 5px solid #010101;
 }
 .gate-panel .btn-secondary:hover,
 .gate-panel .btn-secondary:focus-visible,
 .gate-panel .btn-secondary:active {
-  background: #010101;
-  color: #ffffff;
+  background: #ffffff;
+  border-color: #ffffff;
+  color: #010101;
+  -webkit-text-stroke-width: 0.45px;
 }
 /* Black, because a white ring on white rules would disappear. */
 .gate-panel .btn:focus-visible { outline: 2px solid #010101; outline-offset: 3px; }
