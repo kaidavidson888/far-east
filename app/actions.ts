@@ -7,6 +7,7 @@ import { currentUser } from '@/lib/auth';
 import { createClient } from '@/lib/supabase/server';
 import { logAuthEvent } from '@/lib/logAuthEvent';
 import { normalisePhone } from '@/lib/phone';
+import { safeNext, siteOrigin } from '@/lib/siteUrl';
 import { pageFor } from '@/lib/cigPages';
 import {
   createShare, deleteReview, getCigaretteBySlug, revokeShare, savePack,
@@ -49,6 +50,45 @@ export async function registerAction(_prev: FormState, formData: FormData): Prom
   }
 
   redirect('/favorites');
+}
+
+/**
+ * Sign in with Google.
+ *
+ * A SERVER ACTION AND NOT A LINK, which is the whole subtlety here. The flow
+ * is PKCE: before the reader leaves for Google, a code verifier has to be
+ * generated and stored in a cookie, and the code that comes back is worth
+ * nothing without it. `signInWithOAuth` does the storing, through the server
+ * client's cookie writer — and cookies can only be written from an action or a
+ * route handler, never from a server component. An `<a href>` straight to
+ * Google would skip all of that and the callback would have nothing to
+ * exchange.
+ *
+ * So it returns a url rather than redirecting itself; this hands the reader to
+ * it, and `app/auth/callback/route.ts` catches them coming back.
+ *
+ * Nothing is configured in this repo. The client id and secret live in the
+ * Supabase dashboard (Authentication → Providers → Google) and never touch the
+ * app or its environment.
+ */
+export async function signInWithGoogleAction(formData: FormData) {
+  const next = safeNext(formData.get('next'));
+  const origin = await siteOrigin();
+  const supabase = await createClient();
+
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: {
+      redirectTo: `${origin}/auth/callback?next=${encodeURIComponent(next)}`,
+    },
+  });
+
+  // The commonest cause by far is the provider being switched off in the
+  // dashboard, which reads as validation_failed rather than anything about
+  // Google. The login page says as much in plain words.
+  if (error || !data.url) redirect('/login?error=provider');
+
+  redirect(data.url);
 }
 
 export async function loginAction(_prev: FormState, formData: FormData): Promise<FormState> {

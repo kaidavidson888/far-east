@@ -219,6 +219,25 @@ ul, ol { list-style: none; }
 .btn-ghost { background: transparent; color: var(--body); height: 40px; padding: 0 16px; }
 .btn-ghost:hover { color: var(--ink); }
 .btn-block { width: 100%; }
+/* The rule between a provider button and the email form. One element, so the
+   markup stays a single <p> — the line is a border either side of the word,
+   which keeps it centred on the text's own baseline whatever the word is. */
+.auth-or {
+  display: flex;
+  align-items: center;
+  gap: var(--sm);
+  color: var(--muted);
+  font-size: 13px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+}
+.auth-or::before,
+.auth-or::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--hairline);
+}
 .btn-sm { height: 44px; padding: 0 20px; }
 .btn-icon {
   width: 44px; height: 44px; padding: 0; border-radius: var(--r-full);

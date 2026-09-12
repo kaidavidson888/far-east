@@ -27,7 +27,8 @@ try {
     create schema if not exists auth;
     create table if not exists auth.users (
       id uuid primary key default gen_random_uuid(),
-      email text not null,
+      email text,
+      phone text,
       raw_user_meta_data jsonb not null default '{}'::jsonb
     );
   `);
@@ -72,6 +73,62 @@ try {
   await sql`INSERT INTO auth.users (id, email) VALUES (${uid2}, 'noname@example.com')`;
   const [p2] = await sql`SELECT * FROM profiles WHERE id = ${uid2}`;
   check('falls back to email local part', p2?.display_name === 'noname', JSON.stringify(p2));
+
+  // The names an OAuth provider actually sends. Google has no display_name —
+  // it sends full_name and name — so without migration 0004 every reader
+  // arriving through it would be called after the local part of their email,
+  // forever, on every review they write. The trigger fires once at insert, so
+  // this is the check that has to catch it.
+  const google = randomUUID();
+  await sql`
+    INSERT INTO auth.users (id, email, raw_user_meta_data)
+    VALUES (${google}, 'kai@gmail.com', ${sql.json({
+      iss: 'https://accounts.google.com',
+      name: 'Kai Davidson',
+      full_name: 'Kai Davidson',
+      email: 'kai@gmail.com',
+      avatar_url: 'https://lh3.googleusercontent.com/a/x',
+      email_verified: true,
+    })})
+  `;
+  const [gp] = await sql`SELECT display_name FROM profiles WHERE id = ${google}`;
+  check('a Google sign-up is named from full_name, not the email',
+    gp?.display_name === 'Kai Davidson', JSON.stringify(gp));
+
+  // name without full_name — some providers send only the one
+  const nameOnly = randomUUID();
+  await sql`
+    INSERT INTO auth.users (id, email, raw_user_meta_data)
+    VALUES (${nameOnly}, 'someone@example.com', ${sql.json({ name: 'Someone Else' })})
+  `;
+  const [np] = await sql`SELECT display_name FROM profiles WHERE id = ${nameOnly}`;
+  check('name alone is enough', np?.display_name === 'Someone Else', JSON.stringify(np));
+
+  // our own field still wins, so nothing that works today changes
+  const ours = randomUUID();
+  await sql`
+    INSERT INTO auth.users (id, email, raw_user_meta_data)
+    VALUES (${ours}, 'chosen@example.com', ${sql.json({ display_name: 'Chosen', full_name: 'Ignored' })})
+  `;
+  const [op] = await sql`SELECT display_name FROM profiles WHERE id = ${ours}`;
+  check('our own display_name still takes precedence', op?.display_name === 'Chosen',
+    JSON.stringify(op));
+
+  // a phone sign-up has no email at all: split_part(NULL,'@',1) is NULL and
+  // profiles.display_name is NOT NULL, so before 0004 this insert took the
+  // whole sign-up down with it
+  const byPhone = randomUUID();
+  await sql`
+    INSERT INTO auth.users (id, email, phone, raw_user_meta_data)
+    VALUES (${byPhone}, NULL, '+15555550123', '{}'::jsonb)
+  `;
+  const [pp] = await sql`SELECT display_name FROM profiles WHERE id = ${byPhone}`;
+  check('a sign-up with no email still gets a profile', pp?.display_name === '+15555550123',
+    JSON.stringify(pp));
+
+  for (const id of [google, nameOnly, ours, byPhone]) {
+    await sql`DELETE FROM auth.users WHERE id = ${id}`;
+  }
 
   console.log('\n— catalogue seed —');
   process.env.DATABASE_URL = URL_;

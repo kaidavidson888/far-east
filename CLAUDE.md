@@ -319,6 +319,57 @@ preload even same-origin — without it the browser fetches the file twice),
 filename** — bump `far-east-1` to `-2` when the file is replaced, in
 `globals.css` and `app/layout.tsx` together, or caches will hold the old one.
 
+## Signing in with Google
+**Google is not an alternative to Supabase Auth — it is a provider inside it.**
+The handshake produces the same `auth.users` row, the same session cookie and the
+same `currentUser()`; nothing downstream knows the difference. Replacing Supabase
+Auth outright would mean rewriting every `references profiles(id)`, the signup
+trigger and the RLS default-deny, for no gain.
+
+Three things make it work, and only the first lives in this repo:
+- `signInWithGoogleAction` (`app/actions.ts`) starts it. **A server action, not a
+  link** — the flow is PKCE, so a code verifier has to be written to a cookie
+  before the reader leaves, and cookies can only be written from an action or a
+  route handler. An `<a href>` straight at Google would skip that and the
+  callback would have nothing to exchange.
+- `app/auth/callback/route.ts` catches them coming back and swaps the one-time
+  code for a session. Any provider added later comes back through the same
+  door. Node runtime — the only thing here that ever ran on the edge was the
+  session middleware, and it crashed.
+- `lib/siteUrl.ts` works out the origin to come back TO, from
+  `x-forwarded-proto` + Host, because Vercel terminates TLS at the edge and the
+  function itself sees http. `safeNext()` is there too: `next` rides through the
+  handshake in a query string, so it comes back from outside — a
+  protocol-relative `//evil.example` would be an open redirect handing over a
+  freshly minted session.
+
+**The credentials are not in this repo and must not be.** Client id and secret
+live in the Supabase dashboard (Authentication → Providers → Google); the
+redirect URI registered with Google is **Supabase's own**
+`https://<ref>.supabase.co/auth/v1/callback`, never this site's. Both origins —
+`http://localhost:3000/**` and the deployed one — have to be on the Redirect
+URLs allow-list under Authentication → URL Configuration, or the last hop
+lands nowhere. That list is enforced at the callback, so it cannot be checked
+without completing a real sign-in.
+
+**Migration 0004 is the part that cannot be fixed later.** `handle_new_user` read
+`raw_user_meta_data ->> 'display_name'` — a field WE invent and pass in the
+sign-up metadata. Google does not send it; it sends `full_name` and `name`. Every
+reader arriving through Google would have been named after the local part of
+their email, on every review they ever wrote, and the trigger fires once at
+insert. The chain is now display_name, full_name, name, email local part,
+phone, 'Reader' — our own field first, so nothing that works today changes.
+The last two also mean a sign-up with no email cannot fail the NOT NULL insert
+any more, which is what `splashAuthAction` has been working around.
+**Already applied to the shared Supabase project**, along with 0003.
+
+The button is `components/GoogleButton.tsx`, on `/login` and `/register`. Google's
+four-colour G is **the one mark on this site drawn outside the palette** — their
+branding terms require it; a monochrome or cinnabar G is not allowed. The rest
+of the button is the house style. **The splash has no Google button yet**: `/` is
+baked artwork, frame 100's login box IS the UI, so putting one there is a
+drawing job and the owner's call.
+
 ## Working as a team (two people, two Claude Code sessions)
 The repo is **public** on GitHub — chosen so Vercel Hobby deploys commits from either owner.
 That means: **never commit anything sensitive** (`.env*` is gitignored; keep it that way), and
@@ -350,15 +401,14 @@ the brand assets and review text in this repo are visible to anyone.
    values in `lib/seed.ts`.
 5. **Instagram link is a placeholder** — two constants at the top of `app/page.tsx`.
 6. `subscribers` table is unused (newsletter removed); drop it in a migration when convenient.
-7. **Nobody can sign in to this site right now.** The Supabase project has the
-   email provider switched off — a password sign-in comes back
-   `email_provider_disabled`, so `/login` and `/register` cannot work — and the
-   splash's phone sign-in needs an SMS provider that is not configured either
-   (Authentication -> Providers). Everything that reads is fine, because
-   nothing on this site needs an account to browse; everything that writes is
-   unreachable until one of the two is turned on. That includes the new
-   bookmark: pressing it signed out correctly sends you to `/login`, and
-   `/login` is currently a dead end. It also means a signed-in press cannot be
+7. **Email and phone sign-in are both switched off.** A password sign-in comes
+   back `email_provider_disabled` and the splash's phone sign-in needs an SMS
+   provider that is not configured (Authentication -> Providers). **Google is
+   the way in** — it is already enabled with a real client id, and it needs
+   neither. Whether the deployed origin and localhost are on the Redirect URLs
+   allow-list has not been confirmed; that is the one thing that cannot be
+   checked without completing a real sign-in. The splash still offers only
+   phone, so a reader who lands on `/` has to reach `/login` to get in. It also means a signed-in press cannot be
    verified end to end locally — the DB layer under it is covered by
    `npm run verify:db` instead.
 8. **The pack shelf has no shelf page.** `/favorites` lists catalogue products
