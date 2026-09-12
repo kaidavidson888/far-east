@@ -12,7 +12,7 @@ import {
   CIG_RULE,
   PAINT_MS,
   CIG_FRAME_HOLD_MS,
-  CIG_FRAME_HOLD_SLACK,
+  CIG_GLIDE_FRICTION,
   REFERENCE_SPEED,
   SPEED,
   cigLayout,
@@ -55,8 +55,6 @@ const { left: LEFT, total: LAP } = cigLayout();
 
 /** How far a wheel notch pushes the row, at the owner's pace. */
 const WHEEL = 0.8 * SPEED;
-/** A flick's speed decays by 1/e in this long. */
-const GLIDE_TAU = 0.45;
 /** Below this the glide is spent and the row starts settling. */
 const SETTLE_BELOW = 40;
 /** How long the settle takes to close the distance — a fifth slower too. */
@@ -178,7 +176,7 @@ export function CigScroller({
       f.pendingSince = 0;
     } else if (f.pendingSince === 0) {
       f.pendingSince = now;
-    } else if (now - f.pendingSince >= CIG_FRAME_HOLD_MS) {
+    } else if (now - f.pendingSince >= hold(velRef.current)) {
       f.i = m.pick;
       f.pendingSince = 0;
     }
@@ -197,14 +195,11 @@ export function CigScroller({
       }
     }
 
-    // Let go early if it has carried the frame too far. The clock alone is
-    // unbounded in distance — how far the pack gets in two frames is however
-    // hard the row was thrown — and a frame out at the edge is not stickiness,
-    // it is the frame losing the row. Whichever limit comes first wins.
-    // A missing position is the same thing taken to its end: the pack has left
-    // the screen, so there is nothing left to hold on to at all.
-    const slack = (CIG_PACKS[f.i]?.w ?? 0) * CIG_FRAME_HOLD_SLACK + CIG_GAP;
-    if (at === null || best > slack) {
+    // If the pack has left the screen there is no position to draw the frame
+    // at, so it hands over at once. There is no distance clamp beside this any
+    // more: the hold shortens as the row speeds up, which caps the drift at
+    // HOLD * REFERENCE_SPEED — 47px — without a second rule to arrive at it.
+    if (at === null) {
       f.i = m.pick;
       f.pendingSince = 0;
       at = m.pickAt;
@@ -213,6 +208,31 @@ export function CigScroller({
     setSelected(f.i);
     setPickX(at);
   }, [compute]);
+
+  /**
+   * How long the frame holds its pack, given how fast the row is going.
+   *
+   * A fixed hold is the wrong shape, because what it is suppressing is not
+   * fixed. The flicker worth ignoring happens when the row is BARELY moving —
+   * it crosses a boundary as it settles, comes back, and the frame would
+   * change hands twice for a movement of a few pixels. At speed there is no
+   * flicker to suppress: packs pass the middle decisively, one after another,
+   * and a frame that keeps holding the last one just falls behind the row.
+   *
+   * So the hold is scaled by momentum: full at a standstill, and shrinking as
+   * the row moves, against REFERENCE_SPEED — the pace the owner's own
+   * recording runs at, which is the natural yardstick for "moving".
+   *
+   *   at rest            250ms, the full hold
+   *   reference speed    125ms, one frame of the row's 8fps
+   *   three times it      62ms, less than a frame: no hold at all
+   *
+   * This is also what keeps the frame near the middle without a separate
+   * distance clamp doing it: the faster the pack is travelling, the less time
+   * it is allowed to carry the frame, so the drift cannot run away with speed
+   * the way a fixed hold let it.
+   */
+  const hold = (v: number) => CIG_FRAME_HOLD_MS / (1 + Math.abs(v) / REFERENCE_SPEED);
 
   /** How far the row is from having the nearest pack dead centre. */
   const offCentre = useCallback(() => {
@@ -251,8 +271,16 @@ export function CigScroller({
         }
       } else if (!draggingRef.current) {
         if (Math.abs(velRef.current) > SETTLE_BELOW) {
-          offsetRef.current += velRef.current * dt;
-          velRef.current *= Math.exp(-dt / GLIDE_TAU);
+          // Friction: a constant rate of braking, not a decay proportional to
+          // the speed. Position is integrated against the AVERAGE of the
+          // velocity before and after the step rather than either end of it —
+          // for a constant acceleration that is exact, where taking one end
+          // over-runs and the other falls short, each by half the step's own
+          // change in speed.
+          const was = velRef.current;
+          const drop = CIG_GLIDE_FRICTION * dt;
+          velRef.current = Math.abs(was) <= drop ? 0 : was - Math.sign(was) * drop;
+          offsetRef.current += ((was + velRef.current) / 2) * dt;
         } else {
           // The glide is spent, so bring the nearest pack to the middle
           // rather than resting wherever it happened to stop. The source

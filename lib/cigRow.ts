@@ -139,35 +139,30 @@ export const SPEED = 1;
 export const CIG_FRAME_HOLD_MS = PAINT_MS * 2;
 
 /**
- * ...and how far the held pack may carry the frame from the middle before it
- * lets go regardless of the clock.
+ * How hard the row is braked once it is let go, in pixels per second squared.
  *
- * A hold measured only in time is unbounded in distance: how far the pack gets
- * in two frames is however hard the row was thrown. Uncapped, a gentle wheel
- * carried the frame 226px off centre and a firm one 490px — half the width of
- * the row, the frame out at the edge riding a pack while the middle moved on
- * without it. Sticky, but not smooth, which is half of what was asked for.
+ * IT DECELERATES AT A CONSTANT RATE, which is what friction does. The glide
+ * used to decay exponentially — v *= exp(-dt/tau) — and that is viscous drag,
+ * the physics of something moving through a fluid: the braking force falls
+ * away with the speed, so the row never quite stops, it only gets slower and
+ * slower until a threshold gives up on it. It is why naive momentum scrolling
+ * feels floaty.
  *
- * SO THE HOLD ENDS ON WHICHEVER COMES FIRST, the two frames or this distance.
+ * Something sliding on a surface is braked by a force that does not care how
+ * fast it is going, so it sheds speed at a steady rate and comes to a real
+ * stop at a definite moment. Two consequences you can feel:
  *
- * THE TWO PULL AGAINST EACH OTHER and the number is the balance. The flicker
- * worth suppressing happens while the row is FAST — that is what makes those
- * tenures 126-146ms — so holding through it necessarily means holding a pack
- * that is moving, which necessarily means drift. Tightening this until the
- * drift vanished (0.75, about 70px) also suppressed nothing at all: the frame
- * tracked the nearest pack one for one, exactly as it did before the hold
- * existed. Measured across a gentle, a firm and a hard flick:
+ *   stopping distance   v^2 / 2a   quadratic, not linear. Throw it twice as
+ *                                  hard and it goes four times as far, which
+ *                                  is what the hand expects.
+ *   stopping time       v / a      finite. The row stops rather than fades.
  *
- *   slack   handovers suppressed   worst drift
- *   none    2 of 4                 490px
- *   0.75    0 of 4                  66px
- *   2.5     1 of 4                 144px
+ * 700 leaves a hard flick travelling about as far as the old decay carried it,
+ * so the row's reach is roughly unchanged; what changes is the shape of the
+ * arrival, and how differently a light flick and a hard one behave.
  *
- * 2.5 keeps one handover's worth of stickiness on every gesture and bounds the
- * frame inside the middle sixth of the row. It settles dead centre either way.
- *
- * It is a share of the pack's OWN width plus the gap, not a fixed number of
- * pixels, because the packs run 42 to 108 wide — a constant that let a slim
- * pack drift politely would let a wide one hang half off the centre.
+ * Divided by SPEED rather than multiplied: SPEED is how far a flick carries,
+ * and less braking carries further.
  */
-export const CIG_FRAME_HOLD_SLACK = 2.5;
+export const CIG_GLIDE_FRICTION = 700 / SPEED;
+
