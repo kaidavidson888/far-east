@@ -93,6 +93,21 @@ export const PAINT_MS = 125;
 export const REFERENCE_SPEED = 189.6;
 
 /**
+ * How long the frame takes to catch up with the pack it has picked.
+ *
+ * The row itself steps at 8fps and the frame used to step with it, landing on
+ * the new pack in the same instant the packs moved. The owner asked for it to
+ * drag: it now runs behind, easing out, so it is still arriving when the row
+ * has already gone. Two of the row's own 125ms steps, which is enough to read
+ * as weight without the frame ever being a pack behind.
+ *
+ * It is the one thing on this row that is not stepped. That is deliberate —
+ * the stepping is the packs' character, and a frame that glides against it is
+ * what makes the drag visible at all.
+ */
+export const CIG_FRAME_DRAG_MS = PAINT_MS * 2;
+
+/**
  * Everything that moves the row runs at this share of what it used to.
  *
  * The owner asked for the scroll a fifth slower without losing the sense of

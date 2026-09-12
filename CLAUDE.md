@@ -237,6 +237,19 @@ kept in `scripts/assets`: a positioning SVG and an MP4 of the motion. The MP4 ru
 dead constant** — that stepping is deliberate and the owner likes it, so the row is driven by a
 125ms timer rather than rAF. All of it is written up in `lib/cigRow.ts`.
 
+**The red frame is the one thing on that row that is not stepped.** The owner asked for it to
+drag, so it eases after the pack it has picked over `CIG_FRAME_DRAG_MS` (two of the row's own
+125ms steps) instead of landing in the same instant the packs move. The contrast is the point:
+a frame that glides against stepping packs is what makes the drag read as weight. It is a CSS
+transition on `left` and `width`, off under `prefers-reduced-motion`, and while it is gliding
+its position is fractional — so the 5px border is very slightly soft in motion and crisp at
+rest, which is the right way round.
+
+Note for testing any of this: **rAF does not run in the desktop app's Browser pane, and timers
+are throttled to about half a second** when the pane is not fronted. Sampling motion there does
+not work. `document.getAnimations()` does — it reports the running transitions, their duration
+and easing, with no timing dependency at all.
+
 ## The owner's own face (`public/fonts/far-east-1.woff2`)
 Supplied by the owner as `Far_East_Full_Webfont.woff2`, declared as the family
 **"Far East"**, self-hosted, and reached through the `--font-typed` token.

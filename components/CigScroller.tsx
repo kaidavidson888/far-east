@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   CIG_BAND_H,
+  CIG_FRAME_DRAG_MS,
   CIG_FRAME_H,
   CIG_GAP,
   CIG_HEIGHT,
@@ -401,14 +402,17 @@ export function CigScroller({
         <span
           className="cig-frame"
           aria-hidden="true"
-          style={{
-            left: `${Math.round(pickX) - CIG_OUTLINE.x}px`,
-            top: `${(CIG_BAND_H - CIG_FRAME_H) / 2}px`,
-            width: `${pick.w + CIG_OUTLINE.x * 2}px`,
-            height: `${CIG_FRAME_H}px`,
-            borderWidth: `${CIG_OUTLINE.stroke}px`,
-            borderColor: CIG_OUTLINE.colour,
-          }}
+          style={
+            {
+              left: `${Math.round(pickX) - CIG_OUTLINE.x}px`,
+              top: `${(CIG_BAND_H - CIG_FRAME_H) / 2}px`,
+              width: `${pick.w + CIG_OUTLINE.x * 2}px`,
+              height: `${CIG_FRAME_H}px`,
+              borderWidth: `${CIG_OUTLINE.stroke}px`,
+              borderColor: CIG_OUTLINE.colour,
+              '--cig-drag': `${CIG_FRAME_DRAG_MS}ms`,
+            } as React.CSSProperties
+          }
         />
       ) : null}
 
