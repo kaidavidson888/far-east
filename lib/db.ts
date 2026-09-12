@@ -393,6 +393,55 @@ export async function savePack(userId: string, packId: string): Promise<void> {
   `;
 }
 
+/** A carton or a pack — what the plus button's right-hand wheel offers. */
+export type PackUnit = 'C' | 'P';
+
+/** A shelf entry: the pack, and how much of it if the reader said. */
+export type SavedPack = { packId: string; amount: number | null; unit: PackUnit | null };
+
+/**
+ * Record how much of a pack the reader has, from the plus button's two wheels.
+ *
+ * It SAVES THE PACK TOO if it is not already on the shelf. Setting a quantity
+ * on something you have not bookmarked is a perfectly ordinary thing to do —
+ * the plus button sits beside the bookmark, not behind it — and making the
+ * reader press both in the right order would be a rule with no reason.
+ *
+ * Both halves are written together or not at all, which is the same thing the
+ * check constraint says: a quantity is an amount AND a unit, and half of one
+ * is not a smaller answer, it is a broken row.
+ */
+export async function setPackQuantity(
+  userId: string,
+  packId: string,
+  amount: number,
+  unit: PackUnit,
+): Promise<void> {
+  const sql = db();
+  await sql`
+    INSERT INTO pack_favorites (user_id, pack_id, amount, unit)
+    VALUES (${userId}, ${packId}, ${amount}, ${unit})
+    ON CONFLICT (user_id, pack_id)
+    DO UPDATE SET amount = EXCLUDED.amount, unit = EXCLUDED.unit
+  `;
+}
+
+/** The whole shelf with its quantities, most recently saved first. */
+export async function savedPacks(userId: string): Promise<SavedPack[]> {
+  const sql = db();
+  const rows = await sql<{ pack_id: string; amount: number | null; unit: PackUnit | null }[]>`
+    SELECT pack_id, amount, unit FROM pack_favorites
+    WHERE user_id = ${userId} ORDER BY created_at DESC
+  `;
+  return rows.map((r) => ({
+    packId: r.pack_id,
+    // int2 comes back as a number already, but a null must stay a null rather
+    // than becoming 0 — a shelf entry with no quantity is not "nought of them".
+    amount: r.amount === null ? null : Number(r.amount),
+    unit: r.unit,
+  }));
+}
+
 /** Everything on this reader's pack shelf, most recently saved first. */
 export async function savedPackIds(userId: string): Promise<string[]> {
   const sql = db();
