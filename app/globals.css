@@ -469,12 +469,14 @@ ul, ol { list-style: none; }
 }
 .gate-panel .display-sm, .gate-panel .title-lg { color: #ffffff; }
 .gate-panel p { color: #ffffff; }
-/* Both paragraphs inside the rule are black, against the white rule that
-   holds them and the white bar above it. */
+/* Both paragraphs inside the rule are black, and so is the rule: one black
+   block of terms under the white bar and the white question. */
 .gate-terms .body-md { color: #010101; }
 .gate-terms .caption { color: #010101; }
-/* One solid white bar at 6px — the same colour as the rule under it — where
-   the site's own is a 5px two-tone. Both halves are set
+/* One solid white bar at 6px, where the site's own is a 5px two-tone. It is
+   the one white line on the panel — the rule under it is black, with the
+   black terms inside it — so it reads as the question's own underline rather
+   than as part of the box. Both halves are set
    rather than the parent, because .seal-divider colours its spans and leaves
    the element itself transparent. */
 /* Full width, not the site’s 96px .short: the bar runs the same 440px the
@@ -600,7 +602,7 @@ ul, ol { list-style: none; }
 
    Re-solve all four numbers if the copy, the line-heights or the 18px change. */
 .gate-terms {
-  outline: 2px solid #ffffff;
+  outline: 2px solid #010101;
   outline-offset: 4px;
   /* margin-left/right, NOT the shorthand: .stack-md sets margin-top on this
      and a shorthand here would silently zero it. */
