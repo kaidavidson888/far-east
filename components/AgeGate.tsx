@@ -32,8 +32,8 @@ export function AgeGate() {
     return (
       <div className="gate-backdrop" role="dialog" aria-modal="true" aria-labelledby="gate-blocked">
         <div className="gate-panel stack-md">
-          <div className="seal-divider short" aria-hidden="true"><span /><span /></div>
           <h2 id="gate-blocked" className="display-sm">You need to be of legal smoking age.</h2>
+          <div className="seal-divider short" aria-hidden="true"><span /><span /></div>
           <p className="body-md">
             Far East publishes reviews of tobacco products and is restricted to adults at or above
             the legal smoking age in their country. Thanks for stopping by.
@@ -47,8 +47,8 @@ export function AgeGate() {
     <div className="gate-backdrop" role="dialog" aria-modal="true" aria-labelledby="gate-title">
       <div className="gate-panel stack-lg">
         <div className="stack-md">
-          <div className="seal-divider short" aria-hidden="true"><span /><span /></div>
           <h2 id="gate-title" className="display-sm">Are you of legal smoking age?</h2>
+          <div className="seal-divider short" aria-hidden="true"><span /><span /></div>
           {/* the two lower paragraphs share one rule, so they read as one block
               of terms against the question above them */}
           <div className="gate-terms stack-md">

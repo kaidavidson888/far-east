@@ -482,6 +482,18 @@ ul, ol { list-style: none; }
    content box and that rule are the same width by construction -- the box is
    428 wide and its outline reaches 6px past each edge. .short is beaten on
    specificity rather than on file order. */
+/* THE SAME 17.8px OF AIR EITHER SIDE OF THE BAR, which takes two different
+   margins because neither neighbour's box is where its ink is.
+
+   Above it, the question's line box hangs 4.8px below the letters, so the
+   bar's own margin is 17.8 - 4.8 = 13px. Below it, the rule round the terms
+   is drawn 6px outside the box it belongs to and reaches up past its own
+   edge, so that box wants 17.8 + 6 = 23.8px.
+
+   These were 13px and 19px when the bar was above the question; the 19
+   becomes 23.8 because the half-leading that used to be in the way is now on
+   the other side of the bar. */
+.gate-panel .seal-divider { margin-top: 13px; }
 .gate-panel .seal-divider.short { width: 100%; }
 .gate-panel .seal-divider { height: 3px; }
 .gate-panel .seal-divider span:first-child,
@@ -514,19 +526,9 @@ ul, ol { list-style: none; }
   font-weight: 700;
   text-transform: uppercase;
   -webkit-text-stroke: 0.6px currentColor;
-  /* THE QUESTION SITS EQUIDISTANT between the bar and the rule below it, and
-     the two stack gaps have to differ to manage it, because what is being
-     centred is the INK and neither neighbour is where it looks.
-
-     Above, the line box stands 4.8px taller than the letters (half-leading).
-     Below, the outline is drawn 6px outside the box it belongs to — 4px of
-     offset and 2px of rule — so it reaches up past its own edge.
-
-     Measured: 93.2px between the bar's foot and the rule's top, 57.6px of
-     that is the two lines of ink, so 35.6px is free and each side wants
-     17.8px. That is 17.8 - 4.8 = 13px above, and 17.8 + 6 - 4.8 = 19px
-     below. Same 93.2 total, so nothing else on the panel moves. */
-  margin-top: 13px;
+  /* The question leads the panel now — the bar sits under it — so it takes
+     no margin of its own and starts on the panel's own padding edge. */
+  margin-top: 0;
 }
 /* The same trick at the same STRENGTH, which means a different number of
    pixels: the title's 0.6px on a 28px line is 0.021em, so the 17px paragraph
@@ -615,7 +617,7 @@ ul, ol { list-style: none; }
      height against the 156.7 it was holding. */
   padding: 10.39px 14px 11.63px;
 }
-.gate-panel .gate-terms { margin-top: 19px; }
+.gate-panel .gate-terms { margin-top: 23.8px; }
 .gate-terms .body-md {
   font-size: 14.67px;
   /* the stroke keeps its share of the em: 0.0214 x 14.67 */
