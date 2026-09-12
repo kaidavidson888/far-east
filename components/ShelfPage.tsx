@@ -1,9 +1,9 @@
-import landing from '@/lib/landing-geometry.json';
+import Link from 'next/link';
 import { removePackAction } from '@/app/actions';
 import { BOOKMARK } from '@/lib/cigPages';
-import { DIVIDER, SHELF_HEADER, SHELF_QUANTITY_FRAME, SHELF_ROW, shelfLayout, type ShelfEntry } from '@/lib/shelfPage';
+import { HOME } from '@/lib/innerPage';
+import { DIVIDER, SHELF_HEADER, SHELF_LOGO, SHELF_QUANTITY_FRAME, SHELF_ROW, shelfLayout, type ShelfEntry } from '@/lib/shelfPage';
 import { CigQuantity } from './CigQuantity';
-import { LogoMenu } from './LogoMenu';
 import { ShelfStage } from './ShelfStage';
 
 /**
@@ -27,11 +27,16 @@ import { ShelfStage } from './ShelfStage';
  * the rule's width taken off its offset — or it lands the rule's width too
  * far in, which is what the owner saw on the plus and the bookmark.
  *
+ * THE LOGO GOES HOME, AND IS NOT THE MENU HERE. The owner asked for it sized
+ * to the top pack's width, and the logo menu's first frame IS the 40x87 logo,
+ * baked — it cannot sit on a mark of any other size without every frame being
+ * redrawn. So on this page the logo is what it is on every page but the
+ * landing page: a link to /landing.
+ *
  * The comment panel is drawn as the design draws it and does nothing yet:
  * the pack shelf has nowhere to keep a note, and inventing that is a bigger
  * change than a page. See Known gaps.
  */
-const LOGO = landing.parts.logo;
 const px = (n: number) => `${n}px`;
 type B = { left: number; top: number; width: number; height: number };
 const box = (b: B): React.CSSProperties => ({
@@ -54,35 +59,48 @@ const type = (t: { left: number; top: number; size: number }): React.CSSProperti
 });
 
 export function ShelfPage({ entries }: { entries: ShelfEntry[] }) {
-  const { rows, rowsTop, rowsHeight, bottom } = shelfLayout(entries);
+  const { rows, rowsTop, rowsHeight, bottom, topPackWidth } = shelfLayout(entries);
   const R = SHELF_ROW;
 
   return (
     <div className="shelf">
-      <ShelfStage rowsTop={rowsTop} rowsHeight={rowsHeight} bottom={bottom}>
-        {/* the mark the menu's first frame is baked to sit on, at the landing margins */}
-        <span className="shelf-logo" style={{ left: px(LOGO.x), top: px(LOGO.y) }}>
-          <img src="/landing/parts/logo.svg" alt="" width={LOGO.w} height={LOGO.h} draggable={false} />
-        </span>
+      <ShelfStage rowsTop={rowsTop} rowsHeight={rowsHeight} bottom={bottom} topPackWidth={topPackWidth}>
+        {/* the logo, as wide as the top pack, about its own centre — the stage sizes it */}
+        <Link
+          href={HOME}
+          className="shelf-logo"
+          aria-label="遠東 — home"
+          style={{ left: 'var(--logo-left)', top: 'var(--logo-top)', width: 'var(--logo-w)', height: 'var(--logo-h)' }}
+        >
+          <img src={SHELF_LOGO.src} alt="" width={SHELF_LOGO.w} height={SHELF_LOGO.h} draggable={false} />
+        </Link>
 
-        {/* the header box, hung by its right edge from the aligned right margin */}
+        {/* the caption's box: the price's width, hung by its right edge from the aligned right margin */}
         <div
           className="shelf-header-box"
           style={{
-            left: `calc(var(--aligned-right) - ${px(SHELF_HEADER.box.width)})`,
+            left: 'calc(var(--aligned-right) - var(--price-w))',
             top: px(SHELF_HEADER.box.top),
-            width: px(SHELF_HEADER.box.width),
+            width: 'var(--price-w)',
             height: px(SHELF_HEADER.box.height),
             borderWidth: px(SHELF_HEADER.box.stroke),
-            fontSize: px(SHELF_HEADER.click.size),
           }}
         >
-          {SHELF_HEADER.click.text}
+          {/* the caption, centred inside the rule and scaled to a 3px clearance on its tightest side — the stage fits it */}
+          <span className="shelf-type" style={{ left: 'var(--caption-left)', top: 'var(--caption-top)', fontSize: 'var(--caption-size)' }}>
+            {SHELF_HEADER.caption.text}
+          </span>
         </div>
-        {/* the $240, hung by its right edge from the same line */}
+        {/* the $240, bold, hung by its ink's right edge from the same line */}
         <div
           className="shelf-price"
-          style={{ left: 'var(--aligned-right)', top: px(SHELF_HEADER.price.top), fontSize: px(SHELF_HEADER.price.size), transform: 'translateX(-100%)' }}
+          style={{
+            left: `calc(var(--aligned-right) - ${px(SHELF_HEADER.price.inset)})`,
+            top: px(SHELF_HEADER.price.top),
+            fontSize: px(SHELF_HEADER.price.size),
+            WebkitTextStroke: `${px(SHELF_HEADER.price.stroke)} currentColor`,
+            transform: 'translateX(-100%)',
+          }}
         >
           {SHELF_HEADER.price.text}
         </div>
@@ -151,7 +169,7 @@ export function ShelfPage({ entries }: { entries: ShelfEntry[] }) {
                 {row.quantity ? (
                   <span
                     className="shelf-type"
-                    style={type({ size: R.qty.size, left: R.qty.left - R.qtyBox.left - R.qtyBox.stroke, top: R.qty.top - R.qtyBox.top - R.qtyBox.stroke })}
+                    style={type(R.qty)}
                     aria-label={`${row.quantity.slice(0, -1)} ${row.quantity.endsWith('c') ? 'cartons' : 'packs'}`}
                   >
                     {row.quantity}
@@ -177,8 +195,6 @@ export function ShelfPage({ entries }: { entries: ShelfEntry[] }) {
             </div>
           ))}
         </div>
-
-        <LogoMenu stop="home" />
       </ShelfStage>
     </div>
   );

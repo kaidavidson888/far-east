@@ -693,13 +693,46 @@ design (`scripts/assets/shelf-mobile.svg`). Three pieces, one rule between them
   ink height: `size = inkHeight / (ascent/1000)`, ascents from
   `far-east-ink.json`, and placed by baseline (0.825 of the size in a
   line-height:1 box, measured in Chrome).
-- **Every pack's rule starts on the left margin** (`SHELF_MARGIN`, the logo's own
-  left, 45), at the row's own red rule, one pack height for all (aspect from
-  `cigs.json`); a wider pack grows to the right. The design draws them on its
-  own logo's left too, so the row is shifted by `DX` (1px). An earlier version
-  centred them on the logo's centre line — the design satisfies both at 1x — but
-  that pushed the packs off the page's left edge once the rows were scaled up,
-  and the owner's instruction is the LEFT EDGE.
+- **Every pack is centred on one axis — the logo's centre line** (`SHELF_AXIS_X`,
+  65), at the row's own red rule, one pack height for all (aspect from
+  `cigs.json`); the boxes, panel and clouds keep the design's distance from that
+  axis. The owner's rule ("align the cigarette images on their middle axis"),
+  and the design's own: its five rules share a centre at ~73, its logo's. The
+  row is shifted by `DX` (-8) to put that on the site's logo. (It was briefly
+  left-aligned on the margin instead; the owner's later instruction is the
+  axis.) The rows are scaled with `zoom` anchored on the axis, so a pack stays
+  centred on the logo at any zoom.
+- **The rows are scaled to 80% of the fit** (`ROW_SHRINK`): the factor that
+  would land the clouds on the right margin, less a fifth — the owner's "scale
+  all the cigarette stuff down 20%". Their right edge therefore sits inside the
+  margin; the header, price and divider still meet it.
+- **The logo is as wide as the top pack, about its own centre** — the owner's
+  rule, "use its current centre of mass as a guide". The stage sizes it live
+  (`topPackWidth × zoom`, real width and height so the vector stays sharp) with
+  its centre fixed at the landing page's (65, 71.5). **Its height is clamped**
+  (`SHELF_LOGO.maxHeight`, 131): the top may not leave the page and the bottom
+  may not pass the foot of the price's ink, the header's own baseline. On a
+  desktop the zoomed pack is 100+px wide and a logo that wide is 250 tall —
+  off the page and through the divider — so there it grows to 60 wide; at
+  every phone and tablet width the pack's width fits and it takes it exactly.
+- **On the shelf the logo is a link home, not the menu.** The logo menu's first
+  frame IS the 40x87 logo, baked; it cannot sit on a rescaled mark without
+  every frame being redrawn. `/landing`, per the logo-goes-home rule.
+- **The quantity ("2c") is centred in its box** — equal margins to the rule above
+  and below, the digit's ink (its ascent is the run's tallest) being what is
+  centred. Placed relative to the inside of the rule.
+- **The price is bold and the caption's box takes its width.** The face has one
+  weight, so bold is a stroke on the glyphs (`-webkit-text-stroke`, 0.03 of the
+  size, the age gate's trick), hung so the INK's right edge — stroke included —
+  sits on the margin. The "Click # When Finished" box is the price ink's width,
+  right edge and top where they were; the caption is centred inside it and
+  scaled until its tightest margin to the rule is 3px (the sides bind; the top
+  and bottom come out ~12). **Both are measured in the page** by `ShelfStage`
+  on a canvas with the elements' own computed fonts once the faces are loaded,
+  because `$` and `#` come from the fallback face and the ink table can only
+  estimate them; and the caption is measured a second time at its final size,
+  since type set small does not scale exactly from type set large (that was
+  1.7px of a 3px margin). The table's figures are the first paint.
 - **The margins are symmetric, and everything meets the right one, at any
   width.** The owner's rule: the aligned right edge holds the same margin from
   the page's right as the logo holds from its left. The logo is left-anchored in

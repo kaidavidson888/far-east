@@ -1651,29 +1651,32 @@ html:has(.cigpage) {
   width: 100%;
   min-height: 100%;
 }
+/* The logo: a link home, sized by the stage to the top pack's width about its
+   own centre (real width and height, so the vector rasterises sharp). */
 .shelf-logo {
   position: absolute;
   z-index: 4;
   display: block;
-  pointer-events: none;
 }
 .shelf-logo img {
   display: block;
+  width: 100%;
+  height: 100%;
+  max-width: none;
 }
+.shelf-logo:focus-visible {
+  outline: 2px solid #010101;
+  outline-offset: 3px;
+}
+/* The caption's box; the caption is placed inside it by the template. */
 .shelf-header-box {
   position: absolute;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   border: 0 solid #010101;
   box-sizing: border-box;
-  font-family: var(--font-typed);
-  font-weight: 400;
-  font-synthesis: none;
-  line-height: 1;
   color: #ff0000;
-  white-space: nowrap;
 }
+/* Bold, by a stroke laid on the glyphs (the face has one weight) — the width
+   is set inline from the template, as a share of the size. */
 .shelf-price {
   position: absolute;
   font-family: var(--font-typed);
@@ -1682,6 +1685,7 @@ html:has(.cigpage) {
   line-height: 1;
   color: #010101;
   white-space: nowrap;
+  paint-order: stroke fill;
 }
 .shelf-divider {
   position: absolute;
