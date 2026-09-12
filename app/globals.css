@@ -477,6 +477,12 @@ ul, ol { list-style: none; }
 /* One solid black bar at 3px, not the site's 5px two-tone rule. Both halves are set
    rather than the parent, because .seal-divider colours its spans and leaves
    the element itself transparent. */
+/* Full width, not the site’s 96px .short: the bar runs the same 440px the
+   rule round the terms does, and starts on the same x=253, because the panel
+   content box and that rule are the same width by construction -- the box is
+   428 wide and its outline reaches 6px past each edge. .short is beaten on
+   specificity rather than on file order. */
+.gate-panel .seal-divider.short { width: 100%; }
 .gate-panel .seal-divider { height: 3px; }
 .gate-panel .seal-divider span:first-child,
 .gate-panel .seal-divider span:last-child { background: #010101; }
@@ -680,7 +686,7 @@ ul, ol { list-style: none; }
    Opacity rather than a colour: the pair are each other's negative, so any
    colour that dimmed one would be the other's own. */
 .gate-panel .row:has(.btn:hover, .btn:focus-visible) .btn:not(:hover):not(:focus-visible) {
-  opacity: 0.5;
+  opacity: 0.75;
 }
 .gate-panel .btn:focus-visible { outline: 2px solid #010101; outline-offset: 3px; }
 
