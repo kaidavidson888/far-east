@@ -95,10 +95,11 @@ export const REFERENCE_SPEED = 189.6;
 /**
  * Everything that moves the row runs at this share of what it used to.
  *
- * The owner asked for the scroll a fifth slower without losing the sense of
- * it being under your hand, so this scales what a wheel notch is worth and
- * how far a flick carries — but never the drag itself, which stays pinned
- * 1:1 to the pointer. A drag that lagged the finger by 20% would not read as
+ * It was 0.8 for a while — the owner asked for the scroll a fifth slower —
+ * and then asked for that taken back off, so it is 1 again and the row runs
+ * at the speed the source recording does. It still scales only what a wheel
+ * notch is worth and how far a flick carries; the drag has always been pinned
+ * 1:1 to the pointer, because a drag that lagged the finger would not read as
  * slower, it would read as broken.
  */
-export const SPEED = 0.8;
+export const SPEED = 1;
