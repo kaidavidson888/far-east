@@ -1,7 +1,8 @@
 import landing from '@/lib/landing-geometry.json';
 import { BOOKMARK } from '@/lib/cigPages';
-import { DIVIDER, ROW_ANCHOR_X, ROW_SCALE, SHELF_HEADER, SHELF_ROW, shelfLayout, type ShelfEntry } from '@/lib/shelfPage';
+import { DIVIDER, SHELF_HEADER, SHELF_ROW, shelfLayout, type ShelfEntry } from '@/lib/shelfPage';
 import { LogoMenu } from './LogoMenu';
+import { ShelfStage } from './ShelfStage';
 
 /**
  * The reader's shelf, drawn from the owner's design — see lib/shelfPage.ts
@@ -36,16 +37,17 @@ export function ShelfPage({ entries }: { entries: ShelfEntry[] }) {
 
   return (
     <div className="shelf">
-      <div className="shelf-stage" style={{ minHeight: px(minHeight) }}>
+      <ShelfStage minHeight={minHeight}>
         {/* the mark the menu's first frame is baked to sit on, at the landing margins */}
         <span className="shelf-logo" style={{ left: px(LOGO.x), top: px(LOGO.y) }}>
           <img src="/landing/parts/logo.svg" alt="" width={LOGO.w} height={LOGO.h} draggable={false} />
         </span>
 
+        {/* the header box, hung by its right edge from the aligned right margin */}
         <div
           className="shelf-header-box"
           style={{
-            left: px(SHELF_HEADER.box.left),
+            left: `calc(var(--aligned-right) - ${px(SHELF_HEADER.box.width)})`,
             top: px(SHELF_HEADER.box.top),
             width: px(SHELF_HEADER.box.width),
             height: px(SHELF_HEADER.box.height),
@@ -55,28 +57,29 @@ export function ShelfPage({ entries }: { entries: ShelfEntry[] }) {
         >
           {SHELF_HEADER.click.text}
         </div>
-        {/* hung by its right edge from the shared line, so it aligns with the box */}
+        {/* the $240, hung by its right edge from the same line */}
         <div
           className="shelf-price"
-          style={{ left: px(SHELF_HEADER.price.right), top: px(SHELF_HEADER.price.top), fontSize: px(SHELF_HEADER.price.size), transform: 'translateX(-100%)' }}
+          style={{ left: 'var(--aligned-right)', top: px(SHELF_HEADER.price.top), fontSize: px(SHELF_HEADER.price.size), transform: 'translateX(-100%)' }}
         >
           {SHELF_HEADER.price.text}
         </div>
 
-        {/* the red rule dividing the header from the shelf */}
+        {/* the red rule dividing the header from the shelf, margin to margin */}
         <span
           className="shelf-divider"
-          style={{ left: px(DIVIDER.left), top: px(DIVIDER.top), width: px(DIVIDER.width), height: px(DIVIDER.height), background: DIVIDER.colour }}
+          style={{ left: px(DIVIDER.left), top: px(DIVIDER.top), width: `calc(var(--aligned-right) - ${px(DIVIDER.left)})`, height: px(DIVIDER.height), background: DIVIDER.colour }}
           aria-hidden="true"
         />
 
         {rows.map((row) => (
           <div key={row.key} className="shelf-row" style={{ top: px(row.top), height: px(R.height) }}>
             {/* the whole row scaled as one, about the logo's centre, so its
-                right edge (the clouds) meets the header's — see ROW_SCALE */}
+                right edge (the clouds) meets the aligned right margin. The
+                factor comes from the stage, sized to the width — see ShelfStage */}
             <div
               className="shelf-row-scale"
-              style={{ transform: `scale(${ROW_SCALE})`, transformOrigin: `${ROW_ANCHOR_X}px 50%` }}
+              style={{ transform: 'scale(var(--row-scale))', transformOrigin: 'var(--shelf-anchor) 50%' }}
             >
             {/* the pack, in the same rule the cigarette pages draw round theirs */}
             <div className="shelf-pack" style={{ ...box(row.frame), '--rule': px(R.rule) } as React.CSSProperties}>
@@ -136,7 +139,7 @@ export function ShelfPage({ entries }: { entries: ShelfEntry[] }) {
         ))}
 
         <LogoMenu stop="home" />
-      </div>
+      </ShelfStage>
     </div>
   );
 }

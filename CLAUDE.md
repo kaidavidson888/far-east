@@ -674,17 +674,23 @@ design (`scripts/assets/shelf-mobile.svg`). Three pieces, one rule between them
 - **Packs are centred on the character logo's centre line**, at the row's own
   red rule, one pack height for all (aspect from `cigs.json`). The design centres
   them on ~73; the owner asked for the logo (65), so the row is shifted by `DX`.
-- **Each row is scaled as one to the header's right edge.** The owner asked the
-  row scaled so its right edge meets the "Click # When Finished" box's right
-  edge, same ratios. The clouds are the right edge (they sit past the header in
-  the design), so `ROW_SCALE` brings the whole row in, as a single transform
-  **anchored on the logo's centre** so the packs stay centred. For the header,
-  the divider and the clouds to meet at one line at every width, the header is
-  placed at the design's fixed x (`HEADER_RIGHT`), NOT right-anchored — a
-  right-anchored header only lined up at exactly 390px.
+- **The margins are symmetric, and everything meets the right one.** The owner's
+  rule: the aligned right edge holds the same margin from the page's right as the
+  logo holds from its left (`SHELF_MARGIN` = the logo's own left, 45). The logo
+  is left-anchored in real px, so the right must be too — `--aligned-right` is
+  `width - MARGIN`, measured live by `components/ShelfStage.tsx`, not a fixed
+  design x. The header box and the $240 **move** (not scale — "keep the same
+  ratios") to hang from that edge; the divider spans margin to margin; and each
+  **row scales up** so its right edge (the clouds) lands on it (`--row-scale`,
+  `rowScaleFor`), as one transform **anchored on the logo's centre** so the packs
+  stay centred. Past `SHELF_MAX_WIDTH` (440, just over the widest phone) the
+  width is held and the shelf becomes a left-anchored column, the way every
+  mobile-design page here behaves on a desktop — without it "scale up to fit"
+  would make the packs enormous on a monitor. `SHELF_DEFAULTS` are the
+  design-width values, used for first paint before the measure.
 - **The red divider between header and shelf is an addition**, not in the export
   (the only red there is the pack rules and the header caption). It is the
-  site's red rule (5px `#FF0000`) from the left margin to `HEADER_RIGHT`.
+  site's red rule (5px `#FF0000`) from the left margin to `--aligned-right`.
 - **The quantity shows as e.g. `2c`** in the third box — the amount then a
   lowercase c/p — set in the face like everything else. A bookmark-only pack has
   no quantity and the box is empty.

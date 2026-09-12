@@ -73,10 +73,20 @@ const typeAt = (run: Run, x: number) => ({
 });
 
 /**
- * The header box's right edge, in the design's own fixed coordinates. The
- * divider, the scaled rows and the header all meet here, so it is one number.
+ * THE MARGINS ARE SYMMETRIC. The owner's rule: the aligned right edge holds
+ * the same margin from the page's right as the logo holds from its left. The
+ * logo IS that left margin (its own left edge), so one number sets both, and
+ * because the logo is left-anchored in real pixels the right has to be too —
+ * `alignedRight` is `width - MARGIN`, measured live, not a fixed design x.
  */
-const HEADER_RIGHT = g.header.box.x + g.header.box.w;
+export const SHELF_MARGIN = LOGO.x;
+/**
+ * Past this width the shelf stops widening and holds a column, left-anchored,
+ * the way every mobile-design page on this site behaves on a desktop. Without
+ * it "scale up to fit" would make the rows enormous on a wide monitor. A
+ * little over the widest phone, so every phone gets the symmetric margins.
+ */
+export const SHELF_MAX_WIDTH = 440;
 
 /** The row's fixed furniture, in row coordinates. Computed once. */
 export const SHELF_ROW = {
@@ -100,16 +110,15 @@ export const SHELF_ROW = {
 };
 
 /**
- * The header sits at the design's own fixed position, not right-anchored to
- * the viewport. Everything else that meets its right edge — the divider and
- * the scaled rows' clouds — is at a fixed page x, so the header has to be too
- * or the three only line up at exactly 390px wide. Its right edge is the
- * shared HEADER_RIGHT (334), the box left is the design's own, and the $240 is
- * hung by its right edge from the same line.
+ * The header — the "Click # When Finished" box and the $240 — MOVES to the
+ * right margin but does not scale (the owner: "move the price and the box
+ * above it, keep the same ratios"). Both are hung from the aligned right edge,
+ * which the page supplies live as `--aligned-right`, so their right edge sits
+ * the logo's-margin in from the page's right at every width. The box keeps its
+ * drawn width; the $240 keeps its drawn size.
  */
 export const SHELF_HEADER = {
   box: {
-    left: g.header.box.x,
     top: g.header.box.y,
     width: g.header.box.w,
     height: g.header.box.h,
@@ -119,8 +128,6 @@ export const SHELF_HEADER = {
   price: {
     text: g.header.price.text,
     size: g.header.price.size,
-    /** right edge, in fixed page x — the element is hung from it */
-    right: HEADER_RIGHT,
     top: lineTop(g.header.price.ink.y, g.header.price.asc, g.header.price.size),
   },
 };
@@ -129,40 +136,43 @@ export const SHELF_HEADER = {
 const BOTTOM = g.viewBox.h - (g.row.top + (g.row.count - 1) * g.row.pitch + g.row.height);
 
 /**
- * THE WHOLE ROW IS SCALED SO ITS RIGHT EDGE MEETS THE HEADER'S.
+ * EACH ROW SCALES UP TO FILL FROM ITS LEFT TO THE RIGHT MARGIN.
  *
- * The owner's call: the clouds are the row's right edge, and the row is scaled
- * as one — pack, boxes, panel and clouds together, the same ratios and margins
- * — until that edge lines up with the right edge of the "Click # When Finished"
- * box. The clouds sit a little past the header in the design, so this brings
- * the row in a touch rather than out.
+ * The clouds are the row's right edge, and the row is scaled as one — pack,
+ * boxes, panel and clouds, the same ratios — so that edge lands on the aligned
+ * right. ANCHORED ON THE LOGO'S CENTRE LINE, because the packs are centred on
+ * the logo and that has to hold: scaling about the centre leaves them centred
+ * where scaling about the left would walk them off it.
  *
- * ANCHORED ON THE LOGO'S CENTRE LINE, not the row's left edge, because the
- * packs are centred on the logo and that has to hold: scaling about the logo's
- * centre leaves every pack still centred on it, where scaling about the left
- * would walk them off it. One factor for every row, applied as a single
- * transform, so nothing inside has to be re-measured.
+ * The factor depends on the width, so the page computes it live and hands it
+ * down as `--row-scale`; the value here is the fallback for first paint and
+ * for the design's own width. `ROW_SCALE_FALLBACK(alignedRight)` is the same
+ * formula the client runs, kept here so both use one definition.
  */
 export const ROW_ANCHOR_X = SHELF_ROW.centreX;
-const CLOUD_RIGHT = Math.max(...SHELF_ROW.clouds.map((c) => c.left + c.width));
-export const ROW_SCALE = +((HEADER_RIGHT - ROW_ANCHOR_X) / (CLOUD_RIGHT - ROW_ANCHOR_X)).toFixed(4);
+export const CLOUD_RIGHT = Math.max(...SHELF_ROW.clouds.map((c) => c.left + c.width));
+export const rowScaleFor = (alignedRight: number) =>
+  +((alignedRight - ROW_ANCHOR_X) / (CLOUD_RIGHT - ROW_ANCHOR_X)).toFixed(4);
+
+/** The design's own width sets the first-paint values, before the page measures. */
+const DESIGN_ALIGNED_RIGHT = g.viewBox.w - SHELF_MARGIN;
+export const SHELF_DEFAULTS = {
+  alignedRight: DESIGN_ALIGNED_RIGHT,
+  rowScale: rowScaleFor(DESIGN_ALIGNED_RIGHT),
+};
 
 /**
  * A red rule between the top of the page and the shelf, at the owner's ask.
  *
- * The design has no such line — the only red in it is the pack rules and the
- * red header caption — so this is the site's own red rule (5px, #FF0000, the
- * weight and colour the pack rules and the cigarette pages' info rule use)
- * added to divide the two sections. It runs from the page's left margin (the
- * logo's own left) to the header box's right edge, which is the width the
- * content occupies, and sits halfway down the gap between the $240 and the
- * first row.
+ * Not in the export — the only red there is the pack rules and the header
+ * caption — so it is the site's own red rule (5px, #FF0000). It runs from the
+ * left margin to the aligned right edge (its width the page supplies live),
+ * halfway down the gap between the $240 and the first row.
  */
 export const DIVIDER = {
   colour: '#ff0000',
   height: SHELF_ROW.rule,
-  left: LOGO.x,
-  width: HEADER_RIGHT - LOGO.x,
+  left: SHELF_MARGIN,
   top: Math.round((g.header.price.ink.y + g.header.price.ink.h + g.row.top) / 2 - SHELF_ROW.rule / 2),
 };
 
