@@ -185,15 +185,25 @@ export const CIG_BRAKE = 115 / SPEED;
  * several seconds. The row did not feel unbraked because the braking was too
  * gentle; it felt unbraked because it was being thrown impossibly hard.
  *
- * Eight times the pace of the owner's own recording: fast enough to read as a
- * wheel being spun rather than a row being nudged, and still slow enough that
- * the packs are packs and not a smear. It is the same shape of limit the wheel
- * already had, which is now written as half of this.
+ * TWICE the pace of the owner's own recording, where it was eight times. At
+ * eight the row was a smear at the top of a throw and the spin ran thirteen
+ * seconds; the owner asked for a quarter of the speed, and this is that. The
+ * braking is untouched at the reference wheel's own rate, so what goes is the
+ * length of the spin, not its character:
  *
- * It was briefly ten. The owner's answer to that: the deceleration is the
- * issue, not the initial velocity. Quite right — see cigBrake.
+ *   top speed   1517px/s  ->  379px/s
+ *   spin             13s  ->  3.3s
+ *   travel     104 packs  ->  7 packs
+ *
+ * It is the same shape of limit the wheel already had, which is written as
+ * half of this.
+ *
+ * NOTE that this caps the RELEASE only. A drag still moves the row pixel for
+ * pixel under the finger however fast the hand goes — a drag that lagged
+ * would not read as slower, it would read as broken. What is capped is what
+ * the row is left with when the finger lifts.
  */
-export const CIG_FLING_MAX = REFERENCE_SPEED * 8;
+export const CIG_FLING_MAX = REFERENCE_SPEED * 2;
 
 /**
  * How far back a release looks to decide how fast it was going.
