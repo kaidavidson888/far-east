@@ -921,15 +921,18 @@ the brand assets and review text in this repo are visible to anyone.
   save image) and Android starts a text selection with handles; either takes
   the gesture, and the splash's press-and-hold could not complete — the owner
   found the door would not open on a phone. Every pressable on the site, and
-  every image inside one, now declines all three (,
-  , ) in one rule
-  in , kept in step with the pressable-pointer list; holds and
+  every image inside one, now declines all three (`-webkit-touch-callout: none`,
+  `user-select: none`, `-webkit-tap-highlight-color: transparent`) in one rule
+  in `globals.css`, kept in step with the pressable-pointer list; holds and
   drags — the splash hit, the seal, the plus and its wheels, the cigarette row
-  — also cancel , which Android raises on a long-press whatever
+  — also cancel `contextmenu`, which Android raises on a long-press whatever
   the CSS says. Fields are exempt: selecting the text in one is how it is
-  edited. **Chrome on Windows cannot show ** — it drops
+  edited. **Chrome on Windows cannot show `-webkit-touch-callout`** — it drops
   the declaration from the CSSOM — so check the built stylesheet for it, not
-  a computed style. And a new pressable needs adding to that list.
+  a computed style. And a new pressable needs adding to that list. (This note
+  itself was first written through a double-quoted shell string, which
+  command-substituted its backticks and stripped every code span — the
+  heredoc gotcha below, in a second form. Patch text with the editor.)
 - **A `'use server'` module may only export async functions.** Exporting a plain
   `const` from `app/actions.ts` does not fail the build and does not fail
   `tsc --noEmit` — it silently strips EVERY export from the module, and the first
