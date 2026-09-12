@@ -25,12 +25,10 @@
  * part. The logo stays drawn and takes a transparent link on top, which is
  * how the landing page handles its logo too.
  *
- * TWO ARRANGEMENTS. The owner asked for the page rearranged — the title
- * block up under the logo on the landing page's own left edge, everything
- * below it spread down the whole page rather than stopping three quarters
- * of the way — and for that arrangement to be the desktop's. So each vector
- * is cut twice: the design as drawn into public/cigpages, which is what a
- * phone gets, and the rearranged one into public/cigpages/desktop.
+ * THE TITLE MOVES. The one change the owner asked for to the supplied
+ * design: the title block goes up under the 遠東 logo and takes the landing
+ * page's own left edge for it, three pixels in from the logo. Everything else
+ * stays where it was drawn, and the same page serves a phone and a desktop.
  * scripts/lib/cigpage-layout.mjs does the moving and explains how.
  *
  * SIZE. The vectors are 307KB each — 77MB for the set — and almost all of
@@ -43,11 +41,10 @@
  */
 import { readdirSync, readFileSync, writeFileSync, mkdirSync, rmSync } from 'node:fs';
 import sharp from 'sharp';
-import { relayout, FRAME as PAGE_FRAME, BODY_LEFT } from './lib/cigpage-layout.mjs';
+import { alignTitle } from './lib/cigpage-layout.mjs';
 
 const SRC = 'scripts/assets/cigpages';
 const OUT_DIR = 'public/cigpages';
-const DESKTOP_DIR = 'public/cigpages/desktop';
 const MANIFEST = 'lib/cigpages.json';
 const PACKS = 'lib/cigs.json';
 
@@ -321,7 +318,6 @@ const files = readdirSync(SRC)
 
 rmSync(OUT_DIR, { recursive: true, force: true });
 mkdirSync(OUT_DIR, { recursive: true });
-mkdirSync(DESKTOP_DIR, { recursive: true });
 
 /** Cut the page down to a frame, so it can be centred with equal margins. */
 const cropTo = (svg, box) =>
@@ -335,16 +331,23 @@ const cropTo = (svg, box) =>
  * Write both arrangements of one page. The rearranging runs on the whole
  * design, before either crop, because it works in the design's own
  * coordinates — and the phone's cut is taken first, off the untouched one.
+ *
+ * The phone's is a plain cropped svg, loaded through <img> and centred. The
+ * desktop's is markup meant to be INLINED in the page, because its columns
+ * spread with the window and CSS cannot reach inside an <img>. Being inline
+ * lets three things go: it needs no viewBox (one user unit is one css pixel
+ * of the stage), no embedded font (the page's own is already loaded, and it
+ * is the same file byte for byte), and no copy of the pack photograph — it
+ * points at the one the landing row already serves. What is left is a few
+ * kilobytes of geometry.
  */
-const factors = [];
+const moves = [];
 function emit(svg, id, label) {
-  const phone = cropTo(svg, CONTENT);
-  writeFileSync(`${OUT_DIR}/${id}.svg`, phone);
-  const moved = relayout(svg, label);
-  const wide = cropTo(moved.svg, PAGE_FRAME);
-  writeFileSync(`${DESKTOP_DIR}/${id}.svg`, wide);
-  factors.push(moved.k);
-  return phone.length + wide.length;
+  const aligned = alignTitle(svg, label);
+  moves.push(aligned.dy);
+  const out = cropTo(aligned.svg, CONTENT);
+  writeFileSync(`${OUT_DIR}/${id}.svg`, out);
+  return out.length;
 }
 
 const pages = [];
@@ -688,14 +691,6 @@ writeFileSync(
       body: { w: CONTENT.w, h: CONTENT.h },
       /** The design's top margin; the sides come from centring. */
       top: CONTENT.y,
-      /** The rearranged one, in public/cigpages/desktop. It is anchored to
-       *  the page's left margin rather than centred, so the title stays
-       *  under the logo at any width. */
-      desktop: {
-        body: { w: PAGE_FRAME.w, h: PAGE_FRAME.h },
-        top: PAGE_FRAME.y,
-        left: BODY_LEFT,
-      },
       count: pages.length,
       pages,
     },
@@ -704,14 +699,11 @@ writeFileSync(
   )}\n`,
 );
 
-console.log(
-  `${pages.length} pages -> ${OUT_DIR} + ${DESKTOP_DIR} (${researched} assembled from the template)`,
-);
-if (factors.length) {
-  const k = factors.slice().sort((a, b) => a - b);
+console.log(`${pages.length} pages -> ${OUT_DIR} (${researched} assembled from the template)`);
+if (moves.length) {
+  const d = moves.slice().sort((a, b) => a - b);
   console.log(
-    `  desktop gaps stretched x${k[0].toFixed(2)}..${k[k.length - 1].toFixed(2)} ` +
-      `(median ${k[Math.floor(k.length / 2)].toFixed(2)})`,
+    `  title lifted ${(-d[d.length - 1]).toFixed(1)}..${(-d[0]).toFixed(1)}px onto the landing page's own line`,
   );
 }
 console.log(

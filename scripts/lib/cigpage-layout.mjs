@@ -1,65 +1,48 @@
 /**
- * The cigarette page, rearranged.
+ * The cigarette page's title block, aligned.
  *
- * The owner asked for two things. The title block — brand, variant, full
- * name — moves up under the 遠東 logo and takes the left edge the landing
- * page's OFFERS button has, which is three pixels in from the logo's own.
- * Everything below it keeps the *ratio* of the gaps between the bands but
- * spreads down the whole page instead of stopping three quarters of the way.
+ * The owner asked for one change to the supplied design: the title block —
+ * brand, variant, full name — moves up under the 遠東 logo and takes the left
+ * edge the landing page's OFFERS button has, which is three pixels in from
+ * the logo's own. Its three lines keep their spacing relative to each other.
+ * Everything else on the page stays exactly where it was drawn.
  *
- * WHY BANDS RATHER THAN ELEMENTS. Each vector is a flat list of rects,
- * images and texts with absolute coordinates — no groups, no ids. But all
+ * WHY A BAND RATHER THAN THREE ELEMENTS. Each vector is a flat list of rects,
+ * images and texts with absolute coordinates — no groups, no ids — but all
  * 227 of them lay the page out the same way, in six horizontal bands that
  * never interleave (surveyed: two shapes, differing only by one rect in the
  * ratings band, and every element in exactly one band in every file). So the
- * move is done by wrapping each band's run of elements in a <g translate>
- * and leaving every coordinate inside it alone. Nothing is re-typed, so
- * nothing can be mistyped.
+ * title's three lines are found by where they sit, and moved by wrapping
+ * their run in a <g translate>, leaving every coordinate inside it alone.
+ * Nothing is re-typed, so nothing can be mistyped.
  *
- * WHY THE FRAME IS FIXED AND NOT MEASURED. The body is centred on the page
- * while the logo is pinned to the page's edge, so the two only line up at
- * the design's own width — and the title has to line up with the logo. If
- * the crop were measured off the ink, moving the title would move the crop,
- * which would move the title: the alignment would chase itself. So the crop
- * is the design's own frame (x=39, the width the logo used to start at) and
- * the arithmetic is stable.
- *
- * WHICH SETS WHERE THE BODY GOES. The title sits 5 in from the frame's left
- * edge and has to reach stage 48, so the body's own left edge has to be at
- * 43 — and it has to be there at every width, not only the design's. This
- * arrangement is therefore anchored to the page's left margin rather than
- * centred: a centred column on a wide window would carry the title away from
- * a logo that stays pinned to the page's edge, and being under the logo is
- * the whole point of it. The one the phone gets is still centred, which is
- * what makes its side margins equal.
+ * WHERE IT LANDS. The body is cut to the design's own frame and centred by
+ * the page, so at the design's 390 the body sits at stage x=43 and vector
+ * x=44 falls on stage x=48 — the logo's 45 plus the OFFERS 3. The frame is
+ * fixed rather than measured off the ink for exactly this reason: a crop that
+ * followed the ink would move when the title moved, which would move the
+ * title, and the alignment would chase itself.
  */
 import { readFileSync } from 'node:fs';
 
 const ink = JSON.parse(readFileSync('scripts/assets/far-east-ink.json', 'utf8'));
 
-/** The design's own page and its frame within it. */
+/** The design's own page, and the frame the body is cut to within it. */
 export const PAGE = { w: 390, h: 844 };
-/** Top margin from the design; the foot gets the same, so it spreads evenly. */
-export const MARGIN = 18;
-export const FRAME = { x: 39, y: MARGIN, w: 304, h: PAGE.h - MARGIN * 2 };
+export const FRAME = { x: 39, y: 18, w: 304, h: 712 };
 
 /** Where the landing page puts OFFERS, which is where the title block goes. */
 const OFFERS = { x: 48, y: 161 };
-/** The logo, as the page draws it, and the body's left edge at design width. */
+/** The logo as the page draws it, and the body's left edge at design width. */
 const LOGO_STAGE_X = 45;
 const BODY_STAGE_X = (PAGE.w - FRAME.w) / 2; // 43
-/** vector x -> stage x at the design width. */
-const toStage = (x) => x - FRAME.x + BODY_STAGE_X;
 const fromStage = (x) => x - BODY_STAGE_X + FRAME.x;
 
-/** The title's left edge, in the vector's own coordinates. */
+/** The title's left edge and ink top, in the vector's own coordinates. */
 export const TITLE_X = fromStage(LOGO_STAGE_X + (OFFERS.x - LOGO_STAGE_X)); // 44
-/** The title's ink top, likewise. */
 export const TITLE_TOP = OFFERS.y;
-/** Where the body's left edge has to sit for the title to land on OFFERS. */
-export const BODY_LEFT = OFFERS.x - (TITLE_X - FRAME.x);
 
-/** The bands, in the order they appear down the page. */
+/** The bands, in the order they appear down the page. Only one moves. */
 const BANDS = [
   { id: 'head', y0: 0, y1: 150 },
   { id: 'title', y0: 150, y1: 262 },
@@ -68,8 +51,6 @@ const BANDS = [
   { id: 'clouds', y0: 540, y1: 580 },
   { id: 'comments', y0: 580, y1: 745 },
 ];
-/** The ones that move. `head` is the stripped logo and seal and the ground. */
-const MOVING = ['title', 'pack', 'rating', 'clouds', 'comments'];
 
 const ELEMENT = /<(rect|image|text|path|line)\b[^>]*(\/>|>[\s\S]*?<\/\1>)/g;
 
@@ -142,12 +123,21 @@ export function readBands(svg, label = 'page') {
     if (name === 'rect' && num(tag, 'width') === PAGE.w) continue;
     const band = bandOf(name, tag);
     if (!band) throw new Error(`${label}: <${name}> in no band`);
-    found.push({ name, tag, band: band.id, at: m.index, end: m.index + tag.length, ext: extentOf(name, tag) });
+    found.push({
+      name,
+      tag,
+      band: band.id,
+      at: m.index,
+      end: m.index + tag.length,
+      ext: extentOf(name, tag),
+    });
   }
 
   const bands = new Map();
   for (const el of found) {
-    if (!bands.has(el.band)) bands.set(el.band, { id: el.band, els: [], top: Infinity, bottom: -Infinity });
+    if (!bands.has(el.band)) {
+      bands.set(el.band, { id: el.band, els: [], top: Infinity, bottom: -Infinity });
+    }
     const b = bands.get(el.band);
     b.els.push(el);
     if (el.ext) {
@@ -163,7 +153,9 @@ export function readBands(svg, label = 'page') {
     if (last - first + 1 !== b.els.length) {
       throw new Error(`${label}: the ${b.id} band is interleaved with another`);
     }
-    if (!Number.isFinite(b.top)) throw new Error(`${label}: the ${b.id} band has no measurable element`);
+    if (!Number.isFinite(b.top)) {
+      throw new Error(`${label}: the ${b.id} band has no measurable element`);
+    }
     b.from = b.els[0].at;
     b.to = b.els[b.els.length - 1].end;
   }
@@ -171,76 +163,34 @@ export function readBands(svg, label = 'page') {
 }
 
 /**
- * Where each band should go.
+ * Move the title block, and only the title block.
  *
- * The title lands on OFFERS. What is left of the page is shared out among
- * the bands below it: each keeps its own height, and the gaps between them
- * keep their ratio to one another and take up whatever is left.
+ * Its ink top goes to OFFERS' own y and its left edge to OFFERS' own x. The
+ * three lines travel together inside one translate, so the spacing the owner
+ * drew between them is carried across untouched.
  */
-export function planMoves(bands, label = 'page') {
-  const order = MOVING.filter((id) => bands.has(id));
+export function alignTitle(svg, label = 'page') {
+  const bands = readBands(svg, label);
   const title = bands.get('title');
   if (!title) throw new Error(`${label}: no title band`);
 
-  const moves = new Map();
-  moves.set('title', { dx: TITLE_X - leftOf(title), dy: TITLE_TOP - title.top });
-
-  const rest = order.filter((id) => id !== 'title').map((id) => bands.get(id));
-  const titleBottom = title.bottom + (TITLE_TOP - title.top);
-
-  const gaps = [];
-  let prevBottom = title.bottom;
-  for (const b of rest) {
-    gaps.push(b.top - prevBottom);
-    prevBottom = b.bottom;
+  let left = Infinity;
+  for (const el of title.els) {
+    const x = num(el.tag, 'x');
+    if (x !== null && x < left) left = x;
   }
-  const heights = rest.map((b) => b.bottom - b.top);
+  if (!Number.isFinite(left)) throw new Error(`${label}: the title band has no x`);
 
-  const room = FRAME.y + FRAME.h - titleBottom;
-  const forGaps = room - heights.reduce((a, b) => a + b, 0);
-  const gapSum = gaps.reduce((a, b) => a + b, 0);
-  if (forGaps <= 0) throw new Error(`${label}: no room left for the gaps`);
-  const k = forGaps / gapSum;
+  const dx = TITLE_X - left;
+  const dy = TITLE_TOP - title.top;
+  if (!dx && !dy) return { svg, dx, dy };
 
-  let y = titleBottom;
-  rest.forEach((b, i) => {
-    y += gaps[i] * k;
-    moves.set(b.id, { dx: 0, dy: y - b.top });
-    y += heights[i];
-  });
-  return { moves, k };
-}
-
-/** The leftmost edge a band's elements start at. */
-function leftOf(band) {
-  let x = Infinity;
-  for (const el of band.els) {
-    const v = num(el.tag, 'x');
-    if (v !== null && v < x) x = v;
-  }
-  return x;
-}
-
-/** Wrap each band in its own translate, without touching a coordinate. */
-export function applyMoves(svg, bands, moves) {
-  const runs = [...bands.values()]
-    .filter((b) => moves.has(b.id))
-    .map((b) => ({ ...b, move: moves.get(b.id) }))
-    .sort((a, b) => b.from - a.from); // back to front, so offsets hold
-
-  let out = svg;
-  for (const run of runs) {
-    const { dx, dy } = run.move;
-    if (!dx && !dy) continue;
-    const open = `<g transform="translate(${dx.toFixed(2)},${dy.toFixed(2)})">`;
-    out = out.slice(0, run.from) + open + out.slice(run.from, run.to) + '</g>' + out.slice(run.to);
-  }
-  return out;
-}
-
-/** The whole rearrangement, and the numbers it used. */
-export function relayout(svg, label = 'page') {
-  const bands = readBands(svg, label);
-  const { moves, k } = planMoves(bands, label);
-  return { svg: applyMoves(svg, bands, moves), bands, moves, k };
+  const open = `<g transform="translate(${dx.toFixed(2)},${dy.toFixed(2)})">`;
+  const moved =
+    svg.slice(0, title.from) +
+    open +
+    svg.slice(title.from, title.to) +
+    '</g>' +
+    svg.slice(title.to);
+  return { svg: moved, dx, dy };
 }

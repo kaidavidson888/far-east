@@ -175,33 +175,30 @@ landing row uses, and closes the red frame onto it with no margin, which is how
 the owner's vectors draw it (rect and image share one box). **The logo there is
 the menu, not a link** — the menu's home box is what goes back.
 
-**Each vector is cut twice.** The phone keeps the design as drawn — it is a
-phone-shaped page to begin with — and is centred, which is what makes its side
-margins equal. The **desktop** gets the owner's rearrangement: the title block
-up under the logo on the landing page's own left edge, everything below it
-spread down the whole page. `scripts/lib/cigpage-layout.mjs` does the moving,
-and these are worth knowing before touching it:
-- **It moves bands, not elements.** Each vector is a flat list of rects, images
-  and texts with absolute coordinates and no ids, but all 227 lay the page out
-  in the same six horizontal bands, which never interleave (surveyed: two
-  shapes, differing by one rect in the ratings band). So a band's run of
+**One change is made to the design as supplied: the title block moves.** Brand,
+variant and full name go up under the 遠東 logo and take the landing page's own
+left edge for it — three pixels in from the logo, the same as OFFERS — keeping
+their spacing relative to one another. Everything else stays where it was
+drawn, and the same page serves a phone and a desktop.
+`scripts/lib/cigpage-layout.mjs` does the move, and two things in it are worth
+knowing before touching it:
+- **It moves a band, not three elements.** Each vector is a flat list of rects,
+  images and texts with absolute coordinates and no ids, but all 227 lay the
+  page out in the same six horizontal bands, which never interleave (surveyed:
+  two shapes, differing by one rect in the ratings band). So the title's run of
   elements is wrapped in a `<g translate>` and nothing inside is retyped.
-- **The frame is fixed, not measured.** A crop measured off the ink would move
+- **The frame is fixed, not measured.** A crop that followed the ink would move
   when the title moved, which would move the title: the alignment would chase
-  itself. The frame is the design's own (x=39, w=304), which puts the title's
-  vector x=44 at stage x=48 — the logo's 45 plus the OFFERS 3.
-- **The desktop body is anchored left, not centred** (`desktop.left` = 43 in the
-  manifest). It has to be: the logo is pinned to the page's edge, so a centred
-  column would carry the title away from it the moment the window grew, and
-  being under the logo is the whole point of the arrangement. **So the desktop
-  page does not have equal side margins** — the space that would have been a
-  right margin flexes between the body and the seal's corner. That is a
-  deliberate trade the owner chose, not an oversight; do not "fix" it by
-  centring.
-- The gaps between the lower bands keep their **ratio** and are stretched by a
-  common factor (~2.9) to fill the page, rather than the elements being scaled:
-  the content is already at the frame's full width, so scaling up would
-  overflow it.
+  itself. The frame is the design's own (x=39, w=304), which at 390 puts the
+  body at stage x=43 and so the title's vector x=44 on stage x=48 — the logo's
+  45 plus the OFFERS 3. **That alignment is exact at the design's own width**;
+  the body is centred, so on a much wider window it drifts right of the logo.
+  Anchoring the body left would hold it at any width, at the cost of the equal
+  side margins — the owner's call, not one to make unasked.
+- `scripts/assets/far-east-ink.json` is the per-character ink extent of the
+  owner's face, measured once in Chrome. It is what lets the build know where a
+  line of text actually starts and stops, which is what the title's ink top is
+  measured from. Regenerate it the same way if the face ever changes.
 
 The cigarette row on the landing page is measured off two references the owner supplied, both
 kept in `scripts/assets`: a positioning SVG and an MP4 of the motion. The MP4 runs at **8fps,
@@ -293,6 +290,13 @@ the brand assets and review text in this repo are visible to anyone.
    change rather than a rider on someone else's.
 
 ## Gotchas learned the hard way
+- **Heredocs on this machine eat one level of backslash.** Writing file content
+  straight into `cat > f <<'EOF'` is fine, but a JS *string literal* containing
+  `\s` or `\b` inside a heredoc arrives as `s`, which the string literal then
+  eats again — leaving a bare `s`, or a literal backspace. It has cost real time
+  four times now: a regex that silently matches nothing drops elements from a
+  page without erroring. **Use the Write tool for any patch script with a regex
+  in it.**
 - Run `next build` only with the dev server stopped; both write to `.next`. If you need
   the pre-commit build while someone's dev server is up, `NEXT_DIST_DIR=.next-build npm run
   build` sends it elsewhere — but Next rewrites `tsconfig.json` and `next-env.d.ts` to point
