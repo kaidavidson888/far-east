@@ -905,11 +905,12 @@ ul, ol { list-style: none; }
    margin the design gives it, so it travels with that pack and hops to the
    next as the lead changes. It sits over the packs, so it must not eat the
    press. */
-/* The frame drags: it eases after the pack it has picked instead of landing
-   on it in the same instant the row steps. Duration is CIG_FRAME_DRAG_MS, set
-   on the element so lib/cigRow.ts stays the one place it is decided. The row
-   steps at 8fps and this does not — that contrast is what makes the drag read
-   as weight rather than as lag. */
+/* The frame holds the middle and lets packs pass through it; the only thing
+   that moves is its width, easing to whatever pack is under it rather than
+   stepping with the row. left rides along because it is the middle minus half
+   that width — same duration, same easing, so the frame stays exactly centred
+   the whole way across. Duration is CIG_FRAME_DRAG_MS, set on the element so
+   lib/cigRow.ts stays the one place it is decided. */
 .cig-frame {
   position: absolute;
   display: block;
