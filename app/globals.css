@@ -449,9 +449,90 @@ ul, ol { list-style: none; }
   background: rgba(13, 13, 13, 0.92);
   display: flex; align-items: center; justify-content: center; padding: var(--lg);
 }
-.gate-panel { background: #171717; color: #ffffff; max-width: 520px; width: 100%; padding: var(--xl); }
-.gate-panel .display-sm, .gate-panel .title-lg { color: #ffffff; }
-.gate-panel p { color: #c4c0ba; }
+/* The gate is the site's own furniture: the page's white, the artwork's own
+   #FF0000, black for everything else, and the owner's face for the words.
+
+   THE RED IS #FF0000, NOT --cinnabar. Cinnabar (#c1272d) is the brand token
+   the catalogue pages use; the red the reader actually sees on this site --
+   the logo, the frame round every pack, the rule round the cigarette info,
+   the splash -- is the artwork's own pure red, and the gate is the first
+   thing anyone sees, so it matches that rather than the token.
+
+   THE RULE'S BLUE GOES BLACK. --cobalt is the only blue on the site and it
+   is otherwise a focus ring; on the gate it read as a third colour with
+   nothing to do. Black is what the artwork pairs with the red everywhere. */
+.gate-panel {
+  background: #ffffff;
+  color: #010101;
+  font-family: var(--font-typed);
+  max-width: 520px; width: 100%; padding: var(--xl);
+}
+.gate-panel .display-sm, .gate-panel .title-lg { color: #010101; }
+.gate-panel p { color: #010101; }
+/* The health warning in the artwork’s own red — the one thing in the gate
+   that is not black, and the line the law is about. NOT --negative, which is
+   warm grey and is never a warning colour on this site, per the spec. */
+.gate-terms .caption { color: #ff0000; }
+.gate-panel .seal-divider span:first-child { background: #010101; }
+.gate-panel .seal-divider span:last-child { background: #ff0000; }
+/* The face is only letters and digits (see "The owner's own face"), so the
+   punctuation in this copy comes from the fallback. Kept deliberate rather
+   than accidental: font-synthesis off so neither is smeared into a bold. */
+.gate-panel .display-sm,
+.gate-panel p,
+.gate-panel .btn {
+  font-family: var(--font-typed);
+  font-synthesis: none;
+}
+/* Black on #FF0000 is the higher contrast of the two (5.25:1 against white's
+   4.0:1) as well as the colour the owner asked for. */
+/* One rule round the two lower paragraphs: what the site is and the health
+   line, together, as the terms under the question.
+
+   An OUTLINE rather than a border, for the same reason the cigarette pages
+   use one — it draws outside the box it is given, so it cannot shift the text
+   inside it by a pixel — and outline-offset costs no layout either.
+
+   THE GAP IS EVEN ON ALL FOUR SIDES, and getting there takes padding because
+   a line box is taller than the ink inside it. Measured on the rendered page:
+   the outline's 2px offset put the sides 2px off the letters, but the top 7px
+   and the foot 5.1px, the difference being each paragraph's own half-leading —
+   5.0px above the 17px line, 3.1px below the 13px one, which is also why the
+   top and the foot did not match each other.
+
+   So the padding makes up the difference rather than the rule moving: 5px at
+   the sides and 2px at the foot bring all four to 7px of daylight. The numbers
+   are the two line-heights' and would want re-measuring if either changed. */
+.gate-terms {
+  outline: 2px solid #010101;
+  outline-offset: 2px;
+  padding: 0 5px 2px;
+}
+/* The question carries the weight, and getting it there takes a stroke.
+
+   The owner's face has exactly ONE weight drawn (usWeightClass 700), so
+   font-weight cannot make it heavier — there is nothing heavier to ask for,
+   and the declaration below only reaches the punctuation, which comes from
+   the fallback. A stroke on the glyphs is what is left. It is chosen over
+   letting font-synthesis back on because it is symmetric and the amount is
+   ours to pick, where a browser's synthetic bold is a smear we do not
+   control — and the rest of the site turns synthesis off for exactly that
+   reason. 0.6px against a 28px line.
+
+   UPPERCASE ON A UNICASE FACE barely moves the letterforms — the capitals
+   and the lowercase are largely the same drawings, which is the whole
+   character of this typeface — so it reads as a deliberate evenness rather
+   than as shouting. */
+.gate-panel .display-sm {
+  font-weight: 700;
+  text-transform: uppercase;
+  -webkit-text-stroke: 0.6px currentColor;
+}
+.gate-panel .btn-primary { background: #ff0000; color: #010101; }
+.gate-panel .btn-primary:hover, .gate-panel .btn-primary:active { background: #d90000; }
+.gate-panel .btn-secondary { background: transparent; color: #010101; border-color: #010101; }
+.gate-panel .btn-secondary:hover { background: #f2f2f2; }
+.gate-panel .btn:focus-visible { outline: 2px solid #010101; outline-offset: 2px; }
 
 /* ---------- Responsive ---------- */
 @media (max-width: 1024px) {

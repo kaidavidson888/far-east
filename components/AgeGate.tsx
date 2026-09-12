@@ -49,23 +49,22 @@ export function AgeGate() {
         <div className="stack-md">
           <div className="seal-divider short" aria-hidden="true"><span /><span /></div>
           <h2 id="gate-title" className="display-sm">Are you of legal smoking age?</h2>
-          <p className="body-md">
-            Far East reviews tobacco products. Entry is limited to adults at or above the legal
-            smoking age where they live.
-          </p>
-          <p className="caption" style={{ color: '#8a857e' }}>
-            Smoking causes serious, often fatal disease. Nothing on this site is a recommendation
-            to start or to continue smoking.
-          </p>
+          {/* the two lower paragraphs share one rule, so they read as one block
+              of terms against the question above them */}
+          <div className="gate-terms stack-md">
+            <p className="body-md">
+              Far East reviews tobacco products. Entry is limited to adults at or above the legal
+              smoking age where they live.
+            </p>
+            <p className="caption">
+              Smoking causes serious, often fatal disease. Nothing on this site is a recommendation
+              to start or to continue smoking.
+            </p>
+          </div>
         </div>
         <div className="row wrap" style={{ gap: 'var(--sm)' }}>
           <button type="button" className="btn btn-primary" onClick={confirm}>Yes, I am</button>
-          <button
-            type="button"
-            className="btn btn-secondary"
-            style={{ color: '#fff', borderColor: '#fff' }}
-            onClick={() => setDeclined(true)}
-          >
+          <button type="button" className="btn btn-secondary" onClick={() => setDeclined(true)}>
             No
           </button>
         </div>
