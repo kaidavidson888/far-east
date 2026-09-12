@@ -119,6 +119,44 @@
 *, *::before, *::after { box-sizing: border-box; }
 * { margin: 0; padding: 0; }
 html { -webkit-text-size-adjust: 100%; }
+
+/* ---------- The pointer ----------
+   The site's own cloud, in place of the arrow, everywhere.
+
+   IT CARRIES A WHITE KEYLINE because the ink is black and this site has black
+   to put a pointer on — the age gate's NO button, the comment panel on every
+   cigarette page, the top nav. On those a black cloud would simply not be
+   there. Every operating system's arrow solves this the same way. On white
+   the keyline is invisible, which is the point of it.
+
+   THE HOTSPOT IS 0 14, WHICH IS MEASURED. The cloud's tail is the one part of
+   the shape that comes to a point, and it sits about three quarters of the
+   way down the left edge — not the middle, not the corner. npm run build:sigil
+   measures it off the finished pixels and prints the line to paste here; if
+   the mark is ever recut, take the number from the build rather than from the
+   eye.
+
+   Two declarations, not one: a browser that cannot parse image-set drops that
+   line at parse time and keeps the plain url above it. Same pattern as
+   round(50%, 1px) further down.
+
+   WHAT IS DELIBERATELY LEFT ALONE: every cursor: pointer on the site. On the
+   artwork pages the hit areas are transparent — the buttons ARE the artwork —
+   so the hand is the only thing telling a reader that something is pressable.
+   Replacing it would make the landing page's controls undiscoverable. Same
+   for grab/grabbing on the cigarette row and text on the fields: those say
+   what the pointer can do there, which a cloud cannot. */
+body {
+  cursor: url('/sigil-cursor.png') 0 14, auto;
+  cursor: image-set(url('/sigil-cursor.png') 1x, url('/sigil-cursor@2x.png') 2x) 0 14, auto;
+}
+/* cursor: default means "the ordinary pointer", and the ordinary pointer is
+   the cloud now — without this the one box that is not a link pops back to an
+   arrow. */
+.artpage-nav-current {
+  cursor: url('/sigil-cursor.png') 0 14, auto;
+  cursor: image-set(url('/sigil-cursor.png') 1x, url('/sigil-cursor@2x.png') 2x) 0 14, auto;
+}
 body {
   background: var(--canvas);
   color: var(--body);
@@ -496,6 +534,20 @@ ul, ol { list-style: none; }
    These were 13px and 19px when the bar was above the question; the 19
    becomes 23.8 because the half-leading that used to be in the way is now on
    the other side of the bar. */
+/* The cloud marks after the question, at its own cap height — measured, not
+   guessed: 20px of ink for a 28px line in this face. baseline alignment puts
+   their feet where the letters' feet are, so a 20px mark tops out exactly at
+   the capitals.
+
+   They are a 2.7KB raster rather than the landing page's cloud part, which is
+   396KB of trace; the gate renders from app/layout.tsx on every page and most
+   of them load none of that artwork. npm run build:sigil cuts it. */
+.gate-sigil {
+  display: inline-block;
+  height: 20px;
+  width: auto;
+  vertical-align: baseline;
+}
 .gate-panel .seal-divider { margin-top: 13px; }
 .gate-panel .seal-divider.short { width: 100%; }
 .gate-panel .seal-divider { height: 6px; }
@@ -956,7 +1008,6 @@ ul, ol { list-style: none; }
 /* the box for the page you are on */
 .artpage-nav-current {
   opacity: 0.5;
-  cursor: default;
 }
 .artpage-nav-current[data-hover] {
   opacity: 0.1;

@@ -25,6 +25,9 @@ no CSS framework (tokens in `app/globals.css`). Deploys to Vercel.
 - `npm run seed` — upserts `lib/catalog.json` into the database (idempotent; never touches user data)
 - `npm run link-supabase` / `set-db-password` / `diagnose-db` — configure `.env.local` safely (hidden prompts, connection tested before saving, refuse piped input)
 - `npm run demo` — three sample accounts, LOCAL ONLY; needs the secret key
+- `npm run build:sigil` — cuts the cloud ornament down for the age gate and
+  for the site's pointer. Re-run it if `public/landing/parts/cloud.svg` changes;
+  it prints the cursor hotspot line to paste into `globals.css`.
 - `npm run build:cigs` — rebuilds the 282 pack marks in `public/cigs` and `lib/cigs.json`
   from the owner's `Cigs Images` folder (path at the top of `scripts/build-cigs.mjs`).
   `CIGS_ONLY=<substring> node scripts/build-cigs.mjs` rebuilds just the matching
@@ -463,6 +466,47 @@ branding terms require it; a monochrome or cinnabar G is not allowed. The rest
 of the button is the house style. **The splash has no Google button yet**: `/` is
 baked artwork, frame 100's login box IS the UI, so putting one there is a
 drawing job and the owner's call.
+
+## The cloud, as ornament and as pointer
+Three of the cloud mark sit after the age gate's question, and the same mark is
+the cursor for the whole site. Both come from `npm run build:sigil`, out of the
+landing page's own `cloud.svg`.
+
+**It is rasterised, and that is the point.** `cloud.svg` is 396KB — about 28,000
+traced points at two decimal places on a mark 54 units wide, which is precision
+to a hundredth of a pixel. Rounding the numbers only reaches 333KB; the weight
+is the point count. `AgeGate` renders from `app/layout.tsx`, so it is on EVERY
+page, most of which load none of the landing artwork — pointing an `<img>` at the
+part would have put 396KB on the first view of `/catalog`, `/about` and `/login`.
+The build writes a 2.7KB WebP at 3x its drawn size instead, the same oversample
+rule the rest of the embedded art follows.
+
+**The white ground comes off by un-multiplying**, exactly as `build-menu-frames`
+does. The part is drawn for white paper — a white rectangle behind the cloud and
+white inside the spirals — and on the gate's red panel that showed as a white
+box. Un-multiplying recovers the ink and its coverage exactly, where a colour key
+would leave a halo on every curve, and this mark is nothing but curves. The
+spirals end up transparent, which is right: they are paper showing through, and
+there the paper is red.
+
+**The cursor carries a white keyline.** The ink is black and this site has black
+to put a pointer on — the gate's NO button, the comment panel on every cigarette
+page, the top nav — where a black cloud would not be there at all. The keyline is
+a union of eight translations of the same silhouette in white, not a blur, so it
+keeps hard edges; a blur reads as a shadow at cursor size. On white it is
+invisible, which is what it is for. Checked against all four grounds.
+
+**The hotspot is 0 14 and it is measured, not chosen.** The tail is the only part
+of the shape that comes to a point and it sits about three quarters of the way
+down the left edge. The build measures it off the finished pixels and prints the
+CSS line; take it from there if the mark is recut.
+
+**Every `cursor: pointer` on the site is deliberately left alone.** On the artwork
+pages the hit areas are transparent — the buttons ARE the artwork — so the hand
+is the only thing telling a reader something is pressable. Replacing it would
+make the landing page's controls undiscoverable. `grab`/`grabbing` on the cigarette
+row and `text` in the fields stay for the same reason: they say what the pointer
+can do there, which a cloud cannot.
 
 ## Working as a team (two people, two Claude Code sessions)
 The repo is **public** on GitHub — chosen so Vercel Hobby deploys commits from either owner.

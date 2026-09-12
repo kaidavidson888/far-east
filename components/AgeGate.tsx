@@ -20,6 +20,28 @@ function confirm() {
   listeners.forEach((fn) => fn());
 }
 
+/**
+ * Three of the site's cloud marks, set after the question at the height of
+ * its own capitals.
+ *
+ * Decorative, so alt is empty: the h2 is what aria-labelledby points at, and
+ * a mark with no alt contributes nothing to the name the gate is announced
+ * by. The spaces between them are real spaces in the owner's face, not
+ * margins, so they track with the type rather than against it.
+ */
+function Sigils() {
+  return (
+    <>
+      {' '}
+      <img className="gate-sigil" src="/sigil.webp" alt="" width={42} height={20} />
+      {' '}
+      <img className="gate-sigil" src="/sigil.webp" alt="" width={42} height={20} />
+      {' '}
+      <img className="gate-sigil" src="/sigil.webp" alt="" width={42} height={20} />
+    </>
+  );
+}
+
 export function AgeGate() {
   // Server renders as "already confirmed" so the gate never ships in the HTML;
   // the real answer arrives on hydration.
@@ -47,7 +69,9 @@ export function AgeGate() {
     <div className="gate-backdrop" role="dialog" aria-modal="true" aria-labelledby="gate-title">
       <div className="gate-panel stack-lg">
         <div className="stack-md">
-          <h2 id="gate-title" className="display-sm">Are you of legal smoking age?</h2>
+          <h2 id="gate-title" className="display-sm">
+            Are you of legal smoking age?<Sigils />
+          </h2>
           <div className="seal-divider short" aria-hidden="true"><span /><span /></div>
           {/* the two lower paragraphs share one rule, so they read as one block
               of terms against the question above them */}
