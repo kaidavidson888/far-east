@@ -57,10 +57,23 @@ const { left: LEFT, total: LAP } = cigLayout();
 
 /** How far a wheel notch pushes the row, at the owner's pace. */
 const WHEEL = 0.8 * SPEED;
-/** Below this the glide is spent and the row starts settling. */
-const SETTLE_BELOW = 40;
-/** How long the settle takes to close the distance — a fifth slower too. */
-const SETTLE_TAU = 0.18 / SPEED;
+/**
+ * Below this the glide is spent and the row starts settling.
+ *
+ * Low, so friction carries the row almost the whole way down and the handover
+ * to the centring happens while it is already crawling. A high threshold hands
+ * over at a speed you can still see, and the change of rule shows as a kink.
+ */
+const SETTLE_BELOW = 25;
+/**
+ * How long the settle takes to close the last of the distance.
+ *
+ * 0.28, where it was 0.18: the end of a roulette spin is the part worth
+ * watching, and the wheel creeps into its slot rather than clicking into it.
+ * Each tick closes about 45% of what is left, so half a pitch of travel takes
+ * a little under a second — against half that before.
+ */
+const SETTLE_TAU = 0.28 / SPEED;
 /**
  * Pressing a pack that is not the one in the frame fetches it, at twice the
  * speed the row settles at — the owner's 200%.

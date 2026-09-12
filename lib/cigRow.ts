@@ -157,14 +157,22 @@ export const CIG_FRAME_HOLD_MS = PAINT_MS * 2;
  *                                  is what the hand expects.
  *   stopping time       v / a      finite. The row stops rather than fades.
  *
- * 700 leaves a hard flick travelling about as far as the old decay carried it,
- * so the row's reach is roughly unchanged; what changes is the shape of the
- * arrival, and how differently a light flick and a hard one behave.
+ * IT IS SET FOR A ROULETTE WHEEL, which is a heavy mass on low-friction
+ * bearings: it flies at first, winds down over seconds, and creeps into its
+ * slot rather than snapping to it. 600 against a cap of ten times the
+ * reference pace gives a hard throw 3.2 seconds and about 31 packs of travel —
+ * long enough to watch it wind down and wonder where it will stop.
+ *
+ * Constant braking is the right shape for that quite apart from being what
+ * friction does: speed falls linearly, so the PROPORTION lost each second
+ * grows, and the last half second is where the winding-down reads. An
+ * exponential decay does the opposite — it sheds most of its speed at the
+ * start and then crawls, which is the floaty tail this replaced.
  *
  * Divided by SPEED rather than multiplied: SPEED is how far a flick carries,
  * and less braking carries further.
  */
-export const CIG_GLIDE_FRICTION = 1400 / SPEED;
+export const CIG_GLIDE_FRICTION = 600 / SPEED;
 
 /**
  * The fastest the row may be let go at, in pixels per second.
@@ -176,11 +184,12 @@ export const CIG_GLIDE_FRICTION = 1400 / SPEED;
  * several seconds. The row did not feel unbraked because the braking was too
  * gentle; it felt unbraked because it was being thrown impossibly hard.
  *
- * Eight times the pace of the owner's own recording is about as fast as the
- * row can move and still read as a row of cigarettes rather than a smear, and
- * it is the same shape of limit the wheel already had at four times.
+ * Ten times the pace of the owner's own recording: fast enough to read as a
+ * wheel being spun rather than a row being nudged, and still slow enough that
+ * the packs are packs and not a smear. It is the same shape of limit the wheel
+ * already had, which is now written as half of this.
  */
-export const CIG_FLING_MAX = REFERENCE_SPEED * 8;
+export const CIG_FLING_MAX = REFERENCE_SPEED * 10;
 
 /**
  * How far back a release looks to decide how fast it was going.
