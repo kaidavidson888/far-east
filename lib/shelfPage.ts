@@ -72,6 +72,12 @@ const typeAt = (run: Run, x: number) => ({
   top: lineTop(run.ink.y, run.asc, run.size) - g.row.top,
 });
 
+/**
+ * The header box's right edge, in the design's own fixed coordinates. The
+ * divider, the scaled rows and the header all meet here, so it is one number.
+ */
+const HEADER_RIGHT = g.header.box.x + g.header.box.w;
+
 /** The row's fixed furniture, in row coordinates. Computed once. */
 export const SHELF_ROW = {
   height: g.row.height,
@@ -93,9 +99,17 @@ export const SHELF_ROW = {
   centreX: LOGO.x + LOGO.w / 2,
 };
 
+/**
+ * The header sits at the design's own fixed position, not right-anchored to
+ * the viewport. Everything else that meets its right edge — the divider and
+ * the scaled rows' clouds — is at a fixed page x, so the header has to be too
+ * or the three only line up at exactly 390px wide. Its right edge is the
+ * shared HEADER_RIGHT (334), the box left is the design's own, and the $240 is
+ * hung by its right edge from the same line.
+ */
 export const SHELF_HEADER = {
   box: {
-    right: g.viewBox.w - (g.header.box.x + g.header.box.w),
+    left: g.header.box.x,
     top: g.header.box.y,
     width: g.header.box.w,
     height: g.header.box.h,
@@ -105,13 +119,52 @@ export const SHELF_HEADER = {
   price: {
     text: g.header.price.text,
     size: g.header.price.size,
-    right: g.viewBox.w - (g.header.box.x + g.header.box.w),
+    /** right edge, in fixed page x — the element is hung from it */
+    right: HEADER_RIGHT,
     top: lineTop(g.header.price.ink.y, g.header.price.asc, g.header.price.size),
   },
 };
 
 /** The design's own clearance under its last row, held under ours. */
 const BOTTOM = g.viewBox.h - (g.row.top + (g.row.count - 1) * g.row.pitch + g.row.height);
+
+/**
+ * THE WHOLE ROW IS SCALED SO ITS RIGHT EDGE MEETS THE HEADER'S.
+ *
+ * The owner's call: the clouds are the row's right edge, and the row is scaled
+ * as one — pack, boxes, panel and clouds together, the same ratios and margins
+ * — until that edge lines up with the right edge of the "Click # When Finished"
+ * box. The clouds sit a little past the header in the design, so this brings
+ * the row in a touch rather than out.
+ *
+ * ANCHORED ON THE LOGO'S CENTRE LINE, not the row's left edge, because the
+ * packs are centred on the logo and that has to hold: scaling about the logo's
+ * centre leaves every pack still centred on it, where scaling about the left
+ * would walk them off it. One factor for every row, applied as a single
+ * transform, so nothing inside has to be re-measured.
+ */
+export const ROW_ANCHOR_X = SHELF_ROW.centreX;
+const CLOUD_RIGHT = Math.max(...SHELF_ROW.clouds.map((c) => c.left + c.width));
+export const ROW_SCALE = +((HEADER_RIGHT - ROW_ANCHOR_X) / (CLOUD_RIGHT - ROW_ANCHOR_X)).toFixed(4);
+
+/**
+ * A red rule between the top of the page and the shelf, at the owner's ask.
+ *
+ * The design has no such line — the only red in it is the pack rules and the
+ * red header caption — so this is the site's own red rule (5px, #FF0000, the
+ * weight and colour the pack rules and the cigarette pages' info rule use)
+ * added to divide the two sections. It runs from the page's left margin (the
+ * logo's own left) to the header box's right edge, which is the width the
+ * content occupies, and sits halfway down the gap between the $240 and the
+ * first row.
+ */
+export const DIVIDER = {
+  colour: '#ff0000',
+  height: SHELF_ROW.rule,
+  left: LOGO.x,
+  width: HEADER_RIGHT - LOGO.x,
+  top: Math.round((g.header.price.ink.y + g.header.price.ink.h + g.row.top) / 2 - SHELF_ROW.rule / 2),
+};
 
 export type ShelfRow = {
   key: string;

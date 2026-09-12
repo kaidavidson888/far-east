@@ -1,6 +1,6 @@
 import landing from '@/lib/landing-geometry.json';
 import { BOOKMARK } from '@/lib/cigPages';
-import { SHELF_HEADER, SHELF_ROW, shelfLayout, type ShelfEntry } from '@/lib/shelfPage';
+import { DIVIDER, ROW_ANCHOR_X, ROW_SCALE, SHELF_HEADER, SHELF_ROW, shelfLayout, type ShelfEntry } from '@/lib/shelfPage';
 import { LogoMenu } from './LogoMenu';
 
 /**
@@ -45,7 +45,7 @@ export function ShelfPage({ entries }: { entries: ShelfEntry[] }) {
         <div
           className="shelf-header-box"
           style={{
-            right: px(SHELF_HEADER.box.right),
+            left: px(SHELF_HEADER.box.left),
             top: px(SHELF_HEADER.box.top),
             width: px(SHELF_HEADER.box.width),
             height: px(SHELF_HEADER.box.height),
@@ -55,15 +55,29 @@ export function ShelfPage({ entries }: { entries: ShelfEntry[] }) {
         >
           {SHELF_HEADER.click.text}
         </div>
+        {/* hung by its right edge from the shared line, so it aligns with the box */}
         <div
           className="shelf-price"
-          style={{ right: px(SHELF_HEADER.price.right), top: px(SHELF_HEADER.price.top), fontSize: px(SHELF_HEADER.price.size) }}
+          style={{ left: px(SHELF_HEADER.price.right), top: px(SHELF_HEADER.price.top), fontSize: px(SHELF_HEADER.price.size), transform: 'translateX(-100%)' }}
         >
           {SHELF_HEADER.price.text}
         </div>
 
+        {/* the red rule dividing the header from the shelf */}
+        <span
+          className="shelf-divider"
+          style={{ left: px(DIVIDER.left), top: px(DIVIDER.top), width: px(DIVIDER.width), height: px(DIVIDER.height), background: DIVIDER.colour }}
+          aria-hidden="true"
+        />
+
         {rows.map((row) => (
           <div key={row.key} className="shelf-row" style={{ top: px(row.top), height: px(R.height) }}>
+            {/* the whole row scaled as one, about the logo's centre, so its
+                right edge (the clouds) meets the header's — see ROW_SCALE */}
+            <div
+              className="shelf-row-scale"
+              style={{ transform: `scale(${ROW_SCALE})`, transformOrigin: `${ROW_ANCHOR_X}px 50%` }}
+            >
             {/* the pack, in the same rule the cigarette pages draw round theirs */}
             <div className="shelf-pack" style={{ ...box(row.frame), '--rule': px(R.rule) } as React.CSSProperties}>
               <img
@@ -117,6 +131,7 @@ export function ShelfPage({ entries }: { entries: ShelfEntry[] }) {
             {R.clouds.map((c, i) => (
               <img key={i} className="shelf-cloud" src="/sigil.webp" alt="" style={box(c)} width={c.width} height={c.height} draggable={false} />
             ))}
+            </div>
           </div>
         ))}
 

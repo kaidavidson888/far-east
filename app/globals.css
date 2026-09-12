@@ -1648,10 +1648,21 @@ ul, ol { list-style: none; }
   color: #010101;
   white-space: nowrap;
 }
+.shelf-divider {
+  position: absolute;
+  display: block;
+}
 .shelf-row {
   position: absolute;
   left: 0;
   right: 0;
+}
+/* The whole row's contents, scaled as one about the logo's centre line so the
+   clouds land on the header's right edge. Inset:0 keeps the children on their
+   measured coordinates; the transform does the rest. */
+.shelf-row-scale {
+  position: absolute;
+  inset: 0;
 }
 /* The rule round the pack, closed onto it the way the cigarette pages draw
    theirs: the image sits two pixels in and the rule's inner three cover it. */
