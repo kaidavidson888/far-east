@@ -652,6 +652,61 @@ the thing that is not pressable. `grab`/`grabbing` on the cigarette row and `tex
 in the fields stay for the same reason: they say what the pointer can DO there,
 which neither cloud can.
 
+## The shelf, the plus, and Carton/Pack
+The seal leads to `/shelf`: the reader's saved packs, drawn from the owner's
+design (`scripts/assets/shelf-mobile.svg`). Three pieces, one rule between them
+— nothing on this page is a picture.
+- **The seal goes on the SECOND press.** `SealButton` runs its animation on the
+  first press (skip-to-end if mid-run) and navigates only when it is already
+  `open` — the owner's "after the animation is finished, click again". A button,
+  not a link, so the first press cannot navigate.
+- **The page is a template.** `npm run build:shelf` measures the design into
+  `lib/shelf-geometry.json` (every mark rasterised alone and its ink box read,
+  like split-svg-parts — Figma's rects carry quarter-pixel sizes and the type is
+  outlined, so pixels are the only honest source). `lib/shelfPage.ts` turns a
+  list of saved packs into a layout; `components/ShelfPage.tsx` draws it. Boxes
+  are boxes, rules are rules, the clouds are `/sigil.webp`, the packs are the
+  `/cigs/<id>.svg` marks the row uses, and **every word and number is re-set in
+  the owner's face** — which is the ask and what makes it sharp. Type is sized by
+  ink height: `size = inkHeight / (ascent/1000)`, ascents from
+  `far-east-ink.json`, and placed by baseline (0.825 of the size in a
+  line-height:1 box, measured in Chrome).
+- **Packs are centred on the character logo's centre line**, at the row's own
+  red rule, one pack height for all (aspect from `cigs.json`). The design centres
+  them on ~73; the owner asked for the logo (65), so the row is shifted by `DX`.
+- **Each row is scaled as one to the header's right edge.** The owner asked the
+  row scaled so its right edge meets the "Click # When Finished" box's right
+  edge, same ratios. The clouds are the right edge (they sit past the header in
+  the design), so `ROW_SCALE` brings the whole row in, as a single transform
+  **anchored on the logo's centre** so the packs stay centred. For the header,
+  the divider and the clouds to meet at one line at every width, the header is
+  placed at the design's fixed x (`HEADER_RIGHT`), NOT right-anchored — a
+  right-anchored header only lined up at exactly 390px.
+- **The red divider between header and shelf is an addition**, not in the export
+  (the only red there is the pack rules and the header caption). It is the
+  site's red rule (5px `#FF0000`) from the left margin to `HEADER_RIGHT`.
+- **The quantity shows as e.g. `2c`** in the third box — the amount then a
+  lowercase c/p — set in the face like everything else. A bookmark-only pack has
+  no quantity and the box is empty.
+
+**The plus beside the bookmark opens a quantity menu** (`components/CigQuantity.tsx`,
+`PLUS`/`QUANTITY_MENU`/`WHEEL` in `lib/cigPages.ts`). The plus box is the
+artwork's (byte-identical in all 235 built pages, checked); only the hit area is
+the page's. Hovering shows the menu at 50% (`pointer-events:none`), pressing
+opens it solid at 100% over everything below — which cannot be pressed while it
+is open. Two white stripes are wheels: 1-9 left, C or P right, both in the face.
+**One captured gesture can do it all** — press the plus, slide onto a stripe and
+pull, across to the other, lift — or open it and work the wheels by drag, wheel
+or arrow keys. A chosen value turns white on the red middle-slot window; the
+rest of its stripe drops to 75%. Both chosen + pointer up → save and close;
+press outside or Escape → close without saving.
+- **C = Carton, P = Pack**, stored on `pack_favorites.amount`/`unit` (migration
+  0005; amount and unit are nullable TOGETHER, so a bookmark-only row is valid).
+  `setPackQuantity` saves the pack too if it was not already saved. `amount` is
+  held to 1-9 and `unit` to C/P in the DB, not just the UI — a server action is
+  a public endpoint. `setPackQuantityAction` takes plain args, not a form: the
+  menu commits on release with nothing to submit.
+
 ## Working as a team (two people, two Claude Code sessions)
 The repo is **public** on GitHub — chosen so Vercel Hobby deploys commits from either owner.
 That means: **never commit anything sensitive** (`.env*` is gitignored; keep it that way), and
