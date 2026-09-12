@@ -1,5 +1,6 @@
 import landing from '@/lib/landing-geometry.json';
 import geometry from '@/lib/cigpages.json';
+import { INFO_BOX } from '@/lib/cigPages';
 import { LogoMenu } from './LogoMenu';
 import { SealButton } from './SealButton';
 
@@ -63,6 +64,17 @@ export function CigPage({ id, name }: { id: string; name: string }) {
             width={body.w}
             height={body.h}
             draggable={false}
+          />
+
+          {/* a rule round the info, inside the body so it travels with it */}
+          <div
+            className="cigpage-frame"
+            style={{
+              left: `${INFO_BOX.left}px`,
+              top: `${INFO_BOX.top}px`,
+              width: `${INFO_BOX.width}px`,
+              height: `${INFO_BOX.height}px`,
+            }}
           />
         </div>
 

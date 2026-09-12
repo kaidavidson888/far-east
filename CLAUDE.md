@@ -195,6 +195,24 @@ knowing before touching it:
   the body is centred, so on a much wider window it drifts right of the logo.
   Anchoring the body left would hold it at any width, at the cost of the equal
   side margins — the owner's call, not one to make unasked.
+- **Every pack on the row is a button, but there are not 247 vectors.** The
+  owner supplied one info-page vector per cigarette *name*, and twelve packs
+  carry a name another pack already has (`299_Karelia-Blue` and
+  `252_Karelia-Blue`, `111_GoldenLeaf-Love_Style` and
+  `42_Golden_Leaf-Love_Style`, ten more). The build gives the vector to
+  whichever asks first; `lib/cigPages.ts` sends the other twelve to their
+  twin's page, matching on the name with punctuation and spacing removed —
+  which is what makes `GoldenLeaf` and `Golden Leaf` meet. Use `PRESSABLE` and
+  `pageFor()` from there rather than `cigpages.json` directly, or those twelve
+  go dead again. If the owner ever settles those names into genuinely
+  different products, each will claim its own vector and this finds nothing
+  to do.
+- **The 5px rule round the info** is `INFO_BOX` in the same file, drawn by the
+  page rather than baked into the vector. It frames the title block down to
+  the foot of the comment panels and deliberately leaves the logo and the seal
+  outside it — they are the page's furniture, not the cigarette's. Its numbers
+  are only constant across all 235 pages because the build puts the title on
+  the landing page's own line, so its ink top is 161 whatever the brand name.
 - `scripts/assets/far-east-ink.json` is the per-character ink extent of the
   owner's face, measured once in Chrome. It is what lets the build know where a
   line of text actually starts and stops, which is what the title's ink top is

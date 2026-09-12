@@ -758,6 +758,16 @@ ul, ol { list-style: none; }
   user-select: none;
   -webkit-user-drag: none;
 }
+/* A rule round the info itself — the title block down to the foot of the
+   comment panels — and not round the logo and the seal, which are the page's
+   furniture rather than the cigarette's. An outline rather than a border so
+   it draws outside the box it is given and cannot move the artwork inside it
+   by a pixel. Its box is INFO_BOX in lib/cigPages.ts. */
+.cigpage-frame {
+  position: absolute;
+  outline: 5px solid #010101;
+  pointer-events: none;
+}
 /* Against the stage, not the body: 45 and 28 are the landing page's own
    margins, and the mark is the landing page's own vector at its own 40x87 —
    the artwork's copy was a raster and read soft at this size. It is drawn,

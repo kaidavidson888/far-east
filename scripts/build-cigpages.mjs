@@ -715,5 +715,8 @@ if (unmatched.length) {
   for (const u of unmatched) console.log(`    ${u}`);
 }
 const without = packs.filter((p) => !claimed.has(p.id));
-console.log(`  ${without.length} packs have no page`);
+console.log(
+  `  ${without.length} packs have no vector of their own; lib/cigPages.ts sends ` +
+    `each to the page its name-twin claimed`,
+);
 console.log(`wrote ${MANIFEST}`);
