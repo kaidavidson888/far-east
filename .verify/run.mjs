@@ -27,7 +27,8 @@ try {
     create schema if not exists auth;
     create table if not exists auth.users (
       id uuid primary key default gen_random_uuid(),
-      email text not null,
+      email text,
+      phone text,
       raw_user_meta_data jsonb not null default '{}'::jsonb
     );
   `);
@@ -49,7 +50,7 @@ try {
     SELECT table_name FROM information_schema.tables
     WHERE table_schema = 'public' ORDER BY table_name
   `;
-  check('all 7 tables created', tables.length === 7, JSON.stringify(tables.map((t) => t.table_name)));
+  check('all 8 tables created', tables.length === 8, JSON.stringify(tables.map((t) => t.table_name)));
 
   const rls = await sql`
     SELECT relname, relrowsecurity FROM pg_class
@@ -72,6 +73,62 @@ try {
   await sql`INSERT INTO auth.users (id, email) VALUES (${uid2}, 'noname@example.com')`;
   const [p2] = await sql`SELECT * FROM profiles WHERE id = ${uid2}`;
   check('falls back to email local part', p2?.display_name === 'noname', JSON.stringify(p2));
+
+  // The names an OAuth provider actually sends. Google has no display_name —
+  // it sends full_name and name — so without migration 0004 every reader
+  // arriving through it would be called after the local part of their email,
+  // forever, on every review they write. The trigger fires once at insert, so
+  // this is the check that has to catch it.
+  const google = randomUUID();
+  await sql`
+    INSERT INTO auth.users (id, email, raw_user_meta_data)
+    VALUES (${google}, 'kai@gmail.com', ${sql.json({
+      iss: 'https://accounts.google.com',
+      name: 'Kai Davidson',
+      full_name: 'Kai Davidson',
+      email: 'kai@gmail.com',
+      avatar_url: 'https://lh3.googleusercontent.com/a/x',
+      email_verified: true,
+    })})
+  `;
+  const [gp] = await sql`SELECT display_name FROM profiles WHERE id = ${google}`;
+  check('a Google sign-up is named from full_name, not the email',
+    gp?.display_name === 'Kai Davidson', JSON.stringify(gp));
+
+  // name without full_name — some providers send only the one
+  const nameOnly = randomUUID();
+  await sql`
+    INSERT INTO auth.users (id, email, raw_user_meta_data)
+    VALUES (${nameOnly}, 'someone@example.com', ${sql.json({ name: 'Someone Else' })})
+  `;
+  const [np] = await sql`SELECT display_name FROM profiles WHERE id = ${nameOnly}`;
+  check('name alone is enough', np?.display_name === 'Someone Else', JSON.stringify(np));
+
+  // our own field still wins, so nothing that works today changes
+  const ours = randomUUID();
+  await sql`
+    INSERT INTO auth.users (id, email, raw_user_meta_data)
+    VALUES (${ours}, 'chosen@example.com', ${sql.json({ display_name: 'Chosen', full_name: 'Ignored' })})
+  `;
+  const [op] = await sql`SELECT display_name FROM profiles WHERE id = ${ours}`;
+  check('our own display_name still takes precedence', op?.display_name === 'Chosen',
+    JSON.stringify(op));
+
+  // a phone sign-up has no email at all: split_part(NULL,'@',1) is NULL and
+  // profiles.display_name is NOT NULL, so before 0004 this insert took the
+  // whole sign-up down with it
+  const byPhone = randomUUID();
+  await sql`
+    INSERT INTO auth.users (id, email, phone, raw_user_meta_data)
+    VALUES (${byPhone}, NULL, '+15555550123', '{}'::jsonb)
+  `;
+  const [pp] = await sql`SELECT display_name FROM profiles WHERE id = ${byPhone}`;
+  check('a sign-up with no email still gets a profile', pp?.display_name === '+15555550123',
+    JSON.stringify(pp));
+
+  for (const id of [google, nameOnly, ours, byPhone]) {
+    await sql`DELETE FROM auth.users WHERE id = ${id}`;
+  }
 
   console.log('\n— catalogue seed —');
   process.env.DATABASE_URL = URL_;
@@ -156,6 +213,45 @@ try {
   const removedAgain = await sql`DELETE FROM favorites WHERE user_id = ${uid} AND cigarette_id = ${gitanes.id} RETURNING id`;
   check('toggle on when absent returns nothing', removedAgain.length === 0);
 
+  console.log('\n— the pack shelf —');
+  // Not the same shelf: these key on the page's own id, which is a filename
+  // and not a catalogue row. See supabase/migrations/0003_pack_favorites.sql.
+  const PACK = '04_ESSE-Change_Strawberry';
+  await sql`INSERT INTO pack_favorites (user_id, pack_id) VALUES (${uid}, ${PACK})`;
+  const [seen] = await sql`
+    SELECT 1 AS one FROM pack_favorites WHERE user_id = ${uid} AND pack_id = ${PACK}
+  `;
+  check('a pack saves and reads back', Boolean(seen));
+
+  // add-only: the owner asked for red to be permanent, so the action inserts
+  // and never deletes, and pressing twice must not make a second row
+  await sql`
+    INSERT INTO pack_favorites (user_id, pack_id) VALUES (${uid}, ${PACK})
+    ON CONFLICT (user_id, pack_id) DO NOTHING
+  `;
+  const [dupes] = await sql`
+    SELECT COUNT(*)::int AS n FROM pack_favorites WHERE user_id = ${uid} AND pack_id = ${PACK}
+  `;
+  check('saving twice leaves one row', dupes.n === 1, JSON.stringify(dupes));
+
+  const [absent] = await sql`
+    SELECT 1 AS one FROM pack_favorites WHERE user_id = ${uid} AND pack_id = 'not-a-pack'
+  `;
+  check('a pack nobody saved reads back as unsaved', absent === undefined);
+
+  // two readers keep separate shelves — the queries are scoped by user_id and
+  // nothing else is watching, so this is the check that matters most here
+  const other = randomUUID();
+  await sql`
+    INSERT INTO auth.users (id, email, raw_user_meta_data)
+    VALUES (${other}, 'other@example.com', ${sql.json({ display_name: 'Other' })})
+  `;
+  const [mine] = await sql`
+    SELECT COUNT(*)::int AS n FROM pack_favorites WHERE user_id = ${other}
+  `;
+  check("another reader's shelf is empty", mine.n === 0, JSON.stringify(mine));
+  await sql`DELETE FROM auth.users WHERE id = ${other}`;
+
   console.log('\n— share snapshots —');
   const token = randomBytes(12).toString('base64url');
   const share = await sql.begin(async (tx) => {
@@ -197,6 +293,11 @@ try {
 
   console.log('\n— cascade —');
   await sql`DELETE FROM auth.users WHERE id = ${uid}`;
+  const [packOrphans] = await sql`
+    SELECT COUNT(*)::int AS n FROM pack_favorites WHERE user_id = ${uid}
+  `;
+  check('deleting the account clears the pack shelf', packOrphans.n === 0,
+    JSON.stringify(packOrphans));
   const orphans = await sql`
     SELECT (SELECT COUNT(*)::int FROM profiles WHERE id = ${uid}) AS p,
            (SELECT COUNT(*)::int FROM reviews WHERE user_id = ${uid}) AS r,
@@ -251,6 +352,14 @@ try {
   const shelf = await lib.favoritesWithNotes(owner);
   check('favoritesWithNotes resolves every favourite', shelf.length === favIds.length,
     `${shelf.length} resolved of ${favIds.length} saved`);
+
+  await lib.savePack(owner, '04_ESSE-Change_Strawberry');
+  await lib.savePack(owner, '04_ESSE-Change_Strawberry');
+  check('savePack is idempotent',
+    (await lib.savedPackIds(owner)).filter((p) => p === '04_ESSE-Change_Strawberry').length === 1);
+  check('packIsSaved sees it', await lib.packIsSaved(owner, '04_ESSE-Change_Strawberry'));
+  check('packIsSaved says no to one nobody saved',
+    (await lib.packIsSaved(owner, '99_Nothing')) === false);
 
   const marked = cigs.filter((c) => new Set(favIds).has(c.id));
   check('catalogue marks saved items as on the shelf', marked.length === favIds.length,

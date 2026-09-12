@@ -320,6 +320,51 @@ export async function setFavoriteNote(userId: string, cigaretteId: number, note:
   `;
 }
 
+/* ---------- The pack shelf ----------
+ * The bookmark on a cigarette's own page, which is a different shelf from the
+ * one above. `favorites` keys on a catalogue row and the catalogue is still
+ * 32 placeholder products; these 235 pages are the owner's own vectors, keyed
+ * by the pack's source filename. See supabase/migrations/0003_pack_favorites.sql
+ * for why they are not the same table.
+ *
+ * The id saved is the PAGE's, not the pressed pack's, so the twelve packs that
+ * share a name with another save as the one cigarette they are.
+ */
+
+/** Whether this reader has already bookmarked this page. */
+export async function packIsSaved(userId: string, packId: string): Promise<boolean> {
+  const sql = db();
+  const [row] = await sql<{ one: number }[]>`
+    SELECT 1 AS one FROM pack_favorites
+    WHERE user_id = ${userId} AND pack_id = ${packId}
+  `;
+  return Boolean(row);
+}
+
+/**
+ * Bookmark a page. Add-only and idempotent: the owner asked for the mark to
+ * go red permanently, so pressing it again is not an undo, and a double
+ * submit cannot make a second row.
+ */
+export async function savePack(userId: string, packId: string): Promise<void> {
+  const sql = db();
+  await sql`
+    INSERT INTO pack_favorites (user_id, pack_id)
+    VALUES (${userId}, ${packId})
+    ON CONFLICT (user_id, pack_id) DO NOTHING
+  `;
+}
+
+/** Everything on this reader's pack shelf, most recently saved first. */
+export async function savedPackIds(userId: string): Promise<string[]> {
+  const sql = db();
+  const rows = await sql<{ pack_id: string }[]>`
+    SELECT pack_id FROM pack_favorites
+    WHERE user_id = ${userId} ORDER BY created_at DESC
+  `;
+  return rows.map((r) => r.pack_id);
+}
+
 /* ---------- Profiles ---------- */
 export type Profile = { id: string; display_name: string; created_at: string };
 

@@ -4,6 +4,36 @@
    ============================================================ */
 
 /* ---------- Tokens ---------- */
+/* ------------------------------------------------------------ Far East --
+   The owner's own face, supplied as a webfont and self-hosted. It is what
+   anyone types into this site: every field, on every page.
+
+   What is in the file (read straight out of it, see the notes in CLAUDE.md):
+   64 glyphs — space, 0-9, A-Z, a-z, and nothing else. No full stop, no
+   comma, no apostrophe, no @, no CJK. Whatever is not in that list is drawn
+   by the next family in the stack, which is why unicode-range is declared
+   exactly: it keeps the browser from ever consulting this face for a
+   character it does not have, and keeps the file off pages that have no
+   letters to set in it.
+
+   usWeightClass is 700 and there is one weight in the file, so the range is
+   declared 400-700 — the same drawn face at either end, rather than the
+   browser faking a bold out of it. Metrics: 1000 upem, cap 700, x-height
+   510, and a mean lowercase advance of 0.67em, which is about a third wider
+   than any fallback; nothing can metric-match it, so the file is preloaded
+   in the document head instead and swaps within a frame.
+
+   Bump the number in the filename when the file is replaced — /fonts is
+   served immutable for a year (see next.config.mjs). */
+@font-face {
+  font-family: "Far East";
+  src: url("/fonts/far-east-1.woff2") format("woff2");
+  font-weight: 400 700;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0020, U+0030-0039, U+0041-005A, U+0061-007A;
+}
+
 :root {
   /* brand */
   --cinnabar: #c1272d;
@@ -35,6 +65,9 @@
   --font-display: "Exo 2", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --font-body: "Noto Serif", Georgia, "Times New Roman", serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  /* What the reader types, and what we set new copy in. The face has letters
+     and digits only; the rest of the stack draws the punctuation. */
+  --font-typed: "Far East", var(--font-display);
 
   /* layout */
   --container: 1280px;
@@ -186,6 +219,25 @@ ul, ol { list-style: none; }
 .btn-ghost { background: transparent; color: var(--body); height: 40px; padding: 0 16px; }
 .btn-ghost:hover { color: var(--ink); }
 .btn-block { width: 100%; }
+/* The rule between a provider button and the email form. One element, so the
+   markup stays a single <p> — the line is a border either side of the word,
+   which keeps it centred on the text's own baseline whatever the word is. */
+.auth-or {
+  display: flex;
+  align-items: center;
+  gap: var(--sm);
+  color: var(--muted);
+  font-size: 13px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+}
+.auth-or::before,
+.auth-or::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--hairline);
+}
 .btn-sm { height: 44px; padding: 0 20px; }
 .btn-icon {
   width: 44px; height: 44px; padding: 0; border-radius: var(--r-full);
@@ -285,13 +337,18 @@ ul, ol { list-style: none; }
 /* ---------- Inputs ---------- */
 .field { display: block; }
 .field > .label { color: var(--muted); display: block; margin-bottom: var(--xs); }
+/* Everything typed on this site is set in the owner's own face — the fields
+   here and the splash's, which is the rule for every field added after this.
+   font-synthesis is off because the file holds one weight: let it be the
+   weight it was drawn at rather than a smeared copy of it. */
 .input, .select, .textarea {
   width: 100%; background: var(--surface); color: var(--ink);
-  font-family: var(--font-display); font-size: 15px; line-height: 1.5;
+  font-family: var(--font-typed); font-size: 15px; line-height: 1.5;
+  font-synthesis: none;
   border: 1px solid var(--hairline); border-radius: var(--r-none);
   padding: 12px 16px; height: 48px;
 }
-.textarea { height: auto; min-height: 140px; font-family: var(--font-body); line-height: 1.6; resize: vertical; }
+.textarea { height: auto; min-height: 140px; line-height: 1.6; resize: vertical; }
 .input::placeholder, .textarea::placeholder { color: var(--disabled); }
 .input:focus, .select:focus, .textarea:focus { border-color: var(--hairline-strong); }
 .select {
@@ -516,3 +573,529 @@ ul, ol { list-style: none; }
 /* The footer stays canvas-dark in both modes, so its controls do too. */
 .site-footer .btn-icon { background: #171717; color: #ffffff; }
 .site-footer .btn-icon:hover { background: #222222; }
+
+/* ---------- Splash ---------- */
+/* The recoloured source animation on a canvas — the frame 1:1 in the centre, the
+   red design branched out to the screen edge with a faint-centre / bold-edge
+   veil. On latch, settle.webp cross-fades the baked black to 0 and
+   SplashLoginFields shows per-part windows of blackbox.webp (the box's own black
+   content, pixel-exact) over the red outline box. Above the age gate. */
+.splash {
+  position: fixed; inset: 0; z-index: 200;
+  overflow: hidden; background: #fcfcfc;
+  touch-action: none;
+}
+.splash-canvas {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  display: block;
+}
+
+/* press-and-hold target — the seal's square (positioned from JS) */
+.splash-hit {
+  position: fixed;
+  margin: 0; padding: 0; background: transparent; border: 0;
+  cursor: pointer; -webkit-tap-highlight-color: transparent;
+}
+.splash-hit:focus-visible { outline: 2px solid #ff0000; outline-offset: 6px; }
+
+.splash-fields { position: static; }
+.splash-field-input {
+  border: 0; background: transparent; border-radius: 0;
+  /* the owner's own face, the same as every other field on the site; it was
+     Cormorant Unicase only as a stand-in for the box's drawn lettering */
+  font-family: var(--font-typed);
+  font-weight: 700;
+  font-synthesis: none;
+  line-height: 1; color: #000000;
+  caret-color: transparent;
+  padding: 0;
+}
+.splash-field-input:focus { outline: none; }
+.splash-field-submit { border: 0; background: transparent; cursor: pointer; padding: 0; line-height: 1; }
+.splash-field-submit:hover, .splash-field-submit:focus-visible { text-decoration: underline; outline: none; }
+.splash-fields-error {
+  margin: 0;
+  font-family: var(--font-display); font-size: clamp(10px, 1.5vw, 13px);
+  color: var(--negative); text-align: center; /* spec: errors are warm grey, never red */
+}
+
+/* --------------------------------------------------------- artwork pages --
+   Pages built from a supplied design image — the landing page, About Us, and
+   whatever follows. Each mark in the artwork is its own SVG, positioned
+   against the viewport's edges rather than scaled inside a frame, so the
+   design's margins survive at any width. Scaling one flat image instead would
+   scale those margins with it, which is the thing to avoid.
+
+   --artpage-bg is the page's own ground, set inline from the artwork's
+   generated geometry, so a backing plate in the art can never seam against
+   it. These sit under the splash (z-index 200) and over the sticky
+   header (40). */
+.artpage {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: var(--artpage-bg, #ffffff);
+  overflow: auto;
+}
+/* The stage is the page's own area, and everything anchors to its edges. Its
+   min-height (set inline, derived from the artwork) stops the top block and
+   the bottom row meeting on a short window; past that the page scrolls. */
+.artpage-stage {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+.artpage-hit,
+.artpage-decor,
+.artpage-cluster {
+  position: absolute;
+}
+.artpage-hit {
+  display: block;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.artpage-hit:focus-visible {
+  outline: 2px solid var(--artpage-focus, #010101);
+  outline-offset: 3px;
+}
+.artpage-mark {
+  display: block;
+  width: 100%;
+  height: 100%;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+.artpage-hit-debug {
+  outline: 1px dashed var(--artpage-focus, #fd0000);
+}
+
+/* ------------------------------------------------------- inner page nav --
+   The three footer boxes. The one for the page you are already on goes
+   nowhere: it sits at half opacity and fades as you approach, saying where
+   you are rather than inviting a press. Pressing it anyway flashes the whole
+   square — fill and outline both — red for a quarter second.
+
+   The other two lead away. Hovering brings up a second image with the box
+   filled black behind its label (painting over the box would bury the
+   label), and drops the whole button to three-quarters opacity. */
+/* No position here: .artpage-hit is already absolute, which is its own
+   containing block for the overlays below. Setting `relative` took these
+   three out of the cluster's absolute layout and stacked them diagonally. */
+.artpage-nav {
+  transition: opacity 120ms ease-out;
+}
+.artpage-nav-hover {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  opacity: 0;
+  pointer-events: none;
+}
+.artpage-nav[data-hover] .artpage-nav-hover {
+  opacity: 1;
+}
+.artpage-nav[data-hover] {
+  opacity: 0.75;
+}
+
+/* the box for the page you are on */
+.artpage-nav-current {
+  opacity: 0.5;
+  cursor: default;
+}
+.artpage-nav-current[data-hover] {
+  opacity: 0.1;
+}
+.artpage-nav-flash {
+  position: absolute;
+  /* the outline is drawn outside the mark's box, so reach past it */
+  inset: -2px;
+  display: block;
+  background: #ff0000;
+  opacity: 0;
+  pointer-events: none;
+}
+/* The flash rides at whatever opacity the button is sitting at, so a press
+   reads as the box going from dark red to the page's red and back rather
+   than as it jumping forward. */
+.artpage-nav-current[data-flashing] .artpage-nav-flash {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .artpage-nav {
+    transition: none;
+  }
+}
+
+/* ------------------------------------------------------- cigarette page --
+   One page per cigarette, built from the supplied info-page vector. The
+   body keeps its drawn size at every width and is centred, which is what
+   makes the left and right margins equal; it holds the design's own top
+   margin.
+
+   The logo and the seal are NOT part of that body. The build takes both
+   out of the vector and they are placed against the page's own edges
+   instead, at the landing page's margins and the landing page's size --
+   the margin rule, the same as every other page on the site. A mark that
+   travelled with a centred body would sit somewhere different on every
+   width; and the vector drew its logo as a raster, which read soft. */
+.cigpage {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: #ffffff;
+  overflow: auto;
+}
+.cigpage-stage {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  /* the rule round the info measures its stand-off against this */
+  container-type: inline-size;
+}
+/* Centred, on a whole pixel. An odd stage width makes 50% land on .5, and a
+   body drawn into a half-pixel box is resampled row by row — the quietest
+   cause of blur on this site, and the reason the design's own marks are
+   rounded outward everywhere else. round() puts the left edge on an integer;
+   the half-width comes off in px from the component, not as another 50%.
+   A browser without round() keeps the plain 50% above it. */
+.cigpage-body {
+  position: absolute;
+  left: 50%;
+  left: round(50%, 1px);
+}
+.cigpage-art {
+  display: block;
+  width: 100%;
+  height: 100%;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+/* A rule round the info itself — the title block down to the foot of the
+   comment panels — and not round the logo and the seal, which are the page's
+   furniture rather than the cigarette's. An outline rather than a border so
+   it draws outside the box it is given and cannot move the artwork inside it
+   by a pixel.
+
+   It stands off the info by the same distance the brand line stands off the
+   flavour, which is a different number on every page — every line here is
+   sized to its own phrase, so that gap runs 14 to 28px across the set. The
+   build measures it; the page reads it off the manifest. Box: INFO_BOX in
+   lib/cigPages.ts, grown by that gap.
+
+   The red is the artwork's own #FF0000, not --negative: that token is warm
+   grey and is never an error colour, per the spec. */
+.cigpage-frame {
+  position: absolute;
+  outline: 5px solid #ff0000;
+  pointer-events: none;
+
+  /* The stand-off is the page's own brand-to-flavour gap, until there is not
+     room for it. The rule is the widest thing on the page, so on a narrow
+     phone the widest of these gaps (28px) would push it past the edge and
+     scroll the page sideways — 314 is the info's 299 plus the rule's 5 at
+     each end, and what is left over is what the stand-off may have half of.
+     It only bites below about 370px, and only on the handful of pages whose
+     brand and flavour sit furthest apart. */
+  --stand: max(0px, min(var(--gap) * 1px, (100cqw - 314px) / 2));
+  left: calc(var(--x) * 1px - var(--stand));
+  top: calc(var(--y) * 1px - var(--stand));
+  width: calc(var(--w) * 1px + 2 * var(--stand));
+  height: calc(var(--h) * 1px + 2 * var(--stand));
+}
+/* ------------------------------------------------------- the bookmark --
+   The one control inside the artwork. The design draws it as a filled mark
+   in a box; the build takes the mark out of the vector, because an SVG
+   loaded through <img> is out of CSS's reach, and the page draws it back at
+   the same coordinates so it can be coloured. The box stays in the artwork
+   — it is the outline of the control and it never changes.
+
+   Black at rest, red under the pointer, red for good once it is saved. The
+   red is the artwork's own #FF0000, not --negative: that token is warm grey
+   and is never an error colour, per the spec.
+
+   Placed against the body rather than the stage, so it travels with the
+   artwork it belongs to. Every number comes from BOOKMARK in
+   lib/cigPages.ts and lands on a whole pixel. */
+.cigpage-bookmark {
+  position: absolute;
+  z-index: 2;
+  display: block;
+  margin: 0;
+  color: #010101;
+}
+.cigpage-bookmark[data-saved] {
+  color: #ff0000;
+}
+/* Fills the form, which is what carries the placement. */
+.cigpage-bookmark-hit {
+  position: absolute;
+  inset: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.cigpage-bookmark-hit:hover,
+.cigpage-bookmark-hit[data-pressed] {
+  color: #ff0000;
+}
+/* Black, like the menu's boxes — this sits on the same white artwork, and
+   the cobalt the rest of the site uses would be the only cobalt on the page. */
+.cigpage-bookmark-hit:focus-visible {
+  outline: 2px solid #010101;
+  outline-offset: 2px;
+  color: #ff0000;
+}
+/* Positioned from the same measurement as the box, so the mark cannot drift
+   inside it. currentColor is the whole point: one property carries all three
+   states down from whichever element is holding them. */
+.cigpage-bookmark-mark {
+  position: absolute;
+  display: block;
+  fill: currentColor;
+  pointer-events: none;
+}
+
+/* Against the stage, not the body: 45 and 28 are the landing page's own
+   margins, and the mark is the landing page's own vector at its own 40x87 —
+   the artwork's copy was a raster and read soft at this size. It is drawn,
+   not pressed: the menu's canvas sits over it and owns the hit. */
+.cigpage-logo {
+  position: absolute;
+  z-index: 2;
+  display: block;
+  pointer-events: none;
+}
+.cigpage-logo img {
+  display: block;
+}
+/* The menu and the seal both want the top strip. Here the bar runs one box
+   further than on the landing page — out to x=354, with home on the end —
+   and the seal takes 87 plus its 30 margin off the right edge, so the two
+   collide below 354 + 117 = 471. Where they do, the seal stands down for as
+   long as the menu is out, exactly as it does on the landing page. */
+@media (max-width: 480px) {
+  .cigpage-stage:has(.logo-menu:not([data-phase='idle'])) .seal-button {
+    opacity: 0;
+    pointer-events: none;
+  }
+}
+
+/* -------------------------------------------------------- cigarette row --
+   A row of packs across the middle of the page that scrolls forever, with a
+   red frame at the centre marking the one you can press.
+
+   Placed by the same rule as everything else on these pages: the design puts
+   the band 375 from the top and 375 from the bottom of an 844-high page, so
+   it is centred, and it holds its own height in real pixels at any viewport
+   rather than scaling. It spans the full width because it has no ends. */
+.cig-row {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 1;
+  overflow: hidden;
+  touch-action: pan-y;
+  cursor: grab;
+  -webkit-tap-highlight-color: transparent;
+  /* nothing in here is selectable or draggable: a native image drag steals
+     the gesture and the row stops following the pointer */
+  user-select: none;
+  -webkit-user-select: none;
+}
+.cig-row:active {
+  cursor: grabbing;
+}
+/* The row runs the full width, so a focus ring only ever showed as a line
+   above and below it. The owner liked that, so it is drawn deliberately now
+   rather than left to the browser: the frame's own weight and colour, and
+   pushed out so the clearance it had from the packs it now has from the
+   frame. Sized from CIG_RULE, set inline on the row. */
+.cig-row:focus-visible {
+  outline: none;
+}
+.cig-rule {
+  position: absolute;
+  left: 0;
+  right: 0;
+  display: block;
+  height: var(--cig-rule);
+  background: var(--cig-red);
+  pointer-events: none;
+  opacity: 0;
+}
+.cig-row:focus-visible .cig-rule {
+  opacity: 1;
+}
+.cig-rule-top {
+  top: 0;
+}
+.cig-rule-bottom {
+  bottom: 0;
+}
+.cig-track {
+  position: absolute;
+  inset: 0;
+}
+/* Each pack is vertically centred in the band: the band is the frame's outer
+   box (92 + 6 + 6), so the 6 above and below is the frame's own margin. */
+.cig-slot {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  display: block;
+  -webkit-user-drag: none;
+}
+.cig-slot-picked {
+  cursor: pointer;
+}
+.cig-slot-picked:focus-visible {
+  outline: none;
+}
+.cig-pack {
+  display: block;
+  width: 100%;
+  height: 100%;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+/* The frame is drawn around whichever pack is nearest the middle, at the
+   margin the design gives it, so it travels with that pack and hops to the
+   next as the lead changes. It sits over the packs, so it must not eat the
+   press. */
+.cig-frame {
+  position: absolute;
+  display: block;
+  border-style: solid;
+  pointer-events: none;
+  box-sizing: border-box;
+}
+
+/* ------------------------------------------------------------- logo menu --
+   The 遠東 logo unfolding into a nav. Sits at the stage's top-left corner,
+   over the page's own logo: the animation's first frame is that logo, baked
+   to land on it to half a pixel, so it covers rather than replaces it. It is
+   only as wide as the animation's content so its white ground cannot reach
+   the seal. Idle it draws nothing and lets the page's logo show through; the
+   button over the characters is what listens. */
+.logo-menu {
+  position: absolute;
+  left: 0;
+  top: 0;
+  /* above the seal: on a narrow screen the unfolded boxes reach into the
+     seal's corner, and the seal is the static one of the two */
+  z-index: 3;
+  /* The box is as wide as the whole bar even at rest, and on a narrow screen
+     it reaches over the seal's corner — an invisible div is still hit-
+     testable, so without this it would eat presses meant for the seal. The
+     parts below take their own hits back. */
+  pointer-events: none;
+}
+/* The page's own 遠東 steps aside while the menu is out.
+   Frame 0 of the animation IS that logo, and it used to arrive behind an
+   opaque white ground that covered the page's copy. The ground is gone now —
+   it was cutting across the red rule on the cigarette pages — so without this
+   the two identical marks would sit on top of one another and the strokes
+   would thicken the moment the menu opened. */
+.artpage-stage:has(.logo-menu:not([data-phase='idle'])) [data-part='logo'],
+.cigpage-stage:has(.logo-menu:not([data-phase='idle'])) .cigpage-logo {
+  opacity: 0;
+}
+.logo-menu-canvas {
+  display: block;
+  pointer-events: none;
+  /* nothing is painted until the menu is asked for, so the page's own
+     (vector, and sharper) logo is what shows at rest */
+  opacity: 0;
+  transition: none;
+}
+.logo-menu[data-phase='forward'] .logo-menu-canvas,
+.logo-menu[data-phase='open'] .logo-menu-canvas,
+.logo-menu[data-phase='reverse'] .logo-menu-canvas {
+  opacity: 1;
+}
+.logo-menu-logo,
+.logo-menu-box {
+  position: absolute;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  display: block;
+  pointer-events: auto;
+  -webkit-tap-highlight-color: transparent;
+}
+.logo-menu-logo:focus-visible,
+.logo-menu-box:focus-visible {
+  outline: 2px solid #010101;
+  outline-offset: 2px;
+}
+
+/* ----------------------------------------------------------- seal button --
+   The seal animates when approached. Its first frame IS the seal, so this
+   canvas replaces the page's own seal part rather than covering it: the page
+   omits that part and this draws the mark at rest as well as in motion,
+   which keeps it one consistent size instead of growing on hover. Anchored
+   to the same corner and margins the artwork puts it in. */
+.seal-button {
+  position: absolute;
+  z-index: 2;
+  transition: opacity 120ms linear;
+}
+/* The menu and the seal both want the top strip, and on a narrow screen
+   there is not enough of it. The boxes are drawn out to x=290 (see
+   lib/menu-geometry.json) and the seal takes 87 plus its 30 margin off the
+   right edge, so the two collide below 290 + 117 = 407. Where they do, the
+   seal stands down for as long as the menu is out — it is the static mark,
+   and the menu is only ever out because someone asked for it.
+
+   This only became true when the seal grew to the height of the character
+   logo; at the artwork's own 45px it cleared the boxes. */
+@media (max-width: 406px) {
+  .artpage-stage:has(.logo-menu:not([data-phase='idle'])) .seal-button {
+    opacity: 0;
+    pointer-events: none;
+  }
+}
+/* Always on: the first frame IS the seal, at the size the owner asked for
+   (as tall as the character logo), so the page leaves its own smaller seal
+   out and this draws it at rest too. Hiding it until hover made the mark
+   jump size the moment you approached it. */
+.seal-button-canvas {
+  display: block;
+  pointer-events: none;
+}
+.seal-button-hit {
+  position: absolute;
+  inset: 0;
+  display: block;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.seal-button-hit:focus-visible {
+  outline: 2px solid var(--artpage-focus, #010101);
+  outline-offset: 3px;
+}

@@ -22,6 +22,21 @@ try {
         ${sql.json({ display_name: 'Test Harness' })}
       ) RETURNING id
     `;
+    // GoTrue will not sign anyone in without a matching row in auth.identities,
+    // whatever auth.users says — the password check runs off the identity. A
+    // user inserted straight into the table has none, so it is made here.
+    // identity_data must carry sub and email: GoTrue reads the claims from it.
+    await sql`
+      INSERT INTO auth.identities (
+        provider, provider_id, user_id, identity_data,
+        last_sign_in_at, created_at, updated_at
+      ) VALUES (
+        'email', ${u.id}, ${u.id},
+        ${sql.json({ sub: u.id, email: EMAIL, email_verified: true, phone_verified: false })},
+        now(), now(), now()
+      )
+    `;
+
     // Give it a shelf so the count badge and share bar have something to show.
     await sql`
       INSERT INTO favorites (user_id, cigarette_id, note)

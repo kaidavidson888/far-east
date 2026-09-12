@@ -12,9 +12,16 @@
     "seed": "node scripts/seed-catalog.mjs",
     "demo": "node scripts/demo-data.mjs",
     "verify:db": "node .verify/run.mjs",
+    "build:splash": "node scripts/build-splash-frames.mjs",
     "set-db-password": "node scripts/set-db-password.mjs",
     "link-supabase": "node scripts/link-supabase.mjs",
-    "diagnose-db": "node scripts/diagnose-db.mjs"
+    "diagnose-db": "node scripts/diagnose-db.mjs",
+    "build:landing": "node scripts/build-landing-svg.mjs",
+    "build:pages": "node scripts/build-pages.mjs",
+    "build:menu": "node scripts/build-menu-frames.mjs",
+    "build:seal": "node scripts/build-seal-frames.mjs",
+    "build:cigs": "node scripts/build-cigs.mjs",
+    "build:cigpages": "node scripts/build-cigpages.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.5",
@@ -30,6 +37,9 @@
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.5",
     "embedded-postgres": "^18.4.0-beta.17",
+    "gifuct-js": "^2.1.2",
+    "pngjs": "^7.0.0",
+    "sharp": "^0.34.5",
     "typescript": "^5.5.4"
   },
   "allowScripts": {

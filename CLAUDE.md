@@ -16,10 +16,21 @@ no CSS framework (tokens in `app/globals.css`). Deploys to Vercel.
 ## Commands
 - `npm run dev` — local server (needs `.env.local`, see below)
 - `npm run build` — must stay clean; run it before every commit
+- `npm run build:landing` / `npm run build:pages` — normalise a page's artwork and cut it
+  into `public/<page>/parts/*.svg` + `lib/<page>-geometry.json`. `build:pages` does About Us,
+  Privacy Policy and Terms of Service together. Re-run after changing the matching
+  `scripts/assets/*.svg`; the layouts read that geometry, so nothing is hardcoded and a
+  re-export moves the buttons with the marks. See "Pages built from artwork" below.
 - `npm run verify:db` — 29 checks against a throwaway Postgres (no network, no Supabase). Run after any schema or `lib/db.ts` change. It boots its own Postgres via `embedded-postgres`.
 - `npm run seed` — upserts `lib/catalog.json` into the database (idempotent; never touches user data)
 - `npm run link-supabase` / `set-db-password` / `diagnose-db` — configure `.env.local` safely (hidden prompts, connection tested before saving, refuse piped input)
 - `npm run demo` — three sample accounts, LOCAL ONLY; needs the secret key
+- `npm run build:cigs` — rebuilds the 282 pack marks in `public/cigs` and `lib/cigs.json`
+  from the owner's `Cigs Images` folder (path at the top of `scripts/build-cigs.mjs`)
+- `npm run build:cigpages` — rebuilds the 235 pages in `public/cigpages` and
+  `lib/cigpages.json` from the owner's info-page vectors in `scripts/assets/cigpages`.
+  **Takes about half an hour** (it re-encodes every raster in every vector), so background
+  it. Re-run it after `build:cigs`: each page carries a copy of that pack's cleaned mark.
 
 ## Environment (`.env.local`, gitignored — never commit, never paste into chat)
 `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `DATABASE_URL`.
@@ -48,6 +59,316 @@ overwrote this file twice during setup. `.env.example` is the template.
   Exception the owner chose: cinnabar is also the "Add to my shelf" CTA (the primary action).
 - Dates are formatted server-side in `lib/format.ts` (`en-US`, `America/New_York`) and passed
   as strings — never re-format on the client.
+
+## Pages built from artwork (the landing page, About Us, Privacy Policy, Terms of Service)
+The owner supplies a Figma export; the page is built from it, not hand-typeset. **The rule
+the owner set: hold the design's edge margins in real CSS pixels at every viewport size.**
+Elements keep their drawn size and the space between them flexes. Never scale the whole
+artwork to fit a frame — that scales the margins with it, which is the thing being avoided.
+- Measure margins off a *render* of the export, never off Figma layer boxes; those are
+  padded (the landing logo's was a 116x116 rect mostly empty around the characters).
+- `scripts/lib/split-svg-parts.mjs` cuts an export into one SVG per element, given a
+  `regions` map and the page's `background`. Nodes are grouped by where they sit, not by
+  index. A node matching no region, matching two, or a region catching nothing is a **hard
+  error** — a silently missing mark is worse than a failed build.
+- `scripts/lib/resample-embedded.mjs` brings embedded rasters down to 4x their drawn size.
+  Figma exports images at full resolution: the footer icons were 46x oversampled, 640KB for
+  three 54px squares. **Tune it in Chrome, never in a headless rasteriser** — resvg
+  resamples far better than a browser, so it rates the untouched bitmap best and every
+  re-encode a loss, which is the opposite of what ships. That mistake cost two rounds.
+- `scripts/lib/page-pipeline.mjs` is the shared normalising step for the three inner pages:
+  masks into defs, the logo and the "about us" label swapped for vector, footer fills set
+  (the current page's button black, the other two red, label drawn after the fill), colours
+  snapped. `scripts/build-pages.mjs` holds one config per page.
+- **Watch for duplicated layers.** The Terms of Service export stacks two copies of its whole
+  footer. Anything that rewrites an image must group by image id first, or the second pass
+  measures against what the first already shrank (a 168px icon became 15px).
+- `lib/artpage.ts` holds the shared layout model, `components/ArtworkPage.tsx` renders a
+  spec, `lib/innerPage.ts` builds the spec the three inner pages share, and each page
+  contributes one (`lib/landing.ts`, `lib/about.ts`, `lib/privacy.ts`, `lib/terms.ts`) from
+  its generated geometry. CSS lives in the `.artpage-*` block in `globals.css`.
+- Small labels: a 9px line of text will not render solid at DPR 1 whatever the format. Prefer
+  a real vector of the label; a hairline stroke on its paths is the honest last resort.
+- **Keep every part on whole pixels.** A fractional box is the quietest cause of blur: the
+  part's SVG gets a fractional width, the browser reports its intrinsic size as the rounded
+  integer, then draws it into the fractional CSS box — a scale of 1.0005 that resamples every
+  row. The Privacy body was 295x514 intrinsic drawn into 295x514.25 and looked soft for it.
+  `inkBox` rounds outward, and `ArtworkPage` rounds the centring offset — but only the mark's
+  own half-width, not the `left: 50%` under it, and 50% of an odd stage width is still a .5.
+  **The artwork pages are live with that half pixel today; see Known gaps.** The cigarette
+  page is the one that has it right: `left: round(50%, 1px)`, with a plain `left: 50%`
+  declared above it as the fallback. Measuring a part by drawing its SVG to a canvas will NOT
+  catch this — the canvas draws at integer coordinates. Check `getBoundingClientRect` against
+  `naturalWidth/Height` on the live page instead.
+- **The logo goes home.** On every page except the landing page and the splash, the 遠東
+  logo links to `/landing` (`HOME` in `lib/innerPage.ts`) — not `/`, which puts a signed-out
+  reader back behind the splash. Give the logo part an `href` and `ArtworkPage` renders an
+  `<a>`. This holds for pages not built yet. The landing page is the exception: there the
+  logo opens the menu and is marked `decorative` so it is not also a button.
+- Routes: `/` is the landing artwork behind the sign-in splash; `/landing` is the same page
+  with no splash. `/about`, `/privacy`, `/terms` are the inner pages.
+- **The logo menu** (`components/LogoMenu.tsx`, `npm run build:menu`) is on the landing
+  routes and the cigarette pages — its ground is white, so it cannot go on the red inner
+  pages. Hovering 遠東 unfolds the linked boxes; pressing mid-run skips to the end; pressing
+  the logo again or anything else runs it back at 2x. Frames are baked from
+  `scripts/assets/monkey-bar.gif` because a GIF cannot be seeked, paused or reversed. The
+  canvas draws over the page's own logo rather than replacing it — frame 0 IS that logo, and
+  both put their ink at exactly 46,28, which is measured in the build, not assumed.
+- **The frames carry no white.** The gif paints its background white and 90% of a finished
+  frame was opaque white, which cut across whatever the canvas sat on — on the cigarette pages,
+  the red rule round the info. The bake un-multiplies every frame out of white on the way out:
+  ink over white is `p = C*a + 255*(1-a)`, so `a = 1 - min(r,g,b)/255` and
+  `C = (p - 255*(1-a))/a` recovers the colour and the coverage exactly, for any ink colour.
+  **Not a colour key** — those leave a light halo on every antialiased edge, and this leaves
+  none, because it is the arithmetic the gif's own renderer did, run backwards. Everything
+  upstream of the write still works in RGB over white, which is what the fourth box's synthesis
+  and the pressed states want; the pressed overlays stay opaque, because they are meant to fill
+  their box.
+- **So the page's own logo steps aside while the menu is out** (`[data-part='logo']` on the
+  artwork pages, `.cigpage-logo` on the cigarette pages). The white ground used to hide it by
+  covering it; without that, two identical marks would sit on top of one another and the
+  strokes would thicken the moment the menu opened.
+- **The menu has a fourth box the gif never drew.** The cigarette pages need a way home, and
+  there the logo is the menu's switch rather than a link, so home had to be a box. It is not
+  hand-drawn: the bake measured that the gif unfolds **one box every 40 frames exactly** (box
+  1's connector at f51, box 2's at f91, box 3's at f131) and that each label is a **linear
+  fade over its last ten frames** — the ink's extent never moves, only its darkness. So frame
+  170+k is frame 169 with the strip carrying box 3's cycle (x 226..290) copied from frame
+  130+k and moved 64px right, its label dropped, and the word "home" faded in at whatever
+  alpha box 3's label was wearing. f169 and f170 are byte-identical, so the join is invisible.
+  **`stops` in `lib/menu-geometry.json` is how a page says how far to play**: `base` is the
+  170 frames the gif drew (the landing page), `home` is all 210. One set of frames, two
+  lengths — do not bake a second set.
+- The home label is `scripts/assets/menu-home-label.png`, a coverage map rendered **in Chrome**
+  from the owner's own webfont. It has to be checked in because librsvg — which is what sharp
+  rasterises SVG with — ignores an `@font-face` even with the font embedded as a data URI, and
+  there is no 'h' anywhere in the three existing labels to cut one from. It is sized the way
+  the owner sizes the others: every label block is ~42px wide whatever its word count, so the
+  type size falls out of that (13.6px for one short word).
+- The form factor is resolved server-side in `lib/device.ts` so the page arrives already
+  arranged. Mobile and desktop are separate placement tables even when the values match,
+  so either can be re-composed alone.
+- Dev flags on these pages: `?hitboxes=1` outlines the buttons, `?device=mobile|desktop`
+  forces an arrangement.
+
+## Pages built from the owner's artwork
+The landing, about, privacy and terms pages are not laid out by hand. Each is built from a
+supplied export by a script in `scripts/`, which measures a *render* of the artwork (never the
+Figma layer boxes — those are padded) and writes a geometry JSON that the page spec reads.
+
+**The margin rule, which the owner set and which applies to every new image they give us:**
+measure the distance from each edge of the design to the outermost ink, and hold those
+distances in real CSS pixels at every viewport. Elements keep their drawn size; the space
+between them flexes. Never scale the artwork to fit — that scales the margins with it, which is
+the thing being avoided. Mobile and desktop get the same margins and differ only in where the
+edges are. See `lib/artpage.ts`.
+
+Two rules that cost real time to learn:
+- **Tune image resampling against Chrome, not a headless rasteriser.** resvg resamples far
+  better than a browser does, so anything tuned against it ships blurry.
+- **Whole pixels.** A part drawn into a fractional CSS box makes the browser resample every
+  row (it reports a rounded intrinsic size, then draws into the fractional box). Canvas
+  measurement cannot see this because canvas draws at integer coordinates — compare
+  `getBoundingClientRect` against `naturalWidth/Height` on the live page instead.
+
+Baked animations (splash, logo menu, seal) are GIF frames rendered to WebP and scrubbed on a
+canvas, because a GIF cannot be seeked, paused or reversed. `lib/useFrameScrub.ts` is the
+shared state machine; `LogoMenu` still carries its own copy and should be folded into it.
+Flat-coloured frames must be quantised to a fixed palette and written lossless — a lossy encode
+will not keep a flat field flat, and per-frame palette choice drifts the white frame to frame.
+
+A cigarette's own page (`/packs/<id>`, `npm run build:cigpages`) is built from
+one supplied vector each, cut to a frame so centring gives it equal side margins.
+**The logo and the seal are taken out of that vector by the build and placed
+against the page's own edges instead**, at the landing page's geometry — the
+margin rule. The vector drew its logo as a raster that read soft, and a mark
+travelling with a centred body would sit somewhere different on every width. The
+build also swaps the vector's own pack photograph for the cleaned one the
+landing row uses, and closes the red frame onto it with no margin, which is how
+the owner's vectors draw it (rect and image share one box). **The logo there is
+the menu, not a link** — the menu's home box is what goes back.
+
+**One change is made to the design as supplied: the title block moves.** Brand,
+variant and full name go up under the 遠東 logo and take the landing page's own
+left edge for it — three pixels in from the logo, the same as OFFERS — keeping
+their spacing relative to one another. Everything else stays where it was
+drawn, and the same page serves a phone and a desktop.
+`scripts/lib/cigpage-layout.mjs` does the move, and two things in it are worth
+knowing before touching it:
+- **It moves a band, not three elements.** Each vector is a flat list of rects,
+  images and texts with absolute coordinates and no ids, but all 227 lay the
+  page out in the same six horizontal bands, which never interleave (surveyed:
+  two shapes, differing by one rect in the ratings band). So the title's run of
+  elements is wrapped in a `<g translate>` and nothing inside is retyped.
+- **The frame is fixed, not measured.** A crop that followed the ink would move
+  when the title moved, which would move the title: the alignment would chase
+  itself. The frame is the design's own (x=39, w=304), which at 390 puts the
+  body at stage x=43 and so the title's vector x=44 on stage x=48 — the logo's
+  45 plus the OFFERS 3. **That alignment is exact at the design's own width**;
+  the body is centred, so on a much wider window it drifts right of the logo.
+  Anchoring the body left would hold it at any width, at the cost of the equal
+  side margins — the owner's call, not one to make unasked.
+- **Every pack on the row is a button, but there are not 247 vectors.** The
+  owner supplied one info-page vector per cigarette *name*, and twelve packs
+  carry a name another pack already has (`299_Karelia-Blue` and
+  `252_Karelia-Blue`, `111_GoldenLeaf-Love_Style` and
+  `42_Golden_Leaf-Love_Style`, ten more). The build gives the vector to
+  whichever asks first; `lib/cigPages.ts` sends the other twelve to their
+  twin's page, matching on the name with punctuation and spacing removed —
+  which is what makes `GoldenLeaf` and `Golden Leaf` meet. Use `PRESSABLE` and
+  `pageFor()` from there rather than `cigpages.json` directly, or those twelve
+  go dead again. If the owner ever settles those names into genuinely
+  different products, each will claim its own vector and this finds nothing
+  to do.
+- **The 5px red rule round the info** is `INFO_BOX` in the same file, drawn by
+  the page rather than baked into the vector. It frames the title block down to
+  the foot of the comment panels and deliberately leaves the logo and the seal
+  outside it — they are the page's furniture, not the cigarette's. That box is
+  only constant across all 235 pages because the build puts the title on the
+  landing page's own line, so its ink top is 161 whatever the brand name.
+  **It stands off the info by that page's own brand-to-flavour gap**, which is
+  not a constant — every line on these pages is sized to its own phrase, so the
+  gap runs 14 to 28px (median 19). `titleGap()` measures it on the file that
+  actually ships and the build records it as `pages[].gap`.
+  **CSS clamps the stand-off to the room there is** (`.cigpage-frame`): the rule
+  is the widest thing on the page, and on a 360px phone the widest gaps would
+  push it off the edge. The clamp only bites below about 370px.
+  The red is the artwork's own `#FF0000`. **Not `--negative`** — that token is
+  warm grey and is never an error colour, per the spec.
+- **The bookmark is the one control inside the artwork.** The owner asked for
+  it to be a button: black at rest, red under the pointer, red for good once
+  it is pressed, and pressing it puts that cigarette on your shelf. A page
+  loaded through `<img>` is out of CSS's reach, so the mark comes out of the
+  vector the way the logo and the seal already do — `stripBookmark` in the
+  build — and `components/CigBookmark.tsx` draws the same path back at the
+  same coordinates, where a stylesheet can colour it. `BOOKMARK` in
+  `lib/cigPages.ts` carries the geometry, taken off the vector and rounded
+  outward so nothing lands on a half pixel. **The box round it stays in the
+  artwork**: that is the outline of the control and it never changes.
+  **The box is the button, the mark is what reddens** — the design draws it as
+  a control, the plus beside it is plainly one too, and it gives a 72x66
+  target rather than a 34px one.
+  It is **add-only, not a toggle**, which is what "red permanently" means: once
+  saved it stops being a button at all and becomes a `<span>` carrying the
+  state, rather than a dead control that still invites a press. Taking
+  something back off is the shelf's job, and **the shelf page does not show
+  packs yet** — see Known gaps.
+- **The pack shelf is a different table from the catalogue shelf.**
+  `favorites.cigarette_id` is a foreign key into `cigarettes`, which holds 32
+  placeholder products from `lib/catalog.json`; these 235 pages are the owner's
+  own vectors, keyed by the pack's source filename. Putting one in `favorites`
+  would mean inventing a brand, a country, a tar figure and a verdict for each.
+  So `public.pack_favorites` keys on `pack_id` — text, deliberately not a
+  foreign key, because the pack list lives in `lib/cigs.json` and is rebuilt
+  from the owner's image folder rather than seeded. **What is saved is the
+  PAGE's id, not the pressed pack's**, so the twelve name-twins save as the one
+  cigarette they are. Migration `0003_pack_favorites.sql`, **already applied to
+  the shared Supabase project** — do not apply it again.
+- **The menu canvas is cut to 360px on the cigarette pages**, which is exactly
+  a 360px phone. The bar with the home box reaches x=354, and `SLACK` in
+  `build-menu-frames.mjs` is 6 rather than 10 for that reason: at 10 the canvas
+  was 364 and scrolled those pages sideways by four pixels. It is transparent
+  at rest but its box still counts.
+- `scripts/assets/far-east-ink.json` is the per-character ink extent of the
+  owner's face, measured once in Chrome. It is what lets the build know where a
+  line of text actually starts and stops, which is what the title's ink top is
+  measured from. Regenerate it the same way if the face ever changes.
+
+The cigarette row on the landing page is measured off two references the owner supplied, both
+kept in `scripts/assets`: a positioning SVG and an MP4 of the motion. The MP4 runs at **8fps,
+dead constant** — that stepping is deliberate and the owner likes it, so the row is driven by a
+125ms timer rather than rAF. All of it is written up in `lib/cigRow.ts`.
+
+## The owner's own face (`public/fonts/far-east-1.woff2`)
+Supplied by the owner as `Far_East_Full_Webfont.woff2`, declared as the family
+**"Far East"**, self-hosted, and reached through the `--font-typed` token.
+
+**The rule the owner set: everything typed into this site is set in this face, in
+every text field on every page, and so is any copy we write from here on** —
+unless they say otherwise for a particular piece. `--font-typed` is how you ask
+for it; do not name the family directly.
+
+What is actually in the file, read out of it rather than assumed:
+- **64 glyphs. Space, 0-9, A-Z, a-z, and nothing else.** No full stop, comma,
+  apostrophe, hyphen, colon, @, parentheses, quotes — and no CJK. Everything
+  outside that set is drawn by the next family in the stack, which is why the
+  `@font-face` declares `unicode-range` exactly: the browser then never
+  consults this face for a character it does not have. **If you write copy that
+  leans on punctuation, look at it rendered before you ship it.**
+- It is a **unicase** design — the capitals and the lowercase are largely the
+  same letterforms. That is why the splash's typed rows used Cormorant *Unicase*
+  as a stand-in before this arrived, and why they now use the real thing.
+- One weight, `usWeightClass` 700, so the face is declared `font-weight: 400 700`
+  and the fields set `font-synthesis: none` — the drawn weight at either end
+  rather than a browser-smeared bold.
+- 1000 upem · cap 700 · x-height 510 · mean lowercase advance 0.67em, about a
+  third wider than any fallback. **Nothing can metric-match it**, so do not try:
+  the file is preloaded in the document head instead and swaps within a frame.
+- `fsType` is 4 (preview & print). If this font is ever licensed from someone
+  else rather than the owner's own conversion, that bit is worth a look.
+
+**The file is already as small as it goes.** Recompressing the brotli stream at
+quality 11 and dropping the `post` table's glyph names together save 50 bytes of
+6484 — 0.8%, for a rewritten font binary. Not worth it; it has already been
+subsetted to exactly its cmap (64 glyphs, 64 codepoints, no orphans). The wins
+that were left were all in delivery, and they are done: preloaded in
+`app/layout.tsx` (with `crossOrigin`, which is **not** optional on a font
+preload even same-origin — without it the browser fetches the file twice),
+`font-display: swap`, the exact `unicode-range`, and `/fonts/:file*` served
+`immutable` for a year from `next.config.mjs`. **The version is in the
+filename** — bump `far-east-1` to `-2` when the file is replaced, in
+`globals.css` and `app/layout.tsx` together, or caches will hold the old one.
+
+## Signing in with Google
+**Google is not an alternative to Supabase Auth — it is a provider inside it.**
+The handshake produces the same `auth.users` row, the same session cookie and the
+same `currentUser()`; nothing downstream knows the difference. Replacing Supabase
+Auth outright would mean rewriting every `references profiles(id)`, the signup
+trigger and the RLS default-deny, for no gain.
+
+Three things make it work, and only the first lives in this repo:
+- `signInWithGoogleAction` (`app/actions.ts`) starts it. **A server action, not a
+  link** — the flow is PKCE, so a code verifier has to be written to a cookie
+  before the reader leaves, and cookies can only be written from an action or a
+  route handler. An `<a href>` straight at Google would skip that and the
+  callback would have nothing to exchange.
+- `app/auth/callback/route.ts` catches them coming back and swaps the one-time
+  code for a session. Any provider added later comes back through the same
+  door. Node runtime — the only thing here that ever ran on the edge was the
+  session middleware, and it crashed.
+- `lib/siteUrl.ts` works out the origin to come back TO, from
+  `x-forwarded-proto` + Host, because Vercel terminates TLS at the edge and the
+  function itself sees http. `safeNext()` is there too: `next` rides through the
+  handshake in a query string, so it comes back from outside — a
+  protocol-relative `//evil.example` would be an open redirect handing over a
+  freshly minted session.
+
+**The credentials are not in this repo and must not be.** Client id and secret
+live in the Supabase dashboard (Authentication → Providers → Google); the
+redirect URI registered with Google is **Supabase's own**
+`https://<ref>.supabase.co/auth/v1/callback`, never this site's. Both origins —
+`http://localhost:3000/**` and the deployed one — have to be on the Redirect
+URLs allow-list under Authentication → URL Configuration, or the last hop
+lands nowhere. That list is enforced at the callback, so it cannot be checked
+without completing a real sign-in.
+
+**Migration 0004 is the part that cannot be fixed later.** `handle_new_user` read
+`raw_user_meta_data ->> 'display_name'` — a field WE invent and pass in the
+sign-up metadata. Google does not send it; it sends `full_name` and `name`. Every
+reader arriving through Google would have been named after the local part of
+their email, on every review they ever wrote, and the trigger fires once at
+insert. The chain is now display_name, full_name, name, email local part,
+phone, 'Reader' — our own field first, so nothing that works today changes.
+The last two also mean a sign-up with no email cannot fail the NOT NULL insert
+any more, which is what `splashAuthAction` has been working around.
+**Already applied to the shared Supabase project**, along with 0003.
+
+The button is `components/GoogleButton.tsx`, on `/login` and `/register`. Google's
+four-colour G is **the one mark on this site drawn outside the palette** — their
+branding terms require it; a monochrome or cinnabar G is not allowed. The rest
+of the button is the house style. **The splash has no Google button yet**: `/` is
+baked artwork, frame 100's login box IS the UI, so putting one there is a
+drawing job and the owner's call.
 
 ## Working as a team (two people, two Claude Code sessions)
 The repo is **public** on GitHub — chosen so Vercel Hobby deploys commits from either owner.
@@ -80,9 +401,46 @@ the brand assets and review text in this repo are visible to anyone.
    values in `lib/seed.ts`.
 5. **Instagram link is a placeholder** — two constants at the top of `app/page.tsx`.
 6. `subscribers` table is unused (newsletter removed); drop it in a migration when convenient.
+7. **Email and phone sign-in are both switched off.** A password sign-in comes
+   back `email_provider_disabled` and the splash's phone sign-in needs an SMS
+   provider that is not configured (Authentication -> Providers). **Google is
+   the way in** — it is already enabled with a real client id, and it needs
+   neither. Whether the deployed origin and localhost are on the Redirect URLs
+   allow-list has not been confirmed; that is the one thing that cannot be
+   checked without completing a real sign-in. The splash still offers only
+   phone, so a reader who lands on `/` has to reach `/login` to get in. It also means a signed-in press cannot be
+   verified end to end locally — the DB layer under it is covered by
+   `npm run verify:db` instead.
+8. **The pack shelf has no shelf page.** `/favorites` lists catalogue products
+   through `favoritesWithNotes`; `pack_favorites` is a separate table and
+   nothing renders it yet, so a bookmark can be added and not seen anywhere
+   else, and not removed. `savedPackIds()` in `lib/db.ts` is the query that
+   page will want.
+9. **The artwork pages are still centred on half pixels.** `styleFor` in
+   `ArtworkPage.tsx` rounds the mark's own half-width but leaves `left: 50%`,
+   and 50% of an odd stage width is a .5 — measured live on /about, the intro
+   and focus bodies sit at x=308.5 and the three footer buttons at 345.5 /
+   420.5 / 495.5, so every one of them is resampled row by row. This is the
+   same softness the owner reported on the cigarette pages. The cigarette page
+   fixes it with `left: round(50%, 1px)` (Chrome, Safari 15.4+, Firefox 118+,
+   with the plain 50% left above as the fallback), which cannot be written as
+   an inline style because React allows one value per property — so the fix
+   here needs the parts to carry a data attribute and let the stylesheet own
+   `left`. Small, but it touches the shared layout engine, so it is its own
+   change rather than a rider on someone else's.
 
 ## Gotchas learned the hard way
-- Run `next build` only with the dev server stopped; both write to `.next`.
+- **Heredocs on this machine eat one level of backslash.** Writing file content
+  straight into `cat > f <<'EOF'` is fine, but a JS *string literal* containing
+  `\s` or `\b` inside a heredoc arrives as `s`, which the string literal then
+  eats again — leaving a bare `s`, or a literal backspace. It has cost real time
+  four times now: a regex that silently matches nothing drops elements from a
+  page without erroring. **Use the Write tool for any patch script with a regex
+  in it.**
+- Run `next build` only with the dev server stopped; both write to `.next`. If you need
+  the pre-commit build while someone's dev server is up, `NEXT_DIST_DIR=.next-build npm run
+  build` sends it elsewhere — but Next rewrites `tsconfig.json` and `next-env.d.ts` to point
+  at that directory, so `git checkout --` both afterwards.
 - Restarting the dev server invalidates Server Action ids in open tabs → `POST 404`; hard-refresh.
 - Vercel Hobby blocked deploys authored by a non-owner while the repo was private; the repo was
   made public to remove that constraint. If it is ever made private again, that returns.

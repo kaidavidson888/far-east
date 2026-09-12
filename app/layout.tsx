@@ -24,12 +24,25 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" data-surface="dark" suppressHydrationWarning>
       <head>
+        {/* The owner's own face: 6.4KB, self-hosted, and wanted by the very
+            first field anyone types into — so it is fetched alongside the
+            document rather than waiting for the stylesheet to ask for it.
+            crossOrigin is not optional on a font preload even same-origin:
+            fonts are fetched in CORS mode, and without it the browser
+            downloads the file a second time. */}
+        <link
+          rel="preload"
+          href="/fonts/far-east-1.woff2"
+          as="font"
+          type="font/woff2"
+          crossOrigin="anonymous"
+        />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
         {/* eslint-disable-next-line @next/next/no-page-custom-font -- App Router: this is the document head */}
         <link
           rel="stylesheet"
-          href="https://fonts.googleapis.com/css2?family=Exo+2:wght@400;500;600;700;800&family=Noto+Serif:wght@400;600;700&family=Noto+Serif+TC:wght@400;700&family=JetBrains+Mono:wght@500&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Cormorant+Unicase:wght@400;500;700&family=Exo+2:wght@400;500;600;700;800&family=Noto+Serif:wght@400;600;700&family=Noto+Serif+TC:wght@400;700&family=JetBrains+Mono:wght@500&display=swap"
         />
         <script dangerouslySetInnerHTML={{ __html: BOOT }} />
       </head>
