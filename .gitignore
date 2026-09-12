@@ -1,13 +1,20 @@
 node_modules
 .next
-.env
-.env.local
-.env*.local
+
+# EVERY env file, whatever the suffix, because the repo is public.
+# This was .env / .env.local / .env*.local, and none of those matched
+# .env.local.bak — a backup of the real thing with the live database
+# password in it, which a `git add -A` committed and which sat in the
+# history until it was caught on the way to a push. One pattern that
+# catches the lot is the only shape that is safe to rely on.
+.env*
+# ...except the template, which carries no values and is meant to ship.
+!.env.example
+
 .DS_Store
 *.log
 tsconfig.tsbuildinfo
 .verify/build
-.env.local.old-project
 
 # Claude Code local launch config (machine-specific)
 .claude/
