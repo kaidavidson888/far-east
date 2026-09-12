@@ -391,8 +391,9 @@ rather than to script an ending.
   wall-clock is not.
 
 **OFFERS, My Saved and RECOMMENDED answer a pointer the same way**: the whole
-button drops to 75%, and a 5px dash appears one space after the word. Pressed,
-both go to 50%. The dash is a `::after` INSIDE the button, so the button's own
+button drops to 50%, and a 5px dash appears one space after the word. Pressed,
+both go to 25%. (Those were 75 and 50 at first; the owner asked for another 25
+off each.) The dash is a `::after` INSIDE the button, so the button's own
 opacity carries it — which is what "the same opacity as the text" means at both
 steps without either number being written twice. The gap is each label's OWN
 space, because the three are drawn at different sizes (51.5, 18.9 and 18.1px):

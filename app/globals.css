@@ -984,9 +984,10 @@ ul, ol { list-style: none; }
    button drops a quarter, and a dash appears one space after the word.
 
    THE DASH IS A CHILD OF THE BUTTON, so the button's own opacity carries it.
-   That is what "the same opacity as the text" means at both steps — 75% on
-   hover, 50% pressed — without either number being written twice or the two
-   drifting apart later.
+   That is what "the same opacity as the text" means at both steps — 50% on
+   hover, 25% pressed — without either number being written twice or the two
+   drifting apart later. Both were a quarter higher to begin with; the owner
+   took another 25 off each, the same way they asked for the first 25.
 
    The gap is that label's OWN space, not one shared number. The three are
    drawn at 51.5, 18.9 and 18.1px (their ink heights divided by the ink
@@ -1016,12 +1017,12 @@ ul, ol { list-style: none; }
 .artpage-hit[data-part='offers']:hover,
 .artpage-hit[data-part='saved']:hover,
 .artpage-hit[data-part='recommended']:hover {
-  opacity: 0.75;
+  opacity: 0.5;
 }
 .artpage-hit[data-part='offers']:active,
 .artpage-hit[data-part='saved']:active,
 .artpage-hit[data-part='recommended']:active {
-  opacity: 0.5;
+  opacity: 0.25;
 }
 .artpage-hit[data-part='offers']::after,
 .artpage-hit[data-part='saved']::after,
