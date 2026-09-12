@@ -513,6 +513,18 @@ ul, ol { list-style: none; }
    the paragraph black, the yes white, the no black. */
 .gate-terms .body-md { -webkit-text-stroke: 0.36px currentColor; }
 .gate-panel .btn { -webkit-text-stroke: 0.3px currentColor; }
+/* The NO is stroked HEAVIER than the YES so the two look equal.
+
+   They were already identical as a number -- 0.3px on 14px, 0.0214em, the
+   same ratio as the title -- and still the no read lighter. That is
+   irradiation, not CSS: light letters on a dark ground bleed outward and
+   gain apparent weight, dark letters on a light one lose it, and this panel
+   has one of each on the same red. Type designers cut a reversed weight
+   lighter for the same reason, in the other direction.
+
+   So the black label gets half again as much stroke. The number is not the
+   thing being matched here; the look is. */
+.gate-panel .btn-secondary { -webkit-text-stroke: 0.45px currentColor; }
 /* One rule round the two lower paragraphs: what the site is and the health
    line, together, as the terms under the question.
 
@@ -532,7 +544,11 @@ ul, ol { list-style: none; }
    are the two line-heights' and would want re-measuring if either changed. */
 .gate-terms {
   outline: 2px solid #ffffff;
-  outline-offset: 2px;
+  /* 4px, not 2: the owner asked for another 2px of daylight, and the offset
+     is the one number that adds it to all four sides at once and costs no
+     layout doing it. The padding still only corrects the leading. 9px all
+     round, measured. */
+  outline-offset: 4px;
   padding: 0 5px 2px;
 }
 /* Both buttons are white rules on the red now. The YES was a red fill, which
