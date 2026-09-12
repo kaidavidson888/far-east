@@ -35,6 +35,9 @@ no CSS framework (tokens in `app/globals.css`). Deploys to Vercel.
   what squaring off and peeling did, and the region that ends up being drawn.
   It leaves the manifest and the rest of the folder alone, so it is for looking,
   not for shipping: **re-run the full build before committing a crop change.**
+- `npm run audit:cigs` — checks every pack crop against its source photograph
+  and names the ones that cut into the pack (needs the `crops.json` that
+  `build:cigs` writes). Run it after any crop change; see "The cigarettes".
 - `npm run build:cigpages` — rebuilds the 235 pages in `public/cigpages` and
   `lib/cigpages.json` from the owner's info-page vectors in `scripts/assets/cigpages`.
   **Takes about half an hour** (it re-encodes every raster in every vector), so background
@@ -303,6 +306,25 @@ cream surface and the paper beside it is exactly the thing not to guess at, so
 those keep their margin. The instruction has always been that the box wins over
 the tidier crop. The build lists every peel, deepest first, so an outlier is
 visible rather than silent.
+
+**`npm run audit:cigs` checks every crop against its source, and it found six
+clips the build's own report could not.** The owner saw packs in the row cut
+short. The build lists what it PEELS, but the clips were not peels — they were
+crop candidates stopping short on a WHITE FACE, which reads as empty to every
+measure the build has: Hongtashan and Yunyan lost their bottom warning lines,
+Ashima its whole brand panel at the top, Zhenlong its white top and emblem,
+Rothmans and Yuxi (source file 219) a rule's width at an edge. All six are now
+in `HAND_CROP`, measured off the source. The audit reads the crop boxes the
+build records in `scripts/assets/cigs/crops.json` (kept out of `cigs.json`,
+which the row loads in the browser) and asks two things of the pixels each crop
+left out: how much of a removed strip is INK, and — for cut-outs — whether a
+solid opaque strip above or below the crop is PAPER-WHITE or not. The second
+is the one that matters: a white top that was cut and paper that was trimmed
+are both white, and only the alpha plus the paper test tells them apart. Its
+ink list is read, not obeyed — the loose cigarettes and overhanging splashes the
+"just the boxes" pass removes on purpose show up there too. It also confirmed
+the peels: of 136, one touched a top or bottom at all, and that one (Raison)
+was transparent, not pack. Run it after any crop change.
 
 **A crop change means rebuilding the pages too.** Each of the 235 info pages
 carries a copy of that pack's cleaned mark (`fitPhoto` reads `public/cigs/<id>.svg`),

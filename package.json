@@ -23,7 +23,8 @@
     "build:sigil": "node scripts/build-sigil.mjs",
     "build:cigs": "node scripts/build-cigs.mjs",
     "build:cigpages": "node scripts/build-cigpages.mjs",
-    "build:shelf": "node scripts/build-shelf.mjs"
+    "build:shelf": "node scripts/build-shelf.mjs",
+    "audit:cigs": "node scripts/audit-cigs.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.5",
