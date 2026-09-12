@@ -469,10 +469,13 @@ ul, ol { list-style: none; }
 }
 .gate-panel .display-sm, .gate-panel .title-lg { color: #010101; }
 .gate-panel p { color: #ffffff; }
-/* Both paragraphs inside the rule are black, against the white rule that
-   holds them and the white bar above it. */
-.gate-terms .body-md { color: #010101; }
-.gate-terms .caption { color: #010101; }
+/* Both paragraphs white, like the rule that holds them and the bar above.
+   The health line is the smallest thing on the panel and the only unstroked
+   one, so white is also the reading that carries: it measures 4.0:1 on this
+   red against black’s 5.25, but irradiation puts light letters ahead of the
+   number at this size. */
+.gate-terms .body-md { color: #ffffff; }
+.gate-terms .caption { color: #ffffff; }
 /* One solid white bar at 6px — the same colour as the rule under it — where
    the site's own is a 5px two-tone. Both halves are set
    rather than the parent, because .seal-divider colours its spans and leaves
@@ -624,11 +627,10 @@ ul, ol { list-style: none; }
 .gate-panel .gate-terms { margin-top: 23.8px; }
 .gate-terms .body-md {
   font-size: 14.67px;
-  /* 0.47px, not the 0.31 the em ratio alone gives (0.0214 x 14.67). This
-     paragraph is black on red now, and black reads thinner there than white
-     does, so it takes the same half-again correction the black button
-     carries. The health line under it was never stroked and is left alone. */
-  -webkit-text-stroke: 0.47px currentColor;
+  /* Back to the plain em ratio, 0.0214 x 14.67, now this paragraph is white
+     again: the half-again correction is only for black on red, which reads
+     thinner than white does. The health line under it is unstroked. */
+  -webkit-text-stroke: 0.31px currentColor;
 }
 .gate-terms .caption { font-size: 11.21px; }
 /* Both buttons are white rules on the red now. The YES was a red fill, which
