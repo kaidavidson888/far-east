@@ -1327,6 +1327,51 @@ ul, ol { list-style: none; }
 .cig-rule-bottom {
   bottom: 0;
 }
+
+/* ------------------------------------------------------------- reset ----
+   Puts the whole catalogue back, through the same spin My Saved uses.
+
+   It sits just under the row's left end, where the owner drew it. That is
+   NOT the page's left margin (45px, where the logo and the labels line up) —
+   it is 12px off the viewport edge, because this button belongs to the ROW,
+   and the row is full-bleed: it runs left:0 to right:0 and ignores the
+   margin rule by design. Anchored to the row's own band rather than to a
+   number, so it follows it at any height.
+
+   The border is there in both states and only shows in one: black on black
+   at rest, and the edge of the white box once the colours invert. Without it
+   the hovered button would be white on a white page, which is not an
+   inversion so much as a disappearance. */
+.cig-reset {
+  position: absolute;
+  left: 12px;
+  top: calc(50% + var(--cig-band) / 2 + 8px);
+  z-index: 2;
+  width: 88px;
+  height: 30px;
+  margin: 0;
+  padding: 0;
+  border: 2px solid #010101;
+  background: #010101;
+  color: #ffffff;
+  font-family: var(--font-typed);
+  font-weight: 400;
+  font-synthesis: none;
+  font-size: 15px;
+  line-height: 1;
+  text-align: center;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background-color 120ms ease-out, color 120ms ease-out;
+}
+.cig-reset:hover {
+  background: #ffffff;
+  color: #010101;
+}
+.cig-reset:focus-visible {
+  outline: 2px solid #010101;
+  outline-offset: 3px;
+}
 .cig-track {
   position: absolute;
   inset: 0;
@@ -1389,15 +1434,35 @@ ul, ol { list-style: none; }
      parts below take their own hits back. */
   pointer-events: none;
 }
-/* The page's own 遠東 steps aside while the menu is out.
-   Frame 0 of the animation IS that logo, and it used to arrive behind an
-   opaque white ground that covered the page's copy. The ground is gone now —
-   it was cutting across the red rule on the cigarette pages — so without this
-   the two identical marks would sit on top of one another and the strokes
-   would thicken the moment the menu opened. */
-.artpage-stage:has(.logo-menu:not([data-phase='idle'])) [data-part='logo'],
-.cigpage-stage:has(.logo-menu:not([data-phase='idle'])) .cigpage-logo {
-  opacity: 0;
+/* The page's own 遠東 stays put while the menu is out, and the menu's copy
+   of it goes instead.
+
+   IT USED TO BE THE OTHER WAY ROUND, and the owner could see the difference:
+   the logo "changed opacity" the instant you hovered it. Both marks land in
+   the same place — the page's vector occupies x 45..85 and the canvas's copy
+   46..83, measured live — but they are not the same mark. The canvas's is a
+   RASTER, two pixels narrower, carrying the soft edges the un-multiply leaves
+   (mean alpha 209 against a vector's hard 255). Swapping a crisp mark for a
+   soft one that size reads as it going lighter, which is exactly what was
+   reported.
+
+   So the vector wins its own box. It is lifted above the canvas rather than
+   the canvas being clipped, because the canvas has ink outside the logo from
+   frame 0 onwards — a 3px sliver at x 31..33 — and clipping would take that
+   with it. The two marks coincide, so the vector covering the raster is the
+   whole of the fix: nothing thickens, because only one of them is visible. */
+.artpage-stage [data-part='logo'],
+.cigpage-stage .cigpage-logo {
+  /* 4, above the menu's own 3: equal z-index would hand it to whichever came
+     later in the DOM, and the overlay is rendered after the parts. */
+  z-index: 4;
+  /* AND IT MUST NOT TAKE THE POINTER. Lifting it over the menu also lifted it
+     over the menu's own button, which is what listens for the hover that
+     unfolds the boxes — so for a moment the logo covered its own switch and
+     the menu stopped opening at all. It is decorative here (the landing and
+     cigarette pages mark it so, because the menu provides the control), so it
+     has no business receiving a pointer in the first place. */
+  pointer-events: none;
 }
 .logo-menu-canvas {
   display: block;

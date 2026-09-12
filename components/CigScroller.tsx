@@ -18,7 +18,8 @@ import {
   CIG_BRAKE,
   CIG_SPIN_SPEED,
   CIG_SPIN_LAP,
-  CIG_SPIN_PAINT_MS,
+  CIG_SPIN_CATCH,
+  cigPaintMs,
   REFERENCE_SPEED,
   SPEED,
   cigLayout,
@@ -184,7 +185,12 @@ export function CigScroller({
    * next frame after it lands. It never swaps early, and it never stops to
    * wait: both would show the reader the seam this is built to hide.
    */
-  const spinRef = useRef<{ travelled: number; ids: string[] | null } | null>(null);
+  const spinRef = useRef<{
+    /** 'throw' is the fast lap; 'catch' is the wheel being caught after it. */
+    phase: 'throw' | 'catch';
+    travelled: number;
+    ids: string[] | null;
+  } | null>(null);
 
   /**
    * Set for the whole of the My Saved animation, which the owner asked to be
@@ -360,21 +366,34 @@ export function CigScroller({
       let settling = false;
       const spin = spinRef.current;
       if (spin) {
-        // The wheel is thrown: one constant speed, no braking, until a whole
-        // lap has gone by AND the shelf has arrived. Nothing else in the tick
-        // gets a say while this is true — that is what unskippable means
-        // here, and it is why this branch is first.
-        const v = velRef.current;
-        offsetRef.current += v * dt;
-        spin.travelled += v * dt;
-        if (spin.travelled >= CIG_SPIN_LAP && spin.ids) {
-          swapTo(spin.ids);
-          spinRef.current = null;
-          // Momentum back to the ordinary amount, and from here the row is
-          // braked by CIG_BRAKE and centred by the settle exactly as it is
-          // after any other throw. The rest of the animation is not animation
-          // code at all — it is the physics that were already here.
-          velRef.current = CIG_FLING_MAX;
+        // Nothing else in the tick gets a say while a spin is running — that
+        // is what unskippable means here, and it is why this branch is first.
+        if (spin.phase === 'throw') {
+          // The fast lap: one constant speed, no braking, until a whole lap
+          // has gone by AND the shelf is loaded.
+          const v = velRef.current;
+          offsetRef.current += v * dt;
+          spin.travelled += v * dt;
+          if (spin.travelled >= CIG_SPIN_LAP && spin.ids) {
+            swapTo(spin.ids);
+            spin.phase = 'catch';
+          }
+        } else {
+          // The catch: the momentum comes back down to the ordinary amount
+          // over CIG_SPIN_CATCH rather than being assigned there between two
+          // frames. Same trapezoidal step the ordinary brake uses, so the
+          // distance is right for a constant rate rather than over-run.
+          const was = velRef.current;
+          const drop = CIG_SPIN_CATCH * dt;
+          const now2 = Math.max(CIG_FLING_MAX, was - drop);
+          velRef.current = now2;
+          offsetRef.current += ((was + now2) / 2) * dt;
+          if (now2 <= CIG_FLING_MAX) {
+            // Caught. From here the row is braked by CIG_BRAKE and centred by
+            // the settle exactly as it is after any other throw — the rest of
+            // the animation is not animation code at all.
+            spinRef.current = null;
+          }
         }
       } else if (!draggingRef.current && seekRef.current !== null) {
         // fetching a pressed pack: aim at the fixed target, ignore the settle
@@ -419,10 +438,11 @@ export function CigScroller({
       // out after everything else has stopped.
       const owed = frameRef.current.pendingSince !== 0;
       if (draggingRef.current || velRef.current !== 0 || settling || owed) {
-        // The spin paints faster than the row's usual 8fps, and only while it
-        // is spinning — see CIG_SPIN_PAINT_MS for why that is not a breach of
-        // the stepping the owner asked for.
-        timerRef.current = window.setTimeout(tick, spinRef.current ? CIG_SPIN_PAINT_MS : PAINT_MS);
+        // The paint rate follows the SPEED rather than a spinning flag, so
+        // the row is already back on the owner's 8fps by the time it is going
+        // slowly enough for 8fps to be right — no switch, and nothing to see
+        // at the handover. See cigPaintMs.
+        timerRef.current = window.setTimeout(tick, cigPaintMs(velRef.current));
       } else {
         timerRef.current = 0;
         // The row has come to rest, which is the end of the My Saved
@@ -474,28 +494,77 @@ export function CigScroller({
    * has gone by the list is almost always there; if it is not, the tick keeps
    * spinning and swaps on the frame after it lands.
    */
-  const startSpin = useCallback(() => {
-    if (lockRef.current) return; // already running, and it cannot be skipped
-    lockRef.current = true;
-    setLocked(true);
-    seekRef.current = null;
-    draggingRef.current = false;
-    spinRef.current = { travelled: 0, ids: null };
-    velRef.current = CIG_SPIN_SPEED;
-    run();
+  /**
+   * Have the browser decode a set of packs before the row is asked to draw
+   * them.
+   *
+   * WITHOUT THIS THE SWAP IS THE JITTER. Handing React fifteen new `src`es
+   * mid-spin means fifteen fetches and fifteen decodes, and until those land
+   * the slots are empty — the row visibly thins out for a beat at the exact
+   * moment it is supposed to be turning too fast to read. Decoding first
+   * costs nothing, because it happens while the wheel is already spinning.
+   *
+   * It resolves rather than rejects on a failed image: one pack that will not
+   * load is not a reason to spin forever.
+   */
+  const preload = useCallback(async (ids: string[]) => {
+    await Promise.all(
+      ids.map(
+        (id) =>
+          new Promise<void>((done) => {
+            const img = new Image();
+            img.onload = () => done();
+            img.onerror = () => done();
+            img.src = `/cigs/${encodeURIComponent(id)}.svg`;
+          }),
+      ),
+    );
+  }, []);
 
-    savedPacksAction()
-      .then(({ ids }) => {
-        if (spinRef.current) spinRef.current.ids = ids;
-      })
-      .catch(() => {
-        // A signed-out reader is redirected to the splash by the action, and
-        // that rejects here as the navigation takes over. Anything else that
-        // fails still has to let the spin end rather than turn forever, so
-        // either way the row comes back to the catalogue.
-        if (spinRef.current) spinRef.current.ids = [];
-      });
-  }, [run]);
+  /**
+   * Throw the wheel, and swap the row for `next` when a lap has gone by.
+   *
+   * `next` is given a list to show, or null to mean "ask the server what is
+   * on this reader's shelf". Reset passes the whole catalogue; My Saved
+   * passes null. Everything after that — the lap, the catch, the handover to
+   * the ordinary physics — is the same for both, which is what the owner
+   * asked for when they said reset should do the same animation.
+   */
+  const startSpin = useCallback(
+    (next: string[] | null) => {
+      if (lockRef.current) return; // already running, and it cannot be skipped
+      lockRef.current = true;
+      setLocked(true);
+      seekRef.current = null;
+      draggingRef.current = false;
+      spinRef.current = { phase: 'throw', travelled: 0, ids: null };
+      velRef.current = CIG_SPIN_SPEED;
+      run();
+
+      const arrive = (ids: string[]) =>
+        preload(ids).then(() => {
+          if (spinRef.current) spinRef.current.ids = ids;
+        });
+
+      if (next) {
+        arrive(next);
+        return;
+      }
+      savedPacksAction()
+        .then(({ ids }) => arrive(ids))
+        .catch(() => {
+          // A signed-out reader is redirected to the splash by the action, and
+          // that rejects here as the navigation takes over. Anything else that
+          // fails still has to let the spin end rather than turn forever, so
+          // either way the row comes back to the catalogue.
+          if (spinRef.current) spinRef.current.ids = [];
+        });
+    },
+    [preload, run],
+  );
+
+  /** The whole catalogue, which is what reset spins back to. */
+  const allIds = useMemo(() => CIG_PACKS.map((p) => p.id), []);
 
   /**
    * My Saved lives in the page's artwork, not in this component.
@@ -513,7 +582,7 @@ export function CigScroller({
       if (!(t instanceof Element)) return;
       if (!t.closest('[data-part="saved"]')) return;
       e.preventDefault();
-      startSpin();
+      startSpin(null);
     };
     document.addEventListener('click', onDocClick, true);
     return () => document.removeEventListener('click', onDocClick, true);
@@ -661,6 +730,7 @@ export function CigScroller({
   const pick = selected >= 0 ? (packs[selected] ?? null) : null;
 
   return (
+    <>
     <div
       ref={rowRef}
       className="cig-row"
@@ -805,5 +875,26 @@ export function CigScroller({
       <span className="cig-rule cig-rule-top" aria-hidden="true" />
       <span className="cig-rule cig-rule-bottom" aria-hidden="true" />
     </div>
+
+      {/*
+        RESET. Puts the whole catalogue back and clears the filtering — which
+        today means the My Saved shelf, the only thing that narrows this row —
+        and does it through the same spin, because the owner asked for the
+        same animation rather than a cut.
+
+        A sibling of the row rather than a child: the row is overflow:hidden so
+        its packs do not spill past the edges, and a button inside it would be
+        clipped the moment it sat below the band.
+      */}
+      <button
+        type="button"
+        className="cig-reset"
+        style={{ '--cig-band': `${CIG_BAND_H}px` } as React.CSSProperties}
+        onClick={() => startSpin(allIds)}
+        disabled={locked}
+      >
+        reset
+      </button>
+    </>
   );
 }

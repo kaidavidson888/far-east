@@ -366,11 +366,52 @@ rather than to script an ending.
   packs change, because a shelf is a different number of packs of different
   widths. Anything reading `CIG_PACKS` inside the component is a bug — read
   `packsRef.current` in the tick and `packs` in the render.
-- **The spin is the one place the 8fps rule is set aside**, and only while it
-  is spinning (`CIG_SPIN_PAINT_MS`, 25ms). At 125ms a single frame covers
+- **The handover out of the spin has TWO smoothings, and both were needed.**
+  The first version snapped: the owner called it jitteriness and they were
+  right. (a) The velocity used to be ASSIGNED back to `CIG_FLING_MAX` in one
+  frame — 10,290px/s to 379 between two paints, a 27-fold drop with nothing in
+  between. It is now a **catch**: one constant `CIG_SPIN_CATCH` over 400ms,
+  genuinely decelerating the whole way, ~2,100px of travel. The momentum still
+  ends at the normal amount; it just gets there over 400ms instead of
+  instantly. (b) The paint rate used to switch on a flag, so the row went from
+  40fps to 8fps at the same instant. `cigPaintMs(speed)` makes it a function
+  of SPEED, so the row is already back on 125ms by the time it is slow enough
+  for 125ms to be right. **Below `CIG_FLING_MAX` it returns exactly
+  `PAINT_MS`**, so the owner's 8fps is untouched for every motion the
+  reference actually measured — drag, wheel, fling, settle. Only the spin ever
+  goes faster.
+- **The shelf's artwork is decoded BEFORE the swap** (`preload`). Handing React
+  fifteen new `src`es mid-spin means fifteen fetches, and until they land the
+  slots are empty — the row visibly thins out at the exact moment it is meant
+  to be unreadable. It costs nothing because it happens while the wheel is
+  already turning. This was the third cause of the jitter.
+- **The spin is the one place the 8fps rule is set aside** (`CIG_SPIN_PAINT_MS`,
+  25ms, the floor `cigPaintMs` clamps to). At 125ms a single frame covers
   1,286px — about fifteen packs — so consecutive frames share nothing and the
   row reads as static noise rather than as something turning. That is aliasing,
-  not the owner's stepping. Set it to `PAINT_MS` to put it back on 8fps.
+  not the owner's stepping.
+- **`reset` puts the catalogue back, through the same spin.** A black button
+  under the row's left end, white "reset" in the owner's face, inverting on
+  hover. It calls the same `startSpin`, passing the whole catalogue instead of
+  null — so the throw, the lap, the catch and the handover are one code path
+  for both buttons, which is what the owner asked for. It is **12px off the
+  viewport edge, NOT the page's 45px left margin**: it belongs to the row, and
+  the row is full-bleed and ignores the margin rule by design. It carries a
+  black border in both states so that inverting leaves a white box with an
+  edge rather than white text on a white page. Disabled while a spin runs.
+- **THE PAGE'S OWN LOGO NOW STAYS PUT WHILE THE MENU IS OUT**, lifted to
+  `z-index: 4` instead of being hidden. It used to go to `opacity: 0` and let
+  the canvas's copy show, and the owner could see the difference: the logo
+  "changed opacity" the moment you hovered it. Both marks land in the same
+  place — measured live, the vector occupies x 45..85 and the canvas's copy
+  46..83 — but the canvas's is a RASTER, two pixels narrower, carrying the
+  soft edges the un-multiply leaves (mean alpha 209 against a vector's hard
+  255). Swapping a crisp mark for a soft one that size reads as it going
+  lighter. The vector is lifted rather than the canvas clipped, because the
+  canvas has ink outside the logo from frame 0 — a 3px red connector at
+  x 31..33 — which clipping would take with it. **It must also carry
+  `pointer-events: none`**: lifting it over the menu also lifted it over the
+  menu's own button, and the menu stopped opening at all until that was added.
 - **The button is reached by delegation.** `ArtworkPage` draws My Saved as a
   plain button with no destination and is rendered by a SERVER component, so a
   handler cannot be passed down. `CigScroller` listens on the document in

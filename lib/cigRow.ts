@@ -272,3 +272,50 @@ export const CIG_SPIN_LAP = cigLayout().total;
  */
 export const CIG_SPIN_PAINT_MS = 25;
 
+/**
+ * How often the row repaints at a given speed.
+ *
+ * The spin used to switch between 25ms and 125ms on a flag, and the switch
+ * itself was visible: the moment the packs were swapped the row went from 40
+ * frames a second to 8, which reads as a stumble exactly where the animation
+ * is meant to be handing over smoothly. A rate that follows the SPEED has no
+ * such moment — it is already at 125ms by the time the row is going slowly
+ * enough for 125ms to be the right answer.
+ *
+ * BELOW A NORMAL THROW IT IS EXACTLY PAINT_MS, so the owner's 8fps is intact
+ * for every motion the reference recording actually measured — a drag, a
+ * wheel, a fling, the settle. Only the spin ever exceeds CIG_FLING_MAX, and
+ * only the spin is ever painted faster:
+ *
+ *   10,290px/s  (the throw)      25ms   clamped
+ *    2,000px/s                   24ms -> 25ms
+ *      758px/s  (2x a throw)     62ms
+ *      379px/s  (a hard throw)  125ms   and everything slower
+ */
+export function cigPaintMs(speed: number): number {
+  const over = Math.abs(speed) / CIG_FLING_MAX;
+  if (over <= 1) return PAINT_MS;
+  return Math.max(CIG_SPIN_PAINT_MS, PAINT_MS / over);
+}
+
+/**
+ * How hard the wheel is caught after the packs have been swapped, in pixels
+ * per second squared.
+ *
+ * The velocity used to be ASSIGNED back down to CIG_FLING_MAX in one frame —
+ * 10,290px/s to 379px/s between one paint and the next. That is a 27-fold
+ * drop with nothing in between, and it looked like one: the row appeared to
+ * snag rather than to slow. The owner called it jitteriness, which is fair.
+ *
+ * So the drop is spread over CATCH_MS instead, at one constant rate, and the
+ * row is genuinely decelerating the whole way. It is still "the momentum
+ * returns to the normal amount" — it just takes 400ms to get there rather
+ * than happening between two frames, and 400ms is about as long as a hand
+ * closing on a spinning wheel takes.
+ *
+ * The ordinary CIG_BRAKE could not do this job: at 115px/s^2 it would need
+ * 86 seconds to bring the spin down.
+ */
+const CATCH_MS = 400;
+export const CIG_SPIN_CATCH = ((CIG_SPIN_SPEED - CIG_FLING_MAX) / CATCH_MS) * 1000;
+
