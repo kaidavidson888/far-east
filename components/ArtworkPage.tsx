@@ -63,7 +63,12 @@ function Placed({
   const debug = showHitboxes ? ' artpage-hit-debug' : '';
   if (!part.pressable) {
     return (
-      <div className={`artpage-decor${debug}`} aria-hidden="true" style={style}>
+      <div
+        className={`artpage-decor${debug}`}
+        data-part={part.id}
+        aria-hidden="true"
+        style={style}
+      >
         <Mark part={part} />
       </div>
     );
@@ -71,20 +76,32 @@ function Placed({
   // the footer row reacts to hover and to being pressed, so it needs state
   if (part.current || part.hoverSrc) {
     return (
-      <ArtPartButton part={part} style={style} className={`artpage-hit${debug}`}>
+      <ArtPartButton part={part} style={style} className={`artpage-hit${debug}`} data-part={part.id}>
         <Mark part={part} />
       </ArtPartButton>
     );
   }
   if (part.href) {
     return (
-      <Link className={`artpage-hit${debug}`} href={part.href} aria-label={part.label} style={style}>
+      <Link
+        className={`artpage-hit${debug}`}
+        data-part={part.id}
+        href={part.href}
+        aria-label={part.label}
+        style={style}
+      >
         <Mark part={part} />
       </Link>
     );
   }
   return (
-    <button type="button" className={`artpage-hit${debug}`} aria-label={part.label} style={style}>
+    <button
+      type="button"
+      className={`artpage-hit${debug}`}
+      data-part={part.id}
+      aria-label={part.label}
+      style={style}
+    >
       <Mark part={part} />
     </button>
   );

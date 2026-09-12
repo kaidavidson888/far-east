@@ -24,6 +24,23 @@
  * white. That cannot be done by drawing a rectangle over the frame — the
  * label would go with it — so each box gets a second image, built by
  * inverting everything inside it except the red outline, which stays red.
+ * These stay opaque: they are meant to fill their box.
+ *
+ * THE GROUND COMES OFF. The gif paints its background white — 90% of a
+ * finished frame is opaque white — and the canvas is drawn over the page, so
+ * that white cut across whatever was under it. On the cigarette pages that is
+ * the red rule round the info, which the bar's empty lower half sat on top of.
+ *
+ * Every frame is therefore un-multiplied out of white on the way out. Ink over
+ * white is p = C*a + 255*(1-a), so a = 1 - min(r,g,b)/255 and C = (p - 255*(1-a))/a
+ * recovers both the colour and the coverage exactly, for any ink colour — red
+ * (255,128,128) comes back as red at half cover, grey (128,128,128) as black at
+ * half cover. Not a colour key: those leave a light halo on every antialiased
+ * edge, and this leaves none, because it is the arithmetic the gif's own
+ * renderer did, run backwards.
+ *
+ * Everything upstream of the write still works in RGB over white, which is what
+ * the fourth box's synthesis and the pressed states want.
  *
  * ---------------------------------------------------------------------
  * THE FOURTH BOX, WHICH THE GIF DOES NOT HAVE.
@@ -139,8 +156,27 @@ async function rawFrame(i) {
   return data;
 }
 
+/** Ink over white, back to ink over nothing. See the header. */
+function unmultiply(rgb) {
+  const out = Buffer.alloc((rgb.length / 3) * 4);
+  for (let i = 0, o = 0; i < rgb.length; i += 3, o += 4) {
+    const r = rgb[i];
+    const g = rgb[i + 1];
+    const b = rgb[i + 2];
+    const low = r < g ? (r < b ? r : b) : g < b ? g : b;
+    const a = 255 - low;
+    if (a === 0) continue; // white: nothing was drawn here
+    const back = 255 - a; // what the white ground contributed
+    out[o] = Math.min(255, Math.round(((r - back) * 255) / a));
+    out[o + 1] = Math.min(255, Math.round(((g - back) * 255) / a));
+    out[o + 2] = Math.min(255, Math.round(((b - back) * 255) / a));
+    out[o + 3] = a;
+  }
+  return out;
+}
+
 const writeRaw = async (data, i) => {
-  const out = await sharp(data, { raw: { width: RW, height: RH, channels: 3 } })
+  const out = await sharp(unmultiply(data), { raw: { width: RW, height: RH, channels: 4 } })
     .webp({ lossless: true, effort: 6 })
     .toBuffer();
   writeFileSync(`${FRAMES_DIR}/f${String(i).padStart(3, '0')}.webp`, out);

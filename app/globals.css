@@ -933,6 +933,16 @@ ul, ol { list-style: none; }
      parts below take their own hits back. */
   pointer-events: none;
 }
+/* The page's own 遠東 steps aside while the menu is out.
+   Frame 0 of the animation IS that logo, and it used to arrive behind an
+   opaque white ground that covered the page's copy. The ground is gone now —
+   it was cutting across the red rule on the cigarette pages — so without this
+   the two identical marks would sit on top of one another and the strokes
+   would thicken the moment the menu opened. */
+.artpage-stage:has(.logo-menu:not([data-phase='idle'])) [data-part='logo'],
+.cigpage-stage:has(.logo-menu:not([data-phase='idle'])) .cigpage-logo {
+  opacity: 0;
+}
 .logo-menu-canvas {
   display: block;
   pointer-events: none;

@@ -112,9 +112,22 @@ artwork to fit a frame — that scales the margins with it, which is the thing b
   pages. Hovering 遠東 unfolds the linked boxes; pressing mid-run skips to the end; pressing
   the logo again or anything else runs it back at 2x. Frames are baked from
   `scripts/assets/monkey-bar.gif` because a GIF cannot be seeked, paused or reversed. The
-  canvas covers the page's own logo rather than replacing it — frame 0 IS that logo, and both
-  put their ink at exactly 46,28, which is measured in the build, not assumed. The canvas is
-  cut to the animation's own content so its white ground cannot reach the seal.
+  canvas draws over the page's own logo rather than replacing it — frame 0 IS that logo, and
+  both put their ink at exactly 46,28, which is measured in the build, not assumed.
+- **The frames carry no white.** The gif paints its background white and 90% of a finished
+  frame was opaque white, which cut across whatever the canvas sat on — on the cigarette pages,
+  the red rule round the info. The bake un-multiplies every frame out of white on the way out:
+  ink over white is `p = C*a + 255*(1-a)`, so `a = 1 - min(r,g,b)/255` and
+  `C = (p - 255*(1-a))/a` recovers the colour and the coverage exactly, for any ink colour.
+  **Not a colour key** — those leave a light halo on every antialiased edge, and this leaves
+  none, because it is the arithmetic the gif's own renderer did, run backwards. Everything
+  upstream of the write still works in RGB over white, which is what the fourth box's synthesis
+  and the pressed states want; the pressed overlays stay opaque, because they are meant to fill
+  their box.
+- **So the page's own logo steps aside while the menu is out** (`[data-part='logo']` on the
+  artwork pages, `.cigpage-logo` on the cigarette pages). The white ground used to hide it by
+  covering it; without that, two identical marks would sit on top of one another and the
+  strokes would thicken the moment the menu opened.
 - **The menu has a fourth box the gif never drew.** The cigarette pages need a way home, and
   there the logo is the menu's switch rather than a link, so home had to be a box. It is not
   hand-drawn: the bake measured that the gif unfolds **one box every 40 frames exactly** (box
