@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { currentUser } from '@/lib/auth';
-import { packIsSaved } from '@/lib/db';
+import { packEntry } from '@/lib/db';
 import { pageFor } from '@/lib/cigPages';
 import { CigPage } from '@/components/CigPage';
 
@@ -42,7 +42,8 @@ export default async function PackPage({ params }: { params: Promise<{ id: strin
   if (!page) notFound();
 
   const user = await currentUser();
-  const saved = user ? await packIsSaved(user.id, page.id) : false;
+  // one query answers both the bookmark and the plus: on the shelf, and how many
+  const entry = user ? await packEntry(user.id, page.id) : null;
 
   return (
     <CigPage
@@ -50,7 +51,9 @@ export default async function PackPage({ params }: { params: Promise<{ id: strin
       name={page.name}
       gap={page.gap}
       packId={packId}
-      saved={saved}
+      saved={entry !== null}
+      amount={entry?.amount ?? null}
+      unit={entry?.unit ?? null}
     />
   );
 }

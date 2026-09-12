@@ -393,11 +393,24 @@ export async function savePack(userId: string, packId: string): Promise<void> {
   `;
 }
 
-/** A carton or a pack — what the plus button's right-hand wheel offers. */
-export type PackUnit = 'C' | 'P';
+/** A carton or a pack — what the plus button's right-hand wheel offers. Lives with the page geometry so the client can name it. */
+import type { PackUnit } from './cigPages';
+export type { PackUnit };
 
 /** A shelf entry: the pack, and how much of it if the reader said. */
 export type SavedPack = { packId: string; amount: number | null; unit: PackUnit | null };
+
+/** One pack's shelf entry, or null if it is not on the shelf. What a cigarette's page asks. */
+export async function packEntry(userId: string, packId: string): Promise<SavedPack | null> {
+  const sql = db();
+  const rows = await sql<{ pack_id: string; amount: number | null; unit: PackUnit | null }[]>`
+    SELECT pack_id, amount, unit FROM pack_favorites
+    WHERE user_id = ${userId} AND pack_id = ${packId}
+  `;
+  if (!rows.length) return null;
+  const r = rows[0];
+  return { packId: r.pack_id, amount: r.amount === null ? null : Number(r.amount), unit: r.unit };
+}
 
 /**
  * Record how much of a pack the reader has, from the plus button's two wheels.

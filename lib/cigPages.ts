@@ -108,3 +108,63 @@ export const BOOKMARK = {
 
 /** The rule's weight, which globals.css draws and the page has to allow for. */
 export const RULE = 5;
+
+/** A carton or a pack — what the plus button's right-hand wheel offers. */
+export type PackUnit = 'C' | 'P';
+
+/**
+ * The plus beside the bookmark, which opens the quantity menu.
+ *
+ * The same box as the bookmark's, 91px to its right, straight out of the
+ * vector: <rect x="273" y="331.5" width="68" height="63" stroke-width="3">,
+ * outer edge 271.5..342.5 and 330..396, which is 232..304 and 312..378 on the
+ * body. Byte-identical in all 235 built pages, along with the two bars that
+ * draw the plus and the notes strip below — checked, not assumed.
+ *
+ * Unlike the bookmark, the mark itself stays in the artwork: nothing about
+ * it changes colour, so there is nothing for a stylesheet to reach. Only the
+ * hit area is the page's.
+ */
+export const PLUS = {
+  box: { left: 232, top: 312, width: 72, height: 66 },
+};
+
+/**
+ * The quantity menu: from the info rule's top-left corner to the foot of the
+ * notes strip, the full width of the rule. The owner's words, and the
+ * numbers are the artwork's — the strip is
+ * <rect x="180.5" y="408" width="162.5" height="24" fill="#FF0000">, whose
+ * foot is 432 in the vector and 414 on the body. It lies over the title, the
+ * pack, the prices, the bookmark and the plus, and while it is open none of
+ * them can be pressed, which is the point of it being solid.
+ */
+export const QUANTITY_MENU = {
+  left: INFO_BOX.left,
+  top: INFO_BOX.top,
+  width: INFO_BOX.width,
+  height: 414 - INFO_BOX.top,
+};
+
+/**
+ * The two wheels, as white stripes down the menu.
+ *
+ * Each is a fifth of the menu's width, and the three gaps — edge, between,
+ * edge — share what is left equally, which is what the owner asked for. The
+ * same gap is held above and below, so the stripes sit in the menu the way
+ * they sit across it. Three item slots tall, the middle one being the window
+ * the chosen value sits in.
+ */
+export const WHEEL = (() => {
+  const width = Math.round(QUANTITY_MENU.width / 5);
+  const gap = (QUANTITY_MENU.width - width * 2) / 3;
+  const pitch = 50;
+  return {
+    width,
+    pitch,
+    height: pitch * 3,
+    top: Math.round(gap),
+    lefts: [Math.round(gap), Math.round(gap * 2 + width)] as const,
+    /** The window: the middle slot. */
+    window: pitch,
+  };
+})();

@@ -12,7 +12,7 @@ import { pageFor } from '@/lib/cigPages';
 import { CIG_PACKS } from '@/lib/cigRow';
 import {
   accountState, createShare, deleteReview, getCigaretteBySlug, revokeShare, savePack,
-  savedPackIds, setFavoriteNote, toggleFavorite, upsertReview,
+  savedPackIds, setFavoriteNote, setPackQuantity, toggleFavorite, upsertReview,
 } from '@/lib/db';
 
 export type FormState = { error?: string; ok?: string } | null;
@@ -318,6 +318,32 @@ export async function savePackAction(formData: FormData) {
 
   await savePack(user.id, page.id);
   revalidatePath(`/packs/${id}`);
+}
+
+/**
+ * How many of a pack the reader has, from the plus button's two wheels.
+ *
+ * Takes its arguments plainly rather than as a form: the menu commits the
+ * moment the second wheel is let go, with nothing to submit. Everything is
+ * checked again here — the wheels only offer 1-9 and C or P, but a server
+ * action is a public endpoint and the database's own constraint is the last
+ * line, not the first.
+ *
+ * Saves the pack to the shelf as well if it was not there, and refreshes
+ * both the page and the shelf, which draws the answer.
+ */
+export async function setPackQuantityAction(packId: string, amount: number, unit: string) {
+  const page = pageFor(packId);
+  if (!page) return;
+  if (!Number.isInteger(amount) || amount < 1 || amount > 9) return;
+  if (unit !== 'C' && unit !== 'P') return;
+
+  const user = await currentUser();
+  if (!user) redirect(signInGate(`/packs/${packId}`));
+
+  await setPackQuantity(user.id, page.id, amount, unit);
+  revalidatePath(`/packs/${packId}`);
+  revalidatePath('/shelf');
 }
 
 /**

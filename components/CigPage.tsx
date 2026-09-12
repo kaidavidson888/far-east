@@ -1,7 +1,8 @@
 import landing from '@/lib/landing-geometry.json';
 import geometry from '@/lib/cigpages.json';
-import { INFO_BOX, RULE } from '@/lib/cigPages';
+import { INFO_BOX, RULE, type PackUnit } from '@/lib/cigPages';
 import { CigBookmark } from './CigBookmark';
+import { CigQuantity } from './CigQuantity';
 import { LogoMenu } from './LogoMenu';
 import { SealButton } from './SealButton';
 
@@ -57,6 +58,8 @@ export function CigPage({
   gap,
   packId,
   saved,
+  amount,
+  unit,
 }: {
   id: string;
   name: string;
@@ -64,6 +67,9 @@ export function CigPage({
   /** The id in the address, which is the page's own except for the twelve twins. */
   packId: string;
   saved: boolean;
+  /** How many the reader said they have, if they have said. */
+  amount: number | null;
+  unit: PackUnit | null;
 }) {
   // The rule stands off the info by the page's own brand-to-flavour gap, so
   // it reaches below the artwork; the stage grows to keep the design's own
@@ -100,6 +106,9 @@ export function CigPage({
 
           {/* the artwork's own bookmark, given back as a control */}
           <CigBookmark id={packId} name={name} saved={saved} />
+
+          {/* the plus beside it, and the menu it opens — see CigQuantity */}
+          <CigQuantity id={packId} name={name} amount={amount} unit={unit} />
 
           {/* a rule round the info, inside the body so it travels with it */}
           <div

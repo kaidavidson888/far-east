@@ -1249,6 +1249,93 @@ ul, ol { list-style: none; }
   pointer-events: none;
 }
 
+/* ------------------------------------------------- the plus, and its menu --
+   The plus box is the artwork's; only the hit area is the page's. The menu
+   is the owner's red over the top of the info — from the rule's corner to
+   the foot of the notes strip — half strength while the plus is hovered and
+   solid once pressed. Solid means solid: it takes the pointer, so nothing
+   under it can be pressed while it is open. Geometry from lib/cigPages.ts. */
+.cigpage-plus-hit {
+  position: absolute;
+  z-index: 2;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  cursor: pointer;
+  touch-action: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.cigpage-plus-hit:focus-visible {
+  outline: 2px solid #010101;
+  outline-offset: 2px;
+}
+.cigpage-quantity {
+  position: absolute;
+  z-index: 4;
+  background: #ff0000;
+  transition: opacity 120ms ease-out;
+}
+.cigpage-quantity[data-mode='preview'] {
+  opacity: 0.5;
+  pointer-events: none;
+}
+/* A wheel: a white stripe, its middle slot cut through to the red behind. */
+.cigpage-wheel {
+  position: absolute;
+  overflow: hidden;
+  background: #ffffff;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  outline: none;
+}
+.cigpage-wheel:focus-visible {
+  outline: 2px solid #010101;
+  outline-offset: 2px;
+}
+.cigpage-wheel-window {
+  position: absolute;
+  left: 0;
+  right: 0;
+  display: block;
+  background: #ff0000;
+}
+.cigpage-wheel-track {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  will-change: transform;
+  transition: transform 140ms ease-out;
+}
+.cigpage-wheel[data-dragging] .cigpage-wheel-track {
+  transition: none;
+}
+/* The values, in the owner's face. Black on the white; the chosen one is
+   white, on the red it sits over; the rest drop to three quarters once
+   there is a choice. */
+.cigpage-wheel-item {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-typed);
+  font-weight: 400;
+  font-synthesis: none;
+  font-size: 40px;
+  line-height: 1;
+  color: #010101;
+  transition: opacity 120ms ease-out, color 120ms ease-out;
+}
+.cigpage-wheel[data-picked] .cigpage-wheel-item {
+  opacity: 0.75;
+}
+.cigpage-wheel[data-picked] .cigpage-wheel-item[data-selected] {
+  opacity: 1;
+  color: #ffffff;
+}
+
 /* Against the stage, not the body: 45 and 28 are the landing page's own
    margins, and the mark is the landing page's own vector at its own 40x87 —
    the artwork's copy was a raster and read soft at this size. It is drawn,
@@ -1510,6 +1597,118 @@ ul, ol { list-style: none; }
    omits that part and this draws the mark at rest as well as in motion,
    which keeps it one consistent size instead of growing on hover. Anchored
    to the same corner and margins the artwork puts it in. */
+/* ------------------------------------------------------------- the shelf --
+   The owner's shelf design, drawn rather than pictured: boxes, rules, the
+   site's own cloud, the packs from the row, and the type in the owner's
+   face. Every number is set inline from lib/shelfPage.ts, which reads the
+   measured geometry; this block only says what each thing is made of. */
+.shelf {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: #ffffff;
+  overflow: auto;
+  /* white ground, so it says so — see the note on .artpage */
+  color-scheme: light;
+}
+.shelf-stage {
+  position: relative;
+  width: 100%;
+  min-height: 100%;
+}
+.shelf-logo {
+  position: absolute;
+  z-index: 4;
+  display: block;
+  pointer-events: none;
+}
+.shelf-logo img {
+  display: block;
+}
+.shelf-header-box {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 0 solid #010101;
+  box-sizing: border-box;
+  font-family: var(--font-typed);
+  font-weight: 400;
+  font-synthesis: none;
+  line-height: 1;
+  color: #ff0000;
+  white-space: nowrap;
+}
+.shelf-price {
+  position: absolute;
+  font-family: var(--font-typed);
+  font-weight: 400;
+  font-synthesis: none;
+  line-height: 1;
+  color: #010101;
+  white-space: nowrap;
+}
+.shelf-row {
+  position: absolute;
+  left: 0;
+  right: 0;
+}
+/* The rule round the pack, closed onto it the way the cigarette pages draw
+   theirs: the image sits two pixels in and the rule's inner three cover it. */
+.shelf-pack {
+  position: absolute;
+  overflow: hidden;
+}
+.shelf-pack img {
+  position: absolute;
+  display: block;
+}
+.shelf-pack::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border: var(--rule) solid #ff0000;
+  pointer-events: none;
+}
+.shelf-box {
+  position: absolute;
+  display: block;
+  border: 0 solid #010101;
+  box-sizing: border-box;
+  background: #ffffff;
+}
+.shelf-plus-bar {
+  position: absolute;
+  display: block;
+  background: #010101;
+}
+.shelf-bookmark {
+  position: absolute;
+  display: block;
+  fill: #ff0000;
+}
+.shelf-panel {
+  position: absolute;
+  background: #010101;
+  color: #ffffff;
+}
+.shelf-type {
+  position: absolute;
+  font-family: var(--font-typed);
+  font-weight: 400;
+  font-synthesis: none;
+  line-height: 1;
+  white-space: nowrap;
+  color: inherit;
+}
+.shelf-box .shelf-type {
+  color: #010101;
+}
+.shelf-cloud {
+  position: absolute;
+  display: block;
+}
+
 .seal-button {
   position: absolute;
   z-index: 2;
