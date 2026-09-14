@@ -24,15 +24,33 @@ export const LANDING_MARGINS = marginsOf(viewBox, Object.values(parts));
  * THE SQUARE STANDS 5PX OFF THE SIGIL, not the design's 17: the owner's
  * "close the gap between the sigil and the outline to 3px", then "increase
  * to 5px". The cloud keeps its drawn place in the cluster and the square
- * comes to it; the pair is then centred as one, so the cluster narrows
- * about the page's middle.
+ * comes to it.
+ *
+ * THE PAIR SITS UNDER THE SEAL, AS WIDE AS THE SEAL. The owner's next ask:
+ * "put the sigil and the outline under the seal logo and scale it so it fits
+ * within the sides of the seal", with "a margin between them equal to the one
+ * between the my saved and recommended". So the pair is scaled as one until
+ * its width is the seal's (the seal button's drawn size, the logo's height),
+ * each mark rounded to whole pixels with the square held to the right edge so
+ * the width comes out exact; hung from the seal's own right margin; and set
+ * below the seal by the design's gap from the foot of My Saved to the top of
+ * RECOMMENDED. The marks are vectors, so they stay sharp at the new size.
  */
 const SIGIL_GAP = 5;
-const CLUSTER = {
-  cloud: parts.cloud,
-  square: { ...parts.square, x: parts.cloud.x + parts.cloud.w + SIGIL_GAP },
-};
-const cluster = clusterBox(Object.values(CLUSTER));
+const SEAL_SIZE = parts.logo.h;
+const LABEL_GAP = parts.recommended.y - (parts.saved.y + parts.saved.h);
+const cluster = (() => {
+  const drawnW = parts.cloud.w + SIGIL_GAP + parts.square.w;
+  const k = SEAL_SIZE / drawnW;
+  const square = { w: Math.round(parts.square.w * k), h: Math.round(parts.square.h * k) };
+  const cloud = { w: Math.round(parts.cloud.w * k), h: Math.round(parts.cloud.h * k) };
+  const marks = {
+    cloud: { x: 0, y: Math.round((parts.cloud.y - parts.square.y) * k), ...cloud },
+    square: { x: SEAL_SIZE - square.w, y: 0, ...square },
+  };
+  return { marks, ...clusterBox(Object.values(marks)) };
+})();
+const CLUSTER = cluster.marks;
 
 const M = LANDING_MARGINS;
 
@@ -78,7 +96,7 @@ export const LANDING_SPEC: ArtPageSpec = {
   cluster: {
     w: cluster.w,
     h: cluster.h,
-    placement: both({ centreX: true, bottom: M.bottom }),
+    placement: both({ right: M.right, top: M.top + SEAL_SIZE + LABEL_GAP }),
   },
   parts: [
     anchored('logo', '遠東', both({ left: M.left, top: parts.logo.y })),
