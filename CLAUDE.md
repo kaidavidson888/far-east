@@ -703,34 +703,46 @@ design (`scripts/assets/shelf-mobile.svg`). Three pieces, one rule between them
   ink height: `size = inkHeight / (ascent/1000)`, ascents from
   `far-east-ink.json`, and placed by baseline (0.825 of the size in a
   line-height:1 box, measured in Chrome).
-- **THE ROWS SIT BETWEEN THE LOGO AND THE CAPTION BOX** (`shelfFit`). The
-  owner's rule, and the latest of three: each row's left edge is the right
-  edge of the character logo, its right edge the left edge of the "Click #
-  When Finished" box, the rows keeping their arrangement. So every pack's rule
-  starts on the row's own left edge (`DX = -frame.x` puts the design's frame at
-  row x=0; a wider pack grows right, into the gap before the boxes — a pack over
-  ~69px wide at row scale would reach the boxes, an old latent edge), the
-  boxes/panel/clouds keep the design's distance from it, and one zoom lands the
-  clouds (`CLOUD_RIGHT`, the row's width) on the caption box's left. The stage
-  hands down `--rows-left` (the logo's right, in page px) and `--row-scale`;
-  `.shelf-rows` divides both by the zoom, since `zoom` scales its own offsets.
-  **The span depends on the zoom** — the logo is sized to the top pack, whose
-  screen width is its row width × zoom — so it is a linear fixed point,
-  solved: `z = (captionLeft − C) / (R + tw/2)`, or with the logo's height clamp
-  binding, `z = (captionLeft − C − w/2) / R`. Verified exact at 961: six rows'
-  left edges at 95 = logo right (spread 0), clouds at 694 = caption left.
-  (Before this: packs centred on the logo's axis at 80% of the fit to the right
-  margin; before that, left on the margin. Each was the owner's instruction at
-  the time.)
+- **THE SHELF IS A GRID BETWEEN THE LOGO AND THE CAPTION BOX, TWO TO A LINE**
+  (`shelfFit`). The owner's rule, in two steps: each row's left edge on the
+  right edge of the character logo and its right edge on the left edge of the
+  "Click # When Finished" box, the rows keeping their arrangement — and then
+  "scale them down again, same parameters, so that two fit in a row". So every
+  pack's rule starts on its row's own left edge (`DX = -frame.x` puts the
+  design's frame at row x=0; a wider pack grows right, into the gap before the
+  boxes — a pack over ~69px wide at row scale would reach the boxes, an old
+  latent edge), the boxes/panel/clouds keep the design's distance from it, two
+  rows side by side make a line (`SHELF_COLUMNS`), the gap between them is the
+  design's own pack-to-boxes gap (`COLUMN_GAP`, 15, read off the geometry, not
+  chosen), and one zoom lands the second column's clouds on the caption box's
+  left: `z = span / GRID_WIDTH`. **Where a row lands is the stylesheet's**: each
+  `.shelf-row` carries its index as `--i`, and `left`/`top` come from `mod()`
+  and `round(down, …)` against `--cols`, `--col-pitch` and `--row-pitch`, which
+  the stage sets — the column count is decided from the width on the client, so
+  React does not place rows. Those functions have exactly the support of the
+  `round()` the cigarette page already leans on; a one-column pair declared
+  first is the fallback for anything older. The stage hands down `--rows-left`
+  (the logo's DRAWN right edge — its rounded left plus width, so the grid never
+  starts on a half pixel) and `--row-scale`; `.shelf-rows` divides both by the
+  zoom, since `zoom` scales its own offsets. **The span depends on the zoom** —
+  the logo is sized to the top pack, whose screen width is its row width × zoom
+  — so it is a linear fixed point, solved: `z = (captionLeft − C) / (G + tw/2)`,
+  or with the logo's height clamp binding, `z = (captionLeft − C − w/2) / G`.
+  Verified exact at 961: column one from the logo's right, column two's clouds
+  at 709 = caption left, gap 13.9 = 15 × 0.926, three lines for six packs.
+  (Before this: one to a line between the same edges; before that, packs
+  centred on the logo's axis at 80% of the fit to the right margin; before
+  that, left on the margin. Each was the owner's instruction at the time.)
 - **On a phone that rule has no room, and a fallback holds** — `ROW_SCALE_FLOOR`
   (0.6). The caption box is the price's width hung from the right margin; at
   375 its left is at 123 and the logo's right past 85, a span of a few dozen
-  px that would draw the rows at a tenth of their size. The owner wrote the rule
-  at a desktop. Below the floor the previous phone layout holds: every pack's
-  rule on the left margin, rows at `FALLBACK_SHRINK` (0.8) of the fit to the
-  right margin. The switch lands at roughly 530px wide. **That is a judgement,
-  not the owner's instruction**, kept in one place so it can be moved or
-  removed; `data-fit` on the stage says which mode is live.
+  px that would draw a pair at a twentieth of their size. The owner wrote the
+  rule at a desktop. Below the floor the previous phone layout holds: ONE to a
+  line, every pack's rule on the left margin, rows at `FALLBACK_SHRINK` (0.8)
+  of the fit to the right margin. With two columns the switch lands at about
+  735px wide, so phones fall back and tablets get the pair. **That is a
+  judgement, not the owner's instruction**, kept in one place so it can be
+  moved or removed; `data-fit` on the stage says which mode is live.
 - **The logo is as wide as the top pack, about its own centre** — the owner's
   rule, "use its current centre of mass as a guide". It comes out of the same
   `shelfFit` solve as the rows (real width and height so the vector stays

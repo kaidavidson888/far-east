@@ -59,12 +59,12 @@ const type = (t: { left: number; top: number; size: number }): React.CSSProperti
 });
 
 export function ShelfPage({ entries }: { entries: ShelfEntry[] }) {
-  const { rows, rowsTop, rowsHeight, bottom, topPackWidth } = shelfLayout(entries);
+  const { rows, rowsTop, rowHeight, pitch, count, bottom, topPackWidth } = shelfLayout(entries);
   const R = SHELF_ROW;
 
   return (
     <div className="shelf">
-      <ShelfStage rowsTop={rowsTop} rowsHeight={rowsHeight} bottom={bottom} topPackWidth={topPackWidth}>
+      <ShelfStage rowsTop={rowsTop} rowHeight={rowHeight} pitch={pitch} count={count} bottom={bottom} topPackWidth={topPackWidth}>
         {/* the logo, as wide as the top pack, about its own centre — the stage sizes it */}
         <Link
           href={HOME}
@@ -130,7 +130,7 @@ export function ShelfPage({ entries }: { entries: ShelfEntry[] }) {
           }
         >
           {rows.map((row) => (
-            <div key={row.key} className="shelf-row" style={{ top: px(row.top), height: px(R.height) }}>
+            <div key={row.key} className="shelf-row" style={{ '--i': row.index, height: px(R.height) } as React.CSSProperties}>
               {/* the pack, in the same rule the cigarette pages draw round theirs */}
               <div className="shelf-pack" style={{ ...box(row.frame), '--rule': px(R.rule) } as React.CSSProperties}>
                 <img

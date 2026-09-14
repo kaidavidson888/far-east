@@ -3,29 +3,33 @@
 import { useEffect, useRef } from 'react';
 import {
   CAPTION_DEFAULT,
+  COLUMN_PITCH,
   DESIGN_ALIGNED_RIGHT,
   SHELF_HEADER,
   SHELF_MARGIN,
   fitCaption,
+  gridHeight,
   shelfFit,
   type ShelfFit,
 } from '@/lib/shelfPage';
 
 /**
  * The shelf's stage, which measures what the CSS cannot know and hands it
- * down: where the aligned right edge is, where the rows start and how much
- * they are zoomed, how big the logo is, and how wide the price really is.
+ * down: where the aligned right edge is, where the grid starts, how much it
+ * is zoomed and how many columns it has, how big the logo is, and how wide
+ * the price really is.
  *
  * Everything that meets the right edge — the header, the $240, the divider —
  * reads `--aligned-right`, which is the width less the logo's margin, so the
- * right margin mirrors the left at any width. The rows block reads
- * `--rows-left` and `--row-scale` from `shelfFit`, which puts the rows between
- * the logo's right edge and the caption box's left edge (see shelfPage.ts),
- * and the stage's own height grows with the zoom so the page scrolls to the
- * last row.
+ * right margin mirrors the left at any width. The rows read `--rows-left`,
+ * `--row-scale`, `--cols` and the two pitches from `shelfFit`, which puts the
+ * grid between the logo's right edge and the caption box's left edge (see
+ * shelfPage.ts) — two entries to a line, or one on a phone — and each row finds
+ * its own column and line from its index in the stylesheet. The stage's height
+ * grows with the zoom and the line count so the page scrolls to the last line.
  *
  * THE LOGO COMES OUT OF THE SAME FIT. It is sized to the top pack about its
- * own centre, and because the rows' zoom and the logo's width depend on each
+ * own centre, and because the grid's zoom and the logo's width depend on each
  * other, one solve gives both. Set as real width and height rather than a
  * transform, so the vector rasterises sharp at the size it shows at.
  *
@@ -35,12 +39,15 @@ import {
  * estimate; measured here on a canvas with the elements' own computed fonts,
  * once the fonts are loaded, the margins come out exact — and the price's
  * measured width goes back into the fit, since the caption box's left edge is
- * where the rows end. The table's figures are the first paint.
+ * where the grid ends. The table's figures are the first paint.
  */
-function fitVars(fit: ShelfFit) {
+function fitVars(fit: ShelfFit, pitch: number) {
   return {
     '--row-scale': String(fit.scale),
     '--rows-left': `${fit.rowsLeft}px`,
+    '--cols': String(fit.cols),
+    '--col-pitch': `${COLUMN_PITCH}px`,
+    '--row-pitch': `${pitch}px`,
     '--logo-w': `${fit.logo.w}px`,
     '--logo-h': `${fit.logo.h}px`,
     '--logo-left': `${fit.logo.left}px`,
@@ -84,13 +91,17 @@ function captionVars(boxWidth: number, captionEm: number, measure: (size: number
 
 export function ShelfStage({
   rowsTop,
-  rowsHeight,
+  rowHeight,
+  pitch,
+  count,
   bottom,
   topPackWidth,
   children,
 }: {
   rowsTop: number;
-  rowsHeight: number;
+  rowHeight: number;
+  pitch: number;
+  count: number;
   bottom: number;
   topPackWidth: number | null;
   children: React.ReactNode;
@@ -100,6 +111,9 @@ export function ShelfStage({
   const priceWRef = useRef(SHELF_HEADER.box.width);
   const applyRef = useRef<() => void>(() => {});
 
+  const minHeightFor = (fit: ShelfFit) =>
+    `${Math.ceil(rowsTop + gridHeight(count, fit.cols, rowHeight, pitch) * fit.scale + bottom)}px`;
+
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
@@ -107,20 +121,22 @@ export function ShelfStage({
       const alignedRight = el.clientWidth - SHELF_MARGIN;
       const fit = shelfFit(alignedRight, priceWRef.current, topPackWidth);
       el.style.setProperty('--aligned-right', `${alignedRight}px`);
-      for (const [k, v] of Object.entries(fitVars(fit))) el.style.setProperty(k, v);
+      for (const [k, v] of Object.entries(fitVars(fit, pitch))) el.style.setProperty(k, v);
       el.dataset.fit = fit.mode;
-      el.style.minHeight = `${Math.ceil(rowsTop + rowsHeight * fit.scale + bottom)}px`;
+      el.style.minHeight = minHeightFor(fit);
     };
     applyRef.current = apply;
     apply();
     const ro = new ResizeObserver(apply);
     ro.observe(el);
     return () => ro.disconnect();
-  }, [bottom, rowsHeight, rowsTop, topPackWidth]);
+    // minHeightFor closes over the same props this effect lists
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bottom, count, pitch, rowHeight, rowsTop, topPackWidth]);
 
   // the header, once the faces are in: the price's real ink width, and the
   // caption fitted to it with its real fallback glyphs — then the fit again,
-  // because the caption box's left edge is where the rows end
+  // because the caption box's left edge is where the grid ends
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
@@ -165,10 +181,10 @@ export function ShelfStage({
       data-fit={first.mode}
       style={
         {
-          minHeight: `${Math.ceil(rowsTop + rowsHeight * first.scale + bottom)}px`,
+          minHeight: minHeightFor(first),
           '--aligned-right': `${DESIGN_ALIGNED_RIGHT}px`,
           '--shelf-margin': `${SHELF_MARGIN}px`,
-          ...fitVars(first),
+          ...fitVars(first, pitch),
           '--price-w': `${SHELF_HEADER.box.width}px`,
           '--caption-size': `${CAPTION_DEFAULT.size}px`,
           '--caption-left': `${CAPTION_DEFAULT.left}px`,

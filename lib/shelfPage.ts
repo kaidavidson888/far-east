@@ -227,6 +227,22 @@ const BOTTOM = g.viewBox.h - (g.row.top + (g.row.count - 1) * g.row.pitch + g.ro
 export const CLOUD_RIGHT = Math.max(...SHELF_ROW.clouds.map((c) => c.left + c.width));
 
 /**
+ * TWO ENTRIES TO A LINE — the owner's "scale them down again, same
+ * parameters, so that two fit in a row". The pair spans the same edges one row
+ * did, logo's right to caption box's left, so each is a little under half the
+ * width. The gap between the two is the design's own gap between a pack's
+ * rule and the boxes beside it (15 at design scale), read off the geometry
+ * rather than chosen, so the pair keeps the row's own rhythm. Entries fill
+ * left to right, then the next line.
+ */
+export const SHELF_COLUMNS = 2;
+export const COLUMN_GAP = g.row.plusBox.x - (g.row.frame.x + g.row.frame.w);
+/** From one column's left edge to the next, in row coordinates. */
+export const COLUMN_PITCH = CLOUD_RIGHT + COLUMN_GAP;
+/** The whole line, in row coordinates: what the zoom is worked out against. */
+export const GRID_WIDTH = SHELF_COLUMNS * CLOUD_RIGHT + (SHELF_COLUMNS - 1) * COLUMN_GAP;
+
+/**
  * THE LOGO IS AS WIDE AS THE TOP PACK, about its own centre.
  *
  * The owner's rule: scale the character logo up to the width of the first
@@ -263,18 +279,20 @@ export const SHELF_LOGO = {
  * The owner's rule — the left edge of each row on the right edge of the
  * character logo, the right edge of each row on the left edge of the "Click #
  * When Finished" box, the rows keeping their arrangement — is one zoom and one
- * offset: z = span / CLOUD_RIGHT, and the row's x=0 placed on the logo's right.
+ * offset: z = span / GRID_WIDTH — the line is two rows wide plus the design's
+ * own gap, since the owner then asked for two to a line — and the first
+ * column's x=0 placed on the logo's right.
  *
  * THE SPAN DEPENDS ON THE ZOOM. The logo is sized to the top pack, and the top
  * pack's width on screen is its row width times the zoom, so the logo's right
  * edge moves with z. It is a linear fixed point, solved rather than iterated:
  *
  *   logoRight = C + (tw · z) / 2         C the logo's centre, tw the top pack's row width
- *   z · R     = captionLeft − logoRight  R = CLOUD_RIGHT
- *   z         = (captionLeft − C) / (R + tw / 2)
+ *   z · G     = captionLeft − logoRight  G = GRID_WIDTH
+ *   z         = (captionLeft − C) / (G + tw / 2)
  *
  * unless the logo's height clamp binds (SHELF_LOGO.maxHeight), when its width
- * is fixed and z = (captionLeft − C − w/2) / R. The unclamped answer is taken
+ * is fixed and z = (captionLeft − C − w/2) / G. The unclamped answer is taken
  * first and the clamped one used if it is what the clamp gives.
  *
  * ON A PHONE THIS RULE HAS NO ROOM. The caption box is the price's width, hung
@@ -292,7 +310,9 @@ export const FALLBACK_SHRINK = 0.8;
 
 export type ShelfFit = {
   scale: number;
-  /** The page x the row's left edge (row x=0) lands on. */
+  /** How many entries sit side by side on a line. */
+  cols: number;
+  /** The page x the first column's left edge (row x=0) lands on. */
   rowsLeft: number;
   logo: { w: number; h: number; left: number; top: number };
   mode: 'between' | 'fallback';
@@ -300,7 +320,7 @@ export type ShelfFit = {
 
 export function shelfFit(alignedRight: number, priceBoxWidth: number, topPackWidth: number | null): ShelfFit {
   const C = SHELF_LOGO.centreX;
-  const R = CLOUD_RIGHT;
+  const G = GRID_WIDTH;
   const maxW = Math.round((SHELF_LOGO.maxHeight * SHELF_LOGO.w) / SHELF_LOGO.h);
   const captionLeft = alignedRight - priceBoxWidth;
   const logoAt = (w: number) => {
@@ -313,23 +333,28 @@ export function shelfFit(alignedRight: number, priceBoxWidth: number, topPackWid
   if (!topPackWidth) {
     // nothing on the shelf: the logo stays as drawn, and the fit is against it
     w = SHELF_LOGO.w;
-    z = (captionLeft - C - w / 2) / R;
+    z = (captionLeft - C - w / 2) / G;
   } else {
-    z = (captionLeft - C) / (R + topPackWidth / 2);
+    z = (captionLeft - C) / (G + topPackWidth / 2);
     w = Math.round(topPackWidth * z);
     if (w > maxW) {
       w = maxW;
-      z = (captionLeft - C - w / 2) / R;
+      z = (captionLeft - C - w / 2) / G;
     }
   }
   z = +z.toFixed(4);
   if (z >= ROW_SCALE_FLOOR) {
-    return { scale: z, rowsLeft: C + w / 2, logo: logoAt(w), mode: 'between' };
+    // the grid starts on the logo's DRAWN right edge — its rounded left plus
+    // its width — not on C + w/2, which for an odd width is a half pixel and
+    // would put every row's rule on one (the whole-pixel rule)
+    const logo = logoAt(w);
+    return { scale: z, cols: SHELF_COLUMNS, rowsLeft: logo.left + logo.w, logo, mode: 'between' };
   }
 
-  const zf = +((FALLBACK_SHRINK * (alignedRight - SHELF_MARGIN)) / R).toFixed(4);
+  // the phone layout: one to a line, on the margin
+  const zf = +((FALLBACK_SHRINK * (alignedRight - SHELF_MARGIN)) / CLOUD_RIGHT).toFixed(4);
   const wf = topPackWidth ? Math.min(maxW, Math.round(topPackWidth * zf)) : SHELF_LOGO.w;
-  return { scale: zf, rowsLeft: SHELF_MARGIN, logo: logoAt(wf), mode: 'fallback' };
+  return { scale: zf, cols: 1, rowsLeft: SHELF_MARGIN, logo: logoAt(wf), mode: 'fallback' };
 }
 
 /** The design's own width sets the first-paint values, before the page measures. */
@@ -381,8 +406,12 @@ export const SHELF_QUANTITY_FRAME = (() => {
 
 export type ShelfRow = {
   key: string;
-  /** From the top of the rows block, in design px — the block is what zooms. */
-  top: number;
+  /**
+   * Its place on the shelf, most recent first. WHERE it lands — which column,
+   * which line — is the stylesheet's, from `--cols` and the pitches the stage
+   * sets, because the column count is decided from the width on the client.
+   */
+  index: number;
   pack: CigPack;
   amount: number | null;
   unit: PackUnit | null;
@@ -397,9 +426,11 @@ export type ShelfLayout = {
   rows: ShelfRow[];
   /** Where the rows block starts, below the divider. Not zoomed. */
   rowsTop: number;
-  /** The block's own height in design px; the page multiplies by the zoom. */
-  rowsHeight: number;
-  /** The design's clearance under the last row. */
+  /** One row's height and the line pitch, in design px; the stage multiplies by the zoom. */
+  rowHeight: number;
+  pitch: number;
+  count: number;
+  /** The design's clearance under the last line. */
   bottom: number;
   /** The first pack's rule width in row px — what the logo is sized to — or null with nothing on the shelf. */
   topPackWidth: number | null;
@@ -413,7 +444,7 @@ export function shelfLayout(entries: ShelfEntry[]): ShelfLayout {
     const left = SHELF_ROW.left;
     return {
       key: e.pack.id,
-      top: i * g.row.pitch,
+      index: i,
       pack: e.pack,
       amount: e.amount,
       unit: e.unit,
@@ -422,6 +453,19 @@ export function shelfLayout(entries: ShelfEntry[]): ShelfLayout {
       quantity: e.amount !== null && e.unit !== null ? `${e.amount}${e.unit.toLowerCase()}` : null,
     };
   });
-  const rowsHeight = rows.length ? (rows.length - 1) * g.row.pitch + g.row.height : 0;
-  return { rows, rowsTop: g.row.top, rowsHeight, bottom: BOTTOM, topPackWidth: rows[0]?.frame.width ?? null };
+  return {
+    rows,
+    rowsTop: g.row.top,
+    rowHeight: g.row.height,
+    pitch: g.row.pitch,
+    count: rows.length,
+    bottom: BOTTOM,
+    topPackWidth: rows[0]?.frame.width ?? null,
+  };
+}
+
+/** The block's height in design px for a given column count: lines of rows at the pitch. */
+export function gridHeight(count: number, cols: number, rowHeight: number, pitch: number): number {
+  if (!count) return 0;
+  return (Math.ceil(count / cols) - 1) * pitch + rowHeight;
 }

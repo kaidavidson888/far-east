@@ -1719,9 +1719,18 @@ html:has(.cigpage) {
 .shelf-rows {
   position: absolute;
 }
+/* Each row finds its column and its line from its own index (`--i`, set
+   inline) and the grid the stage describes (`--cols`, `--col-pitch`,
+   `--row-pitch`): entries fill left to right, then the next line. mod() and
+   round() have exactly the support of the round() the cigarette page already
+   leans on; the plain one-column pair declared first is what anything older
+   falls back to. */
 .shelf-row {
   position: absolute;
   left: 0;
+  top: calc(var(--i) * var(--row-pitch));
+  left: calc(mod(var(--i), var(--cols)) * var(--col-pitch));
+  top: calc(round(down, var(--i) / var(--cols)) * var(--row-pitch));
 }
 /* The bookmark's box is a form, so the whole box is the press. The mark is
    red (it is on the shelf); under the pointer it goes black, the way the
