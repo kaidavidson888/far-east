@@ -48,8 +48,10 @@ const cluster = (() => {
     cloud: { x: 0, y: Math.round((parts.cloud.y - parts.square.y) * k), ...cloud },
     square: { x: SEAL_SIZE - square.w, y: 0, ...square },
   };
-  return { marks, ...clusterBox(Object.values(marks)) };
+  return { marks, scale: k, ...clusterBox(Object.values(marks)) };
 })();
+/** The square's stroke as drawn, measured off its vector (3 of its 44); it scales with the pair. */
+const OUTLINE_STROKE = 3;
 const CLUSTER = cluster.marks;
 
 const M = LANDING_MARGINS;
@@ -86,8 +88,11 @@ const both = (p: NonNullable<ArtPart['placement']>['mobile']) => ({ mobile: p, d
  * follows, so the mark is never stretched; that lands the type at 19.5px, a
  * whole-pixel rounding away from 18.9. The column keeps its left edge and
  * the design's 13px between one line and the next (offers→saved and
- * saved→recommended are both 13), and its top is the outline's top under the
- * seal. The pressable box is the mark's box, so the button shrinks with it.
+ * saved→recommended are both 13), and its top is the INSIDE of the outline's
+ * top edge under the seal — the owner's "inner edge": the square's top plus
+ * its stroke at the pair's scale (3 × 87/103 = 2.5, rounded to the whole
+ * pixel the type has to start on). The pressable box is the mark's box, so
+ * the button shrinks with it.
  */
 const OFFERS_SIZE = 51.5;
 const SAVED_SIZE = 18.9;
@@ -95,7 +100,7 @@ const OFFERS = (() => {
   const h = Math.round(parts.offers.h * (SAVED_SIZE / OFFERS_SIZE));
   return { w: Math.round((parts.offers.w * h) / parts.offers.h), h };
 })();
-const LABEL_TOP = LANDING_MARGINS.top + SEAL_SIZE + LABEL_GAP;
+const LABEL_TOP = LANDING_MARGINS.top + SEAL_SIZE + LABEL_GAP + Math.round(OUTLINE_STROKE * cluster.scale);
 const OFFERS_TO_SAVED = parts.saved.y - (parts.offers.y + parts.offers.h);
 const LABELS = {
   offers: LABEL_TOP,
