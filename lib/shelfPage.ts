@@ -303,8 +303,10 @@ export const SHELF_LOGO = {
    * that a pack is over 100px across, and a logo that wide is 250 tall — off
    * the top of the page and down through the divider into the first row. So
    * the height is held to what the header has room for: the top may not
-   * leave the page, and the bottom may not pass the foot of the price's ink,
-   * the header's own baseline. Wherever the pack's width fits inside that —
+   * leave the page (moot now the page is brought down until the top sits on
+   * the margin — see shelfTopShift — but harmless, since the price binds
+   * first), and the bottom may not pass the foot of the price's ink, the
+   * header's own baseline. Wherever the pack's width fits inside that —
    * every phone and tablet — the logo takes it exactly.
    */
   maxHeight: Math.floor(
@@ -405,6 +407,19 @@ export function shelfFit(
   const wf = topPackWidth ? Math.min(maxW, Math.round(topPackWidth * zf)) : SHELF_LOGO.w;
   return { scale: zf, cols: 1, rowsLeft: SHELF_MARGIN, logo: logoAt(wf), mode: 'fallback' };
 }
+
+/**
+ * HOW FAR THE WHOLE PAGE COMES DOWN. The owner's rule: the logo's top margin
+ * is its left margin — the same distance from the page's top edge to the top
+ * of the mark as from the left edge to the mark's own left. THE MARK'S OWN
+ * LEFT, not the page's 45: the logo scales about its centre, so on a desktop
+ * (60 wide, the clamp binding) its left is at 35 and its top at 6, and it is
+ * the 35 that is matched; wherever the mark is as drawn, both are 45. Both
+ * edges come out of the fit, so the shift does too. Everything on the page —
+ * logo, header, divider, rows — moves down by this one amount, so nothing
+ * changes relative to anything else.
+ */
+export const shelfTopShift = (fit: ShelfFit) => fit.logo.left - fit.logo.top;
 
 /** The design's own width sets the first-paint values, before the page measures. */
 export const DESIGN_ALIGNED_RIGHT = g.viewBox.w - SHELF_MARGIN;

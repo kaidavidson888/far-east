@@ -785,6 +785,18 @@ design (`scripts/assets/shelf-mobile.svg`). Three pieces, one rule between them
   baseline. On a desktop the zoomed pack is 100+px wide and a logo that wide is
   250 tall — off the page and through the divider — so there it holds at 60
   wide, and its right edge (95) is where the rows begin.
+- **The whole page comes down until the logo's top margin is its left margin**
+  — the owner's rule: the same distance from the page's top edge to the top
+  of the mark as from the left edge to the mark's own left. **The mark's own
+  left, not the page's 45**: the logo scales about its centre, so on a
+  desktop (60 wide, the clamp binding) its left is at 35 and its top was at
+  6, and it is the 35 that is matched; wherever the mark is as drawn both are
+  45. Both edges come out of the fit, so the shift does (`shelfTopShift`),
+  and it is not fixed: the stage hands it down as `--shelf-top`, every
+  top-anchored thing — logo, header box, price, divider, the rows block
+  (inside its zoom division) — adds it, and the stage's height grows by it.
+  Nothing moves relative to anything else. Verified at 961 (top 35 = left
+  35, shift 29) and 375: every other element down by exactly the shift.
 - **On the shelf the logo is a link home, not the menu.** The logo menu's first
   frame IS the 40x87 logo, baked; it cannot sit on a rescaled mark without
   every frame being redrawn. `/landing`, per the logo-goes-home rule.

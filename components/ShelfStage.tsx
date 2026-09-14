@@ -10,6 +10,7 @@ import {
   fitCaption,
   gridHeight,
   shelfFit,
+  shelfTopShift,
   type ShelfFit,
 } from '@/lib/shelfPage';
 
@@ -33,6 +34,10 @@ import {
  * other, one solve gives both. Set as real width and height rather than a
  * transform, so the vector rasterises sharp at the size it shows at.
  *
+ * THE WHOLE PAGE THEN COMES DOWN BY `--shelf-top` — whatever puts the logo's
+ * top on the same margin its left holds (shelfTopShift). Every top-anchored
+ * thing adds it, and the stage's height grows by it.
+ *
  * THE HEADER IS MEASURED IN THE PAGE'S OWN FACES. The caption's box takes the
  * price's width and the caption is fitted inside it to a 3px clearance. `$`
  * and `#` come from the fallback face, whose widths the ink table can only
@@ -42,7 +47,9 @@ import {
  * where the grid ends. The table's figures are the first paint.
  */
 function fitVars(fit: ShelfFit, pitch: number, rowWidth: number) {
+  const shift = shelfTopShift(fit);
   return {
+    '--shelf-top': `${shift}px`,
     '--row-scale': String(fit.scale),
     '--rows-left': `${fit.rowsLeft}px`,
     '--cols': String(fit.cols),
@@ -51,7 +58,7 @@ function fitVars(fit: ShelfFit, pitch: number, rowWidth: number) {
     '--logo-w': `${fit.logo.w}px`,
     '--logo-h': `${fit.logo.h}px`,
     '--logo-left': `${fit.logo.left}px`,
-    '--logo-top': `${fit.logo.top}px`,
+    '--logo-top': `${fit.logo.top + shift}px`,
   };
 }
 
@@ -118,7 +125,7 @@ export function ShelfStage({
   const applyRef = useRef<() => void>(() => {});
 
   const minHeightFor = (fit: ShelfFit) =>
-    `${Math.ceil(rowsTop + gridHeight(count, fit.cols, rowHeight, pitch) * fit.scale + bottom)}px`;
+    `${Math.ceil(shelfTopShift(fit) + rowsTop + gridHeight(count, fit.cols, rowHeight, pitch) * fit.scale + bottom)}px`;
 
   useEffect(() => {
     const el = ref.current;

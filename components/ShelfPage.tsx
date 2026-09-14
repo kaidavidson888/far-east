@@ -83,7 +83,7 @@ export function ShelfPage({ entries }: { entries: ShelfEntry[] }) {
           className="shelf-header-box"
           style={{
             left: 'calc(var(--aligned-right) - var(--price-w))',
-            top: px(SHELF_HEADER.box.top),
+            top: `calc(var(--shelf-top) + ${px(SHELF_HEADER.box.top)})`,
             width: 'var(--price-w)',
             height: px(SHELF_HEADER.box.height),
             borderWidth: px(SHELF_HEADER.box.stroke),
@@ -102,7 +102,7 @@ export function ShelfPage({ entries }: { entries: ShelfEntry[] }) {
           className="shelf-price"
           style={{
             left: `calc(var(--aligned-right) - ${px(SHELF_HEADER.price.inset)} + var(--price-shift, 0px))`,
-            top: px(SHELF_HEADER.price.top),
+            top: `calc(var(--shelf-top) + ${px(SHELF_HEADER.price.top)})`,
             fontSize: px(SHELF_HEADER.price.size),
             WebkitTextStroke: `${px(SHELF_HEADER.price.stroke)} currentColor`,
             transform: 'translateX(-100%)',
@@ -114,7 +114,7 @@ export function ShelfPage({ entries }: { entries: ShelfEntry[] }) {
         {/* the red rule dividing the header from the shelf, margin to margin */}
         <span
           className="shelf-divider"
-          style={{ left: px(DIVIDER.left), top: px(DIVIDER.top), width: `calc(var(--aligned-right) - ${px(DIVIDER.left)})`, height: px(DIVIDER.height), background: DIVIDER.colour }}
+          style={{ left: px(DIVIDER.left), top: `calc(var(--shelf-top) + ${px(DIVIDER.top)})`, width: `calc(var(--aligned-right) - ${px(DIVIDER.left)})`, height: px(DIVIDER.height), background: DIVIDER.colour }}
           aria-hidden="true"
         />
 
@@ -124,12 +124,17 @@ export function ShelfPage({ entries }: { entries: ShelfEntry[] }) {
           right edge — and its right edge (the clouds) on the caption box's
           left. `zoom` multiplies the block's own offsets too, so both are
           divided out. The stage works both numbers out; see shelfFit.
+
+          Everything top-anchored on this page — the logo, the header box, the
+          price, the divider, this block — adds `--shelf-top`, the one amount
+          the stage brings the page down by so the logo's top margin is its
+          left margin. See shelfTopShift.
         */}
         <div
           className="shelf-rows"
           style={
             {
-              top: `calc(${px(rowsTop)} / var(--row-scale))`,
+              top: `calc((${px(rowsTop)} + var(--shelf-top)) / var(--row-scale))`,
               left: 'calc(var(--rows-left) / var(--row-scale))',
               zoom: 'var(--row-scale)',
             } as React.CSSProperties
