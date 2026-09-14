@@ -3,55 +3,48 @@
 import { useEffect, useRef } from 'react';
 import {
   CAPTION_DEFAULT,
-  ROW_ANCHOR_X,
-  SHELF_DEFAULTS,
+  DESIGN_ALIGNED_RIGHT,
   SHELF_HEADER,
-  SHELF_LOGO,
   SHELF_MARGIN,
   fitCaption,
-  rowScaleFor,
+  shelfFit,
+  type ShelfFit,
 } from '@/lib/shelfPage';
 
 /**
  * The shelf's stage, which measures what the CSS cannot know and hands it
- * down: where the aligned right edge is, how much to zoom the rows, how big
- * the logo is, and how wide the price really is.
+ * down: where the aligned right edge is, where the rows start and how much
+ * they are zoomed, how big the logo is, and how wide the price really is.
  *
  * Everything that meets the right edge — the header, the $240, the divider —
  * reads `--aligned-right`, which is the width less the logo's margin, so the
  * right margin mirrors the left at any width. The rows block reads
- * `--row-scale`, and the stage's own height grows with it so the page scrolls
- * to the last row.
+ * `--rows-left` and `--row-scale` from `shelfFit`, which puts the rows between
+ * the logo's right edge and the caption box's left edge (see shelfPage.ts),
+ * and the stage's own height grows with the zoom so the page scrolls to the
+ * last row.
  *
- * THE LOGO IS SIZED TO THE TOP PACK. Its width on screen is the first pack's
- * rule width times the zoom; the height follows the mark's own proportion,
- * held to what the header has room for (SHELF_LOGO.maxHeight); and it is
- * placed so its centre stays exactly where the landing page draws it — the
- * owner's "use its current centre of mass as a guide". Set as real width and
- * height rather than a transform, so the vector rasterises sharp at the size
- * it shows at. Whole pixels throughout.
+ * THE LOGO COMES OUT OF THE SAME FIT. It is sized to the top pack about its
+ * own centre, and because the rows' zoom and the logo's width depend on each
+ * other, one solve gives both. Set as real width and height rather than a
+ * transform, so the vector rasterises sharp at the size it shows at.
  *
  * THE HEADER IS MEASURED IN THE PAGE'S OWN FACES. The caption's box takes the
- * price's width and the caption is fitted inside it to a 3px clearance. Two
- * of those characters — `$` and `#` — are not in the owner's face and come
- * from the fallback, whose widths the ink table can only estimate; measured
- * here on a canvas with the elements' own computed fonts, once the fonts are
- * loaded, the margins come out exact. The table's figures are the first paint.
- *
- * A ResizeObserver keeps the width-dependent values current.
+ * price's width and the caption is fitted inside it to a 3px clearance. `$`
+ * and `#` come from the fallback face, whose widths the ink table can only
+ * estimate; measured here on a canvas with the elements' own computed fonts,
+ * once the fonts are loaded, the margins come out exact — and the price's
+ * measured width goes back into the fit, since the caption box's left edge is
+ * where the rows end. The table's figures are the first paint.
  */
-function logoVars(topPackWidth: number | null, scale: number) {
-  let w = topPackWidth ? Math.round(topPackWidth * scale) : SHELF_LOGO.w;
-  let h = Math.round((w * SHELF_LOGO.h) / SHELF_LOGO.w);
-  if (h > SHELF_LOGO.maxHeight) {
-    h = SHELF_LOGO.maxHeight;
-    w = Math.round((h * SHELF_LOGO.w) / SHELF_LOGO.h);
-  }
+function fitVars(fit: ShelfFit) {
   return {
-    '--logo-w': `${w}px`,
-    '--logo-h': `${h}px`,
-    '--logo-left': `${Math.round(SHELF_LOGO.centreX - w / 2)}px`,
-    '--logo-top': `${Math.round(SHELF_LOGO.centreY - h / 2)}px`,
+    '--row-scale': String(fit.scale),
+    '--rows-left': `${fit.rowsLeft}px`,
+    '--logo-w': `${fit.logo.w}px`,
+    '--logo-h': `${fit.logo.h}px`,
+    '--logo-left': `${fit.logo.left}px`,
+    '--logo-top': `${fit.logo.top}px`,
   };
 }
 
@@ -76,7 +69,6 @@ function captionVars(boxWidth: number, captionEm: number, measure: (size: number
   let m = measure(size);
   const inkW = () => m.actualBoundingBoxLeft + m.actualBoundingBoxRight;
   const inkH = () => m.actualBoundingBoxAscent + m.actualBoundingBoxDescent;
-  // correct for what the small size actually draws, on whichever side binds
   size = +(size * Math.min(roomW / inkW(), roomH / inkH())).toFixed(2);
   m = measure(size);
 
@@ -104,18 +96,22 @@ export function ShelfStage({
   children: React.ReactNode;
 }) {
   const ref = useRef<HTMLDivElement | null>(null);
+  /** The price box's width — the table's figure until the faces are measured. */
+  const priceWRef = useRef(SHELF_HEADER.box.width);
+  const applyRef = useRef<() => void>(() => {});
 
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
     const apply = () => {
       const alignedRight = el.clientWidth - SHELF_MARGIN;
-      const scale = rowScaleFor(alignedRight);
+      const fit = shelfFit(alignedRight, priceWRef.current, topPackWidth);
       el.style.setProperty('--aligned-right', `${alignedRight}px`);
-      el.style.setProperty('--row-scale', String(scale));
-      for (const [k, v] of Object.entries(logoVars(topPackWidth, scale))) el.style.setProperty(k, v);
-      el.style.minHeight = `${Math.ceil(rowsTop + rowsHeight * scale + bottom)}px`;
+      for (const [k, v] of Object.entries(fitVars(fit))) el.style.setProperty(k, v);
+      el.dataset.fit = fit.mode;
+      el.style.minHeight = `${Math.ceil(rowsTop + rowsHeight * fit.scale + bottom)}px`;
     };
+    applyRef.current = apply;
     apply();
     const ro = new ResizeObserver(apply);
     ro.observe(el);
@@ -123,7 +119,8 @@ export function ShelfStage({
   }, [bottom, rowsHeight, rowsTop, topPackWidth]);
 
   // the header, once the faces are in: the price's real ink width, and the
-  // caption fitted to it with its real fallback glyphs
+  // caption fitted to it with its real fallback glyphs — then the fit again,
+  // because the caption box's left edge is where the rows end
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
@@ -145,11 +142,13 @@ export function ShelfStage({
       ctx.font = font(captionEl, 100);
       const c = ctx.measureText(SHELF_HEADER.caption.text);
       const captionEm = (c.actualBoundingBoxLeft + c.actualBoundingBoxRight) / 100;
-      const measure = (size: number) => {
+      const measureAt = (size: number) => {
         ctx.font = font(captionEl, size);
         return ctx.measureText(SHELF_HEADER.caption.text);
       };
-      for (const [k, v] of Object.entries(captionVars(boxWidth, captionEm, measure))) el.style.setProperty(k, v);
+      for (const [k, v] of Object.entries(captionVars(boxWidth, captionEm, measureAt))) el.style.setProperty(k, v);
+      priceWRef.current = boxWidth;
+      applyRef.current();
     };
     document.fonts.ready.then(measure);
     return () => {
@@ -157,18 +156,19 @@ export function ShelfStage({
     };
   }, []);
 
+  const first = shelfFit(DESIGN_ALIGNED_RIGHT, SHELF_HEADER.box.width, topPackWidth);
+
   return (
     <div
       ref={ref}
       className="shelf-stage"
+      data-fit={first.mode}
       style={
         {
-          minHeight: `${Math.ceil(rowsTop + rowsHeight * SHELF_DEFAULTS.rowScale + bottom)}px`,
-          '--aligned-right': `${SHELF_DEFAULTS.alignedRight}px`,
-          '--row-scale': String(SHELF_DEFAULTS.rowScale),
-          '--shelf-anchor': `${ROW_ANCHOR_X}px`,
+          minHeight: `${Math.ceil(rowsTop + rowsHeight * first.scale + bottom)}px`,
+          '--aligned-right': `${DESIGN_ALIGNED_RIGHT}px`,
           '--shelf-margin': `${SHELF_MARGIN}px`,
-          ...logoVars(topPackWidth, SHELF_DEFAULTS.rowScale),
+          ...fitVars(first),
           '--price-w': `${SHELF_HEADER.box.width}px`,
           '--caption-size': `${CAPTION_DEFAULT.size}px`,
           '--caption-left': `${CAPTION_DEFAULT.left}px`,

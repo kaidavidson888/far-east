@@ -113,18 +113,18 @@ export function ShelfPage({ entries }: { entries: ShelfEntry[] }) {
         />
 
         {/*
-          The rows, zoomed as one block so their right edge (the clouds) lands
-          on the aligned right margin. `zoom` multiplies the block's own offsets
-          too, so its top is divided out to stay put, and its left is set so the
-          left margin — where every pack's rule starts — is the point that does
-          not move, which holds that margin at any zoom. See shelfPage.ts.
+          The rows, zoomed as one block and placed so the row's left edge (x=0,
+          where every pack's rule starts) lands on `--rows-left` — the logo's
+          right edge — and its right edge (the clouds) on the caption box's
+          left. `zoom` multiplies the block's own offsets too, so both are
+          divided out. The stage works both numbers out; see shelfFit.
         */}
         <div
           className="shelf-rows"
           style={
             {
               top: `calc(${px(rowsTop)} / var(--row-scale))`,
-              left: 'calc(var(--shelf-anchor) * (1 - var(--row-scale)) / var(--row-scale))',
+              left: 'calc(var(--rows-left) / var(--row-scale))',
               zoom: 'var(--row-scale)',
             } as React.CSSProperties
           }

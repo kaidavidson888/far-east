@@ -18,13 +18,15 @@ import type { PackUnit } from './cigPages';
  * margin; the rows keep the design's distance from the top and from each
  * other, and grow down the page as the shelf does.
  *
- * THE PACKS SIT ON ONE AXIS — the logo's centre line. Every pack's rule is
- * centred on it (the owner: "align the cigarette images on their middle
- * axis"), and the boxes, the panel and the clouds keep the design's distance
- * from that axis. The design draws exactly this: its five rules share a centre
- * at ~73, its own logo's centre. The site's logo is 8px further left, so the
- * row is moved by the difference. The logo itself is then sized to the top
- * pack's width, about its own centre, so the column reads as one thing.
+ * THE ROWS SIT BETWEEN THE LOGO AND THE CAPTION BOX. The owner's rule: each
+ * row's left edge is the right edge of the character logo, and its right
+ * edge is the left edge of the "Click # When Finished" box, the rows keeping
+ * their arrangement. So every pack's rule starts on the row's own left edge
+ * (a wider pack grows to the right, into the gap before the boxes), the
+ * boxes, panel and clouds keep the design's distance from it, and one zoom
+ * lands the clouds on the caption box. The logo is sized to the top pack
+ * about its own centre, which makes the span depend on the zoom — see
+ * `shelfFit`, which solves that rather than guessing.
  *
  * THE TYPE IS THE OWNER'S FACE. Every word and number in the design was
  * outlined; the build measured its ink and this sets it in the face at the
@@ -44,10 +46,14 @@ const LOGO = landing.parts.logo;
  */
 export const SHELF_MARGIN = LOGO.x;
 
-/** The axis every pack is centred on: the logo's centre line. */
+/** The logo's centre line — the point the logo scales about. */
 export const SHELF_AXIS_X = LOGO.x + LOGO.w / 2;
-/** The design's row, moved so its packs' shared centre lands on that axis. */
-const DX = Math.round(SHELF_AXIS_X - (g.row.frame.x + g.row.frame.w / 2));
+/**
+ * The design's row, moved so the pack rule's left edge is x=0 in row
+ * coordinates: the row's own left edge, which the page puts on the logo's
+ * right. Everything else keeps the design's distance from it.
+ */
+const DX = -g.row.frame.x;
 
 /**
  * The pack image sits this far inside the rule's outer edge. The design has
@@ -116,9 +122,9 @@ export const SHELF_ROW = {
   line1: { ...typeAt(g.row.line1, g.row.line1.ink.x + DX), text: g.row.line1.text },
   line2: { ...typeAt(g.row.line2, g.row.line2.ink.x + DX), text: g.row.line2.text },
   clouds: g.row.clouds.map(rel),
-  /** The rule round the pack, and the axis every pack is centred on. */
+  /** The rule round the pack, and the row's left edge, where every pack's rule starts. */
   rule: g.row.frame.stroke,
-  axisX: SHELF_AXIS_X,
+  left: 0,
 };
 
 /**
@@ -208,29 +214,17 @@ export const CAPTION_DEFAULT = fitCaption(SHELF_HEADER.box.width, CAPTION_EM);
 const BOTTOM = g.viewBox.h - (g.row.top + (g.row.count - 1) * g.row.pitch + g.row.height);
 
 /**
- * THE ROWS ARE SCALED TO A FIFTH SHORT OF FILLING TO THE RIGHT MARGIN.
+ * The row's right edge, in row coordinates: the far edge of the clouds. With
+ * the pack's rule at x=0 this is the row's whole width, and what the zoom is
+ * worked out against.
  *
- * The clouds are the row's right edge, and the rows are scaled as one — pack,
- * boxes, panel and clouds, the same ratios. The factor that would land the
- * clouds on the aligned right is taken, and then a fifth comes off it: the
- * owner asked for "all the cigarette stuff scaled down 20%". ANCHORED ON THE
- * AXIS the packs are centred on, so a pack stays centred on the logo at any
- * zoom and the row grows out from there.
- *
- * There is no cap. The factor depends on the width, so the page measures and
- * hands it down as `--row-scale`; `rowScaleFor` is the one formula.
- *
- * IT IS `zoom`, NOT `transform: scale`. A transform scales the row's finished
- * pixels, so at 2x the type, the rules and the packs all go soft — the owner
- * saw it. `zoom` lays the row out again at the new size: type is set at the
- * size it shows at, rules are drawn at their zoomed weight, and the packs come
- * from their 3x rasters.
+ * THE ROWS ARE SCALED WITH `zoom`, NOT `transform: scale`. A transform scales
+ * the row's finished pixels, so at 2x the type, the rules and the packs all go
+ * soft — the owner saw it. `zoom` lays the row out again at the new size: type
+ * is set at the size it shows at, rules are drawn at their zoomed weight, and
+ * the packs come from their 3x rasters.
  */
-export const ROW_SHRINK = 0.8;
-export const ROW_ANCHOR_X = SHELF_AXIS_X;
 export const CLOUD_RIGHT = Math.max(...SHELF_ROW.clouds.map((c) => c.left + c.width));
-export const rowScaleFor = (alignedRight: number) =>
-  +((ROW_SHRINK * (alignedRight - ROW_ANCHOR_X)) / (CLOUD_RIGHT - ROW_ANCHOR_X)).toFixed(4);
 
 /**
  * THE LOGO IS AS WIDE AS THE TOP PACK, about its own centre.
@@ -263,12 +257,83 @@ export const SHELF_LOGO = {
   ),
 };
 
-/** The design's own width sets the first-paint values, before the page measures. */
-const DESIGN_ALIGNED_RIGHT = g.viewBox.w - SHELF_MARGIN;
-export const SHELF_DEFAULTS = {
-  alignedRight: DESIGN_ALIGNED_RIGHT,
-  rowScale: rowScaleFor(DESIGN_ALIGNED_RIGHT),
+/**
+ * WHERE THE ROWS GO, AND HOW BIG: the fit between the logo and the caption box.
+ *
+ * The owner's rule — the left edge of each row on the right edge of the
+ * character logo, the right edge of each row on the left edge of the "Click #
+ * When Finished" box, the rows keeping their arrangement — is one zoom and one
+ * offset: z = span / CLOUD_RIGHT, and the row's x=0 placed on the logo's right.
+ *
+ * THE SPAN DEPENDS ON THE ZOOM. The logo is sized to the top pack, and the top
+ * pack's width on screen is its row width times the zoom, so the logo's right
+ * edge moves with z. It is a linear fixed point, solved rather than iterated:
+ *
+ *   logoRight = C + (tw · z) / 2         C the logo's centre, tw the top pack's row width
+ *   z · R     = captionLeft − logoRight  R = CLOUD_RIGHT
+ *   z         = (captionLeft − C) / (R + tw / 2)
+ *
+ * unless the logo's height clamp binds (SHELF_LOGO.maxHeight), when its width
+ * is fixed and z = (captionLeft − C − w/2) / R. The unclamped answer is taken
+ * first and the clamped one used if it is what the clamp gives.
+ *
+ * ON A PHONE THIS RULE HAS NO ROOM. The caption box is the price's width, hung
+ * from the right margin; at 375 wide its left edge is at 123 and the logo's
+ * right edge is past 85 — a span of a few dozen pixels, which would draw the
+ * rows at a tenth of their size. The owner wrote the rule looking at a desktop,
+ * where the span is hundreds of pixels. So where it would take the rows below
+ * ROW_SCALE_FLOOR the previous phone layout holds instead: every pack's rule on
+ * the left margin, the rows at FALLBACK_SHRINK of the fit to the right margin.
+ * THAT SWITCH IS A JUDGEMENT, NOT THE OWNER'S — written here so it can be moved
+ * or removed in one place.
+ */
+export const ROW_SCALE_FLOOR = 0.6;
+export const FALLBACK_SHRINK = 0.8;
+
+export type ShelfFit = {
+  scale: number;
+  /** The page x the row's left edge (row x=0) lands on. */
+  rowsLeft: number;
+  logo: { w: number; h: number; left: number; top: number };
+  mode: 'between' | 'fallback';
 };
+
+export function shelfFit(alignedRight: number, priceBoxWidth: number, topPackWidth: number | null): ShelfFit {
+  const C = SHELF_LOGO.centreX;
+  const R = CLOUD_RIGHT;
+  const maxW = Math.round((SHELF_LOGO.maxHeight * SHELF_LOGO.w) / SHELF_LOGO.h);
+  const captionLeft = alignedRight - priceBoxWidth;
+  const logoAt = (w: number) => {
+    const h = Math.round((w * SHELF_LOGO.h) / SHELF_LOGO.w);
+    return { w, h, left: Math.round(C - w / 2), top: Math.round(SHELF_LOGO.centreY - h / 2) };
+  };
+
+  let z: number;
+  let w: number;
+  if (!topPackWidth) {
+    // nothing on the shelf: the logo stays as drawn, and the fit is against it
+    w = SHELF_LOGO.w;
+    z = (captionLeft - C - w / 2) / R;
+  } else {
+    z = (captionLeft - C) / (R + topPackWidth / 2);
+    w = Math.round(topPackWidth * z);
+    if (w > maxW) {
+      w = maxW;
+      z = (captionLeft - C - w / 2) / R;
+    }
+  }
+  z = +z.toFixed(4);
+  if (z >= ROW_SCALE_FLOOR) {
+    return { scale: z, rowsLeft: C + w / 2, logo: logoAt(w), mode: 'between' };
+  }
+
+  const zf = +((FALLBACK_SHRINK * (alignedRight - SHELF_MARGIN)) / R).toFixed(4);
+  const wf = topPackWidth ? Math.min(maxW, Math.round(topPackWidth * zf)) : SHELF_LOGO.w;
+  return { scale: zf, rowsLeft: SHELF_MARGIN, logo: logoAt(wf), mode: 'fallback' };
+}
+
+/** The design's own width sets the first-paint values, before the page measures. */
+export const DESIGN_ALIGNED_RIGHT = g.viewBox.w - SHELF_MARGIN;
 
 /**
  * A red rule between the top of the page and the shelf, at the owner's ask.
@@ -344,8 +409,8 @@ export function shelfLayout(entries: ShelfEntry[]): ShelfLayout {
   const rows = entries.map((e, i) => {
     const imgW = Math.round((SHELF_PACK_H * e.pack.w) / e.pack.h);
     const outerW = imgW + INSET * 2;
-    // every pack centred on the axis; a wider pack grows both ways
-    const left = Math.round(SHELF_AXIS_X - outerW / 2);
+    // every pack's rule starts on the row's left edge; a wider pack grows right
+    const left = SHELF_ROW.left;
     return {
       key: e.pack.id,
       top: i * g.row.pitch,

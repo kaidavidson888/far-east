@@ -703,28 +703,43 @@ design (`scripts/assets/shelf-mobile.svg`). Three pieces, one rule between them
   ink height: `size = inkHeight / (ascent/1000)`, ascents from
   `far-east-ink.json`, and placed by baseline (0.825 of the size in a
   line-height:1 box, measured in Chrome).
-- **Every pack is centred on one axis — the logo's centre line** (`SHELF_AXIS_X`,
-  65), at the row's own red rule, one pack height for all (aspect from
-  `cigs.json`); the boxes, panel and clouds keep the design's distance from that
-  axis. The owner's rule ("align the cigarette images on their middle axis"),
-  and the design's own: its five rules share a centre at ~73, its logo's. The
-  row is shifted by `DX` (-8) to put that on the site's logo. (It was briefly
-  left-aligned on the margin instead; the owner's later instruction is the
-  axis.) The rows are scaled with `zoom` anchored on the axis, so a pack stays
-  centred on the logo at any zoom.
-- **The rows are scaled to 80% of the fit** (`ROW_SHRINK`): the factor that
-  would land the clouds on the right margin, less a fifth — the owner's "scale
-  all the cigarette stuff down 20%". Their right edge therefore sits inside the
-  margin; the header, price and divider still meet it.
+- **THE ROWS SIT BETWEEN THE LOGO AND THE CAPTION BOX** (`shelfFit`). The
+  owner's rule, and the latest of three: each row's left edge is the right
+  edge of the character logo, its right edge the left edge of the "Click #
+  When Finished" box, the rows keeping their arrangement. So every pack's rule
+  starts on the row's own left edge (`DX = -frame.x` puts the design's frame at
+  row x=0; a wider pack grows right, into the gap before the boxes — a pack over
+  ~69px wide at row scale would reach the boxes, an old latent edge), the
+  boxes/panel/clouds keep the design's distance from it, and one zoom lands the
+  clouds (`CLOUD_RIGHT`, the row's width) on the caption box's left. The stage
+  hands down `--rows-left` (the logo's right, in page px) and `--row-scale`;
+  `.shelf-rows` divides both by the zoom, since `zoom` scales its own offsets.
+  **The span depends on the zoom** — the logo is sized to the top pack, whose
+  screen width is its row width × zoom — so it is a linear fixed point,
+  solved: `z = (captionLeft − C) / (R + tw/2)`, or with the logo's height clamp
+  binding, `z = (captionLeft − C − w/2) / R`. Verified exact at 961: six rows'
+  left edges at 95 = logo right (spread 0), clouds at 694 = caption left.
+  (Before this: packs centred on the logo's axis at 80% of the fit to the right
+  margin; before that, left on the margin. Each was the owner's instruction at
+  the time.)
+- **On a phone that rule has no room, and a fallback holds** — `ROW_SCALE_FLOOR`
+  (0.6). The caption box is the price's width hung from the right margin; at
+  375 its left is at 123 and the logo's right past 85, a span of a few dozen
+  px that would draw the rows at a tenth of their size. The owner wrote the rule
+  at a desktop. Below the floor the previous phone layout holds: every pack's
+  rule on the left margin, rows at `FALLBACK_SHRINK` (0.8) of the fit to the
+  right margin. The switch lands at roughly 530px wide. **That is a judgement,
+  not the owner's instruction**, kept in one place so it can be moved or
+  removed; `data-fit` on the stage says which mode is live.
 - **The logo is as wide as the top pack, about its own centre** — the owner's
-  rule, "use its current centre of mass as a guide". The stage sizes it live
-  (`topPackWidth × zoom`, real width and height so the vector stays sharp) with
-  its centre fixed at the landing page's (65, 71.5). **Its height is clamped**
-  (`SHELF_LOGO.maxHeight`, 131): the top may not leave the page and the bottom
-  may not pass the foot of the price's ink, the header's own baseline. On a
-  desktop the zoomed pack is 100+px wide and a logo that wide is 250 tall —
-  off the page and through the divider — so there it grows to 60 wide; at
-  every phone and tablet width the pack's width fits and it takes it exactly.
+  rule, "use its current centre of mass as a guide". It comes out of the same
+  `shelfFit` solve as the rows (real width and height so the vector stays
+  sharp) with its centre fixed at the landing page's (65, 71.5). **Its height
+  is clamped** (`SHELF_LOGO.maxHeight`, 131): the top may not leave the page
+  and the bottom may not pass the foot of the price's ink, the header's own
+  baseline. On a desktop the zoomed pack is 100+px wide and a logo that wide is
+  250 tall — off the page and through the divider — so there it holds at 60
+  wide, and its right edge (95) is where the rows begin.
 - **On the shelf the logo is a link home, not the menu.** The logo menu's first
   frame IS the 40x87 logo, baked; it cannot sit on a rescaled mark without
   every frame being redrawn. `/landing`, per the logo-goes-home rule.
@@ -749,19 +764,18 @@ design (`scripts/assets/shelf-mobile.svg`). Three pieces, one rule between them
   real px, so the right must be too — `--aligned-right` is `width - MARGIN`,
   measured live by `components/ShelfStage.tsx`, not a fixed design x. The header
   box and the $240 **move** (not scale — "keep the same ratios") to hang from
-  that edge; the divider spans margin to margin; and the rows **scale up** as one
-  block so their right edge (the clouds) lands on it (`--row-scale`,
-  `rowScaleFor`). **There is no cap** — the owner asked for the mirror at their
-  own width, so a desktop gets big rows; that is the instruction.
+  that edge, and the divider spans margin to margin. The rows no longer reach
+  the right margin: they end at the caption box's left edge (see the rule
+  above).
 - **The rows are scaled with `zoom`, NOT `transform: scale`.** A transform
   scales finished pixels, and at 2x the type, the rules and the packs all went
   soft — the owner saw it. `zoom` lays the block out again at the new size, so
   type is set at the size it shows at, rules draw at their zoomed weight, and
   the packs come from their 3x rasters. `zoom` multiplies the block's OWN
-  offsets too, so `.shelf-rows` has its `top` divided out to stay put and its
-  `left` set so the left margin is the point that does not move
-  (`A(1-z)/z`). The stage's height grows with the zoom. Chrome floors a zoomed
-  border (3px at 2.58 draws 7, not 7.74), so inset marks can sit <1px off.
+  offsets too, so `.shelf-rows` has both its `top` and its `left`
+  (`--rows-left`) divided by the zoom to land where they are meant to. The
+  stage's height grows with the zoom. Chrome floors a zoomed border (3px at
+  2.58 draws 7, not 7.74), so inset marks can sit <1px off.
 - **Inside a ruled box, children sit inside the rule.** An absolutely placed
   child of a bordered box is positioned from the padding edge, so a mark
   measured from the box's OUTER corner needs the rule's width taken off its
