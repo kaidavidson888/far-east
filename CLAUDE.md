@@ -943,6 +943,25 @@ the brand assets and review text in this repo are visible to anyone.
   itself was first written through a double-quoted shell string, which
   command-substituted its backticks and stripped every code span — the
   heredoc gotcha below, in a second form. Patch text with the editor.)
+- **`setPointerCapture` throws, so guard it.** It raises `NotFoundError` /
+  `InvalidPointerId` when the pointer is not active by the time the handler
+  runs — a finger already lifted, or a scripted pointer whose id the browser
+  never issued. Unguarded in `CigQuantity`'s press it threw BEFORE
+  `setMode('open')`, so the menu silently never opened. Every capture and
+  release on the site is now wrapped in `try { … } catch { /* no pointer */ }`,
+  the way the splash always was; losing capture only costs a one-gesture
+  slide, never the press itself.
+- **The Browser pane cannot time or paint animation, and it fakes it two
+  ways.** It starves `requestAnimationFrame` (0–2 frames a second, even
+  fronted) and clamps timers to ~500ms, so anything rAF-driven — the splash's
+  hold, the seal's run — sits at its first phase for ever, and a CSS transition
+  read after 1s is still at its start (the OFFERS hover "did not dim"; read
+  again later it had). Both looked like site bugs for an afternoon. To drive an
+  rAF loop there, shim it with a `MessageChannel` (which the pane does not
+  throttle), never a timer; to read a transition, wait several seconds or
+  read the rule, not the computed value. And its scripted pointers have ids the
+  browser never issued, so `setPointerCapture` throws for them — stub it on
+  `Element.prototype` for a test, and read the guard above.
 - **A `'use server'` module may only export async functions.** Exporting a plain
   `const` from `app/actions.ts` does not fail the build and does not fail
   `tsc --noEmit` — it silently strips EVERY export from the module, and the first

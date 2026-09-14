@@ -234,7 +234,7 @@ export function CigQuantity({
   const stripeDown = (which: Which) => (e: React.PointerEvent) => {
     if (e.button !== 0 && e.pointerType === 'mouse') return;
     e.preventDefault();
-    e.currentTarget.setPointerCapture(e.pointerId);
+    try { e.currentTarget.setPointerCapture(e.pointerId); } catch { /* no pointer — see the plus */ }
     gestureRef.current = { which, y: e.clientY };
     setDragging(which);
     update(which, { picked: true }); // a tap accepts what is in the window
@@ -325,8 +325,13 @@ export function CigQuantity({
         onPointerDown={(e) => {
           if (e.button !== 0 && e.pointerType === 'mouse') return;
           e.preventDefault();
-          // keep the pointer: the same press can go on to work the wheels
-          e.currentTarget.setPointerCapture(e.pointerId);
+          // keep the pointer: the same press can go on to work the wheels.
+          // Guarded, as the splash guards its own: setPointerCapture throws
+          // InvalidPointerId if the pointer is no longer active by the time
+          // this runs, and an unguarded throw here landed BEFORE setMode —
+          // the menu simply never opened. Losing capture only costs the
+          // one-gesture slide; the menu must still open.
+          try { e.currentTarget.setPointerCapture(e.pointerId); } catch { /* no pointer */ }
           gestureRef.current = { which: null, y: e.clientY };
           setMode('open');
         }}

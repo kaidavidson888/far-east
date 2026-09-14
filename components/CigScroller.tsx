@@ -702,7 +702,8 @@ export function CigScroller({
     // pressable. A press that never moves never captures.
     if (!capturedRef.current && dragRef.current.moved > SLOP) {
       capturedRef.current = true;
-      e.currentTarget.setPointerCapture?.(e.pointerId);
+      // guarded: throws InvalidPointerId if the pointer has already gone
+      try { e.currentTarget.setPointerCapture?.(e.pointerId); } catch { /* no pointer */ }
     }
   };
   const endDrag = (e: React.PointerEvent) => {
@@ -710,7 +711,7 @@ export function CigScroller({
     draggingRef.current = false;
     if (capturedRef.current) {
       capturedRef.current = false;
-      e.currentTarget.releasePointerCapture?.(e.pointerId);
+      try { e.currentTarget.releasePointerCapture?.(e.pointerId); } catch { /* was never captured */ }
     }
     run();
   };
