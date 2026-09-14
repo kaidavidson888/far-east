@@ -59,17 +59,49 @@ const anchored = (
   id: keyof typeof parts,
   label: string,
   place: ArtPart['placement'],
+  size: { w: number; h: number } = parts[id],
 ): ArtPart => ({
   id,
   label,
   src: `/landing/parts/${id}.svg`,
-  w: parts[id].w,
-  h: parts[id].h,
+  w: size.w,
+  h: size.h,
   pressable: true,
   placement: place,
 });
 
 const both = (p: NonNullable<ArtPart['placement']>['mobile']) => ({ mobile: p, desktop: p });
+
+/**
+ * THE THREE LABELS ARE A COLUMN WHOSE TOP IS THE OUTLINE'S, WITH OFFERS SET AT
+ * MY SAVED'S SIZE. The owner's ask: "scale the offers text and button down to
+ * the same size as the my saved while keeping the margins and align the top
+ * of the entire row of text with the top of the outline next to the sigil
+ * while keeping the same margins between the text".
+ *
+ * The design draws OFFERS at 51.5px and My Saved at 18.9 (each ink height
+ * divided by the ink extent of the letters in it — the stylesheet's dash
+ * geometry says the same). So OFFERS is scaled by 18.9/51.5, its box rounded
+ * to whole pixels AT ITS OWN ASPECT — 37 tall becomes 14, and the width
+ * follows, so the mark is never stretched; that lands the type at 19.5px, a
+ * whole-pixel rounding away from 18.9. The column keeps its left edge and
+ * the design's 13px between one line and the next (offers→saved and
+ * saved→recommended are both 13), and its top is the outline's top under the
+ * seal. The pressable box is the mark's box, so the button shrinks with it.
+ */
+const OFFERS_SIZE = 51.5;
+const SAVED_SIZE = 18.9;
+const OFFERS = (() => {
+  const h = Math.round(parts.offers.h * (SAVED_SIZE / OFFERS_SIZE));
+  return { w: Math.round((parts.offers.w * h) / parts.offers.h), h };
+})();
+const LABEL_TOP = LANDING_MARGINS.top + SEAL_SIZE + LABEL_GAP;
+const OFFERS_TO_SAVED = parts.saved.y - (parts.offers.y + parts.offers.h);
+const LABELS = {
+  offers: LABEL_TOP,
+  saved: LABEL_TOP + OFFERS.h + OFFERS_TO_SAVED,
+  recommended: LABEL_TOP + OFFERS.h + OFFERS_TO_SAVED + parts.saved.h + LABEL_GAP,
+};
 
 const inCluster = (id: keyof typeof CLUSTER, label: string, pressable: boolean): ArtPart => ({
   id,
@@ -101,12 +133,12 @@ export const LANDING_SPEC: ArtPageSpec = {
   parts: [
     anchored('logo', '遠東', both({ left: M.left, top: parts.logo.y })),
     anchored('seal', 'Seal', both({ right: M.right, top: M.top })),
-    anchored('offers', 'Offers', both({ left: parts.offers.x, top: parts.offers.y })),
-    anchored('saved', 'My Saved', both({ left: parts.saved.x, top: parts.saved.y })),
+    anchored('offers', 'Offers', both({ left: parts.offers.x, top: LABELS.offers }), OFFERS),
+    anchored('saved', 'My Saved', both({ left: parts.saved.x, top: LABELS.saved })),
     anchored(
       'recommended',
       'Recommended',
-      both({ left: parts.recommended.x, top: parts.recommended.y }),
+      both({ left: parts.recommended.x, top: LABELS.recommended }),
     ),
     inCluster('cloud', '', false),
     inCluster('square', '', false),

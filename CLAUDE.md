@@ -493,6 +493,18 @@ x-height measured from that label's baseline. All of it is off the ink in
 `scripts/assets/far-east-ink.json`, like everything else on these pages. The
 block is in `globals.css` under "the three landing labels".
 
+**The landing page has since moved off the design in three places, all the
+owner's asks (2026-09-14), all in `lib/landing.ts` and none in the artwork
+build:** TEST YOUR LUCK is no longer placed (the part is still cut, so it is
+one line to restore); the sigil and the square sit under the seal, scaled as
+one to the seal's 87px width, 13px below it (the design's gap from My Saved
+to RECOMMENDED) with 5px between them as drawn, which the scale takes to 4;
+and the three labels are a column whose top is that square's top, OFFERS
+shown at 14/37 of its drawn size — My Saved's 18.9px to the whole pixel, at
+its own aspect so it is never stretched — with the design's 13px between one
+line and the next. OFFERS's dash figures in the stylesheet are scaled by the
+same 14/37.
+
 ## The owner's own face (`public/fonts/far-east-1.woff2`)
 Supplied by the owner as `Far_East_Full_Webfont.woff2`, declared as the family
 **"Far East"**, self-hosted, and reached through the `--font-typed` token.
