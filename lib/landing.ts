@@ -52,6 +52,12 @@ const cluster = (() => {
 })();
 /** The square's stroke as drawn, measured off its vector (3 of its 44); it scales with the pair. */
 const OUTLINE_STROKE = 3;
+/**
+ * How far the O's crown rises above the flat tops of F, E, R and S in the
+ * OFFERS drawing (1 of its 37, measured off the vector). The part's box
+ * starts at the crown; the eye lines the word up by the flat tops.
+ */
+const OFFERS_CROWN = 1;
 const CLUSTER = cluster.marks;
 
 const M = LANDING_MARGINS;
@@ -90,9 +96,9 @@ const both = (p: NonNullable<ArtPart['placement']>['mobile']) => ({ mobile: p, d
  * the design's 13px between one line and the next (offers→saved and
  * saved→recommended are both 13), and its top is the INSIDE of the outline's
  * top edge under the seal — the owner's "inner edge": the square's top plus
- * its stroke at the pair's scale (3 × 87/103 = 2.5, rounded to the whole
- * pixel the type has to start on). The pressable box is the mark's box, so
- * the button shrinks with it.
+ * its stroke at the pair's scale (3 × 87/103 = 2.5), the letters' flat tops
+ * on that line (see LABEL_TOP). The pressable box is the mark's box, so the
+ * button shrinks with it.
  */
 const OFFERS_SIZE = 51.5;
 const SAVED_SIZE = 18.9;
@@ -100,7 +106,19 @@ const OFFERS = (() => {
   const h = Math.round(parts.offers.h * (SAVED_SIZE / OFFERS_SIZE));
   return { w: Math.round((parts.offers.w * h) / parts.offers.h), h };
 })();
-const LABEL_TOP = LANDING_MARGINS.top + SEAL_SIZE + LABEL_GAP + Math.round(OUTLINE_STROKE * cluster.scale);
+/**
+ * The column's top: the outline's inner edge — its outer top plus its stroke
+ * at the pair's scale (2.5) — less the crown, so that it is the FLAT TOPS of
+ * the letters that meet the inner edge, not the O's overshoot; then the
+ * whole pixel the box has to start on. At today's sizes that is 124 + 2.5 −
+ * 0.4 → 126: the letters' top edge and the stroke's inner edge both fall in
+ * the same pixel row, each covering about half of it.
+ */
+const LABEL_TOP =
+  LANDING_MARGINS.top +
+  SEAL_SIZE +
+  LABEL_GAP +
+  Math.round(OUTLINE_STROKE * cluster.scale - OFFERS_CROWN * (OFFERS.h / parts.offers.h));
 const OFFERS_TO_SAVED = parts.saved.y - (parts.offers.y + parts.offers.h);
 const LABELS = {
   offers: LABEL_TOP,

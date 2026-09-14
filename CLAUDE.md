@@ -500,8 +500,11 @@ one line to restore); the sigil and the square sit under the seal, scaled as
 one to the seal's 87px width, 13px below it (the design's gap from My Saved
 to RECOMMENDED) with 5px between them as drawn, which the scale takes to 4;
 and the three labels are a column whose top is the inside of that square's
-top edge (its top plus its 3px stroke at the pair's scale, rounded to a whole
-pixel: 3 below the outer edge), OFFERS shown at 14/37 of its drawn size — My Saved's 18.9px to the whole pixel, at
+top edge — its top plus its 3px stroke at the pair's scale (2.5), less the
+1px the O's crown rises above the flat tops in the OFFERS drawing, rounded
+to the whole pixel the box must start on: 2 below the outer edge, so the
+letters' flat tops and the stroke's inner edge share a pixel row — OFFERS
+shown at 14/37 of its drawn size — My Saved's 18.9px to the whole pixel, at
 its own aspect so it is never stretched — with the design's 13px between one
 line and the next. OFFERS's dash figures in the stylesheet are scaled by the
 same 14/37.
