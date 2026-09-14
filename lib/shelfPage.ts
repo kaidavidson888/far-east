@@ -236,11 +236,32 @@ export const CLOUD_RIGHT = Math.max(...SHELF_ROW.clouds.map((c) => c.left + c.wi
  * left to right, then the next line.
  */
 export const SHELF_COLUMNS = 2;
-export const COLUMN_GAP = g.row.plusBox.x - (g.row.frame.x + g.row.frame.w);
+/**
+ * The design's own gap between a pack's rule and the boxes beside it — 15.
+ * It is the gap between the columns, and it is the standard margin between
+ * the widest pack and everything to its right (see shelfLayout).
+ */
+export const PACK_GAP = g.row.plusBox.x - (g.row.frame.x + g.row.frame.w);
+export const COLUMN_GAP = PACK_GAP;
+/** Where the boxes start in the design, from the pack rule's left (73). */
+const DESIGN_ELEMENTS_X = g.row.plusBox.x - g.row.frame.x;
+/** Everything from the first box to the far edge of the clouds: one fixed width. */
+export const ELEMENTS_WIDTH = CLOUD_RIGHT - DESIGN_ELEMENTS_X;
+
+/**
+ * A ROW IS AS WIDE AS ITS WIDEST PACK ASKS. The owner's rule: every pack in a
+ * column centred on one axis, with a standardised margin between the widest
+ * and the elements beside it. So the boxes start PACK_GAP past the widest
+ * pack's rule, every other pack is centred in the widest one's box, and the
+ * row's width is that box plus the gap plus the elements. The design's own
+ * frame is 58 wide, which gives the design's own 326. The widest is taken over
+ * the whole shelf, so both columns are the same width and their boxes line up.
+ */
+export const rowWidthFor = (widestPack: number) => widestPack + PACK_GAP + ELEMENTS_WIDTH;
 /** From one column's left edge to the next, in row coordinates. */
-export const COLUMN_PITCH = CLOUD_RIGHT + COLUMN_GAP;
+export const columnPitch = (rowWidth: number) => rowWidth + COLUMN_GAP;
 /** The whole line, in row coordinates: what the zoom is worked out against. */
-export const GRID_WIDTH = SHELF_COLUMNS * CLOUD_RIGHT + (SHELF_COLUMNS - 1) * COLUMN_GAP;
+export const gridWidth = (rowWidth: number) => SHELF_COLUMNS * rowWidth + (SHELF_COLUMNS - 1) * COLUMN_GAP;
 
 /**
  * THE LOGO IS AS WIDE AS THE TOP PACK, about its own centre.
@@ -318,9 +339,14 @@ export type ShelfFit = {
   mode: 'between' | 'fallback';
 };
 
-export function shelfFit(alignedRight: number, priceBoxWidth: number, topPackWidth: number | null): ShelfFit {
+export function shelfFit(
+  alignedRight: number,
+  priceBoxWidth: number,
+  topPackWidth: number | null,
+  rowWidth: number = CLOUD_RIGHT,
+): ShelfFit {
   const C = SHELF_LOGO.centreX;
-  const G = GRID_WIDTH;
+  const G = gridWidth(rowWidth);
   const maxW = Math.round((SHELF_LOGO.maxHeight * SHELF_LOGO.w) / SHELF_LOGO.h);
   const captionLeft = alignedRight - priceBoxWidth;
   const logoAt = (w: number) => {
@@ -352,7 +378,7 @@ export function shelfFit(alignedRight: number, priceBoxWidth: number, topPackWid
   }
 
   // the phone layout: one to a line, on the margin
-  const zf = +((FALLBACK_SHRINK * (alignedRight - SHELF_MARGIN)) / CLOUD_RIGHT).toFixed(4);
+  const zf = +((FALLBACK_SHRINK * (alignedRight - SHELF_MARGIN)) / rowWidth).toFixed(4);
   const wf = topPackWidth ? Math.min(maxW, Math.round(topPackWidth * zf)) : SHELF_LOGO.w;
   return { scale: zf, cols: 1, rowsLeft: SHELF_MARGIN, logo: logoAt(wf), mode: 'fallback' };
 }
@@ -384,11 +410,11 @@ export const DIVIDER = {
  * that slot. The row is zoomed, so on a wide screen this is a good deal bigger
  * than these numbers say.
  */
-export const SHELF_QUANTITY_FRAME = (() => {
+export function shelfQuantityFrame(dx: number) {
   const plus = SHELF_ROW.plusBox;
   const panel = SHELF_ROW.panel;
   const menu = {
-    left: plus.left,
+    left: plus.left + dx,
     top: plus.top,
     width: panel.left + panel.width - plus.left,
     height: panel.top + panel.height - plus.top,
@@ -396,13 +422,13 @@ export const SHELF_QUANTITY_FRAME = (() => {
   const stroke = plus.stroke;
   const pitch = Math.floor((menu.height - stroke * 2) / 3);
   return {
-    plus: { left: plus.left, top: plus.top, width: plus.width, height: plus.height },
+    plus: { left: plus.left + dx, top: plus.top, width: plus.width, height: plus.height },
     menu,
     stroke,
     pitch,
     fontSize: Math.round(pitch * 0.78),
   };
-})();
+}
 
 export type ShelfRow = {
   key: string;
@@ -434,14 +460,24 @@ export type ShelfLayout = {
   bottom: number;
   /** The first pack's rule width in row px — what the logo is sized to — or null with nothing on the shelf. */
   topPackWidth: number | null;
+  /** The widest pack's rule on the shelf; every pack is centred in a box this wide. */
+  widestPack: number;
+  /** How far the boxes, panel and clouds sit right of where the design drew them. */
+  dx: number;
+  /** The row's width in row px, from its left edge to the clouds. */
+  rowWidth: number;
 };
 
 export function shelfLayout(entries: ShelfEntry[]): ShelfLayout {
+  const frames = entries.map((e) => Math.round((SHELF_PACK_H * e.pack.w) / e.pack.h) + INSET * 2);
+  // with nothing on the shelf, the design's own frame
+  const widestPack = frames.length ? Math.max(...frames) : g.row.frame.w;
+  const dx = widestPack + PACK_GAP - DESIGN_ELEMENTS_X;
   const rows = entries.map((e, i) => {
-    const imgW = Math.round((SHELF_PACK_H * e.pack.w) / e.pack.h);
-    const outerW = imgW + INSET * 2;
-    // every pack's rule starts on the row's left edge; a wider pack grows right
-    const left = SHELF_ROW.left;
+    const outerW = frames[i];
+    const imgW = outerW - INSET * 2;
+    // every pack centred in the widest one's box, on one axis down the column
+    const left = Math.round((widestPack - outerW) / 2);
     return {
       key: e.pack.id,
       index: i,
@@ -461,6 +497,9 @@ export function shelfLayout(entries: ShelfEntry[]): ShelfLayout {
     count: rows.length,
     bottom: BOTTOM,
     topPackWidth: rows[0]?.frame.width ?? null,
+    widestPack,
+    dx,
+    rowWidth: rowWidthFor(widestPack),
   };
 }
 

@@ -733,6 +733,21 @@ design (`scripts/assets/shelf-mobile.svg`). Three pieces, one rule between them
   (Before this: one to a line between the same edges; before that, packs
   centred on the logo's axis at 80% of the fit to the right margin; before
   that, left on the margin. Each was the owner's instruction at the time.)
+- **Every pack in a column sits on one axis, and the elements stand a standard
+  margin off the widest** — the owner's rule. `shelfLayout` finds the widest
+  pack's rule on the shelf (`widestPack`), centres every pack in a box that
+  wide (a narrower pack floats with air either side), and moves the boxes,
+  panel and clouds right by `dx` so the first box stands `PACK_GAP` (the
+  design's own 15) past the widest pack's rule — exactly the design's
+  relation, which drew a 58 frame with the boxes at 73. So a row's width is
+  `rowWidthFor(widest)` = widest + 15 + `ELEMENTS_WIDTH` (253), which is the
+  design's 326 for the design's frame and grows with a wide pack; `shelfFit`
+  takes it as an input, and the stage sets `--col-pitch` from it. **The widest
+  is taken over the whole shelf**, not per column, so both columns are one width
+  and their boxes line up — the reading of "standardised"; per column would tie
+  each column's width to which packs happened to land in it, and the column
+  count is decided on the client. `shelfQuantityFrame(dx)` moves the plus's
+  menu with the boxes.
 - **On a phone that rule has no room, and a fallback holds** — `ROW_SCALE_FLOOR`
   (0.6). The caption box is the price's width hung from the right margin; at
   375 its left is at 123 and the logo's right past 85, a span of a few dozen

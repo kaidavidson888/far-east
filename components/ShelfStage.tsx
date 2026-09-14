@@ -3,10 +3,10 @@
 import { useEffect, useRef } from 'react';
 import {
   CAPTION_DEFAULT,
-  COLUMN_PITCH,
   DESIGN_ALIGNED_RIGHT,
   SHELF_HEADER,
   SHELF_MARGIN,
+  columnPitch,
   fitCaption,
   gridHeight,
   shelfFit,
@@ -41,12 +41,12 @@ import {
  * measured width goes back into the fit, since the caption box's left edge is
  * where the grid ends. The table's figures are the first paint.
  */
-function fitVars(fit: ShelfFit, pitch: number) {
+function fitVars(fit: ShelfFit, pitch: number, rowWidth: number) {
   return {
     '--row-scale': String(fit.scale),
     '--rows-left': `${fit.rowsLeft}px`,
     '--cols': String(fit.cols),
-    '--col-pitch': `${COLUMN_PITCH}px`,
+    '--col-pitch': `${columnPitch(rowWidth)}px`,
     '--row-pitch': `${pitch}px`,
     '--logo-w': `${fit.logo.w}px`,
     '--logo-h': `${fit.logo.h}px`,
@@ -96,6 +96,7 @@ export function ShelfStage({
   count,
   bottom,
   topPackWidth,
+  rowWidth,
   children,
 }: {
   rowsTop: number;
@@ -104,6 +105,8 @@ export function ShelfStage({
   count: number;
   bottom: number;
   topPackWidth: number | null;
+  /** The row's width in row px — it grows with the widest pack on the shelf. */
+  rowWidth: number;
   children: React.ReactNode;
 }) {
   const ref = useRef<HTMLDivElement | null>(null);
@@ -119,9 +122,9 @@ export function ShelfStage({
     if (!el) return;
     const apply = () => {
       const alignedRight = el.clientWidth - SHELF_MARGIN;
-      const fit = shelfFit(alignedRight, priceWRef.current, topPackWidth);
+      const fit = shelfFit(alignedRight, priceWRef.current, topPackWidth, rowWidth);
       el.style.setProperty('--aligned-right', `${alignedRight}px`);
-      for (const [k, v] of Object.entries(fitVars(fit, pitch))) el.style.setProperty(k, v);
+      for (const [k, v] of Object.entries(fitVars(fit, pitch, rowWidth))) el.style.setProperty(k, v);
       el.dataset.fit = fit.mode;
       el.style.minHeight = minHeightFor(fit);
     };
@@ -132,7 +135,7 @@ export function ShelfStage({
     return () => ro.disconnect();
     // minHeightFor closes over the same props this effect lists
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [bottom, count, pitch, rowHeight, rowsTop, topPackWidth]);
+  }, [bottom, count, pitch, rowHeight, rowsTop, topPackWidth, rowWidth]);
 
   // the header, once the faces are in: the price's real ink width, and the
   // caption fitted to it with its real fallback glyphs — then the fit again,
@@ -172,7 +175,7 @@ export function ShelfStage({
     };
   }, []);
 
-  const first = shelfFit(DESIGN_ALIGNED_RIGHT, SHELF_HEADER.box.width, topPackWidth);
+  const first = shelfFit(DESIGN_ALIGNED_RIGHT, SHELF_HEADER.box.width, topPackWidth, rowWidth);
 
   return (
     <div
@@ -184,7 +187,7 @@ export function ShelfStage({
           minHeight: minHeightFor(first),
           '--aligned-right': `${DESIGN_ALIGNED_RIGHT}px`,
           '--shelf-margin': `${SHELF_MARGIN}px`,
-          ...fitVars(first, pitch),
+          ...fitVars(first, pitch, rowWidth),
           '--price-w': `${SHELF_HEADER.box.width}px`,
           '--caption-size': `${CAPTION_DEFAULT.size}px`,
           '--caption-left': `${CAPTION_DEFAULT.left}px`,

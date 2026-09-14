@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { removePackAction } from '@/app/actions';
 import { BOOKMARK } from '@/lib/cigPages';
 import { HOME } from '@/lib/innerPage';
-import { DIVIDER, SHELF_HEADER, SHELF_LOGO, SHELF_QUANTITY_FRAME, SHELF_ROW, shelfLayout, type ShelfEntry } from '@/lib/shelfPage';
+import { DIVIDER, SHELF_HEADER, SHELF_LOGO, SHELF_ROW, shelfLayout, shelfQuantityFrame, type ShelfEntry } from '@/lib/shelfPage';
 import { CigQuantity } from './CigQuantity';
 import { ShelfStage } from './ShelfStage';
 
@@ -59,12 +59,15 @@ const type = (t: { left: number; top: number; size: number }): React.CSSProperti
 });
 
 export function ShelfPage({ entries }: { entries: ShelfEntry[] }) {
-  const { rows, rowsTop, rowHeight, pitch, count, bottom, topPackWidth } = shelfLayout(entries);
+  const { rows, rowsTop, rowHeight, pitch, count, bottom, topPackWidth, dx, rowWidth } = shelfLayout(entries);
   const R = SHELF_ROW;
+  /** The boxes, panel and clouds, moved right to clear the widest pack — see shelfLayout. */
+  const sh = <T extends { left: number }>(b: T): T => ({ ...b, left: b.left + dx });
+  const quantityFrame = shelfQuantityFrame(dx);
 
   return (
     <div className="shelf">
-      <ShelfStage rowsTop={rowsTop} rowHeight={rowHeight} pitch={pitch} count={count} bottom={bottom} topPackWidth={topPackWidth}>
+      <ShelfStage rowsTop={rowsTop} rowHeight={rowHeight} pitch={pitch} count={count} bottom={bottom} topPackWidth={topPackWidth} rowWidth={rowWidth}>
         {/* the logo, as wide as the top pack, about its own centre — the stage sizes it */}
         <Link
           href={HOME}
@@ -144,13 +147,13 @@ export function ShelfPage({ entries }: { entries: ShelfEntry[] }) {
               </div>
 
               {/* the plus box is the artwork's; the hit and the menu are CigQuantity's */}
-              <span className="shelf-box" style={{ ...box(R.plusBox), borderWidth: px(R.plusBox.stroke) }} aria-hidden="true">
+              <span className="shelf-box" style={{ ...box(sh(R.plusBox)), borderWidth: px(R.plusBox.stroke) }} aria-hidden="true">
                 <span className="shelf-plus-bar" style={box(inside(R.plusH, R.plusBox))} />
                 <span className="shelf-plus-bar" style={box(inside(R.plusV, R.plusBox))} />
               </span>
 
               {/* the bookmark: pressed here, it takes the pack off the shelf */}
-              <form action={removePackAction} className="shelf-box shelf-box-form" style={{ ...box(R.bookmarkBox), borderWidth: px(R.bookmarkBox.stroke) }}>
+              <form action={removePackAction} className="shelf-box shelf-box-form" style={{ ...box(sh(R.bookmarkBox)), borderWidth: px(R.bookmarkBox.stroke) }}>
                 <input type="hidden" name="pack" value={row.pack.id} />
                 <button type="submit" className="shelf-bookmark-hit" aria-label={`Take ${row.pack.name} off your shelf`}>
                   <svg
@@ -165,7 +168,7 @@ export function ShelfPage({ entries }: { entries: ShelfEntry[] }) {
                 </button>
               </form>
 
-              <span className="shelf-box" style={{ ...box(R.qtyBox), borderWidth: px(R.qtyBox.stroke) }}>
+              <span className="shelf-box" style={{ ...box(sh(R.qtyBox)), borderWidth: px(R.qtyBox.stroke) }}>
                 {row.quantity ? (
                   <span
                     className="shelf-type"
@@ -177,7 +180,7 @@ export function ShelfPage({ entries }: { entries: ShelfEntry[] }) {
                 ) : null}
               </span>
 
-              <div className="shelf-panel" style={box(R.panel)} aria-hidden="true">
+              <div className="shelf-panel" style={box(sh(R.panel))} aria-hidden="true">
                 <span className="shelf-type" style={type({ ...R.line1, left: R.line1.left - R.panel.left, top: R.line1.top - R.panel.top })}>
                   {R.line1.text}
                 </span>
@@ -187,11 +190,11 @@ export function ShelfPage({ entries }: { entries: ShelfEntry[] }) {
               </div>
 
               {R.clouds.map((c, i) => (
-                <img key={i} className="shelf-cloud" src="/sigil.webp" alt="" style={box(c)} width={c.width} height={c.height} draggable={false} />
+                <img key={i} className="shelf-cloud" src="/sigil.webp" alt="" style={box(sh(c))} width={c.width} height={c.height} draggable={false} />
               ))}
 
               {/* the plus's hit area and the quantity menu, in the row's own box */}
-              <CigQuantity id={row.pack.id} name={row.pack.name} amount={row.amount} unit={row.unit} frame={SHELF_QUANTITY_FRAME} />
+              <CigQuantity id={row.pack.id} name={row.pack.name} amount={row.amount} unit={row.unit} frame={quantityFrame} />
             </div>
           ))}
         </div>
