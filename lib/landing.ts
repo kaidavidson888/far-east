@@ -20,9 +20,19 @@ export const LANDING_MARGINS = marginsOf(viewBox, Object.values(parts));
  * right); the owner asked for it taken off the page. The part is still cut by
  * the build (`luck.svg`, in the geometry) and simply not placed, so putting
  * it back is one line here.
+ *
+ * THE SQUARE STANDS 5PX OFF THE SIGIL, not the design's 17: the owner's
+ * "close the gap between the sigil and the outline to 3px", then "increase
+ * to 5px". The cloud keeps its drawn place in the cluster and the square
+ * comes to it; the pair is then centred as one, so the cluster narrows
+ * about the page's middle.
  */
-const CLUSTER_IDS = ['cloud', 'square'] as const;
-const cluster = clusterBox(CLUSTER_IDS.map((id) => parts[id]));
+const SIGIL_GAP = 5;
+const CLUSTER = {
+  cloud: parts.cloud,
+  square: { ...parts.square, x: parts.cloud.x + parts.cloud.w + SIGIL_GAP },
+};
+const cluster = clusterBox(Object.values(CLUSTER));
 
 const M = LANDING_MARGINS;
 
@@ -43,14 +53,14 @@ const anchored = (
 
 const both = (p: NonNullable<ArtPart['placement']>['mobile']) => ({ mobile: p, desktop: p });
 
-const inCluster = (id: keyof typeof parts, label: string, pressable: boolean): ArtPart => ({
+const inCluster = (id: keyof typeof CLUSTER, label: string, pressable: boolean): ArtPart => ({
   id,
   label,
   src: `/landing/parts/${id}.svg`,
-  w: parts[id].w,
-  h: parts[id].h,
+  w: CLUSTER[id].w,
+  h: CLUSTER[id].h,
   pressable,
-  inCluster: { left: parts[id].x - cluster.x, top: parts[id].y - cluster.y },
+  inCluster: { left: CLUSTER[id].x - cluster.x, top: CLUSTER[id].y - cluster.y },
 });
 
 /**
