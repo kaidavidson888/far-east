@@ -163,9 +163,11 @@ const CAPTION_CLEARANCE = 3;
  * Fit the caption to a box of the given width: centred, and as large as a
  * CAPTION_CLEARANCE margin to the rule allows on its tightest side. `captionEm`
  * is the run's width per em — the table's figure at first paint, and then the
- * page's own measurement, because `#` comes from the fallback face and its
- * width is the fallback's, not the table's. Positions are relative to the
- * inside of the box's rule.
+ * page's own measurement, which is exact where the table is a whole-unit
+ * estimate. (The measurement was first added because `#` came from the
+ * fallback face, which the table could not know; `#` is in the owner's face
+ * now, and the measurement stays.) Positions are relative to the inside of
+ * the box's rule.
  */
 export function fitCaption(boxWidth: number, captionEm: number) {
   const box = SHELF_HEADER.box;

@@ -38,6 +38,13 @@ no CSS framework (tokens in `app/globals.css`). Deploys to Vercel.
 - `npm run audit:cigs` — checks every pack crop against its source photograph
   and names the ones that cut into the pack (needs the `crops.json` that
   `build:cigs` writes). Run it after any crop change; see "The cigarettes".
+- `npm run build:font` — sets the owner's numerals, # and $ into their webfont
+  (`scripts/assets/far-east-webfont.woff2` + `numerals.svg` + `hash-dollar.svg`
+  → `public/fonts/far-east-N.woff2`). Splices the glyphs in at the table level
+  and checks every letter comes back byte-identical. After it: bump N in
+  `globals.css` and `app/layout.tsx`, re-measure `far-east-ink.json` in Chrome,
+  `build:shelf`, and `build:cigpages` (the phone pages embed the face). See
+  "The owner's own face".
 - `npm run build:cigpages` — rebuilds the 235 pages in `public/cigpages` and
   `lib/cigpages.json` from the owner's info-page vectors in `scripts/assets/cigpages`.
   **Takes about half an hour** (it re-encodes every raster in every vector), so background
@@ -281,9 +288,27 @@ knowing before touching it:
   was 364 and scrolled those pages sideways by four pixels. It is transparent
   at rest but its box still counts.
 - `scripts/assets/far-east-ink.json` is the per-character ink extent of the
-  owner's face, measured once in Chrome. It is what lets the build know where a
+  owner's face, measured in Chrome. It is what lets the build know where a
   line of text actually starts and stops, which is what the title's ink top is
-  measured from. Regenerate it the same way if the face ever changes.
+  measured from. Regenerate it the same way if the face ever changes — a
+  canvas, `1000px "Far East"`, `measureText` on each of the 66 characters,
+  `actualBoundingBoxAscent/Descent` and `width` rounded to whole units — and
+  **check the characters that did not change come back with exactly the
+  figures they had**; that is the test of the method, and it caught a
+  transcription slip the last time (numerals, # and $, 2026-09-14: every
+  letter matched; only those twelve moved). It is a whole-unit measurement of
+  the RENDERED glyph, so a round glyph reads a little taller than its outline
+  (E's outline stops at 694, Chrome says 703; the new 0 at 698 says 703).
+- **The phone's page carries the site's face, swapped in by the build.** The
+  owner's vectors embed their webfont as a data URI — the only way an `<img>`
+  can set type in it — and the face the site serves has since been rebuilt
+  with the owner's numerals, # and $ (`npm run build:font`). `swapFace` in
+  `build-cigpages.mjs` replaces the embedded copy with `FACE`
+  (`public/fonts/far-east-N.woff2`; bump it with the stylesheet). The desktop
+  arrangement is inline markup and uses the page's own font, so it needs no
+  swap — which is exactly why the swap is needed: without it a phone showed
+  the old numerals in every price while a desktop showed the new. **A font
+  change means `build:cigpages` again**, the half-hour one.
 
 **Some of the supplied cut-outs are not tight, and the crop has to peel them.**
 The alpha on the Lotus / Nanjing / Taishan / Huanghelou block (ids 222-242) runs
@@ -475,12 +500,33 @@ unless they say otherwise for a particular piece. `--font-typed` is how you ask
 for it; do not name the family directly.
 
 What is actually in the file, read out of it rather than assumed:
-- **64 glyphs. Space, 0-9, A-Z, a-z, and nothing else.** No full stop, comma,
-  apostrophe, hyphen, colon, @, parentheses, quotes — and no CJK. Everything
-  outside that set is drawn by the next family in the stack, which is why the
-  `@font-face` declares `unicode-range` exactly: the browser then never
-  consults this face for a character it does not have. **If you write copy that
-  leans on punctuation, look at it rendered before you ship it.**
+- **66 glyphs. Space, # and $, 0-9, A-Z, a-z, and nothing else.** No full stop,
+  comma, apostrophe, hyphen, colon, @, parentheses, quotes, slash — and no CJK.
+  Everything outside that set is drawn by the next family in the stack, which
+  is why the `@font-face` declares `unicode-range` exactly: the browser then
+  never consults this face for a character it does not have. **If you write
+  copy that leans on punctuation, look at it rendered before you ship it.**
+- **THE NUMERALS, THE # AND THE $ ARE THE OWNER'S LATER DRAWINGS, SET INTO THE
+  FILE BY `npm run build:font`** (`scripts/build-font.mjs`). The owner supplied
+  the face with its original digits, then drew a new 0-9 to match the letters
+  (`scripts/assets/numerals.svg`: 688 tall like the old ones, 60 left / 83
+  right bearings like the old ones, so the sizing on the site did not change —
+  the ask) and a # and $ in the same hand (`hash-dollar.svg`), which the face
+  never had; the site drew those two from the fallback until now. The build
+  keeps the owner's file (`scripts/assets/far-east-webfont.woff2`) as the
+  source, replaces the ten digits, appends the two marks, and copies every
+  letter's outline and metrics through byte for byte — spliced at the table
+  level (glyf/loca/hmtx rebuilt from the original records plus the new; head,
+  hhea, maxp brought up to date; cmap and post taught the two codepoints;
+  OS/2 and name untouched) rather than round-tripped through a font library,
+  which would have re-serialised the letters too. It checks itself with an
+  independent parser: every letter must come back identical. The sheets'
+  cubics become TrueType quadratics within a fifth of a unit. Two things to
+  know: `numerals.svg` is in glyph coordinates (y up) and states its advances;
+  `hash-dollar.svg` is SVG coordinates (y DOWN) and states none, so it gets the
+  numerals' rule (ink + 60 + 83). The new digits are wider than the old (the
+  0 is 620 across against 515), so any run of figures grows; the shelf
+  measures its price live and follows.
 - It is a **unicase** design — the capitals and the lowercase are largely the
   same letterforms. That is why the splash's typed rows used Cormorant *Unicase*
   as a stand-in before this arrived, and why they now use the real thing.
@@ -494,16 +540,19 @@ What is actually in the file, read out of it rather than assumed:
   else rather than the owner's own conversion, that bit is worth a look.
 
 **The file is already as small as it goes.** Recompressing the brotli stream at
-quality 11 and dropping the `post` table's glyph names together save 50 bytes of
-6484 — 0.8%, for a rewritten font binary. Not worth it; it has already been
-subsetted to exactly its cmap (64 glyphs, 64 codepoints, no orphans). The wins
+quality 11 and dropping the `post` table's glyph names together saved 50 bytes
+of the original 6484 — 0.8%, for a rewritten font binary. Not worth it; it is
+subsetted to exactly its cmap (66 glyphs, 66 codepoints, no orphans; 7312
+bytes with the new numerals, which carry more points than the old). The wins
 that were left were all in delivery, and they are done: preloaded in
 `app/layout.tsx` (with `crossOrigin`, which is **not** optional on a font
 preload even same-origin — without it the browser fetches the file twice),
 `font-display: swap`, the exact `unicode-range`, and `/fonts/:file*` served
 `immutable` for a year from `next.config.mjs`. **The version is in the
-filename** — bump `far-east-1` to `-2` when the file is replaced, in
-`globals.css` and `app/layout.tsx` together, or caches will hold the old one.
+filename** — it is `far-east-2` now (the numerals); bump it to `-3` when the
+file is next replaced, in `globals.css`, `app/layout.tsx` AND `FACE` in
+`scripts/build-cigpages.mjs` together, or caches will hold the old one and
+the phone pages will embed it.
 
 ## The splash is the sign-in screen
 A signed-out reader who reaches for something needing an account — the bookmark
@@ -702,7 +751,12 @@ design (`scripts/assets/shelf-mobile.svg`). Three pieces, one rule between them
   the owner's face** — which is the ask and what makes it sharp. Type is sized by
   ink height: `size = inkHeight / (ascent/1000)`, ascents from
   `far-east-ink.json`, and placed by baseline (0.825 of the size in a
-  line-height:1 box, measured in Chrome).
+  line-height:1 box, measured in Chrome). **A numeral counts as its flat 688**
+  (`DIGIT_HEIGHT` in `build-shelf.mjs`), not the overshoot the table reports
+  for the round ones — the design draws numbers to the flat height, and the
+  owner asked for the new numerals with their sizing kept; sized by the
+  overshoot, `$240` would have dropped two per cent for the 0 in it. The
+  geometry came out identical after the font change, which is the proof.
 - **THE SHELF IS A GRID BETWEEN THE LOGO AND THE CAPTION BOX, TWO TO A LINE**
   (`shelfFit`). The owner's rule, in two steps: each row's left edge on the
   right edge of the character logo and its right edge on the left edge of the
@@ -810,11 +864,13 @@ design (`scripts/assets/shelf-mobile.svg`). Three pieces, one rule between them
   right edge and top where they were; the caption is centred inside it and
   scaled until its tightest margin to the rule is 3px (the sides bind; the top
   and bottom come out ~12). **Both are measured in the page** by `ShelfStage`
-  on a canvas with the elements' own computed fonts once the faces are loaded,
-  because `$` and `#` come from the fallback face and the ink table can only
-  estimate them; and the caption is measured a second time at its final size,
-  since type set small does not scale exactly from type set large (that was
-  1.7px of a 3px margin). The table's figures are the first paint.
+  on a canvas with the elements' own computed fonts once the faces are loaded
+  — exact, where the ink table is a whole-unit estimate (the measurement was
+  first added because `$` and `#` came from the fallback face, which the table
+  could not know at all; they are in the owner's face now and it stays); and
+  the caption is measured a second time at its final size, since type set
+  small does not scale exactly from type set large (that was 1.7px of a 3px
+  margin). The table's figures are the first paint.
 - **The margins are symmetric, and everything meets the right one, at any
   width.** The owner's rule: the aligned right edge holds the same margin from
   the page's right as the logo holds from its left. The logo is left-anchored in

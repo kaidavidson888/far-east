@@ -41,13 +41,13 @@
       "id": "11_555-Double_Ice",
       "name": "555 — Double Ice",
       "source": "555 (Double Ice)",
-      "gap": 17.44
+      "gap": 16.7
     },
     {
       "id": "12_555-Icy_Shine_Slim",
       "name": "555 — Icy Shine Slim",
       "source": "555 (Icy Shine Slim)",
-      "gap": 21.9
+      "gap": 21.16
     },
     {
       "id": "13_Alishan-Mango_Impression_Capsule",
@@ -101,7 +101,7 @@
       "id": "22_Double_Happiness-9mg_Nanyang",
       "name": "Double Happiness — 9mg Nanyang",
       "source": "Double Happiness (9mg Nanyang)",
-      "gap": 21.03
+      "gap": 20.79
     },
     {
       "id": "23_Double_Happiness-Shanghai_Hard_Pack",
@@ -839,43 +839,43 @@
       "id": "201_520-Rose",
       "name": "520 — Rose",
       "source": "520 (Rose)",
-      "gap": 20.24
+      "gap": 19.5
     },
     {
       "id": "202_520-Menthol",
       "name": "520 — Menthol",
       "source": "520 (Menthol)",
-      "gap": 19
+      "gap": 18.26
     },
     {
       "id": "203_520-Blue",
       "name": "520 — Blue",
       "source": "520 (Blue)",
-      "gap": 19.62
+      "gap": 18.88
     },
     {
       "id": "204_520-Grape",
       "name": "520 — Grape",
       "source": "520 (Grape)",
-      "gap": 19.94
+      "gap": 19.2
     },
     {
       "id": "205_520-Peach",
       "name": "520 — Peach",
       "source": "520 (Peach)",
-      "gap": 19
+      "gap": 18.26
     },
     {
       "id": "206_520-Ice_Blast",
       "name": "520 — Ice Blast",
       "source": "520 (Ice Blast)",
-      "gap": 18.38
+      "gap": 17.64
     },
     {
       "id": "207_Huanghelou-1916",
       "name": "Huanghelou — 1916",
       "source": "researched",
-      "gap": 17.41
+      "gap": 17.11
     },
     {
       "id": "208_Huanghelou-Red",
@@ -953,7 +953,7 @@
       "id": "221_Zhongnanhai-8",
       "name": "Zhongnanhai — 8",
       "source": "Zhongnanhai (8mg)",
-      "gap": 17.7
+      "gap": 17.4
     },
     {
       "id": "222_Huanghelou-Fresh_Breeze",
@@ -965,7 +965,7 @@
       "id": "223_Huanghelou-1916",
       "name": "Huanghelou — 1916",
       "source": "researched",
-      "gap": 17.41
+      "gap": 17.11
     },
     {
       "id": "224_Huanghelou-Dark",

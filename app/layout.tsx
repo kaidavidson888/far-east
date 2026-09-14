@@ -32,7 +32,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             downloads the file a second time. */}
         <link
           rel="preload"
-          href="/fonts/far-east-1.woff2"
+          href="/fonts/far-east-2.woff2"
           as="font"
           type="font/woff2"
           crossOrigin="anonymous"

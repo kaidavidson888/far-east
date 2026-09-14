@@ -24,6 +24,7 @@
     "build:cigs": "node scripts/build-cigs.mjs",
     "build:cigpages": "node scripts/build-cigpages.mjs",
     "build:shelf": "node scripts/build-shelf.mjs",
+    "build:font": "node scripts/build-font.mjs",
     "audit:cigs": "node scripts/audit-cigs.mjs"
   },
   "dependencies": {
@@ -41,9 +42,11 @@
     "@types/react-dom": "^19.2.5",
     "embedded-postgres": "^18.4.0-beta.17",
     "gifuct-js": "^2.1.2",
+    "opentype.js": "^2.0.0",
     "pngjs": "^7.0.0",
     "sharp": "^0.34.5",
-    "typescript": "^5.5.4"
+    "typescript": "^5.5.4",
+    "wawoff2": "^2.0.1"
   },
   "allowScripts": {
     "@embedded-postgres/windows-x64@18.4.0-beta.17": true,

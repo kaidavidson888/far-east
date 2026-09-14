@@ -167,9 +167,18 @@ const rowBottom = Math.max(panel.y + panel.h, topFrame.y + topFrame.h);
  * `by` is the glyphs the design's ink height comes from — the face's own, so
  * a fallback glyph like $ or # never sets the size — and the tallest of them
  * decides: size = inkHeight / (asc / 1000).
+ *
+ * A NUMERAL COUNTS AS ITS FLAT HEIGHT. Every digit in the face stands 688
+ * tall at its flat top; the round ones (0, 6, 8, 9) overshoot that by a
+ * hair, as round letters do, and Chrome's measurement in the ink table
+ * reports the overshoot. The design draws its numbers to the flat height,
+ * so that is what sizes them — sizing by the overshoot would set every run
+ * with a 0 in it two per cent smaller than one without, and the owner asked
+ * for the numerals changed with their sizing kept.
  */
+const DIGIT_HEIGHT = 688;
 const typeRun = (text, by, box) => {
-  const asc = Math.max(...[...by].map((c) => INK.asc[c] ?? 0));
+  const asc = Math.max(...[...by].map((c) => (/[0-9]/.test(c) ? DIGIT_HEIGHT : (INK.asc[c] ?? 0))));
   if (!asc) throw new Error(`no ascent for ${JSON.stringify(by)}`);
   return { text, by, ink: round(box), asc, size: +(box.h / (asc / 1000)).toFixed(2) };
 };

@@ -359,12 +359,33 @@ const cropTo = (svg, box) =>
  * points at the one the landing row already serves. What is left is a few
  * kilobytes of geometry.
  */
+/**
+ * THE PHONE'S PAGE CARRIES THE SITE'S OWN FACE. The owner's vectors embed
+ * their webfont as a data URI, which is how an <img> can set type in it at
+ * all — and the face the site serves is no longer that file: `npm run
+ * build:font` set the owner's numerals, # and $ into it (public/fonts). So
+ * the embedded copy is swapped for the served one here, or the phone would
+ * show every price in the old numerals while the desktop, which uses the
+ * page's own font, showed the new. The path is the one globals.css names;
+ * bump it here when the file is bumped there.
+ */
+const FACE = 'public/fonts/far-east-2.woff2';
+const FACE_DATA = `url(data:font/woff2;base64,${readFileSync(FACE).toString('base64')})`;
+let facesSwapped = 0;
+function swapFace(svg) {
+  let hit = 0;
+  const out = svg.replace(/url\(data:font\/woff2;base64,[A-Za-z0-9+/=]+\)/g, () => (hit++, FACE_DATA));
+  if (hit !== 1) throw new Error(`expected one embedded face, found ${hit}`);
+  facesSwapped++;
+  return out;
+}
+
 const moves = [];
 const gaps = [];
 function emit(svg, id, label) {
   const aligned = alignTitle(svg, label);
   moves.push(aligned.dy);
-  const out = cropTo(aligned.svg, CONTENT);
+  const out = swapFace(cropTo(aligned.svg, CONTENT));
   writeFileSync(`${OUT_DIR}/${id}.svg`, out);
   // measured on what actually ships, so the page's rule can stand off the
   // info by the same distance the brand line stands off the flavour

@@ -38,13 +38,16 @@ import {
  * top on the same margin its left holds (shelfTopShift). Every top-anchored
  * thing adds it, and the stage's height grows by it.
  *
- * THE HEADER IS MEASURED IN THE PAGE'S OWN FACES. The caption's box takes the
- * price's width and the caption is fitted inside it to a 3px clearance. `$`
- * and `#` come from the fallback face, whose widths the ink table can only
- * estimate; measured here on a canvas with the elements' own computed fonts,
- * once the fonts are loaded, the margins come out exact — and the price's
- * measured width goes back into the fit, since the caption box's left edge is
- * where the grid ends. The table's figures are the first paint.
+ * THE HEADER IS MEASURED IN THE PAGE'S OWN FACE. The caption's box takes the
+ * price's width and the caption is fitted inside it to a 3px clearance.
+ * Measured here on a canvas with the elements' own computed fonts, once the
+ * fonts are loaded, the margins come out exact — the ink table is a whole-unit
+ * estimate at 1000 upem, and this is the run at its real size — and the
+ * price's measured width goes back into the fit, since the caption box's left
+ * edge is where the grid ends. (`$` and `#` used to come from the fallback
+ * face, which the table could only guess at; they are in the owner's face now,
+ * and the measurement stays because it is exact.) The table's figures are the
+ * first paint.
  */
 function fitVars(fit: ShelfFit, pitch: number, rowWidth: number) {
   const shift = shelfTopShift(fit);
