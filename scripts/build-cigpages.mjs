@@ -369,7 +369,7 @@ const cropTo = (svg, box) =>
  * page's own font, showed the new. The path is the one globals.css names;
  * bump it here when the file is bumped there.
  */
-const FACE = 'public/fonts/far-east-2.woff2';
+const FACE = 'public/fonts/far-east-3.woff2';
 const FACE_DATA = `url(data:font/woff2;base64,${readFileSync(FACE).toString('base64')})`;
 let facesSwapped = 0;
 function swapFace(svg) {

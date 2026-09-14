@@ -18,20 +18,23 @@ import type { PackUnit } from './cigPages';
  * margin; the rows keep the design's distance from the top and from each
  * other, and grow down the page as the shelf does.
  *
- * THE ROWS SIT BETWEEN THE LOGO AND THE CAPTION BOX. The owner's rule: each
- * row's left edge is the right edge of the character logo, and its right
- * edge is the left edge of the "Click # When Finished" box, the rows keeping
- * their arrangement. So every pack's rule starts on the row's own left edge
- * (a wider pack grows to the right, into the gap before the boxes), the
- * boxes, panel and clouds keep the design's distance from it, and one zoom
- * lands the clouds on the caption box. The logo is sized to the top pack
- * about its own centre, which makes the span depend on the zoom — see
- * `shelfFit`, which solves that rather than guessing.
+ * THE ROWS SIT BETWEEN THE LOGO AND THE $ SIGN. The owner's rule: each row's
+ * left edge is the right edge of the character logo, and its right edge the
+ * $ sign (sigils excluded), the rows keeping their arrangement. So every
+ * pack's rule starts on the row's own left edge (a wider pack grows to the
+ * right, into the gap before the boxes), the boxes, panel and clouds keep the
+ * design's distance from it, and one zoom lands the second column's panel on
+ * the $. The logo is sized to the top pack about its own centre, and the
+ * price's box is the logo's band hung from the logo's margins, which makes
+ * the span depend on the zoom twice over — see `shelfFit`, which works that
+ * out rather than guessing. The design's "Click # When Finished" caption and
+ * its box are gone at the owner's ask; the price's own box took their place.
  *
  * THE TYPE IS THE OWNER'S FACE. Every word and number in the design was
  * outlined; the build measured its ink and this sets it in the face at the
  * size that gives the same ink height. Characters the face does not carry —
- * $ # < and the hyphens — fall through to the stack as they do everywhere.
+ * < and the hyphens — fall through to the stack as they do everywhere; the
+ * $ and the # are the owner's own now (build:font).
  */
 export type ShelfEntry = { pack: CigPack; amount: number | null; unit: PackUnit | null };
 
@@ -99,10 +102,19 @@ const qtyInBox = (() => {
   const size = g.row.qty.size;
   const inkH = (g.row.qty.asc / 1000) * size;
   const inkTop = (innerH - inkH) / 2;
+  // THE p IS SET SMALLER AND LIFTED. At the digit's size its descender ran
+  // 1.7px past the inside of the rule — the owner saw it clip. Set so its
+  // whole ink, x-height to the foot of the descender, is the digit's ink
+  // height, and lifted by that descender, it stands in the digit's own band:
+  // the same margins to the rule above and below. The c has no descender and
+  // is left as it was.
+  const p = g.row.qty.units.p;
+  const pSize = +(inkH / (p.asc + p.desc)).toFixed(2);
   return {
     size,
     left: g.row.qty.ink.x + DX - qtyBox.left - stroke,
     top: Math.round(lineTop(inkTop, g.row.qty.asc, size)),
+    p: { size: pSize, lift: +(p.desc * pSize).toFixed(2) },
   };
 })();
 
@@ -128,89 +140,73 @@ export const SHELF_ROW = {
 };
 
 /**
- * Advance widths in the owner's face, per 1000 em, for the two runs the
- * header has to size. The letters and digits are the ink table's; the two
- * characters the face does not carry are the fallback's, measured the same
- * way — `#` is in the table's fallback set, `$` is not and was measured in
- * Chrome at 50 per 100px alongside the rest. If the face or the fallback
- * changes, re-measure `$`.
- */
-const CAPTION_EM = 12.031;
-const PRICE_EM = 1.953 + 0.5;
-/** The caption's tallest glyph (h, 750) — it has no descenders. */
-const CAPTION_ASC = 750;
-/**
  * The price is set bold. The face has one weight, drawn heavy, so "bold" is a
  * stroke laid on the glyphs — the same trick the age gate's title uses. Three
  * hundredths of the size: enough to read as weight, not enough to close the
  * counters of the 0.
  */
-const PRICE_STROKE_EM = 0.03;
-/** The caption clears its rule by this much on its tightest side. The owner's number. */
-const CAPTION_CLEARANCE = 3;
+export const PRICE_STROKE_EM = 0.03;
 
 /**
- * The header. The $240 hangs by its right edge from the aligned right margin
- * at its drawn size, bold. The caption's box takes the price's width (the
- * owner: "match the price number's width, margins maintained") — its right
- * edge and top stay where they were, its left edge comes to the price's — and
- * the caption is centred inside it and scaled up until its tightest margin to
- * the rule is CAPTION_CLEARANCE. Which side is tightest falls out of the
- * numbers: at these proportions it is the sides, with the top and bottom
- * left roomier.
+ * THE PRICE'S BOX — the owner's later ask, which took the "Click # When
+ * Finished" caption and its box off the page: "add a 3px outline in black
+ * around the price with the same margins as around the click when finished
+ * text", and "scale the price number and its outline up so they have the same
+ * top and side margins relative to the page as the character logo".
+ *
+ * Then, once it was up: "increase the price number outline to 5px and make
+ * the side margins equal to the top and bottom. Also align the right side to
+ * the right end of the red line."
+ *
+ * So: a 5px rule — the weight of the red divider, the site's rule; inside it,
+ * 11px clear on every side — the clearance the caption had above and below
+ * its rule at the design width (which fell out of the caption box's fixed
+ * height), now the sides too at the owner's ask; the box's top on the logo's
+ * top, its right edge on the red line's right end — the aligned right margin,
+ * `width − SHELF_MARGIN`, the same distance in from the page's right as the
+ * design's logo stands from its left — and scaled until it is the logo's
+ * height, so the two share one band across the head of the page. The size is
+ * whatever makes the run's INK, stroke included, fill that box less its
+ * margins: the $ rises above the digits and drops below them, and it is the
+ * whole run the margins are held to, as they were for the caption. On a
+ * narrow page the box would reach the logo first, so it is also held to the
+ * room between the logo's right edge (plus the design's own pack-to-boxes
+ * gap) and that margin; where that binds the box is shorter than the band,
+ * its top still on the logo's. The rows are fitted to the $ sign's left edge
+ * as before — now the box's left plus its rule and its clearance, rather than
+ * a caption box's edge.
  */
+export const PRICE_BOX = {
+  rule: 5,
+  inset: 11,
+  /** Kept between the logo and the box on a narrow page: the design's pack-to-boxes gap. */
+  gap: g.row.plusBox.x - (g.row.frame.x + g.row.frame.w),
+};
+
 /**
- * Fit the caption to a box of the given width: centred, and as large as a
- * CAPTION_CLEARANCE margin to the rule allows on its tightest side. `captionEm`
- * is the run's width per em — the table's figure at first paint, and then the
- * page's own measurement, which is exact where the table is a whole-unit
- * estimate. (The measurement was first added because `#` came from the
- * fallback face, which the table could not know; `#` is in the owner's face
- * now, and the measurement stays.) Positions are relative to the inside of
- * the box's rule.
+ * The price run's ink per em, stroke excluded: its width, its rise above the
+ * baseline, its drop below, and the bearing its first glyph stands in from the
+ * element's origin. The table's figures (build:shelf writes `run` from the ink
+ * table; the $'s bearing is the face's 56, from build:font's report) are the
+ * first paint; the stage measures the run in the page's own face and the box
+ * follows. The table's width is the run's ADVANCE, a bearing or so wider than
+ * its ink, so the first-paint box is a hair wide until then.
  */
-export function fitCaption(boxWidth: number, captionEm: number) {
-  const box = SHELF_HEADER.box;
-  const innerW = boxWidth - box.stroke * 2;
-  const innerH = box.height - box.stroke * 2;
-  const roomW = innerW - CAPTION_CLEARANCE * 2;
-  const roomH = innerH - CAPTION_CLEARANCE * 2;
-  const size = +Math.min(roomW / captionEm, roomH / (CAPTION_ASC / 1000)).toFixed(2);
-  const textW = captionEm * size;
-  const inkH = (CAPTION_ASC / 1000) * size;
-  return {
-    size,
-    left: +((innerW - textW) / 2).toFixed(2),
-    top: +lineTop((innerH - inkH) / 2, CAPTION_ASC, size).toFixed(2),
-  };
-}
+export type PriceMetrics = { em: number; asc: number; desc: number; lsb: number };
+const PRICE_LSB_EM = 0.056;
 
 export const SHELF_HEADER = (() => {
   const price = g.header.price;
-  const stroke = +(PRICE_STROKE_EM * price.size).toFixed(2);
-  // the stroke paints half its width outside the glyph on every side
-  const priceWidth = Math.round(PRICE_EM * price.size + stroke);
-  const box = { top: g.header.box.y, width: priceWidth, height: g.header.box.h, stroke: g.header.box.stroke };
   return {
-    box,
-    caption: { text: g.header.click.text, em: CAPTION_EM, asc: CAPTION_ASC, clearance: CAPTION_CLEARANCE },
     price: {
       text: price.text,
-      size: price.size,
-      stroke,
-      top: Math.round(lineTop(price.ink.y, price.asc, price.size)),
-      /** The stroke's outer half, so the INK's right edge sits on the margin. */
-      inset: +(stroke / 2).toFixed(2),
-      /** The foot of the price's ink, in page px: the header's own baseline. */
-      inkBottom: Math.round(price.ink.y + price.ink.h),
+      strokeEm: PRICE_STROKE_EM,
+      table: { ...price.run, lsb: PRICE_LSB_EM } as PriceMetrics,
     },
     /** The baseline's place in a line-height:1 box, for the stage to place type by. */
     baseline: g.baseline,
   };
 })();
-
-/** The first-paint caption, from the table; the stage re-fits it in the page's own faces. */
-export const CAPTION_DEFAULT = fitCaption(SHELF_HEADER.box.width, CAPTION_EM);
 
 /** The design's own clearance under its last row, held under ours. */
 const BOTTOM = g.viewBox.h - (g.row.top + (g.row.count - 1) * g.row.pitch + g.row.height);
@@ -312,42 +308,47 @@ export const SHELF_LOGO = {
    * every phone and tablet — the logo takes it exactly.
    */
   maxHeight: Math.floor(
-    Math.min(2 * (LOGO.y + LOGO.h / 2), 2 * (SHELF_HEADER.price.inkBottom - (LOGO.y + LOGO.h / 2))),
+    Math.min(2 * (LOGO.y + LOGO.h / 2), 2 * (g.header.price.ink.y + g.header.price.ink.h - (LOGO.y + LOGO.h / 2))),
   ),
 };
 
 /**
- * WHERE THE ROWS GO, AND HOW BIG: the fit between the logo and the caption box.
+ * WHERE THE ROWS GO, AND HOW BIG: the fit between the logo and the price's box.
  *
  * The owner's rule — the left edge of each row on the right edge of the
- * character logo, the right edge of each row on the left edge of the "Click #
- * When Finished" box, the rows keeping their arrangement — is one zoom and one
- * offset: z = span / gridBodyWidth — the line is a whole row, the design's own
- * gap, then a row's BODY, since the owner then asked for two to a line and
- * then for the line to end, sigils excluded, on the $ sign — and the first
- * column's x=0 placed on the logo's right.
+ * character logo, the right edge of each row on the $ sign, the rows keeping
+ * their arrangement — is one zoom and one offset: z = span / gridBodyWidth —
+ * the line is a whole row, the design's own gap, then a row's BODY, since the
+ * owner asked for two to a line and then for the line to end, sigils
+ * excluded, on the $ sign — and the first column's x=0 placed on the logo's
+ * right.
  *
- * THE SPAN DEPENDS ON THE ZOOM. The logo is sized to the top pack, and the top
- * pack's width on screen is its row width times the zoom, so the logo's right
- * edge moves with z. It is a linear fixed point, solved rather than iterated:
+ * THE SPAN DEPENDS ON THE ZOOM, TWICE OVER. The logo is sized to the top pack,
+ * and the top pack's width on screen is its row width times the zoom, so the
+ * logo's right edge moves with z:
  *
  *   logoRight = C + (tw · z) / 2         C the logo's centre, tw the top pack's row width
- *   z · G     = captionLeft − logoRight  G = GRID_WIDTH
- *   z         = (captionLeft − C) / (G + tw / 2)
+ *   z · G     = dollarLeft − logoRight   G = gridBodyWidth
+ *   z         = (dollarLeft − C) / (G + tw / 2)
  *
  * unless the logo's height clamp binds (SHELF_LOGO.maxHeight), when its width
- * is fixed and z = (captionLeft − C − w/2) / G. The unclamped answer is taken
- * first and the clamped one used if it is what the clamp gives.
+ * is fixed and z = (dollarLeft − C − w/2) / G. And the $ sign's left edge is
+ * the price box's, which is the LOGO'S height, its top on the logo's and its
+ * right on the aligned margin (PRICE_BOX) — so it moves with the logo, which
+ * moves with z. That is no longer one linear equation, so it is iterated:
+ * from the tallest logo the clamp allows, the box, then z, then the logo
+ * again, until the logo's width comes back unchanged — a few rounds, since a
+ * pixel of logo moves the $ by a fraction of a pixel.
  *
- * ON A PHONE THIS RULE HAS NO ROOM. The caption box is the price's width, hung
- * from the right margin; at 375 wide its left edge is at 123 and the logo's
- * right edge is past 85 — a span of a few dozen pixels, which would draw the
- * rows at a tenth of their size. The owner wrote the rule looking at a desktop,
+ * ON A PHONE THIS RULE HAS NO ROOM. At 375 wide the box's left edge is a
+ * hundred-odd pixels from the logo's right — a span that would draw the rows
+ * at a fraction of their size. The owner wrote the rule looking at a desktop,
  * where the span is hundreds of pixels. So where it would take the rows below
- * ROW_SCALE_FLOOR the previous phone layout holds instead: every pack's rule on
- * the left margin, the rows at FALLBACK_SHRINK of the fit to the right margin.
- * THAT SWITCH IS A JUDGEMENT, NOT THE OWNER'S — written here so it can be moved
- * or removed in one place.
+ * ROW_SCALE_FLOOR the previous phone layout holds instead: one to a line,
+ * every pack's rule on the left margin, the rows at FALLBACK_SHRINK of the fit
+ * to the right margin; the logo and the price's box are worked out the same
+ * way there. THAT SWITCH IS A JUDGEMENT, NOT THE OWNER'S — written here so it
+ * can be moved or removed in one place.
  */
 export const ROW_SCALE_FLOOR = 0.6;
 export const FALLBACK_SHRINK = 0.8;
@@ -359,55 +360,81 @@ export type ShelfFit = {
   /** The page x the first column's left edge (row x=0) lands on. */
   rowsLeft: number;
   logo: { w: number; h: number; left: number; top: number };
+  /** The price's box in page px (its top before the page's shift, like the logo's), and the size the price is set at inside it. */
+  box: { left: number; top: number; width: number; height: number; size: number };
+  /** The $ sign's left edge: the line the rows are fitted to. */
+  dollarLeft: number;
   mode: 'between' | 'fallback';
 };
 
+/** The price's box for a logo: the logo's band, its top on the logo's and its right on the aligned margin, held to the room beside the logo. */
+function priceBoxFor(width: number, logo: ShelfFit['logo'], price: PriceMetrics) {
+  const { rule, inset, gap } = PRICE_BOX;
+  // the stroke paints half its width outside the ink on every edge
+  const inkW = price.em + PRICE_STROKE_EM;
+  const inkH = price.asc + price.desc + PRICE_STROKE_EM;
+  const right = width - SHELF_MARGIN;
+  const room = right - (logo.left + logo.w + gap) - 2 * (rule + inset);
+  const size = +Math.min((logo.h - 2 * (rule + inset)) / inkH, room / inkW).toFixed(2);
+  const w = Math.round(inkW * size + 2 * (rule + inset));
+  const h = Math.round(inkH * size + 2 * (rule + inset));
+  return { left: right - w, top: logo.top, width: w, height: h, size };
+}
+
 export function shelfFit(
-  alignedRight: number,
-  priceBoxWidth: number,
+  width: number,
+  price: PriceMetrics,
   topPackWidth: number | null,
   rowWidth: number = CLOUD_RIGHT,
   bodyWidth: number = BODY_RIGHT,
 ): ShelfFit {
   const C = SHELF_LOGO.centreX;
-  // the line's body grid: fitted to the $ sign's left edge, which is the
-  // caption box's left by construction (the box takes the price's width and
-  // hangs from the same right edge), so captionLeft below IS the $
   const G = gridBodyWidth(rowWidth, bodyWidth);
   const maxW = Math.round((SHELF_LOGO.maxHeight * SHELF_LOGO.w) / SHELF_LOGO.h);
-  const captionLeft = alignedRight - priceBoxWidth;
   const logoAt = (w: number) => {
     const h = Math.round((w * SHELF_LOGO.h) / SHELF_LOGO.w);
     return { w, h, left: Math.round(C - w / 2), top: Math.round(SHELF_LOGO.centreY - h / 2) };
   };
+  const dollarOf = (box: ShelfFit['box']) => box.left + PRICE_BOX.rule + PRICE_BOX.inset;
 
-  let z: number;
-  let w: number;
-  if (!topPackWidth) {
-    // nothing on the shelf: the logo stays as drawn, and the fit is against it
-    w = SHELF_LOGO.w;
-    z = (captionLeft - C - w / 2) / G;
-  } else {
-    z = (captionLeft - C) / (G + topPackWidth / 2);
-    w = Math.round(topPackWidth * z);
-    if (w > maxW) {
-      w = maxW;
-      z = (captionLeft - C - w / 2) / G;
+  // the tallest logo first; the box, the zoom and the logo then chase each
+  // other round until the logo's width holds
+  let logo = logoAt(topPackWidth ? maxW : SHELF_LOGO.w);
+  let z = 0;
+  for (let round = 0; round < 24; round++) {
+    const dollarLeft = dollarOf(priceBoxFor(width, logo, price));
+    let w: number;
+    if (!topPackWidth) {
+      // nothing on the shelf: the logo stays as drawn, and the fit is against it
+      w = SHELF_LOGO.w;
+      z = (dollarLeft - C - w / 2) / G;
+    } else {
+      z = (dollarLeft - C) / (G + topPackWidth / 2);
+      w = Math.round(topPackWidth * z);
+      if (w > maxW) {
+        w = maxW;
+        z = (dollarLeft - C - w / 2) / G;
+      }
     }
+    if (w === logo.w) break;
+    logo = logoAt(w);
   }
   z = +z.toFixed(4);
   if (z >= ROW_SCALE_FLOOR) {
     // the grid starts on the logo's DRAWN right edge — its rounded left plus
     // its width — not on C + w/2, which for an odd width is a half pixel and
     // would put every row's rule on one (the whole-pixel rule)
-    const logo = logoAt(w);
-    return { scale: z, cols: SHELF_COLUMNS, rowsLeft: logo.left + logo.w, logo, mode: 'between' };
+    const box = priceBoxFor(width, logo, price);
+    return { scale: z, cols: SHELF_COLUMNS, rowsLeft: logo.left + logo.w, logo, box, dollarLeft: dollarOf(box), mode: 'between' };
   }
 
   // the phone layout: one to a line, on the margin
+  const alignedRight = width - SHELF_MARGIN;
   const zf = +((FALLBACK_SHRINK * (alignedRight - SHELF_MARGIN)) / rowWidth).toFixed(4);
   const wf = topPackWidth ? Math.min(maxW, Math.round(topPackWidth * zf)) : SHELF_LOGO.w;
-  return { scale: zf, cols: 1, rowsLeft: SHELF_MARGIN, logo: logoAt(wf), mode: 'fallback' };
+  const logoF = logoAt(wf);
+  const box = priceBoxFor(width, logoF, price);
+  return { scale: zf, cols: 1, rowsLeft: SHELF_MARGIN, logo: logoF, box, dollarLeft: dollarOf(box), mode: 'fallback' };
 }
 
 /**
@@ -424,6 +451,7 @@ export function shelfFit(
 export const shelfTopShift = (fit: ShelfFit) => fit.logo.left - fit.logo.top;
 
 /** The design's own width sets the first-paint values, before the page measures. */
+export const DESIGN_WIDTH = g.viewBox.w;
 export const DESIGN_ALIGNED_RIGHT = g.viewBox.w - SHELF_MARGIN;
 
 /**

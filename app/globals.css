@@ -29,7 +29,7 @@
    served immutable for a year (see next.config.mjs). */
 @font-face {
   font-family: "Far East";
-  src: url("/fonts/far-east-2.woff2") format("woff2");
+  src: url("/fonts/far-east-3.woff2") format("woff2");
   font-weight: 400 700;
   font-style: normal;
   font-display: swap;
@@ -1692,12 +1692,18 @@ html:has(.cigpage) {
   outline: 2px solid #010101;
   outline-offset: 3px;
 }
-/* The caption's box; the caption is placed inside it by the template. */
-.shelf-header-box {
+/* The price's box: the site's 3px rule round the $240, sized and placed by
+   the stage to the logo's own band — see shelfFit. */
+.shelf-price-box {
   position: absolute;
+  display: block;
   border: 0 solid #010101;
   box-sizing: border-box;
-  color: #ff0000;
+}
+/* The quantity's unit letter. A p is set smaller and lifted by the template
+   so its descender stays inside the box's rule — see shelfPage.ts. */
+.shelf-unit {
+  position: relative;
 }
 /* Bold, by a stroke laid on the glyphs (the face has one weight) — the width
    is set inline from the template, as a share of the size. */

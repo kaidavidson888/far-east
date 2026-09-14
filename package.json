@@ -25,6 +25,7 @@
     "build:cigpages": "node scripts/build-cigpages.mjs",
     "build:shelf": "node scripts/build-shelf.mjs",
     "build:font": "node scripts/build-font.mjs",
+    "audit:cigtext": "node scripts/audit-cigpage-text.mjs",
     "audit:cigs": "node scripts/audit-cigs.mjs"
   },
   "dependencies": {

@@ -45,6 +45,9 @@ no CSS framework (tokens in `app/globals.css`). Deploys to Vercel.
   `globals.css` and `app/layout.tsx`, re-measure `far-east-ink.json` in Chrome,
   `build:shelf`, and `build:cigpages` (the phone pages embed the face). See
   "The owner's own face".
+- `npm run audit:cigtext` — estimates every line of type on the built cigarette
+  pages against the box it sits in and lists the tight ones, worst first, with
+  the width it had in the original digits beside it. Run it after a font change.
 - `npm run build:cigpages` — rebuilds the 235 pages in `public/cigpages` and
   `lib/cigpages.json` from the owner's info-page vectors in `scripts/assets/cigpages`.
   **Takes about half an hour** (it re-encodes every raster in every vector), so background
@@ -549,10 +552,14 @@ that were left were all in delivery, and they are done: preloaded in
 preload even same-origin — without it the browser fetches the file twice),
 `font-display: swap`, the exact `unicode-range`, and `/fonts/:file*` served
 `immutable` for a year from `next.config.mjs`. **The version is in the
-filename** — it is `far-east-2` now (the numerals); bump it to `-3` when the
-file is next replaced, in `globals.css`, `app/layout.tsx` AND `FACE` in
+filename** — it is `far-east-3` now (`-2` was the numerals; `-3` the same with
+the 4's dot drawn smaller, since at the price's size its bold stroke closed it
+onto the counter — `DOT` in `build-font.mjs`); bump it to `-4` when the file
+is next replaced, in `globals.css`, `app/layout.tsx` AND `FACE` in
 `scripts/build-cigpages.mjs` together, or caches will hold the old one and
-the phone pages will embed it.
+the phone pages will embed it. `npm run audit:cigtext` then says whether every
+line of type on the cigarette pages still fits its box (with the numerals it
+does; the tightest are the `$240/c` prices, 1.5px inside their rule).
 
 ## The splash is the sign-in screen
 A signed-out reader who reaches for something needing an account — the bookmark
@@ -757,19 +764,21 @@ design (`scripts/assets/shelf-mobile.svg`). Three pieces, one rule between them
   owner asked for the new numerals with their sizing kept; sized by the
   overshoot, `$240` would have dropped two per cent for the 0 in it. The
   geometry came out identical after the font change, which is the proof.
-- **THE SHELF IS A GRID BETWEEN THE LOGO AND THE CAPTION BOX, TWO TO A LINE**
-  (`shelfFit`). The owner's rule, in two steps: each row's left edge on the
-  right edge of the character logo and its right edge on the left edge of the
-  "Click # When Finished" box, the rows keeping their arrangement — and then
-  "scale them down again, same parameters, so that two fit in a row". So every
+- **THE SHELF IS A GRID BETWEEN THE LOGO AND THE $ SIGN, TWO TO A LINE**
+  (`shelfFit`). The owner's rule, in steps: each row's left edge on the right
+  edge of the character logo and its right edge on the left edge of the
+  "Click # When Finished" box (since taken off the page — the $ sign's left
+  edge, which is where that box's edge was, is the line now), the rows keeping
+  their arrangement — and then "scale them down again, same parameters, so
+  that two fit in a row". So every
   pack's rule starts on its row's own left edge (`DX = -frame.x` puts the
   design's frame at row x=0; a wider pack grows right, into the gap before the
   boxes — a pack over ~69px wide at row scale would reach the boxes, an old
   latent edge), the boxes/panel/clouds keep the design's distance from it, two
   rows side by side make a line (`SHELF_COLUMNS`), the gap between them is the
   design's own pack-to-boxes gap (`COLUMN_GAP`, 15, read off the geometry, not
-  chosen), and one zoom lands the second column's clouds on the caption box's
-  left: `z = span / GRID_WIDTH`. **Where a row lands is the stylesheet's**: each
+  chosen), and one zoom lands the second column's panel edge on the $ sign:
+  `z = span / gridBodyWidth`. **Where a row lands is the stylesheet's**: each
   `.shelf-row` carries its index as `--i`, and `left`/`top` come from `mod()`
   and `round(down, …)` against `--cols`, `--col-pitch` and `--row-pitch`, which
   the stage sets — the column count is decided from the width on the client, so
@@ -780,10 +789,13 @@ design (`scripts/assets/shelf-mobile.svg`). Three pieces, one rule between them
   starts on a half pixel) and `--row-scale`; `.shelf-rows` divides both by the
   zoom, since `zoom` scales its own offsets. **The span depends on the zoom** —
   the logo is sized to the top pack, whose screen width is its row width × zoom
-  — so it is a linear fixed point, solved: `z = (captionLeft − C) / (G + tw/2)`,
-  or with the logo's height clamp binding, `z = (captionLeft − C − w/2) / G`.
-  Verified exact at 961: column one from the logo's right, column two's clouds
-  at 709 = caption left, gap 13.9 = 15 × 0.926, three lines for six packs.
+  — and the $ sign moves with the logo too, since the price's box is the
+  logo's height (below) — so `shelfFit` iterates the fixed point: `z =
+  (dollarLeft − C) / (G + tw/2)`, or with the logo's height clamp binding,
+  `z = (dollarLeft − C − w/2) / G`, the box and the logo recomputed each
+  round until the logo's width holds. Verified at 961 (the fixture's six
+  packs, three lines): column one from the logo's right, column two's panel
+  edge on the $ within a pixel.
   (Before this: one to a line between the same edges; before that, packs
   centred on the logo's axis at 80% of the fit to the right margin; before
   that, left on the margin. Each was the owner's instruction at the time.)
@@ -808,21 +820,19 @@ design (`scripts/assets/shelf-mobile.svg`). Three pieces, one rule between them
   `gridBodyWidth` — a whole row, the gap, then a row's BODY (`bodyWidthFor`:
   widest + 15 + the boxes to the panel's edge, `BODY_RIGHT`, 233 in the design)
   — rather than the line's full width, and the clouds run on past the $ line
-  into the margin, as excluding them implies. The $ sign's left edge IS the
-  caption box's left by construction (the box takes the price's width and hangs
-  from the same right edge), so `captionLeft` in `shelfFit` is the target —
-  **but only once the price is hung by its INK.** An element is as wide as its
-  run's advance, and the last glyph carries a right bearing (~7px on the 0 at
-  85px), so hung by the element the price's ink ended that far short of the
-  margin and the $ started that far left of the caption box; it had been that
-  way since the price was first hung, unnoticed because the check read the
-  element's rect, not the ink. The stage measures `advance −
-  actualBoundingBoxRight` and hands it down as `--price-shift`. Verified at
-  961: column two's panel edge on the $ to within a pixel, the clouds ending
-  inside the right margin.
+  into the margin, as excluding them implies. The $ sign's left edge is the
+  price box's left plus its rule and its clearance (`dollarLeft` in
+  `shelfFit`), and the price is placed INSIDE the box by its ink — the stage
+  works the element's origin back from where the ink must sit, by the run's
+  first bearing and the stroke's outer half — so the $ really does start on
+  that line. (It used to be hung by its element, and an element is as wide
+  as its run's advance, so the ink sat a bearing short of where the check
+  said; the check reads ink now.) Verified at 961 and 1280: column two's
+  panel edge on the $ to within a pixel, the clouds ending inside the right
+  margin.
 - **On a phone that rule has no room, and a fallback holds** — `ROW_SCALE_FLOOR`
-  (0.6). The caption box is the price's width hung from the right margin; at
-  375 its left is at 123 and the logo's right past 85, a span of a few dozen
+  (0.6). The price's box is held to the room beside the logo, but at 375 its
+  left is still around 150 and the logo's right at 85, a span of a few dozen
   px that would draw a pair at a twentieth of their size. The owner wrote the
   rule at a desktop. Below the floor the previous phone layout holds: ONE to a
   line, every pack's rule on the left margin, rows at `FALLBACK_SHRINK` (0.8)
@@ -856,30 +866,48 @@ design (`scripts/assets/shelf-mobile.svg`). Three pieces, one rule between them
   every frame being redrawn. `/landing`, per the logo-goes-home rule.
 - **The quantity ("2c") is centred in its box** — equal margins to the rule above
   and below, the digit's ink (its ascent is the run's tallest) being what is
-  centred. Placed relative to the inside of the rule.
-- **The price is bold and the caption's box takes its width.** The face has one
-  weight, so bold is a stroke on the glyphs (`-webkit-text-stroke`, 0.03 of the
-  size, the age gate's trick), hung so the INK's right edge — stroke included —
-  sits on the margin. The "Click # When Finished" box is the price ink's width,
-  right edge and top where they were; the caption is centred inside it and
-  scaled until its tightest margin to the rule is 3px (the sides bind; the top
-  and bottom come out ~12). **Both are measured in the page** by `ShelfStage`
-  on a canvas with the elements' own computed fonts once the faces are loaded
-  — exact, where the ink table is a whole-unit estimate (the measurement was
-  first added because `$` and `#` came from the fallback face, which the table
-  could not know at all; they are in the owner's face now and it stays); and
-  the caption is measured a second time at its final size, since type set
-  small does not scale exactly from type set large (that was 1.7px of a 3px
-  margin). The table's figures are the first paint.
+  centred. Placed relative to the inside of the rule. **A p is set smaller and
+  lifted**: at the digit's size its descender ran 1.7px past the inside of the
+  rule (the owner saw it clip), so it is set so that its whole ink — x-height
+  to the foot of the descender — is the digit's ink height, and lifted by that
+  descender, standing in the digit's own band with the same margins to the
+  rule; the c has no descender and is left as it was (`qty.p` in
+  `lib/shelfPage.ts`, from the `units` the shelf build writes into the
+  geometry). Verified: "4p" and "9p" end a pixel inside the rule.
+- **The price is bold and sits in its own box; the caption is gone.** The face
+  has one weight, so bold is a stroke on the glyphs (`-webkit-text-stroke`,
+  0.03 of the size, the age gate's trick). The owner's asks, in order: take
+  off the "Click # When Finished" caption and its box; put a black outline
+  round the price with the caption's own margins instead; scale the price and
+  its outline up to the logo's top and side margins; then a 5px outline, the
+  side margins equal to the top and bottom, and the right side on the right
+  end of the red line. So (`PRICE_BOX` in `lib/shelfPage.ts`): a 5px rule —
+  the divider's weight — with 11px clear on every side (what the caption had
+  above and below its rule at the design width); the box's top on the logo's
+  top, its right edge on `--aligned-right` where the divider ends, and its
+  height the logo's, so the two share one band; the type as large as makes
+  the run's INK, stroke included, fill that box less its clearances — the $
+  rises above the digits and drops below them, and the whole run is what is
+  held. On a narrow page the box is also held to the room between the logo's
+  right edge plus the design's 15px gap and the margin; where that binds it
+  is shorter than the band, its top still on the logo's. **The run is
+  measured in the page** by `ShelfStage` on a canvas with the element's own
+  computed font once the face is loaded — its ink width, rise, drop and first
+  bearing, exact where the ink table is a whole-unit estimate whose width is
+  the run's advance — and the origin of the element is worked back from where
+  the ink has to sit, then the ink is centred in the whole-pixel box so the
+  rounding's fraction splits between the sides. The table's figures are the
+  first paint. Verified at 961, 1280 and 375: the box's right on the
+  divider's right, its top on the logo's, its bottom on the logo's where the
+  band binds, the ink 11 ± 0.5 off the rule all round.
 - **The margins are symmetric, and everything meets the right one, at any
   width.** The owner's rule: the aligned right edge holds the same margin from
   the page's right as the logo holds from its left. The logo is left-anchored in
   real px, so the right must be too — `--aligned-right` is `width - MARGIN`,
-  measured live by `components/ShelfStage.tsx`, not a fixed design x. The header
-  box and the $240 **move** (not scale — "keep the same ratios") to hang from
-  that edge, and the divider spans margin to margin. The rows no longer reach
-  the right margin: they end at the caption box's left edge (see the rule
-  above).
+  measured live by `components/ShelfStage.tsx`, not a fixed design x. The
+  price's box hangs its right edge from that line — the red divider's right
+  end — and the divider spans margin to margin. The rows do not reach the
+  right margin: they end at the $ sign (see the rule above).
 - **The rows are scaled with `zoom`, NOT `transform: scale`.** A transform
   scales finished pixels, and at 2x the type, the rules and the packs all went
   soft — the owner saw it. `zoom` lays the block out again at the new size, so
@@ -1070,6 +1098,16 @@ the brand assets and review text in this repo are visible to anyone.
   itself was first written through a double-quoted shell string, which
   command-substituted its backticks and stripped every code span — the
   heredoc gotcha below, in a second form. Patch text with the editor.)
+- **React's `onWheel` is passive, so a handler there cannot cancel the
+  scroll.** React registers `wheel` (and `touchstart`/`touchmove`) listeners
+  passive on the root, so `preventDefault` in an `onWheel` prop is refused —
+  Chrome logs "Unable to preventDefault inside passive event listener" — and
+  the page scrolls anyway. The quantity wheels had exactly that: rolling a
+  stripe on the shelf, which scrolls, scrolled the page behind it. Anything
+  that must cancel a wheel goes on with `addEventListener('wheel', h, {
+  passive: false })` — as the cigarette row already did, and the wheels do
+  now (a ref carries the latest handler so the one listener never goes
+  stale).
 - **`setPointerCapture` throws, so guard it.** It raises `NotFoundError` /
   `InvalidPointerId` when the pointer is not active by the time the handler
   runs — a finger already lifted, or a scripted pointer whose id the browser

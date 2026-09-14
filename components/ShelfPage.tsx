@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { removePackAction } from '@/app/actions';
 import { BOOKMARK } from '@/lib/cigPages';
 import { HOME } from '@/lib/innerPage';
-import { DIVIDER, SHELF_HEADER, SHELF_LOGO, SHELF_ROW, shelfLayout, shelfQuantityFrame, type ShelfEntry } from '@/lib/shelfPage';
+import { DIVIDER, PRICE_BOX, SHELF_HEADER, SHELF_LOGO, SHELF_ROW, shelfLayout, shelfQuantityFrame, type ShelfEntry } from '@/lib/shelfPage';
 import { CigQuantity } from './CigQuantity';
 import { ShelfStage } from './ShelfStage';
 
@@ -78,34 +78,28 @@ export function ShelfPage({ entries }: { entries: ShelfEntry[] }) {
           <img src={SHELF_LOGO.src} alt="" width={SHELF_LOGO.w} height={SHELF_LOGO.h} draggable={false} />
         </Link>
 
-        {/* the caption's box: the price's width, hung by its right edge from the aligned right margin */}
-        <div
-          className="shelf-header-box"
+        {/* the price's box — the logo's band, its top on the logo's and its right
+            edge where the red line ends — and the $240 inside it, bold, its ink
+            held the box's clearance off the rule on every side; the stage sizes
+            and places both (shelfFit, PRICE_BOX) */}
+        <span
+          className="shelf-price-box"
           style={{
-            left: 'calc(var(--aligned-right) - var(--price-w))',
-            top: `calc(var(--shelf-top) + ${px(SHELF_HEADER.box.top)})`,
-            width: 'var(--price-w)',
-            height: px(SHELF_HEADER.box.height),
-            borderWidth: px(SHELF_HEADER.box.stroke),
+            left: 'var(--price-box-left)',
+            top: 'var(--price-box-top)',
+            width: 'var(--price-box-w)',
+            height: 'var(--price-box-h)',
+            borderWidth: px(PRICE_BOX.rule),
           }}
-        >
-          {/* the caption, centred inside the rule and scaled to a 3px clearance on its tightest side — the stage fits it */}
-          <span className="shelf-type" style={{ left: 'var(--caption-left)', top: 'var(--caption-top)', fontSize: 'var(--caption-size)' }}>
-            {SHELF_HEADER.caption.text}
-          </span>
-        </div>
-        {/* the $240, bold, hung by its INK's right edge from the same line —
-            `--price-shift` is the last glyph's right bearing, measured by the
-            stage, so the element overhangs the margin by exactly what its ink
-            does not */}
+          aria-hidden="true"
+        />
         <div
           className="shelf-price"
           style={{
-            left: `calc(var(--aligned-right) - ${px(SHELF_HEADER.price.inset)} + var(--price-shift, 0px))`,
-            top: `calc(var(--shelf-top) + ${px(SHELF_HEADER.price.top)})`,
-            fontSize: px(SHELF_HEADER.price.size),
-            WebkitTextStroke: `${px(SHELF_HEADER.price.stroke)} currentColor`,
-            transform: 'translateX(-100%)',
+            left: 'var(--price-left)',
+            top: 'var(--price-top)',
+            fontSize: 'var(--price-size)',
+            WebkitTextStroke: `calc(var(--price-size) * ${SHELF_HEADER.price.strokeEm}) currentColor`,
           }}
         >
           {SHELF_HEADER.price.text}
@@ -183,7 +177,14 @@ export function ShelfPage({ entries }: { entries: ShelfEntry[] }) {
                     style={type(R.qty)}
                     aria-label={`${row.quantity.slice(0, -1)} ${row.quantity.endsWith('c') ? 'cartons' : 'packs'}`}
                   >
-                    {row.quantity}
+                    {row.quantity.slice(0, -1)}
+                    {/* a p is set smaller and lifted so its descender stays inside the rule — see shelfPage.ts */}
+                    <span
+                      className="shelf-unit"
+                      style={row.quantity.endsWith('p') ? { fontSize: px(R.qty.p.size), top: px(-R.qty.p.lift) } : undefined}
+                    >
+                      {row.quantity.slice(-1)}
+                    </span>
                   </span>
                 ) : null}
               </span>

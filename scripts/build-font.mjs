@@ -52,7 +52,7 @@ import opentype from 'opentype.js';
 const SOURCE = 'scripts/assets/far-east-webfont.woff2';
 const NUMERALS = 'scripts/assets/numerals.svg';
 const MARKS = 'scripts/assets/hash-dollar.svg';
-const OUT = process.argv[2] || 'public/fonts/far-east-2.woff2';
+const OUT = process.argv[2] || 'public/fonts/far-east-3.woff2';
 const LSB = 60;
 const RSB = 83;
 const TOLERANCE = 0.2;
@@ -330,6 +330,34 @@ if (numeralAdvances.size !== 10) throw new Error(`numerals.svg: expected an adva
 const numerals = sheetGlyphs(numeralsSvg);
 const marks = sheetGlyphs(readFileSync(MARKS, 'utf8'));
 
+/**
+ * THE 4's DOT IS DRAWN SMALLER THAN THE SHEET HAS IT. The owner saw it clip
+ * in the shelf's price: the sheet gives the dot a radius of 44 with 21 units
+ * of clearance to the three walls of the counter, and the price is set bold
+ * by a stroke of 0.03em — 15 units out from every edge, the dot's and the
+ * walls' both — which is more than the clearance, so at that size the dot
+ * closed onto the counter. At radius 20 the stroked dot keeps 15 units clear,
+ * which is over a pixel at the price's size and reads as a dot everywhere
+ * smaller. The dot is the digit's smallest contour and is scaled about its
+ * own centre, so its place in the counter does not move.
+ */
+const DOT = { 4: 20 };
+function shrinkDot(contours, radius) {
+  const bounds = (c) => {
+    const xs = [c.start, ...c.segs.flatMap((s) => (s.kind === 'C' ? [s.c1, s.c2, s.to] : [s.to]))];
+    const x = xs.map((p) => p[0]);
+    const y = xs.map((p) => p[1]);
+    return { w: Math.max(...x) - Math.min(...x), cx: (Math.max(...x) + Math.min(...x)) / 2, cy: (Math.max(...y) + Math.min(...y)) / 2 };
+  };
+  const dot = contours.map((c, i) => ({ c, i, b: bounds(c) })).sort((a, b) => a.b.w - b.b.w)[0];
+  const k = (radius * 2) / dot.b.w;
+  const at = ([x, y]) => [dot.b.cx + (x - dot.b.cx) * k, dot.b.cy + (y - dot.b.cy) * k];
+  const c = dot.c;
+  return contours.map((o, i) =>
+    i !== dot.i ? o : { start: at(c.start), segs: c.segs.map((s) => (s.kind === 'C' ? { kind: 'C', c1: at(s.c1), c2: at(s.c2), to: at(s.to) } : { kind: 'L', to: at(s.to) })) },
+  );
+}
+
 const replaced = [];
 const yUp = ([x, y]) => [x + LSB, y];
 const yDown = ([x, y]) => [x + LSB, 688 - y];
@@ -341,8 +369,9 @@ function makeGlyph(name, unicode, contours, map, adv) {
 }
 for (let d = 0; d <= 9; d++) {
   const ch = String(d);
-  const contours = numerals.get(`digit-${ch}`);
+  let contours = numerals.get(`digit-${ch}`);
   if (!contours) throw new Error(`numerals.svg has no digit-${ch}`);
+  if (DOT[ch]) contours = shrinkDot(contours, DOT[ch]);
   const { ink, adv } = numeralAdvances.get(ch);
   if (adv !== ink + LSB + RSB) throw new Error(`numerals.svg: ${ch}'s advance ${adv} is not ink ${ink} + ${LSB} + ${RSB}`);
   const i = glyphs.findIndex((g) => g.unicode === ch.charCodeAt(0));

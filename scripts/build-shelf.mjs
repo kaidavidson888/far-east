@@ -177,6 +177,17 @@ const rowBottom = Math.max(panel.y + panel.h, topFrame.y + topFrame.h);
  * for the numerals changed with their sizing kept.
  */
 const DIGIT_HEIGHT = 688;
+/**
+ * A run's ink per em, from the table: its advance, and the tallest ascent and
+ * deepest descent among its glyphs. The page sizes the price's box round the
+ * whole run — the $ rises above the digits and drops below them — and the
+ * stage measures the real thing once the face is in; these are the first paint.
+ */
+const runMetrics = (text) => ({
+  em: +([...text].reduce((w, c) => w + INK.adv[c], 0) / 1000).toFixed(4),
+  asc: Math.max(...[...text].map((c) => INK.asc[c])) / 1000,
+  desc: Math.max(...[...text].map((c) => INK.desc[c])) / 1000,
+});
 const typeRun = (text, by, box) => {
   const asc = Math.max(...[...by].map((c) => (/[0-9]/.test(c) ? DIGIT_HEIGHT : (INK.asc[c] ?? 0))));
   if (!asc) throw new Error(`no ascent for ${JSON.stringify(by)}`);
@@ -194,7 +205,7 @@ const geometry = {
   header: {
     box: { ...round(one('headerBox')), stroke: 3 },
     click: typeRun('Click # When Finished', 'ClickWhenFinished', one('click')),
-    price: typeRun('$240', '240', one('price')),
+    price: { ...typeRun('$240', '240', one('price')), run: runMetrics('$240') },
   },
   row: {
     top: rowTop,
@@ -209,7 +220,11 @@ const geometry = {
     bookmarkBox: { ...bookmarkBox, stroke: 3 },
     bookmark,
     qtyBox: { ...qtyBox, stroke: 3 },
-    qty: typeRun('12x', '12x', one('qty', template)),
+    qty: {
+      ...typeRun('12x', '12x', one('qty', template)),
+      /** The unit letters' ink per em — the p has a descender the box must hold. */
+      units: { c: { asc: INK.asc.c / 1000, desc: INK.desc.c / 1000 }, p: { asc: INK.asc.p / 1000, desc: INK.desc.p / 1000 } },
+    },
     panel,
     line1: typeRun('Leave a comment <3', 'Leaveacomment', one('line1', template)),
     line2: typeRun('-POST-', 'POST', one('line2', template)),

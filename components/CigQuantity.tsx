@@ -206,16 +206,43 @@ export function CigQuantity({
 
   useEffect(() => () => window.clearTimeout(settleRef.current), []);
 
-  /** Rolling a stripe with a mouse wheel: pull it, and settle once the rolling stops. */
-  const roll = (which: Which) => (e: React.WheelEvent) => {
-    e.preventDefault();
-    update(which, { pos: wheelsRef.current[which].pos + e.deltaY / screenPitch(which) });
+  /**
+   * Rolling a stripe with a mouse wheel: pull it, and settle once the rolling
+   * stops. Attached as a NATIVE, NON-PASSIVE listener rather than React's
+   * onWheel: React registers wheel listeners passive, so the preventDefault
+   * in a handler there is refused — Chrome logs "Unable to preventDefault
+   * inside passive event listener" — and on the shelf, which scrolls, the
+   * page went up and down behind the wheel being rolled. The latest handler
+   * is kept in a ref so the one listener never goes stale.
+   */
+  const rollRef = useRef<(which: Which, deltaY: number) => void>(() => {});
+  rollRef.current = (which, deltaY) => {
+    update(which, { pos: wheelsRef.current[which].pos + deltaY / screenPitch(which) });
     window.clearTimeout(settleRef.current);
     settleRef.current = window.setTimeout(() => {
       snap(which);
       commitIfDone();
     }, 160);
   };
+  useEffect(() => {
+    if (mode === 'closed') return;
+    const stripes: [Which, HTMLDivElement | null][] = [
+      ['amount', amountRef.current],
+      ['unit', unitRef.current],
+    ];
+    const offs = stripes.map(([which, el]) => {
+      if (!el) return () => {};
+      const onWheel = (e: WheelEvent) => {
+        e.preventDefault();
+        rollRef.current(which, e.deltaY);
+      };
+      el.addEventListener('wheel', onWheel, { passive: false });
+      return () => el.removeEventListener('wheel', onWheel);
+    });
+    return () => {
+      for (const off of offs) off();
+    };
+  }, [mode]);
 
   /** Arrow keys on a focused stripe, for a keyboard. */
   const key = (which: Which) => (e: React.KeyboardEvent) => {
@@ -282,7 +309,6 @@ export function CigQuantity({
         }}
         onPointerUp={release}
         onPointerCancel={release}
-        onWheel={roll(which)}
         onKeyDown={key(which)}
         onContextMenu={(e) => e.preventDefault()}
       >
