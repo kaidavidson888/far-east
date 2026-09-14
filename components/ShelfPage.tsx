@@ -59,7 +59,7 @@ const type = (t: { left: number; top: number; size: number }): React.CSSProperti
 });
 
 export function ShelfPage({ entries }: { entries: ShelfEntry[] }) {
-  const { rows, rowsTop, rowHeight, pitch, count, bottom, topPackWidth, dx, rowWidth } = shelfLayout(entries);
+  const { rows, rowsTop, rowHeight, pitch, count, bottom, topPackWidth, dx, rowWidth, bodyWidth } = shelfLayout(entries);
   const R = SHELF_ROW;
   /** The boxes, panel and clouds, moved right to clear the widest pack — see shelfLayout. */
   const sh = <T extends { left: number }>(b: T): T => ({ ...b, left: b.left + dx });
@@ -67,7 +67,7 @@ export function ShelfPage({ entries }: { entries: ShelfEntry[] }) {
 
   return (
     <div className="shelf">
-      <ShelfStage rowsTop={rowsTop} rowHeight={rowHeight} pitch={pitch} count={count} bottom={bottom} topPackWidth={topPackWidth} rowWidth={rowWidth}>
+      <ShelfStage rowsTop={rowsTop} rowHeight={rowHeight} pitch={pitch} count={count} bottom={bottom} topPackWidth={topPackWidth} rowWidth={rowWidth} bodyWidth={bodyWidth}>
         {/* the logo, as wide as the top pack, about its own centre — the stage sizes it */}
         <Link
           href={HOME}
@@ -94,11 +94,14 @@ export function ShelfPage({ entries }: { entries: ShelfEntry[] }) {
             {SHELF_HEADER.caption.text}
           </span>
         </div>
-        {/* the $240, bold, hung by its ink's right edge from the same line */}
+        {/* the $240, bold, hung by its INK's right edge from the same line —
+            `--price-shift` is the last glyph's right bearing, measured by the
+            stage, so the element overhangs the margin by exactly what its ink
+            does not */}
         <div
           className="shelf-price"
           style={{
-            left: `calc(var(--aligned-right) - ${px(SHELF_HEADER.price.inset)})`,
+            left: `calc(var(--aligned-right) - ${px(SHELF_HEADER.price.inset)} + var(--price-shift, 0px))`,
             top: px(SHELF_HEADER.price.top),
             fontSize: px(SHELF_HEADER.price.size),
             WebkitTextStroke: `${px(SHELF_HEADER.price.stroke)} currentColor`,

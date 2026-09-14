@@ -748,6 +748,24 @@ design (`scripts/assets/shelf-mobile.svg`). Three pieces, one rule between them
   each column's width to which packs happened to land in it, and the column
   count is decided on the client. `shelfQuantityFrame(dx)` moves the plus's
   menu with the boxes.
+- **The line is fitted to the $ sign, sigils excluded.** The owner's next ask:
+  "scale them all up … so the right edge of each row not including the sigils
+  is lined up with the $ sign". So the zoom is worked out against
+  `gridBodyWidth` — a whole row, the gap, then a row's BODY (`bodyWidthFor`:
+  widest + 15 + the boxes to the panel's edge, `BODY_RIGHT`, 233 in the design)
+  — rather than the line's full width, and the clouds run on past the $ line
+  into the margin, as excluding them implies. The $ sign's left edge IS the
+  caption box's left by construction (the box takes the price's width and hangs
+  from the same right edge), so `captionLeft` in `shelfFit` is the target —
+  **but only once the price is hung by its INK.** An element is as wide as its
+  run's advance, and the last glyph carries a right bearing (~7px on the 0 at
+  85px), so hung by the element the price's ink ended that far short of the
+  margin and the $ started that far left of the caption box; it had been that
+  way since the price was first hung, unnoticed because the check read the
+  element's rect, not the ink. The stage measures `advance −
+  actualBoundingBoxRight` and hands it down as `--price-shift`. Verified at
+  961: column two's panel edge on the $ to within a pixel, the clouds ending
+  inside the right margin.
 - **On a phone that rule has no room, and a fallback holds** — `ROW_SCALE_FLOOR`
   (0.6). The caption box is the price's width hung from the right margin; at
   375 its left is at 123 and the logo's right past 85, a span of a few dozen

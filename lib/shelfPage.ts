@@ -260,8 +260,26 @@ export const ELEMENTS_WIDTH = CLOUD_RIGHT - DESIGN_ELEMENTS_X;
 export const rowWidthFor = (widestPack: number) => widestPack + PACK_GAP + ELEMENTS_WIDTH;
 /** From one column's left edge to the next, in row coordinates. */
 export const columnPitch = (rowWidth: number) => rowWidth + COLUMN_GAP;
-/** The whole line, in row coordinates: what the zoom is worked out against. */
-export const gridWidth = (rowWidth: number) => SHELF_COLUMNS * rowWidth + (SHELF_COLUMNS - 1) * COLUMN_GAP;
+
+/**
+ * THE ROW'S RIGHT EDGE, NOT COUNTING THE SIGILS — the owner's phrase. It is the
+ * panel's far edge (233 in the design; the quantity box ends on the same line),
+ * and it is what the line is fitted by: "the right edge of each row, not
+ * including the sigils, lined up with the $ sign". The clouds run on past it,
+ * which is the point of excluding them, and at every width they still end
+ * well inside the right margin.
+ */
+export const BODY_RIGHT = SHELF_ROW.panel.left + SHELF_ROW.panel.width;
+const BODY_FROM_ELEMENTS = BODY_RIGHT - DESIGN_ELEMENTS_X;
+/** A row's body width for a shelf: the widest pack, the gap, and the boxes to the panel's edge. */
+export const bodyWidthFor = (widestPack: number) => widestPack + PACK_GAP + BODY_FROM_ELEMENTS;
+/**
+ * The line, from the first column's left edge to the LAST column's body edge,
+ * in row coordinates: what the zoom is worked out against. The columns before
+ * the last are whole (clouds and all, then the gap).
+ */
+export const gridBodyWidth = (rowWidth: number, bodyWidth: number) =>
+  (SHELF_COLUMNS - 1) * columnPitch(rowWidth) + bodyWidth;
 
 /**
  * THE LOGO IS AS WIDE AS THE TOP PACK, about its own centre.
@@ -300,8 +318,9 @@ export const SHELF_LOGO = {
  * The owner's rule — the left edge of each row on the right edge of the
  * character logo, the right edge of each row on the left edge of the "Click #
  * When Finished" box, the rows keeping their arrangement — is one zoom and one
- * offset: z = span / GRID_WIDTH — the line is two rows wide plus the design's
- * own gap, since the owner then asked for two to a line — and the first
+ * offset: z = span / gridBodyWidth — the line is a whole row, the design's own
+ * gap, then a row's BODY, since the owner then asked for two to a line and
+ * then for the line to end, sigils excluded, on the $ sign — and the first
  * column's x=0 placed on the logo's right.
  *
  * THE SPAN DEPENDS ON THE ZOOM. The logo is sized to the top pack, and the top
@@ -344,9 +363,13 @@ export function shelfFit(
   priceBoxWidth: number,
   topPackWidth: number | null,
   rowWidth: number = CLOUD_RIGHT,
+  bodyWidth: number = BODY_RIGHT,
 ): ShelfFit {
   const C = SHELF_LOGO.centreX;
-  const G = gridWidth(rowWidth);
+  // the line's body grid: fitted to the $ sign's left edge, which is the
+  // caption box's left by construction (the box takes the price's width and
+  // hangs from the same right edge), so captionLeft below IS the $
+  const G = gridBodyWidth(rowWidth, bodyWidth);
   const maxW = Math.round((SHELF_LOGO.maxHeight * SHELF_LOGO.w) / SHELF_LOGO.h);
   const captionLeft = alignedRight - priceBoxWidth;
   const logoAt = (w: number) => {
@@ -466,6 +489,8 @@ export type ShelfLayout = {
   dx: number;
   /** The row's width in row px, from its left edge to the clouds. */
   rowWidth: number;
+  /** ...and to the panel's edge — the right edge not counting the sigils. */
+  bodyWidth: number;
 };
 
 export function shelfLayout(entries: ShelfEntry[]): ShelfLayout {
@@ -500,6 +525,7 @@ export function shelfLayout(entries: ShelfEntry[]): ShelfLayout {
     widestPack,
     dx,
     rowWidth: rowWidthFor(widestPack),
+    bodyWidth: bodyWidthFor(widestPack),
   };
 }
 

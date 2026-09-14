@@ -97,6 +97,7 @@ export function ShelfStage({
   bottom,
   topPackWidth,
   rowWidth,
+  bodyWidth,
   children,
 }: {
   rowsTop: number;
@@ -107,6 +108,8 @@ export function ShelfStage({
   topPackWidth: number | null;
   /** The row's width in row px — it grows with the widest pack on the shelf. */
   rowWidth: number;
+  /** The row's width to the panel's edge, sigils excluded — what the line is fitted by. */
+  bodyWidth: number;
   children: React.ReactNode;
 }) {
   const ref = useRef<HTMLDivElement | null>(null);
@@ -122,7 +125,7 @@ export function ShelfStage({
     if (!el) return;
     const apply = () => {
       const alignedRight = el.clientWidth - SHELF_MARGIN;
-      const fit = shelfFit(alignedRight, priceWRef.current, topPackWidth, rowWidth);
+      const fit = shelfFit(alignedRight, priceWRef.current, topPackWidth, rowWidth, bodyWidth);
       el.style.setProperty('--aligned-right', `${alignedRight}px`);
       for (const [k, v] of Object.entries(fitVars(fit, pitch, rowWidth))) el.style.setProperty(k, v);
       el.dataset.fit = fit.mode;
@@ -135,7 +138,7 @@ export function ShelfStage({
     return () => ro.disconnect();
     // minHeightFor closes over the same props this effect lists
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [bottom, count, pitch, rowHeight, rowsTop, topPackWidth, rowWidth]);
+  }, [bottom, count, pitch, rowHeight, rowsTop, topPackWidth, rowWidth, bodyWidth]);
 
   // the header, once the faces are in: the price's real ink width, and the
   // caption fitted to it with its real fallback glyphs — then the fit again,
@@ -158,6 +161,15 @@ export function ShelfStage({
       const p = ctx.measureText(SHELF_HEADER.price.text);
       const priceInk = p.actualBoundingBoxLeft + p.actualBoundingBoxRight;
       const boxWidth = Math.round(priceInk + SHELF_HEADER.price.stroke);
+      // THE PRICE IS HUNG BY ITS INK, NOT ITS ADVANCE. The element is as wide
+      // as the run's advance, and the last glyph carries a right bearing —
+      // ~7px on the 0 at this size — so hung by the element the ink ended
+      // that far short of the margin, and the $ started that far left of the
+      // caption box the rows are fitted to. Shifting the element by the
+      // bearing puts the ink's right edge on the margin, and then the $'s
+      // left edge and the caption box's left coincide exactly.
+      const bearingRight = p.width - p.actualBoundingBoxRight;
+      el.style.setProperty('--price-shift', `${bearingRight.toFixed(2)}px`);
       ctx.font = font(captionEl, 100);
       const c = ctx.measureText(SHELF_HEADER.caption.text);
       const captionEm = (c.actualBoundingBoxLeft + c.actualBoundingBoxRight) / 100;
@@ -175,7 +187,7 @@ export function ShelfStage({
     };
   }, []);
 
-  const first = shelfFit(DESIGN_ALIGNED_RIGHT, SHELF_HEADER.box.width, topPackWidth, rowWidth);
+  const first = shelfFit(DESIGN_ALIGNED_RIGHT, SHELF_HEADER.box.width, topPackWidth, rowWidth, bodyWidth);
 
   return (
     <div
