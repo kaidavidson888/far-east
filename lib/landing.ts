@@ -14,10 +14,14 @@ const { viewBox, background, parts } = geometry;
 export const LANDING_MARGINS = marginsOf(viewBox, Object.values(parts));
 
 /**
- * TEST YOUR LUCK, the cloud and the square read as one mark, so they move as
- * one. The design centres them: 111 to the left against 110 to the right.
+ * The cloud and the square read as one mark, so they move as one, centred on
+ * the page. TEST YOUR LUCK was drawn above them and moved with them (the
+ * design centred the three together, 111 to the left against 110 to the
+ * right); the owner asked for it taken off the page. The part is still cut by
+ * the build (`luck.svg`, in the geometry) and simply not placed, so putting
+ * it back is one line here.
  */
-const CLUSTER_IDS = ['luck', 'cloud', 'square'] as const;
+const CLUSTER_IDS = ['cloud', 'square'] as const;
 const cluster = clusterBox(CLUSTER_IDS.map((id) => parts[id]));
 
 const M = LANDING_MARGINS;
@@ -76,7 +80,6 @@ export const LANDING_SPEC: ArtPageSpec = {
       'Recommended',
       both({ left: parts.recommended.x, top: parts.recommended.y }),
     ),
-    inCluster('luck', 'Test your luck', true),
     inCluster('cloud', '', false),
     inCluster('square', '', false),
   ],
