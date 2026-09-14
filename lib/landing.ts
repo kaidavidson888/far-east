@@ -125,6 +125,8 @@ const LABELS = {
   saved: LABEL_TOP + OFFERS.h + OFFERS_TO_SAVED,
   recommended: LABEL_TOP + OFFERS.h + OFFERS_TO_SAVED + parts.saved.h + LABEL_GAP,
 };
+/** The page y the cigarette row must keep clear of: the column's foot plus the design's gap. See cigZoom. */
+export const LANDING_ROW_CLEAR = LABELS.recommended + parts.recommended.h + LABEL_GAP;
 
 const inCluster = (id: keyof typeof CLUSTER, label: string, pressable: boolean): ArtPart => ({
   id,

@@ -319,3 +319,31 @@ export function cigPaintMs(speed: number): number {
 const CATCH_MS = 400;
 export const CIG_SPIN_CATCH = ((CIG_SPIN_SPEED - CIG_FLING_MAX) / CATCH_MS) * 1000;
 
+
+/**
+ * THE ROW IS ZOOMED SO THAT ABOUT SEVEN PACKS SPAN THE SCREEN. The owner's
+ * ask: "scale the scrolling catalogue up while maintaining everything else
+ * the same as it currently is. Make it just big enough where only 7 packs at
+ * max are visible on screen at a time." It is a CSS zoom on the row, as the
+ * shelf's rows are zoomed: the layout, the physics and the paint are
+ * untouched and keep working in row px, and the row is simply drawn bigger —
+ * the same motion at the same pace, larger, which is what "everything else
+ * the same" has to mean for an animation. Pointer and wheel movement arrive
+ * in screen px and are divided by the zoom, so a drag still keeps the packs
+ * under the hand one for one.
+ *
+ * The zoom is the screen's width over seven mean pitches of the catalogue
+ * (the lap over the pack count). The packs' own widths run 42 to 92, so
+ * "seven" is the average across the row: a run of narrow packs shows a
+ * couple more, a run of wide ones fewer. Never below 1 — a phone already
+ * shows fewer than seven — and held so the band, centred on the screen's
+ * height, stays clear of what the page draws above it.
+ */
+export const CIG_VISIBLE_MAX = 7;
+export const CIG_MEAN_PITCH = CIG_SPIN_LAP / CIG_PACKS.length;
+export function cigZoom(screenW: number, screenH: number, clearAbove: number): number {
+  const byWidth = screenW / (CIG_VISIBLE_MAX * CIG_MEAN_PITCH);
+  const roomAbove = screenH / 2 - clearAbove;
+  const byHeight = (roomAbove * 2) / CIG_BAND_H;
+  return +Math.max(1, Math.min(byWidth, byHeight)).toFixed(3);
+}

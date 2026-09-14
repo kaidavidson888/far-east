@@ -24,8 +24,10 @@ import {
   REFERENCE_SPEED,
   SPEED,
   cigLayout,
+  cigZoom,
   type CigPack,
 } from '@/lib/cigRow';
+import { LANDING_ROW_CLEAR } from '@/lib/landing';
 
 /**
  * The row of packs across the middle of the landing page.
@@ -136,6 +138,9 @@ export function CigScroller({
   const timerRef = useRef(0);
   const lastTsRef = useRef(0);
   const widthRef = useRef(0);
+  /** How much bigger the row is drawn than it is laid out — see cigZoom. */
+  const [zoom, setZoom] = useState(1);
+  const zoomRef = useRef(1);
   const dragRef = useRef<{
     x: number;
     t: number;
@@ -608,6 +613,14 @@ export function CigScroller({
     if (!el) return;
     let first = true;
     const measure = () => {
+      // the zoom first: it changes the row's own width, and a change here
+      // re-lays the row out and brings this observer straight back
+      const z = cigZoom(document.documentElement.clientWidth, window.innerHeight, LANDING_ROW_CLEAR);
+      if (z !== zoomRef.current) {
+        zoomRef.current = z;
+        setZoom(z);
+      }
+      // clientWidth is in the row's own px — the screen's width over the zoom
       widthRef.current = el.clientWidth;
       if (first) {
         // Arrive with the first pack framed dead centre rather than with
@@ -639,7 +652,8 @@ export function CigScroller({
       const d = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
       if (!d) return;
       e.preventDefault();
-      const by = d * WHEEL;
+      // screen px in, row px out: the row is zoomed (see cigZoom)
+      const by = (d / zoomRef.current) * WHEEL;
       offsetRef.current += by;
       // a wheel is already a series of shoves, so the glide only carries the
       // tail of it — enough that it does not stop dead under the finger. Half
@@ -674,7 +688,9 @@ export function CigScroller({
   const onPointerMove = (e: React.PointerEvent) => {
     if (!draggingRef.current) return;
     const now = performance.now();
-    const dx = e.clientX - dragRef.current.x;
+    // the pointer moves in screen px and the row is zoomed, so a drag is
+    // divided by the zoom to keep the packs under the hand one for one
+    const dx = (e.clientX - dragRef.current.x) / zoomRef.current;
     offsetRef.current -= dx;
 
     // Keep the tail of the gesture and take the speed across the whole of it,
@@ -694,7 +710,7 @@ export function CigScroller({
 
     const first = hist[0];
     const span = (now - first.t) / 1000;
-    const v = span > 0 ? -(e.clientX - first.x) / span : 0;
+    const v = span > 0 ? -((e.clientX - first.x) / zoomRef.current) / span : 0;
     velRef.current = Math.max(-CIG_FLING_MAX, Math.min(CIG_FLING_MAX, v));
     // Capture only once this is really a drag. Capturing on pointerdown
     // retargets the compatibility mouse events to the row, so the click
@@ -752,6 +768,8 @@ export function CigScroller({
       style={
         {
           height: `${CIG_BAND_H}px`,
+          // drawn bigger, laid out the same — see cigZoom
+          zoom: String(zoom),
           '--cig-rule': `${CIG_RULE.thickness}px`,
           '--cig-red': CIG_OUTLINE.colour,
         } as React.CSSProperties
@@ -907,7 +925,7 @@ export function CigScroller({
       <button
         type="button"
         className="cig-reset"
-        style={{ '--cig-band': `${CIG_BAND_H}px` } as React.CSSProperties}
+        style={{ '--cig-band': `${CIG_BAND_H * zoom}px` } as React.CSSProperties}
         onClick={() => startSpin(allIds)}
         disabled={locked}
       >

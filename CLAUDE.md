@@ -388,6 +388,21 @@ kept in `scripts/assets`: a positioning SVG and an MP4 of the motion. The MP4 ru
 dead constant** — that stepping is deliberate and the owner likes it, so the row is driven by a
 125ms timer rather than rAF. All of it is written up in `lib/cigRow.ts`.
 
+**THE ROW IS DRAWN BIGGER THAN IT IS LAID OUT** (`cigZoom` in `lib/cigRow.ts`,
+the owner's 2026-09-14 ask: "scale the scrolling catalogue up while
+maintaining everything else the same … just big enough where only 7 packs at
+max are visible on screen at a time"). A CSS `zoom` on `.cig-row`, as the
+shelf's rows are zoomed — the layout, the physics and the paint all still
+work in row px; the row is simply rendered larger, the same motion at the same
+pace. The zoom is the screen's width over seven mean pitches of the catalogue
+(lap ÷ pack count, ~88px): about 1.6 at 961 wide, 2.1 at 1280, never below 1
+(a phone already shows fewer than seven), and capped so the band — centred on
+the screen's height — stays clear of the label column above it
+(`LANDING_ROW_CLEAR`). Pointer and wheel movement come in screen px and are
+divided by the zoom, so a drag keeps the packs under the hand one for one; the
+reset button reads the zoomed band height (`--cig-band`) so it keeps its 8px
+under the row. `clientWidth` on the zoomed row is in row px already.
+
 **MY SAVED SPINS THE ROW LIKE A ROULETTE WHEEL AND SWAPS THE PACKS MID-SPIN.**
 Pressing it throws the row at `CIG_SPIN_SPEED` (10,290px/s, 54x the pace the
 owner's recording runs at), and after exactly ONE LAP of the catalogue —
