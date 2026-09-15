@@ -1659,14 +1659,10 @@ ul, ol { list-style: none; }
   overflow-x: hidden;
   /* room for the bar, so the last column is not sat under it */
   scrollbar-gutter: stable;
-  /* THE BAR IS THE PAGE'S OWN TWO COLOURS: a black thumb on a white track,
-     the owner's ask, rather than the browser's grey on grey. Said with the
-     standard `scrollbar-color` and NOT with `::-webkit-scrollbar` — styling
-     that pseudo-element switches Chrome to a custom bar and takes its width
-     with it, and the width here is the `scrollbar-gutter` above, which is
-     what decides whether the last column of tags fits. Colour only, so the
-     grid keeps exactly the columns it had. */
-  scrollbar-color: #010101 #ffffff;
+  /* THE BAR IS THE PAGE'S OWN COLOURS — black on white, and red under the
+     pointer. It is drawn below, with `::-webkit-scrollbar`; the width it is
+     given there is the width this gutter reserves, which is what decides
+     whether the last column of tags fits beside it. */
   /* A SHUT MENU IS NOT PAINTED AT ALL, which is how its scrollbar goes away
      with it: the buttons fade on their own but the box they scroll in does
      not, so a closed menu left a bar hanging down the page beside nothing.
@@ -1684,6 +1680,71 @@ ul, ol { list-style: none; }
 }
 .cig-tags[data-shown] {
   visibility: visible;
+}
+
+/* THE MENU'S SCROLLBAR IS BLACK ON WHITE, AND RED WHEN IT IS TOUCHED — the
+   owner's ask, in two steps: the page's own two colours rather than the
+   browser's grey on grey, and then "when the user hovers or uses the bar
+   don't change its opacity, change it to red". Chrome's own answer to a
+   pointer on a bar is to lighten the thumb; this replaces that with the
+   site's red, on the thumb and on either arrow, and holds it while the
+   thumb is being dragged (`:active`).
+
+   IT HAS TO BE `::-webkit-scrollbar` RATHER THAN `scrollbar-color`. The
+   standard property cannot say "under the pointer" — there is no selector
+   for the bar itself — and where both are given, Chrome takes the standard
+   one and ignores every rule here. So `scrollbar-color` is kept only for
+   engines that have no `::-webkit-scrollbar` at all (Firefox), in the
+   @supports at the foot of this block: resting colours there, and the hover
+   left to the browser, which is as far as that property reaches.
+
+   THE WIDTH IS STATED, AND IT IS THE WIDTH CHROME ALREADY DREW (15px). A
+   custom bar takes its own default width otherwise, and this bar's width is
+   what `scrollbar-gutter: stable` reserves beside the grid — change it and
+   the grid gains or loses a column of tags.
+
+   THE ARROWS ARE DRAWN BACK IN. A custom bar has none unless they are asked
+   for, and Chrome drew them before this; each is the same triangle in the
+   same two colours, centred in a button as wide as the bar. The two crossed
+   states are hidden explicitly, or Chrome lays the bar out in its
+   double-button arrangement — an up AND a down at both ends. */
+.cig-tags::-webkit-scrollbar {
+  width: 15px;
+}
+.cig-tags::-webkit-scrollbar-track {
+  background: #ffffff;
+}
+.cig-tags::-webkit-scrollbar-thumb {
+  background: #010101;
+}
+.cig-tags::-webkit-scrollbar-thumb:hover,
+.cig-tags::-webkit-scrollbar-thumb:active {
+  background: #ff0000;
+}
+.cig-tags::-webkit-scrollbar-button:vertical:decrement {
+  height: 15px;
+  background: #ffffff url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%208%205'%3E%3Cpath%20d='M4%200%208%205H0z'%20fill='%23010101'/%3E%3C/svg%3E") center / 8px 5px no-repeat;
+}
+.cig-tags::-webkit-scrollbar-button:vertical:decrement:hover,
+.cig-tags::-webkit-scrollbar-button:vertical:decrement:active {
+  background-image: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%208%205'%3E%3Cpath%20d='M4%200%208%205H0z'%20fill='%23ff0000'/%3E%3C/svg%3E");
+}
+.cig-tags::-webkit-scrollbar-button:vertical:increment {
+  height: 15px;
+  background: #ffffff url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%208%205'%3E%3Cpath%20d='M0%200h8L4%205z'%20fill='%23010101'/%3E%3C/svg%3E") center / 8px 5px no-repeat;
+}
+.cig-tags::-webkit-scrollbar-button:vertical:increment:hover,
+.cig-tags::-webkit-scrollbar-button:vertical:increment:active {
+  background-image: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%208%205'%3E%3Cpath%20d='M0%200h8L4%205z'%20fill='%23ff0000'/%3E%3C/svg%3E");
+}
+.cig-tags::-webkit-scrollbar-button:vertical:start:increment,
+.cig-tags::-webkit-scrollbar-button:vertical:end:decrement {
+  display: none;
+}
+@supports not selector(::-webkit-scrollbar) {
+  .cig-tags {
+    scrollbar-color: #010101 #ffffff;
+  }
 }
 /* EACH BUTTON ARRIVES IN ITS OWN WRAPPER, and the wrapper is the only thing
    that moves. Two opacities are needed here and they must not fight: the

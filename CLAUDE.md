@@ -633,6 +633,21 @@ cannot drift.
   below about 700px the grid runs to the page's right margin instead:
   `cigTagsRight`. That fallback is a judgement, not the owner's instruction,
   the same call as the shelf's `ROW_SCALE_FLOOR`.
+- **The menu's scrollbar is the page's own colours**: a black thumb and
+  black arrows on a white track, each going RED under the pointer and
+  staying red while the thumb is dragged — the owner's ask, and explicitly
+  *not* a change of opacity, which is what Chrome does to a bar by default.
+  It is written with `::-webkit-scrollbar`, not `scrollbar-color`: the
+  standard property cannot say "under the pointer" (there is no selector for
+  the bar), and **where both are given Chrome takes the standard one and
+  ignores the pseudo-elements**, so `scrollbar-color` is kept for Firefox
+  alone, inside `@supports not selector(::-webkit-scrollbar)`. **The bar's
+  width is stated (15px) and it is the width Chrome already drew**, because
+  that width is what `scrollbar-gutter: stable` reserves beside the grid —
+  change it and the grid gains or loses a column of tags. The arrows are
+  drawn back in as SVG triangles, since a custom bar has none unless asked,
+  and the two crossed button states are hidden or Chrome lays the bar out
+  with an up AND a down at both ends.
 - **That reach is MEASURED ONCE, WHEN THE PLUS IS PRESSED, and then held.**
   The pack left of the framed one changes every time the row moves, so read
   live the grid re-flowed under the reader's hand as the catalogue scrolled
