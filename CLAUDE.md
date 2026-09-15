@@ -517,15 +517,43 @@ cannot drift.
   the mark. Before these arrived it was two plain bars, because the owner's
   face carries no `+` or `-` to set and a fallback face's would have been a
   different letterform beside the house one.
-- **The tags are the info page's three closed vocabularies**: menthol (Y/N),
-  harshness (Lite/mid/hard) and the pack price ($15/$25/$30) — eight buttons,
-  outlined rather than filled, half strength until hovered or picked. The
-  page's other two fields are open vocabularies (112 distinct tasting notes
-  and 207 pairings across the 235 pages), so they cannot be buttons; that is
-  why they are not there. Menthol's two are labelled **Menthol and Regular**,
-  which are the catalogue's own flavour words (`FACET_ORDER` in
-  `lib/seed.ts`) — Y and N mean nothing on a button, and no word here is one
-  we invented.
+- **Six groups, 81 buttons**, outlined rather than filled, half strength
+  until hovered or picked, each group starting its own line in the grid.
+  Three are the info page's closed vocabularies — menthol (Y/N), harshness
+  (Lite/mid/hard), pack price ($15/$25/$30). One is the **brand**, the name
+  before the em dash, all 63 of them. The last two are **families**: the
+  page's tasting notes and its pairings are open vocabularies (112 and 207
+  distinct values across the 235 pages), so the owner asked for five
+  categories encompassing each, and `scripts/build-cigtags.mjs` classifies
+  every value into one — **Sweet, Fruit, Fresh, Floral, Earthy** for notes
+  and **Cannabis, Alcohol, Soft, Dessert, Savoury** for pairings. Anything
+  unmatched is a HARD ERROR rather than a silent "other", so a word added
+  later cannot quietly stop being filterable. Menthol's two buttons are
+  labelled **Menthol and Regular**, the catalogue's own flavour words
+  (`FACET_ORDER` in `lib/seed.ts`) — Y and N mean nothing on a button, and
+  no word here is one we invented.
+- **Two judgements are written into those families rather than hidden.**
+  Earthy also takes the blend's own character (strong, balanced, classic,
+  the origins), because those describe the smoke rather than a flavour.
+  And **Cannabis is settled before anything else is weighed**: strains are
+  named after puddings, so "Mint Chocolate (Hybrid)" and "Mint Chocolate
+  Chip (Hybrid)" both landed in Dessert when the rules were only sorted by
+  length — the bracket is what says what a pairing IS. Note that **every
+  pack has a strain**, so Cannabis on its own matches all 247 and narrows
+  nothing; it is there to be combined.
+- **A pack can be in more than one family** — it has three notes and three
+  pairings — so those two groups are array-valued and a pack matches if ANY
+  of its families is picked, which is the array form of the same
+  `= ANY(values)` clause. Verified: brand ESSE gives exactly its 13 packs,
+  Fruit exactly the 43 the data holds, and the two together exactly the 6
+  in both.
+- **Long labels are set smaller, in the same box.** "Great Hall of the
+  People" is 24 characters where "reset" is five, and every button is the
+  reset button's 88x30. The build measures each label's width per em off the
+  owner's ink table and `fitLabel` picks a size: 15px wherever it fits on
+  one line, otherwise two lines at whatever fits, capped at 12 so the pair
+  still clears the box's 26px. Only the longest dozen brands reach a second
+  line.
 - **The matching is the catalogue's own**, ported rather than called:
   `listCigarettes` builds `column = ANY(values)` per facet and ANDs them, and
   `matchingPacks` in `lib/cigTags.ts` is that rule in the browser. It could

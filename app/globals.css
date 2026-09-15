@@ -1646,6 +1646,18 @@ ul, ol { list-style: none; }
   display: grid;
   grid-template-columns: repeat(auto-fill, var(--cig-btn-w));
   gap: var(--cig-btn-gap);
+  /* SIX GROUPS AND SIXTY-THREE BRANDS DO NOT FIT ON A SCREEN. At two or
+     three columns that is thirty-odd lines, so the grid takes the room
+     there is between its own top and the foot of the page and scrolls
+     inside it. Nothing is unreachable and nothing runs off the bottom.
+     That it scrolls is a judgement, not the owner's instruction — the
+     alternative was a shorter list of brands, which would have meant
+     deciding for them which brands do not matter. */
+  max-height: calc(100% - var(--cig-line2) - var(--cig-edge));
+  overflow-y: auto;
+  overflow-x: hidden;
+  /* room for the bar, so the last column is not sat under it */
+  scrollbar-gutter: stable;
 }
 /* EACH BUTTON ARRIVES IN ITS OWN WRAPPER, and the wrapper is the only thing
    that moves. Two opacities are needed here and they must not fight: the
@@ -1659,17 +1671,25 @@ ul, ol { list-style: none; }
   display: block;
   opacity: 0;
   transform: var(--cig-from);
-  will-change: opacity, transform;
   transition:
     opacity var(--cig-shut-ms) var(--cig-ease-out),
     transform var(--cig-shut-ms) var(--cig-ease-out);
 }
+/* The stagger is capped: at 81 buttons an uncapped one would still be
+   letting the last brand in two seconds after the press. Twelve steps is
+   about a third of a second, by which time the eye has read the thing as
+   having arrived, and the rest come with the twelfth.
+
+   No will-change here either. There are 81 of these and a layer apiece is
+   a real cost in memory; a transition of transform and opacity is promoted
+   by the browser for its duration anyway, which is exactly as long as it
+   is needed. Confirm keeps its own, being one element. */
 .cig-tags[data-open] .cig-tag-slot {
   opacity: 1;
   transform: none;
   transition:
-    opacity var(--cig-fade-ms) var(--cig-ease-in) calc(var(--i, 0) * var(--cig-stagger)),
-    transform var(--cig-grow-ms) var(--cig-ease-in) calc(var(--i, 0) * var(--cig-stagger));
+    opacity var(--cig-fade-ms) var(--cig-ease-in) calc(min(var(--i, 0), 12) * var(--cig-stagger)),
+    transform var(--cig-grow-ms) var(--cig-ease-in) calc(min(var(--i, 0), 12) * var(--cig-stagger));
 }
 .cig-confirm {
   opacity: 0;
@@ -1702,6 +1722,10 @@ ul, ol { list-style: none; }
   height: var(--cig-btn-h);
   background: transparent;
   color: #010101;
+  /* the size and whether it wraps come from the label's own width — see
+     fitLabel; only the longest dozen brands ever reach a second line */
+  line-height: 1.05;
+  overflow: hidden;
 }
 /* Half strength at rest, full under the pointer or picked for good. This is
    the BUTTON's own opacity, multiplied by the wrapper's arrival above. */

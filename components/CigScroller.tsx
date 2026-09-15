@@ -30,7 +30,7 @@ import {
   type CigPack,
 } from '@/lib/cigRow';
 import { LANDING_ROW_CLEAR } from '@/lib/landing';
-import { CIG_TAG_BUTTONS, matchingPacks, tagToken } from '@/lib/cigTags';
+import { CIG_TAG_BUTTONS, fitLabel, matchingPacks, tagToken } from '@/lib/cigTags';
 import { CIG_TOGGLE_GLYPH } from '@/lib/cigToggleGlyph';
 
 /**
@@ -1065,20 +1065,24 @@ export function CigScroller({
           {CIG_TAG_BUTTONS.map((tag, i) => {
             const token = tagToken(tag);
             const on = picked.has(token);
+            const fit = fitLabel(tag.em);
             return (
               // the wrapper is what arrives, so the button's own half-strength
               // opacity and the arrival's never fight over the one property
               <span
                 key={token}
                 className="cig-tag-slot"
-                // the first of each field starts a line, and --i staggers the
+                // the first of each group starts a line, and --i staggers the
                 // arrival so the buttons land nearest-the-plus first — see the CSS
-                data-first={i === 0 || CIG_TAG_BUTTONS[i - 1].key !== tag.key ? '' : undefined}
+                data-first={i === 0 || CIG_TAG_BUTTONS[i - 1].group !== tag.group ? '' : undefined}
                 style={{ '--i': i } as React.CSSProperties}
               >
                 <button
                   type="button"
                   className="cig-tag"
+                  // long brand names take two lines and a smaller size, in the
+                  // same box as every other button — see fitLabel
+                  style={{ fontSize: `${fit.size}px`, whiteSpace: fit.lines === 1 ? 'nowrap' : 'normal' }}
                   data-on={on ? '' : undefined}
                   aria-pressed={on}
                   tabIndex={tagsOpen ? undefined : -1}
