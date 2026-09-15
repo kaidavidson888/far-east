@@ -1487,18 +1487,41 @@ ul, ol { list-style: none; }
    at rest, and the edge of the white box once the colours invert. Without it
    the hovered button would be white on a white page, which is not an
    inversion so much as a disappearance. */
-.cig-reset {
+/* The four controls share one geometry, declared once here: the row's own
+   12px edge, the reset button's 88x30 and the 10px the owner set between it
+   and the plus, which every other gap in the menu then repeats. The wrapper
+   covers the stage so its children can be placed against the row's band,
+   and lets the pointer straight through — only the buttons take it, or the
+   row underneath could not be dragged. */
+.cig-controls {
   position: absolute;
-  left: 12px;
-  top: calc(50% + var(--cig-band) / 2 + 8px);
+  inset: 0;
   z-index: 2;
-  width: 88px;
-  height: 30px;
+  pointer-events: none;
+  --cig-edge: 12px;
+  --cig-btn-w: 88px;
+  --cig-btn-h: 30px;
+  --cig-btn-gap: 10px;
+  --cig-top: calc(50% + var(--cig-band) / 2 + 8px);
+  /* the second column: past reset, and the plus's own left edge */
+  --cig-col: calc(var(--cig-edge) + var(--cig-btn-w) + var(--cig-btn-gap));
+  /* the second line: under reset and the plus */
+  --cig-line2: calc(var(--cig-top) + var(--cig-btn-h) + var(--cig-btn-gap));
+}
+.cig-controls > *,
+.cig-controls .cig-tag {
+  pointer-events: auto;
+}
+.cig-controls [aria-hidden='true'] {
+  pointer-events: none;
+}
+.cig-reset,
+.cig-tags-toggle,
+.cig-confirm,
+.cig-tag {
   margin: 0;
   padding: 0;
   border: 2px solid #010101;
-  background: #010101;
-  color: #ffffff;
   font-family: var(--font-typed);
   font-weight: 400;
   font-synthesis: none;
@@ -1507,15 +1530,139 @@ ul, ol { list-style: none; }
   text-align: center;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
+}
+.cig-reset {
+  position: absolute;
+  left: var(--cig-edge);
+  top: var(--cig-top);
+  width: var(--cig-btn-w);
+  height: var(--cig-btn-h);
+  background: #010101;
+  color: #ffffff;
   transition: background-color 120ms ease-out, color 120ms ease-out;
 }
 .cig-reset:hover {
   background: #ffffff;
   color: #010101;
 }
-.cig-reset:focus-visible {
+.cig-reset:focus-visible,
+.cig-tags-toggle:focus-visible,
+.cig-confirm:focus-visible,
+.cig-tag:focus-visible {
   outline: 2px solid #010101;
   outline-offset: 3px;
+}
+
+/* ------------------------------------------------ the tag menu ----------
+   The owner's ask: a plus beside reset, as tall as reset is and as wide as
+   it is tall, that the tag buttons appear out of; the tags the info page
+   carries, drawn like reset but outlined rather than filled; and a confirm
+   under reset that spins the row down to what they pick.
+
+   THE PLUS IS DRAWN, NOT TYPED. The owner's face carries letters and digits
+   only, so a + and a - out of it would come from whatever the stack falls
+   back to — a different letterform beside the house one. It is two bars
+   instead, the button's own 2px weight, which is also what the cigarette
+   page's plus does. The minus is the same button with the upright gone. */
+.cig-tags-toggle {
+  position: absolute;
+  left: var(--cig-col);
+  top: var(--cig-top);
+  width: var(--cig-btn-h);
+  height: var(--cig-btn-h);
+  background: transparent;
+  color: #010101;
+  transition: background-color 120ms ease-out, color 120ms ease-out;
+}
+.cig-tags-toggle:hover {
+  background: #010101;
+  color: #ffffff;
+}
+.cig-tags-toggle span {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  display: block;
+  background: currentColor;
+}
+.cig-tags-toggle .cig-plus-h {
+  width: 12px;
+  height: 2px;
+  transform: translate(-50%, -50%);
+}
+.cig-tags-toggle .cig-plus-v {
+  width: 2px;
+  height: 12px;
+  transform: translate(-50%, -50%);
+}
+
+/* The grid unfolds out of the plus: its top-left corner IS the plus's left
+   edge, one gap below it, and it is CLIPPED open from that corner rather
+   than scaled — clipping keeps every letterform the size it will end at, so
+   nothing smears on the way out. The same trick the cigarette page's
+   quantity menu uses.
+
+   It fills the room between the plus and `--cig-tags-right`, which the row
+   measures: the right edge of the pack to the left of the framed one, so
+   the menu never reaches across the middle of the row. auto-fill then lays
+   out exactly as many columns as that room holds — two at a laptop width,
+   four at a wide desktop — with no column arithmetic in the component. */
+.cig-tags {
+  position: absolute;
+  left: var(--cig-col);
+  top: var(--cig-line2);
+  width: max(var(--cig-btn-w), calc(var(--cig-tags-right, 0px) - var(--cig-col)));
+  display: grid;
+  grid-template-columns: repeat(auto-fill, var(--cig-btn-w));
+  gap: var(--cig-btn-gap);
+  clip-path: inset(0 100% 100% 0);
+  transition: clip-path 260ms ease-out;
+}
+.cig-tags[data-open] {
+  clip-path: inset(0 0 0 0);
+}
+/* Each of the info page's three fields starts its own line, so the grid
+   says what the values mean without a heading over them — menthol, then
+   harshness, then price. A field wider than the room there is still wraps
+   within itself; the next one still starts at the left. */
+.cig-tag[data-first] {
+  grid-column-start: 1;
+}
+.cig-tag {
+  width: var(--cig-btn-w);
+  height: var(--cig-btn-h);
+  background: transparent;
+  color: #010101;
+  /* half strength until it is under the pointer, or picked for good */
+  opacity: 0.5;
+  transition: opacity 120ms ease-out;
+}
+.cig-tag:hover,
+.cig-tag[data-on] {
+  opacity: 1;
+}
+
+/* Confirm sits under reset, the same gap below it that the plus sits beside
+   it, and appears with the tags. Red on white until the pointer lands, then
+   the fill and the text swap — the reset button's own inversion, in red. */
+.cig-confirm {
+  position: absolute;
+  left: var(--cig-edge);
+  top: var(--cig-line2);
+  width: var(--cig-btn-w);
+  height: var(--cig-btn-h);
+  border-color: #ff0000;
+  background: transparent;
+  color: #ff0000;
+  clip-path: inset(0 100% 100% 0);
+  transition: clip-path 260ms ease-out, background-color 120ms ease-out, color 120ms ease-out;
+}
+.cig-confirm[data-open] {
+  clip-path: inset(0 0 0 0);
+}
+.cig-confirm:hover {
+  background: #ff0000;
+  color: #ffffff;
 }
 .cig-track {
   position: absolute;
@@ -1920,6 +2067,9 @@ input[type='reset'],
 .cig-slot,
 .cig-slot-picked,
 .cig-reset,
+.cig-tags-toggle,
+.cig-tag,
+.cig-confirm,
 .logo-menu,
 .logo-menu-logo,
 .logo-menu-box,

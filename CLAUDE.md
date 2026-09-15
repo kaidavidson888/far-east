@@ -496,6 +496,57 @@ rather than to script an ending.
   the spin takes about four times its real length there. Distance is right,
   wall-clock is not.
 
+**THE PLUS BESIDE RESET OPENS A TAG FILTER FOR THE ROW** (the owner's
+2026-09-14 ask). Four controls now sit under the row's left end, all of them
+the reset button's 88x30 with 10 between — `CIG_CONTROLS` in `lib/cigRow.ts`
+is the one copy of those numbers, handed to the stylesheet as custom
+properties on `.cig-controls` so the component's arithmetic and the CSS
+cannot drift.
+- **The plus is drawn, not typed.** The owner's face carries letters and
+  digits only, so a `+` out of it would come from the fallback — a different
+  letterform beside the house one. It is two bars at the button's own 2px
+  weight, as the cigarette page's plus is, and the minus is the same button
+  with the upright gone.
+- **The tags are the info page's three closed vocabularies**: menthol (Y/N),
+  harshness (Lite/mid/hard) and the pack price ($15/$25/$30) — eight buttons,
+  outlined rather than filled, half strength until hovered or picked. The
+  page's other two fields are open vocabularies (112 distinct tasting notes
+  and 207 pairings across the 235 pages), so they cannot be buttons; that is
+  why they are not there. Menthol's two are labelled **Menthol and Regular**,
+  which are the catalogue's own flavour words (`FACET_ORDER` in
+  `lib/seed.ts`) — Y and N mean nothing on a button, and no word here is one
+  we invented.
+- **The matching is the catalogue's own**, ported rather than called:
+  `listCigarettes` builds `column = ANY(values)` per facet and ANDs them, and
+  `matchingPacks` in `lib/cigTags.ts` is that rule in the browser. It could
+  not be the same query — that one reads the `cigarettes` table, which holds
+  the 32 placeholder products, and the row is the 247 photographed packs
+  which are deliberately not in it (see `pack_favorites`). A pack with no
+  tags fails every tag, as a NULL column fails `= ANY(...)`.
+- **`npm run build:cigtags`** writes `lib/cigtags.json` from the BUILT pages
+  in `public/cigpages` — text only, so it takes a second where
+  `build:cigpages` takes half an hour. **Re-run it after `build:cigpages`.**
+  It is keyed by PACK, resolving the twelve name-twins with the same rule
+  `lib/cigPages.ts` uses, so the browser needs one lookup and never has to
+  carry the page manifest. Anything unexpected in a page is a hard error.
+- **The grid unfolds out of the plus** by clip-path, not scale, so nothing
+  smears — the quantity menu's trick. Each field starts its own line
+  (`[data-first]`), and `auto-fill` takes as many columns as there is room
+  for: three lines at a laptop width. **How far right it may reach is the
+  owner's rule** — the right edge of the pack left of the framed one, which
+  is `pickX` less the row's own gap, times the zoom. **On a phone that leaves
+  no room at all** (50px at 375, which does not hold an 88px button), so
+  below about 700px the grid runs to the page's right margin instead:
+  `cigTagsRight`. That fallback is a judgement, not the owner's instruction,
+  the same call as the shelf's `ROW_SCALE_FLOOR`.
+- **Confirm spins the row down to the matches** through `startSpin`, the same
+  throw, lap, catch and handover My Saved and reset use — three buttons, one
+  code path. **Reset drops every tag and leaves the menu open**, which the
+  owner asked for: it undoes the filtering, not the reaching for it. A filter
+  matching nothing leaves the row alone, as an empty shelf does (`swapTo`
+  returns early). Verified end to end: Menthol + mid put exactly the 29 packs
+  the manifest says, and only those, on the row.
+
 **OFFERS, My Saved and RECOMMENDED answer a pointer the same way**: the whole
 button drops to 50%, and a 5px dash appears one space after the word. Pressed,
 both go to 25%. (Those were 75 and 50 at first; the owner asked for another 25

@@ -25,9 +25,12 @@ import {
   SPEED,
   cigLayout,
   cigZoom,
+  cigTagsRight,
+  CIG_CONTROLS,
   type CigPack,
 } from '@/lib/cigRow';
 import { LANDING_ROW_CLEAR } from '@/lib/landing';
+import { CIG_TAG_BUTTONS, matchingPacks, tagToken } from '@/lib/cigTags';
 
 /**
  * The row of packs across the middle of the landing page.
@@ -141,6 +144,12 @@ export function CigScroller({
   /** How much bigger the row is drawn than it is laid out — see cigZoom. */
   const [zoom, setZoom] = useState(1);
   const zoomRef = useRef(1);
+  /** The viewport's width, which the tag grid's right edge is worked out from. */
+  const [screenW, setScreenW] = useState(0);
+  const screenRef = useRef(0);
+  /** The tag menu: whether the plus has been opened, and what is picked in it. */
+  const [tagsOpen, setTagsOpen] = useState(false);
+  const [picked, setPicked] = useState<ReadonlySet<string>>(() => new Set());
   const dragRef = useRef<{
     x: number;
     t: number;
@@ -615,7 +624,12 @@ export function CigScroller({
     const measure = () => {
       // the zoom first: it changes the row's own width, and a change here
       // re-lays the row out and brings this observer straight back
-      const z = cigZoom(document.documentElement.clientWidth, window.innerHeight, LANDING_ROW_CLEAR);
+      const screenW = document.documentElement.clientWidth;
+      if (screenW !== screenRef.current) {
+        screenRef.current = screenW;
+        setScreenW(screenW);
+      }
+      const z = cigZoom(screenW, window.innerHeight, LANDING_ROW_CLEAR);
       if (z !== zoomRef.current) {
         zoomRef.current = z;
         setZoom(z);
@@ -913,24 +927,116 @@ export function CigScroller({
     </div>
 
       {/*
-        RESET. Puts the whole catalogue back and clears the filtering — which
-        today means the My Saved shelf, the only thing that narrows this row —
-        and does it through the same spin, because the owner asked for the
-        same animation rather than a cut.
+        THE ROW'S CONTROLS: reset, the tag menu's plus, the tags and confirm.
 
-        A sibling of the row rather than a child: the row is overflow:hidden so
-        its packs do not spill past the edges, and a button inside it would be
-        clipped the moment it sat below the band.
+        Siblings of the row rather than children: the row is overflow:hidden
+        so its packs do not spill past the edges, and a button inside it
+        would be clipped the moment it sat below the band. The wrapper lets
+        the pointer through to the row and carries the two numbers the
+        stylesheet cannot work out for itself — the band's height at this
+        zoom, and how far right the tag grid may reach.
+
+        THAT RIGHT EDGE IS THE OWNER'S — the right edge of the pack left of
+        the framed one — with a phone fallback; both live in `cigTagsRight`.
+        The four sizes come down from `CIG_CONTROLS` so the arithmetic here
+        and the stylesheet's placement cannot drift apart.
       */}
-      <button
-        type="button"
-        className="cig-reset"
-        style={{ '--cig-band': `${CIG_BAND_H * zoom}px` } as React.CSSProperties}
-        onClick={() => startSpin(allIds)}
-        disabled={locked}
+      <div
+        className="cig-controls"
+        style={
+          {
+            '--cig-band': `${CIG_BAND_H * zoom}px`,
+            '--cig-edge': `${CIG_CONTROLS.edge}px`,
+            '--cig-btn-w': `${CIG_CONTROLS.width}px`,
+            '--cig-btn-h': `${CIG_CONTROLS.height}px`,
+            '--cig-btn-gap': `${CIG_CONTROLS.gap}px`,
+            '--cig-tags-right': `${cigTagsRight(pickX, zoom, screenW)}px`,
+          } as React.CSSProperties
+        }
       >
-        reset
-      </button>
+        {/*
+          RESET. Puts the whole catalogue back and clears the filtering —
+          the My Saved shelf and now the tags too — through the same spin,
+          because the owner asked for the same animation rather than a cut.
+          It drops every tag but LEAVES THE MENU OPEN, which is what they
+          asked for: reset undoes the filtering, not the reaching for it.
+        */}
+        <button
+          type="button"
+          className="cig-reset"
+          onClick={() => {
+            setPicked(new Set());
+            startSpin(allIds);
+          }}
+          disabled={locked}
+        >
+          reset
+        </button>
+
+        {/* the plus, and the minus it becomes — two bars, not type; see the CSS */}
+        <button
+          type="button"
+          className="cig-tags-toggle"
+          aria-expanded={tagsOpen}
+          aria-label={tagsOpen ? 'Hide the tag filters' : 'Filter by tag'}
+          onClick={() => setTagsOpen((open) => !open)}
+        >
+          <span className="cig-plus-h" aria-hidden="true" />
+          {tagsOpen ? null : <span className="cig-plus-v" aria-hidden="true" />}
+        </button>
+
+        {/*
+          CONFIRM. The same spin My Saved runs, over the packs the tags
+          match rather than over the reader's shelf — `startSpin` takes the
+          ids either way, so the throw, the lap, the catch and the handover
+          are one code path for all three buttons.
+        */}
+        <button
+          type="button"
+          className="cig-confirm"
+          data-open={tagsOpen ? '' : undefined}
+          aria-hidden={tagsOpen ? undefined : true}
+          tabIndex={tagsOpen ? undefined : -1}
+          onClick={() => startSpin(matchingPacks(allIds, picked))}
+          disabled={locked || !tagsOpen}
+        >
+          confirm
+        </button>
+
+        <div
+          className="cig-tags"
+          data-open={tagsOpen ? '' : undefined}
+          aria-hidden={tagsOpen ? undefined : true}
+          role="group"
+          aria-label="Filter the row by tag"
+        >
+          {CIG_TAG_BUTTONS.map((tag, i) => {
+            const token = tagToken(tag);
+            const on = picked.has(token);
+            return (
+              <button
+                key={token}
+                type="button"
+                className="cig-tag"
+                // the first of each field starts a line — see the CSS
+                data-first={i === 0 || CIG_TAG_BUTTONS[i - 1].key !== tag.key ? '' : undefined}
+                data-on={on ? '' : undefined}
+                aria-pressed={on}
+                tabIndex={tagsOpen ? undefined : -1}
+                onClick={() =>
+                  setPicked((prev) => {
+                    const next = new Set(prev);
+                    if (!next.delete(token)) next.add(token);
+                    return next;
+                  })
+                }
+              >
+                {tag.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
     </>
   );
 }
