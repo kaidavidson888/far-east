@@ -634,9 +634,20 @@ cannot drift.
   `cigTagsRight`. That fallback is a judgement, not the owner's instruction,
   the same call as the shelf's `ROW_SCALE_FLOOR`.
 - **The menu's scrollbar is the page's own colours**: a black thumb and
-  black arrows on a white track, each going RED under the pointer and
-  staying red while the thumb is dragged — the owner's ask, and explicitly
-  *not* a change of opacity, which is what Chrome does to a bar by default.
+  black arrows on a white track, the WHOLE BAR going RED together the moment
+  the pointer is anywhere on it and staying red while the thumb is dragged —
+  the owner's ask, and explicitly *not* a change of opacity, which is what
+  Chrome does to a bar by default.
+  **All of it reddening at once needs the component**, because the
+  scrollbar's parts are siblings with no selector between them:
+  `::-webkit-scrollbar-thumb:hover` reaches the thumb and can say nothing
+  about the arrows. So `CigScroller` watches for the pointer in the gutter —
+  Chrome does deliver `pointermove` there, with the scroller as the target
+  and an `offsetX` past its `clientWidth`, which excludes the bar — and puts
+  `data-bar` ON THE NODE rather than in state, since 81 buttons live under
+  that element and every pointer move would otherwise reconcile the lot. The
+  per-part `:hover` rules stay as the backstop, and cover the drag, where
+  the scrollbar has the pointer and the page is sent nothing at all.
   It is written with `::-webkit-scrollbar`, not `scrollbar-color`: the
   standard property cannot say "under the pointer" (there is no selector for
   the bar), and **where both are given Chrome takes the standard one and

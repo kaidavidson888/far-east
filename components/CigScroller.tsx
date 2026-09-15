@@ -137,6 +137,8 @@ export function CigScroller({
   const layoutRef = useRef(cigLayout(CIG_PACKS));
 
   const rowRef = useRef<HTMLDivElement | null>(null);
+  /** The tag grid, which is the box the menu's own scrollbar belongs to. */
+  const tagsRef = useRef<HTMLDivElement | null>(null);
   const offsetRef = useRef(0);
   const velRef = useRef(0);
   const draggingRef = useRef(false);
@@ -711,6 +713,48 @@ export function CigScroller({
     return () => window.clearTimeout(done);
   }, [tagsOpen]);
 
+  /**
+   * WHETHER THE POINTER IS ON THE MENU'S SCROLLBAR, so that the whole bar
+   * reddens together — the thumb and both arrows — rather than only the part
+   * under the pointer. The owner's ask.
+   *
+   * CSS cannot say this on its own. `::-webkit-scrollbar-thumb:hover` reaches
+   * the thumb and nothing else: the scrollbar's parts are siblings with no
+   * selector between them, so hovering one cannot colour another. What the
+   * page CAN see is where the pointer is, because Chrome still delivers
+   * pointermove for the gutter — with the scroller itself as the target and
+   * an offsetX past its `clientWidth`, which excludes the bar. That is the
+   * whole test.
+   *
+   * THE ATTRIBUTE IS SET ON THE NODE, NOT IN STATE. There are 81 buttons
+   * under this element and a state change would reconcile every one of them
+   * on every pointer move across the menu. The stylesheet is the only reader,
+   * so the DOM is the right place to put it.
+   *
+   * While the thumb is being dragged the page gets no moves at all — the
+   * scrollbar has the pointer — so the attribute simply stays as it was when
+   * it was grabbed, which is on. `:active` on the thumb backs that up.
+   */
+  useEffect(() => {
+    const el = tagsRef.current;
+    if (!el) return;
+    if (!tagsOpen) {
+      el.removeAttribute('data-bar');
+      return;
+    }
+    const move = (e: PointerEvent) => {
+      const on = e.target === el && e.offsetX >= el.clientWidth;
+      if (on !== el.hasAttribute('data-bar')) el.toggleAttribute('data-bar', on);
+    };
+    const leave = () => el.removeAttribute('data-bar');
+    el.addEventListener('pointermove', move);
+    el.addEventListener('pointerleave', leave);
+    return () => {
+      el.removeEventListener('pointermove', move);
+      el.removeEventListener('pointerleave', leave);
+    };
+  }, [tagsOpen]);
+
   /** Wheel. Non-passive, because a vertical wheel is turned sideways here. */
   useEffect(() => {
     const el = rowRef.current;
@@ -1079,6 +1123,7 @@ export function CigScroller({
         </button>
 
         <div
+          ref={tagsRef}
           className="cig-tags"
           data-open={tagsOpen ? '' : undefined}
           data-shown={menuPainted ? '' : undefined}

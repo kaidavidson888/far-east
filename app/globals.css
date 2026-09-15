@@ -1741,6 +1741,23 @@ ul, ol { list-style: none; }
 .cig-tags::-webkit-scrollbar-button:vertical:end:decrement {
   display: none;
 }
+/* THE WHOLE BAR REDDENS TOGETHER — thumb and both triangles — whenever the
+   pointer is anywhere on it. The owner's ask, and it cannot be said in CSS
+   alone: the scrollbar's parts are siblings with no selector between them,
+   so `::-webkit-scrollbar-thumb:hover` reaches the thumb and nothing else.
+   `data-bar` is the component saying where the pointer is (see CigScroller
+   — Chrome does deliver pointermove over the gutter), and it is set on the
+   node rather than held in state, because 81 buttons live under this
+   element. The per-part `:hover` rules above stay as the backstop. */
+.cig-tags[data-bar]::-webkit-scrollbar-thumb {
+  background: #ff0000;
+}
+.cig-tags[data-bar]::-webkit-scrollbar-button:vertical:decrement {
+  background-image: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%208%205'%3E%3Cpath%20d='M4%200%208%205H0z'%20fill='%23ff0000'/%3E%3C/svg%3E");
+}
+.cig-tags[data-bar]::-webkit-scrollbar-button:vertical:increment {
+  background-image: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%208%205'%3E%3Cpath%20d='M0%200h8L4%205z'%20fill='%23ff0000'/%3E%3C/svg%3E");
+}
 @supports not selector(::-webkit-scrollbar) {
   .cig-tags {
     scrollbar-color: #010101 #ffffff;
