@@ -1629,10 +1629,10 @@ ul, ol { list-style: none; }
 }
 
 /* The grid unfolds out of the plus: its top-left corner IS the plus's left
-   edge, one gap below it, and it is CLIPPED open from that corner rather
-   than scaled — clipping keeps every letterform the size it will end at, so
-   nothing smears on the way out. The same trick the cigarette page's
-   quantity menu uses.
+   edge, one gap below it. Nothing here is clipped or scaled — the buttons
+   arrive one at a time on the compositor, which is written up on
+   `.cig-controls` above; this block is only where the grid sits and how
+   wide it may be.
 
    It fills the room between the plus and `--cig-tags-right`, which the row
    measures: the right edge of the pack to the left of the framed one, so
@@ -1728,12 +1728,56 @@ ul, ol { list-style: none; }
     background-color 120ms ease-out,
     color 120ms ease-out;
 }
-/* Each of the info page's three fields starts its own line, so the grid
-   says what the values mean without a heading over them — menthol, then
-   harshness, then price. A field wider than the room there is still wraps
-   within itself; the next one still starts at the left. */
+/* Each group starts its own line, under its own heading. The rule stands
+   whether or not the heading above it does — a group that lost its heading
+   would still begin at the left rather than trailing on from the group
+   before it. A group wider than the room there is still wraps within
+   itself; the next one still starts at the left. */
 .cig-tag-slot[data-first] {
   grid-column-start: 1;
+}
+
+/* THE HEADING OVER EACH GROUP (the owner's 2026-09-15 ask): a red outline
+   two buttons wide and one button tall, standing between one group of tags
+   and the next with the group's name in it — MENTHOL CONTENT, HARSHNESS,
+   PRICE PER PACK, FLAVOR PROFILE, RECOMMENDED PAIRINGS, BRAND, in that
+   order. Six of them, each OPENING a group; there is none after the last,
+   because a heading opens a group rather than closes one.
+
+   IT TAKES A WHOLE LINE (1 / -1) AND IS DRAWN TWO COLUMNS WIDE, rather than
+   spanning two tracks. A span of two in a grid with room for only one
+   column would invent a second, implicit one, and the menu would reach past
+   the right edge the owner set for it. Taking the line and stating the
+   width is the same picture at every column count.
+
+   Red and 2px, like confirm; the type is the owner's face in capitals, and
+   bold is a STROKE on the outline (0.03em, set inline with the size) —
+   the face has one weight and these controls set `font-synthesis: none`, so
+   a `font-weight: bold` here would ask for something the browser has
+   already been told not to fake. The size comes down from the component at
+   one figure for all six: see CIG_HEADING_SIZE in lib/cigTags.ts.
+
+   It is not a control and does not take the pointer, so the row underneath
+   can still be dragged through it. */
+.cig-tag-head {
+  grid-column: 1 / -1;
+  justify-self: start;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: calc(var(--cig-btn-w) * 2 + var(--cig-btn-gap));
+  height: var(--cig-btn-h);
+  border: 2px solid #ff0000;
+  color: #ff0000;
+  font-family: var(--font-typed);
+  font-weight: 400;
+  font-synthesis: none;
+  line-height: 1;
+  white-space: nowrap;
+  overflow: hidden;
+}
+.cig-controls .cig-tag-head {
+  pointer-events: none;
 }
 .cig-tag {
   width: var(--cig-btn-w);

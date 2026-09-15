@@ -518,7 +518,8 @@ cannot drift.
   face carries no `+` or `-` to set and a fallback face's would have been a
   different letterform beside the house one.
 - **Six groups, 81 buttons**, outlined rather than filled, half strength
-  until hovered or picked, each group starting its own line in the grid.
+  until hovered or picked, each group starting its own line in the grid
+  under its own heading (below).
   Three are the info page's closed vocabularies — menthol (Y/N), harshness
   (Lite/mid/hard), pack price ($15/$25/$30). One is the **brand**, the name
   before the em dash, all 63 of them. The last two are **families**: the
@@ -526,7 +527,14 @@ cannot drift.
   distinct values across the 235 pages), so the owner asked for five
   categories encompassing each, and `scripts/build-cigtags.mjs` classifies
   every value into one — **Sweet, Fruit, Fresh, Floral, Earthy** for notes
-  and **Cannabis, Alcohol, Soft, Dessert, Savoury** for pairings. Anything
+  and **Cannabis, Alcohol, Alcohol Free, Dessert, Savoury** for pairings.
+  (That fifth one was **Soft** until the owner asked for a better word:
+  soft means a cold fizzy drink, and nine of its fourteen rules are a tea,
+  a coffee or a broth. "Alcohol Free" is the one thing every member of it
+  has in common and reads as the exact complement of the Alcohol button
+  beside it. **No hyphen anywhere in a label** — the face carries letters,
+  digits, `#` and `$` and nothing else, so "Non-Alcoholic" would have drawn
+  its hyphen in the fallback face.) Anything
   unmatched is a HARD ERROR rather than a silent "other", so a word added
   later cannot quietly stop being filterable. Menthol's two buttons are
   labelled **Menthol and Regular**, the catalogue's own flavour words
@@ -554,6 +562,35 @@ cannot drift.
   one line, otherwise two lines at whatever fits, capped at 12 so the pair
   still clears the box's 26px. Only the longest dozen brands reach a second
   line.
+- **EVERY GROUP HAS A HEADING OVER IT** (the owner's 2026-09-15 ask): a red
+  outline two buttons wide and one tall, standing between one group of tags
+  and the next with the group's name in it, in the owner's face, in capitals
+  and bold — **MENTHOL CONTENT, HARSHNESS, PRICE PER PACK, FLAVOR PROFILE,
+  RECOMMENDED PAIRINGS, BRAND**, in that order, their words and their order.
+  Six of them, each OPENING a group; there is none after the last, because a
+  heading opens a group rather than closes one ("stop after the last one").
+  The words live in `GROUP_HEADING` in `scripts/build-cigtags.mjs`, which
+  measures each one off the ink table and asserts the set and the order
+  against the groups the buttons actually run in, so a group added later
+  cannot arrive unnamed. `CIG_TAG_MENU` in `lib/cigTags.ts` is the grid as it
+  is laid out — headings and buttons in one flat list, so the arrival's
+  stagger counts through both.
+  - **Bold is a stroke** (0.03em on the outline, the shelf price's own trick
+    and the age gate's): the face has one weight and these controls set
+    `font-synthesis: none`, so `font-weight: bold` would ask for exactly what
+    the browser has been told not to fake.
+  - **All six are set at ONE size**, worked out from the longest of them
+    ("RECOMMENDED PAIRINGS", 13.84em) so that it fits its box on one line —
+    12.86px, its ink 1.98px inside the rule at each end, which is the 2px of
+    air a button's label gets. Sizing each heading to its own width the way
+    `fitLabel` sizes a button gives six different sizes down a column of
+    headings; a button is one of eighty and is read against its neighbours in
+    the line, a heading against the other headings.
+  - **It takes a whole grid line (`1 / -1`) and is DRAWN two columns wide**,
+    rather than spanning two tracks. A span of two in a grid with room for
+    one column would invent a second, implicit one and push the menu past the
+    right edge the owner set for it; taking the line and stating the width is
+    the same picture at every column count.
 - **The matching is the catalogue's own**, ported rather than called:
   `listCigarettes` builds `column = ANY(values)` per facet and ANDs them, and
   `matchingPacks` in `lib/cigTags.ts` is that rule in the browser. It could

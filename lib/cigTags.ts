@@ -113,3 +113,63 @@ export function fitLabel(em: number): { size: number; lines: 1 | 2 } {
   if (one >= TAG_LABEL.oneLineFloor) return { size: +Math.min(TAG_LABEL.size, one).toFixed(2), lines: 1 };
   return { size: +Math.min(TAG_LABEL.twoLineMax, (room * 2) / em).toFixed(2), lines: 2 };
 }
+
+/**
+ * THE HEADING OVER EACH GROUP (the owner's 2026-09-15 ask): a red outline
+ * two buttons wide and one tall, standing between one group of tags and the
+ * next, with the group's name in it — in the owner's face, in capitals, and
+ * bold. Six of them, one before each group, and none after the last: they
+ * open a group rather than close one.
+ *
+ * BOLD IS A STROKE, because the face has one weight — the shelf price's own
+ * trick and the age gate's, 0.03 of the size laid on the glyph's outline.
+ * `font-weight: bold` would ask the browser to smear the drawn weight, which
+ * is what `font-synthesis: none` is on these controls to refuse.
+ *
+ * ALL SIX ARE SET AT ONE SIZE, worked out from the LONGEST of them
+ * ("RECOMMENDED PAIRINGS", 13.8em) so that it fits its box on one line.
+ * Sizing each heading to its own width the way `fitLabel` sizes a button
+ * would have given six different sizes down a column of headings, which
+ * reads as carelessness; a button is one of eighty and is judged against its
+ * neighbours in the line, a heading is judged against the other headings.
+ * The box is two buttons and the gap between them, less its own rule and
+ * the same 2px of air a button's label gets.
+ */
+export const TAG_HEADING = { columns: 2, stroke: 0.03, pad: 2 };
+
+export type CigTagHeading = { group: CigTagGroup; heading: string; em: number };
+
+export const CIG_TAG_HEADINGS = data.groups as CigTagHeading[];
+
+/** Two buttons and the gap between them — the outline's drawn width. */
+export const CIG_HEADING_WIDTH = CIG_CONTROLS.width * TAG_HEADING.columns + CIG_CONTROLS.gap * (TAG_HEADING.columns - 1);
+
+export const CIG_HEADING_SIZE = +Math.min(
+  TAG_LABEL.size,
+  (CIG_HEADING_WIDTH - 2 * 2 - 2 * TAG_HEADING.pad) / Math.max(...CIG_TAG_HEADINGS.map((h) => h.em)),
+).toFixed(2);
+
+/**
+ * The menu as it is laid out: every group's heading, then that group's
+ * buttons. Flat rather than nested, because the grid is one flow and the
+ * arrival's stagger counts through it — a heading is as much a thing that
+ * appears as a button is.
+ */
+export type CigMenuItem =
+  | { kind: 'heading'; key: string; heading: string }
+  | { kind: 'tag'; key: string; tag: CigTagButton; first: boolean };
+
+export const CIG_TAG_MENU: CigMenuItem[] = (() => {
+  const headings = new Map(CIG_TAG_HEADINGS.map((h) => [h.group, h.heading]));
+  const items: CigMenuItem[] = [];
+  let group: CigTagGroup | null = null;
+  for (const tag of CIG_TAG_BUTTONS) {
+    const first = tag.group !== group;
+    if (first) {
+      group = tag.group;
+      items.push({ kind: 'heading', key: `heading:${tag.group}`, heading: headings.get(tag.group) ?? tag.group.toUpperCase() });
+    }
+    items.push({ kind: 'tag', key: tagToken(tag), tag, first });
+  }
+  return items;
+})();

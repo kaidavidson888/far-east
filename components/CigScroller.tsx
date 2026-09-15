@@ -31,7 +31,7 @@ import {
   type CigPack,
 } from '@/lib/cigRow';
 import { LANDING_ROW_CLEAR } from '@/lib/landing';
-import { CIG_TAG_BUTTONS, fitLabel, matchingPacks, tagToken } from '@/lib/cigTags';
+import { CIG_HEADING_SIZE, CIG_TAG_MENU, TAG_HEADING, fitLabel, matchingPacks } from '@/lib/cigTags';
 import { CIG_TOGGLE_GLYPH } from '@/lib/cigToggleGlyph';
 
 /**
@@ -1086,19 +1086,42 @@ export function CigScroller({
           role="group"
           aria-label="Filter the row by tag"
         >
-          {CIG_TAG_BUTTONS.map((tag, i) => {
-            const token = tagToken(tag);
-            const on = picked.has(token);
+          {CIG_TAG_MENU.map((item, i) => {
+            /* A HEADING OPENS EACH GROUP — the owner's red outline, two
+               buttons wide and one tall, with the group's name in it. It is
+               a `.cig-tag-slot` like everything else in the grid so that it
+               arrives in the same wave and takes its turn in the stagger;
+               only its look and the line it takes are its own. Bold is a
+               stroke on the outline, the face having one weight. */
+            if (item.kind === 'heading') {
+              return (
+                <span
+                  key={item.key}
+                  className="cig-tag-slot cig-tag-head"
+                  style={
+                    {
+                      '--i': i,
+                      fontSize: `${CIG_HEADING_SIZE}px`,
+                      WebkitTextStrokeWidth: `${TAG_HEADING.stroke}em`,
+                    } as React.CSSProperties
+                  }
+                >
+                  {item.heading}
+                </span>
+              );
+            }
+            const { tag, first } = item;
+            const on = picked.has(item.key);
             const fit = fitLabel(tag.em);
             return (
               // the wrapper is what arrives, so the button's own half-strength
               // opacity and the arrival's never fight over the one property
               <span
-                key={token}
+                key={item.key}
                 className="cig-tag-slot"
-                // the first of each group starts a line, and --i staggers the
-                // arrival so the buttons land nearest-the-plus first — see the CSS
-                data-first={i === 0 || CIG_TAG_BUTTONS[i - 1].group !== tag.group ? '' : undefined}
+                // the first of each group starts a line under its heading, and
+                // --i staggers the arrival nearest-the-plus first — see the CSS
+                data-first={first ? '' : undefined}
                 style={{ '--i': i } as React.CSSProperties}
               >
                 <button
@@ -1113,7 +1136,7 @@ export function CigScroller({
                   onClick={() =>
                     setPicked((prev) => {
                       const next = new Set(prev);
-                      if (!next.delete(token)) next.add(token);
+                      if (!next.delete(item.key)) next.add(item.key);
                       return next;
                     })
                   }
