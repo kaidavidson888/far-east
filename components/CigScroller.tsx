@@ -150,6 +150,19 @@ export function CigScroller({
   /** The tag menu: whether the plus has been opened, and what is picked in it. */
   const [tagsOpen, setTagsOpen] = useState(false);
   const [picked, setPicked] = useState<ReadonlySet<string>>(() => new Set());
+  /**
+   * How far right the grid reaches, TAKEN WHEN IT OPENS AND THEN HELD.
+   *
+   * The owner's rule measures the pack to the left of the framed one, and
+   * that pack changes every time the row moves — so read live, the grid
+   * re-flowed under the reader's hand as the catalogue scrolled past, and
+   * the column count jumped about with it. The owner asked for it to stay
+   * as it first appears. So it is a snapshot: set when the plus is pressed
+   * and left alone while the row runs. A resize is the one thing that
+   * refreshes it, because a stale width there could put the grid off the
+   * side of the screen.
+   */
+  const [tagsRight, setTagsRight] = useState(0);
   const dragRef = useRef<{
     x: number;
     t: number;
@@ -163,6 +176,9 @@ export function CigScroller({
   const [selected, setSelected] = useState(-1);
   /** Where the frame goes: the picked pack's own left edge on screen. */
   const [pickX, setPickX] = useState(0);
+  /** The same, for the tag grid to read the instant it opens without depending on it. */
+  const pickXRef = useRef(0);
+  pickXRef.current = pickX;
   /**
    * Which pack the FRAME is on, which is not always the one nearest the
    * middle — see CIG_FRAME_HOLD_MS. `pendingSince` is when some other pack
@@ -657,6 +673,17 @@ export function CigScroller({
 
   useEffect(() => () => window.clearTimeout(timerRef.current), []);
 
+  /**
+   * The grid's reach, refreshed when the window changes shape — not when the
+   * row moves. The press sets it too, so the very first frame the grid is
+   * drawn in is already the right width; this agrees with that value, so
+   * opening costs no second render.
+   */
+  useEffect(() => {
+    if (!tagsOpen) return;
+    setTagsRight(cigTagsRight(pickXRef.current, zoom, screenW));
+  }, [tagsOpen, zoom, screenW]);
+
   /** Wheel. Non-passive, because a vertical wheel is turned sideways here. */
   useEffect(() => {
     const el = rowRef.current;
@@ -950,7 +977,7 @@ export function CigScroller({
             '--cig-btn-w': `${CIG_CONTROLS.width}px`,
             '--cig-btn-h': `${CIG_CONTROLS.height}px`,
             '--cig-btn-gap': `${CIG_CONTROLS.gap}px`,
-            '--cig-tags-right': `${cigTagsRight(pickX, zoom, screenW)}px`,
+            '--cig-tags-right': `${tagsRight}px`,
           } as React.CSSProperties
         }
       >
@@ -979,7 +1006,11 @@ export function CigScroller({
           className="cig-tags-toggle"
           aria-expanded={tagsOpen}
           aria-label={tagsOpen ? 'Hide the tag filters' : 'Filter by tag'}
-          onClick={() => setTagsOpen((open) => !open)}
+          onClick={() => {
+            // measured on the press, so the grid opens at the width it keeps
+            if (!tagsOpen) setTagsRight(cigTagsRight(pickXRef.current, zoomRef.current, screenRef.current));
+            setTagsOpen((open) => !open);
+          }}
         >
           <span className="cig-plus-h" aria-hidden="true" />
           {tagsOpen ? null : <span className="cig-plus-v" aria-hidden="true" />}

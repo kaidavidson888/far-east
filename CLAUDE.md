@@ -539,6 +539,15 @@ cannot drift.
   below about 700px the grid runs to the page's right margin instead:
   `cigTagsRight`. That fallback is a judgement, not the owner's instruction,
   the same call as the shelf's `ROW_SCALE_FLOOR`.
+- **That reach is MEASURED ONCE, WHEN THE PLUS IS PRESSED, and then held.**
+  The pack left of the framed one changes every time the row moves, so read
+  live the grid re-flowed under the reader's hand as the catalogue scrolled
+  and the column count jumped about with it; the owner asked for it to stay
+  as it first appears. The press sets it — so the opening frame is already
+  the width it keeps — and a resize is the only thing that refreshes it, a
+  stale width there being able to put the grid off the side of the screen.
+  Reopening takes a fresh measurement, which is what makes it right for
+  whatever pack is framed by then.
 - **Confirm spins the row down to the matches** through `startSpin`, the same
   throw, lap, catch and handover My Saved and reset use — three buttons, one
   code path. **Reset drops every tag and leaves the menu open**, which the
