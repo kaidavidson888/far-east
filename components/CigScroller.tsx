@@ -154,13 +154,18 @@ export function CigScroller({
    * How far right the grid reaches, TAKEN WHEN IT OPENS AND THEN HELD.
    *
    * The owner's rule measures the pack to the left of the framed one, and
-   * that pack changes every time the row moves — so read live, the grid
-   * re-flowed under the reader's hand as the catalogue scrolled past, and
-   * the column count jumped about with it. The owner asked for it to stay
-   * as it first appears. So it is a snapshot: set when the plus is pressed
-   * and left alone while the row runs. A resize is the one thing that
-   * refreshes it, because a stale width there could put the grid off the
-   * side of the screen.
+   * which pack that is changes every time the row moves — so read live, the
+   * grid re-flowed under the reader's hand as the catalogue scrolled past.
+   * It is a snapshot: set when the plus is pressed, and left alone while the
+   * row runs. A resize is the one thing that refreshes it, because a stale
+   * width there could put the grid off the side of the screen.
+   *
+   * WHAT IS MEASURED MATTERS AS MUCH AS WHEN. `cigTagsRight` works the edge
+   * out from the row's middle and the framed pack's WIDTH, not from where
+   * that pack currently is, so pressing the plus mid-throw gives the same
+   * grid as pressing it at rest. Taken from the live position instead, five
+   * presses at five moments of a throw gave five different grids — 233px to
+   * 311px, which is the difference between two columns and three.
    */
   const [tagsRight, setTagsRight] = useState(0);
   const dragRef = useRef<{
@@ -176,9 +181,8 @@ export function CigScroller({
   const [selected, setSelected] = useState(-1);
   /** Where the frame goes: the picked pack's own left edge on screen. */
   const [pickX, setPickX] = useState(0);
-  /** The same, for the tag grid to read the instant it opens without depending on it. */
-  const pickXRef = useRef(0);
-  pickXRef.current = pickX;
+  /** The framed pack's width, for the tag grid to read the instant it opens. */
+  const pickWRef = useRef(0);
   /**
    * Which pack the FRAME is on, which is not always the one nearest the
    * middle — see CIG_FRAME_HOLD_MS. `pendingSince` is when some other pack
@@ -681,7 +685,7 @@ export function CigScroller({
    */
   useEffect(() => {
     if (!tagsOpen) return;
-    setTagsRight(cigTagsRight(pickXRef.current, zoom, screenW));
+    setTagsRight(cigTagsRight(widthRef.current, pickWRef.current, zoom, screenW));
   }, [tagsOpen, zoom, screenW]);
 
   /** Wheel. Non-passive, because a vertical wheel is turned sideways here. */
@@ -800,6 +804,7 @@ export function CigScroller({
   };
 
   const pick = selected >= 0 ? (packs[selected] ?? null) : null;
+  pickWRef.current = pick?.w ?? 0;
 
   return (
     <>
@@ -1008,7 +1013,7 @@ export function CigScroller({
           aria-label={tagsOpen ? 'Hide the tag filters' : 'Filter by tag'}
           onClick={() => {
             // measured on the press, so the grid opens at the width it keeps
-            if (!tagsOpen) setTagsRight(cigTagsRight(pickXRef.current, zoomRef.current, screenRef.current));
+            if (!tagsOpen) setTagsRight(cigTagsRight(widthRef.current, pickWRef.current, zoomRef.current, screenRef.current));
             setTagsOpen((open) => !open);
           }}
         >
