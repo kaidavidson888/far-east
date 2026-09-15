@@ -502,11 +502,21 @@ the reset button's 88x30 with 10 between — `CIG_CONTROLS` in `lib/cigRow.ts`
 is the one copy of those numbers, handed to the stylesheet as custom
 properties on `.cig-controls` so the component's arithmetic and the CSS
 cannot drift.
-- **The plus is drawn, not typed.** The owner's face carries letters and
-  digits only, so a `+` out of it would come from the fallback — a different
-  letterform beside the house one. It is two bars at the button's own 2px
-  weight, as the cigarette page's plus is, and the minus is the same button
-  with the upright gone.
+- **The plus and minus are the owner's own marks** (`lib/cigToggleGlyph.ts`,
+  supplied as `scripts/assets/tag-plus.svg` and `tag-minus.svg`): a pinwheel
+  of four rounded bars about a centre dot, and a bar with an eye in it. They
+  are **drawn inline and filled with `currentColor`**, never loaded as an
+  `<img>` — the button inverts under the pointer, black ground and white
+  mark, and an image cannot inherit that; the owner's files paint them warm
+  brown on cream, and both of those go. Sized to sit inside the rule: the
+  button is 30 square with a 2px rule, the plus takes 16 of the 26 that
+  leaves (5 clear all round) and the minus takes THE SAME SCALE rather than
+  the same width, so the pair keeps the proportions they were drawn with (18
+  x 6.9, 4 clear at the sides). Each viewBox is that glyph's own ink box,
+  measured off a render at 4x — the supplied frames are mostly empty around
+  the mark. Before these arrived it was two plain bars, because the owner's
+  face carries no `+` or `-` to set and a fallback face's would have been a
+  different letterform beside the house one.
 - **The tags are the info page's three closed vocabularies**: menthol (Y/N),
   harshness (Lite/mid/hard) and the pack price ($15/$25/$30) — eight buttons,
   outlined rather than filled, half strength until hovered or picked. The

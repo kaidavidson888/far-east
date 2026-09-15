@@ -1596,11 +1596,11 @@ ul, ol { list-style: none; }
    carries, drawn like reset but outlined rather than filled; and a confirm
    under reset that spins the row down to what they pick.
 
-   THE PLUS IS DRAWN, NOT TYPED. The owner's face carries letters and digits
-   only, so a + and a - out of it would come from whatever the stack falls
-   back to — a different letterform beside the house one. It is two bars
-   instead, the button's own 2px weight, which is also what the cigarette
-   page's plus does. The minus is the same button with the upright gone. */
+   THE PLUS AND MINUS ARE THE OWNER'S OWN MARKS (lib/cigToggleGlyph.ts),
+   drawn inline and filled with currentColor so they take the button's ink
+   and invert with it. They were two plain bars before, which was only ever
+   a stand-in: the owner's face carries no + or - to set, and a fallback
+   face's would have been a different letterform beside the house one. */
 .cig-tags-toggle {
   position: absolute;
   left: var(--cig-col);
@@ -1615,22 +1615,16 @@ ul, ol { list-style: none; }
   background: #010101;
   color: #ffffff;
 }
-.cig-tags-toggle span {
-  position: absolute;
-  left: 50%;
-  top: 50%;
+/* The mark is centred in what the rule leaves, at the size the module sets
+   — 16px for the plus inside 26px of room. The button is the flex box so
+   the two glyphs, which are different shapes, both sit dead centre. */
+.cig-tags-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.cig-tags-toggle svg {
   display: block;
-  background: currentColor;
-}
-.cig-tags-toggle .cig-plus-h {
-  width: 12px;
-  height: 2px;
-  transform: translate(-50%, -50%);
-}
-.cig-tags-toggle .cig-plus-v {
-  width: 2px;
-  height: 12px;
-  transform: translate(-50%, -50%);
 }
 
 /* The grid unfolds out of the plus: its top-left corner IS the plus's left

@@ -31,6 +31,7 @@ import {
 } from '@/lib/cigRow';
 import { LANDING_ROW_CLEAR } from '@/lib/landing';
 import { CIG_TAG_BUTTONS, matchingPacks, tagToken } from '@/lib/cigTags';
+import { CIG_TOGGLE_GLYPH } from '@/lib/cigToggleGlyph';
 
 /**
  * The row of packs across the middle of the landing page.
@@ -1005,7 +1006,8 @@ export function CigScroller({
           reset
         </button>
 
-        {/* the plus, and the minus it becomes — two bars, not type; see the CSS */}
+        {/* the plus, and the minus it becomes — the owner's own marks, drawn
+            inline so they take the button's ink and invert with it */}
         <button
           type="button"
           className="cig-tags-toggle"
@@ -1017,8 +1019,22 @@ export function CigScroller({
             setTagsOpen((open) => !open);
           }}
         >
-          <span className="cig-plus-h" aria-hidden="true" />
-          {tagsOpen ? null : <span className="cig-plus-v" aria-hidden="true" />}
+          {(() => {
+            const glyph = tagsOpen ? CIG_TOGGLE_GLYPH.minus : CIG_TOGGLE_GLYPH.plus;
+            return (
+              <svg
+                viewBox={glyph.viewBox}
+                width={glyph.width}
+                height={glyph.height}
+                aria-hidden="true"
+                focusable="false"
+              >
+                <g transform={glyph.transform}>
+                  <path d={glyph.d} fill="currentColor" fillRule={glyph.fillRule} />
+                </g>
+              </svg>
+            );
+          })()}
         </button>
 
         {/*
