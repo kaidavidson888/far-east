@@ -1659,6 +1659,14 @@ ul, ol { list-style: none; }
   overflow-x: hidden;
   /* room for the bar, so the last column is not sat under it */
   scrollbar-gutter: stable;
+  /* THE BAR IS THE PAGE'S OWN TWO COLOURS: a black thumb on a white track,
+     the owner's ask, rather than the browser's grey on grey. Said with the
+     standard `scrollbar-color` and NOT with `::-webkit-scrollbar` — styling
+     that pseudo-element switches Chrome to a custom bar and takes its width
+     with it, and the width here is the `scrollbar-gutter` above, which is
+     what decides whether the last column of tags fits. Colour only, so the
+     grid keeps exactly the columns it had. */
+  scrollbar-color: #010101 #ffffff;
   /* A SHUT MENU IS NOT PAINTED AT ALL, which is how its scrollbar goes away
      with it: the buttons fade on their own but the box they scroll in does
      not, so a closed menu left a bar hanging down the page beside nothing.
