@@ -391,3 +391,13 @@ export function cigTagsRight(rowWidth: number, packWidth: number, zoom: number, 
   if (rule - left >= width) return rule;
   return Math.max(left + width, screenW - edge);
 }
+
+/**
+ * How long the tag menu takes to go back into the plus.
+ *
+ * It lives here rather than only in the stylesheet because the component
+ * has to hold the menu PAINTED for exactly that long after it is shut —
+ * otherwise the buttons vanish instead of leaving. The stylesheet takes it
+ * as `--cig-shut-ms` off `.cig-controls`, so there is one number.
+ */
+export const CIG_MENU_SHUT_MS = 200;

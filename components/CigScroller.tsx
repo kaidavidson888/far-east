@@ -27,6 +27,7 @@ import {
   cigZoom,
   cigTagsRight,
   CIG_CONTROLS,
+  CIG_MENU_SHUT_MS,
   type CigPack,
 } from '@/lib/cigRow';
 import { LANDING_ROW_CLEAR } from '@/lib/landing';
@@ -169,6 +170,17 @@ export function CigScroller({
    * 311px, which is the difference between two columns and three.
    */
   const [tagsRight, setTagsRight] = useState(0);
+  /**
+   * Whether the menu is PAINTED, which is not the same as open: it is held
+   * on for the length of the close so the buttons can be seen leaving.
+   *
+   * A shut menu that is still painted leaves its scrollbar hanging down the
+   * page beside nothing, which is what the owner saw. Visibility is what
+   * takes the bar away without touching the layout — the gutter stays
+   * reserved, so the grid has the same columns shut or open, where hiding
+   * the overflow instead would drop one at the moment of opening.
+   */
+  const [menuPainted, setMenuPainted] = useState(false);
   const dragRef = useRef<{
     x: number;
     t: number;
@@ -689,6 +701,16 @@ export function CigScroller({
     setTagsRight(cigTagsRight(widthRef.current, pickWRef.current, zoom, screenW));
   }, [tagsOpen, zoom, screenW]);
 
+  /** Painted the instant it opens, and until the buttons have finished leaving. */
+  useEffect(() => {
+    if (tagsOpen) {
+      setMenuPainted(true);
+      return;
+    }
+    const done = window.setTimeout(() => setMenuPainted(false), CIG_MENU_SHUT_MS);
+    return () => window.clearTimeout(done);
+  }, [tagsOpen]);
+
   /** Wheel. Non-passive, because a vertical wheel is turned sideways here. */
   useEffect(() => {
     const el = rowRef.current;
@@ -983,6 +1005,7 @@ export function CigScroller({
             '--cig-btn-w': `${CIG_CONTROLS.width}px`,
             '--cig-btn-h': `${CIG_CONTROLS.height}px`,
             '--cig-btn-gap': `${CIG_CONTROLS.gap}px`,
+            '--cig-shut-ms': `${CIG_MENU_SHUT_MS}ms`,
             '--cig-tags-right': `${tagsRight}px`,
           } as React.CSSProperties
         }
@@ -1058,6 +1081,7 @@ export function CigScroller({
         <div
           className="cig-tags"
           data-open={tagsOpen ? '' : undefined}
+          data-shown={menuPainted ? '' : undefined}
           aria-hidden={tagsOpen ? undefined : true}
           role="group"
           aria-label="Filter the row by tag"

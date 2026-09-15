@@ -1529,7 +1529,8 @@ ul, ol { list-style: none; }
   --cig-ease-out: cubic-bezier(0.55, 0.06, 0.68, 0.19);
   --cig-grow-ms: 380ms;
   --cig-fade-ms: 300ms;
-  --cig-shut-ms: 200ms;
+  /* --cig-shut-ms is set inline from CIG_MENU_SHUT_MS, because the component
+     has to hold the menu painted for exactly that long while it leaves */
   --cig-stagger: 26ms;
   /* where a closed button sits: back towards the plus, up and to the left */
   --cig-from: translate(-10px, -12px);
@@ -1658,6 +1659,23 @@ ul, ol { list-style: none; }
   overflow-x: hidden;
   /* room for the bar, so the last column is not sat under it */
   scrollbar-gutter: stable;
+  /* A SHUT MENU IS NOT PAINTED AT ALL, which is how its scrollbar goes away
+     with it: the buttons fade on their own but the box they scroll in does
+     not, so a closed menu left a bar hanging down the page beside nothing.
+     Visibility does not touch layout, so the gutter stays reserved and the
+     column count is the same shut or open — hiding the overflow instead
+     would drop a column at the moment of opening.
+
+     `data-shown` is NOT `data-open`: it is held on for the length of the
+     close so the buttons can be seen leaving, and the component owns that
+     timing. Doing it in CSS, as `transition: visibility 0s linear <shut>`,
+     works in a browser but hangs on a transition actually running, and it
+     cannot be checked here — the Browser pane freezes transitions, so the
+     menu would have read as painted for ever. State is the honest way. */
+  visibility: hidden;
+}
+.cig-tags[data-shown] {
+  visibility: visible;
 }
 /* EACH BUTTON ARRIVES IN ITS OWN WRAPPER, and the wrapper is the only thing
    that moves. Two opacities are needed here and they must not fight: the
