@@ -527,22 +527,30 @@ cannot drift.
   distinct values across the 235 pages), so the owner asked for five
   categories encompassing each, and `scripts/build-cigtags.mjs` classifies
   every value into one — **Sweet, Fruit, Fresh, Floral, Earthy** for notes
-  and **Cannabis, Alcohol, Alcohol Free, Dessert, Savoury** for pairings.
-  (That fifth one was **Soft** until the owner asked for a better word:
-  soft means a cold fizzy drink, and nine of its fourteen rules are a tea,
-  a coffee or a broth. "Alcohol Free" is the one thing every member of it
-  has in common and reads as the exact complement of the Alcohol button
-  beside it. **No hyphen anywhere in a label** — the face carries letters,
-  digits, `#` and `$` and nothing else, so "Non-Alcoholic" would have drawn
-  its hyphen in the fallback face.) Anything
+  and **Cannabis, Alcohol, Beverage, Dessert, Savoury** for pairings.
+  (That third one took the owner two goes to name. It was **Soft**, which
+  means a cold fizzy drink where most of these are a tea or a coffee; then
+  **Alcohol Free**, which is what they are but reads as a qualifier on the
+  Alcohol button beside it rather than as a thing of its own; now
+  **Beverage**, which it can be called because the one member that was not
+  a drink has left — see the broth below. **No hyphen anywhere in a label**
+  — the face carries letters, digits, `#` and `$` and nothing else, so
+  "Non-Alcoholic" would have drawn its hyphen in the fallback face.)
+  Anything
   unmatched is a HARD ERROR rather than a silent "other", so a word added
   later cannot quietly stop being filterable. Menthol's two buttons are
   labelled **Menthol and Regular**, the catalogue's own flavour words
   (`FACET_ORDER` in `lib/seed.ts`) — Y and N mean nothing on a button, and
   no word here is one we invented.
-- **Two judgements are written into those families rather than hidden.**
+- **Three judgements are written into those families rather than hidden.**
   Earthy also takes the blend's own character (strong, balanced, classic,
   the origins), because those describe the smoke rather than a flavour.
+  **A broth is food, so it is Savoury** (the owner's ask): "Herbal Broth"
+  sat with the drinks on the strength of being sipped, which is the one
+  thing about it that is not the point — it is stock with herbs in it, and
+  it belongs with the jerky and the braised pork. The rule is the bare word
+  so any broth added later lands there too, and one pack moves (Huangshan
+  Huizhou Merchant, whose other two pairings are a wine and a strain).
   And **Cannabis is settled before anything else is weighed**: strains are
   named after puddings, so "Mint Chocolate (Hybrid)" and "Mint Chocolate
   Chip (Hybrid)" both landed in Dessert when the rules were only sorted by

@@ -98,21 +98,28 @@ const NOTE_FAMILY = {
  * rule first, so "Mint Chocolate" lands in Dessert and "Mint Candies" with
  * it rather than either falling to a stray "Mint".
  *
- * THE DRINKS WITHOUT ALCOHOL ARE "Alcohol Free", NOT "Soft" (the owner's
- * 2026-09-15 ask for a better word). Soft means a cold fizzy drink, and
- * nine of the fourteen rules here are a tea, a coffee or a broth — the one
- * thing every member has in common is the thing the name now says, and it
- * reads as the exact complement of the Alcohol button beside it. A hyphen
- * was not an option: the owner's face carries letters, digits, # and $ and
- * nothing else, so "Non-Alcoholic" would have drawn its hyphen in the
- * fallback face.
+ * THE DRINKS WITHOUT ALCOHOL ARE "Beverage" (the owner's 2026-09-15 name
+ * for them, in two steps). It was "Soft", which means a cold fizzy drink
+ * where most of these are a tea or a coffee; it was briefly "Alcohol Free",
+ * which is what they are but reads as a qualifier on the button beside it
+ * rather than as a thing of its own. A hyphen was never an option either
+ * way: the owner's face carries letters, digits, # and $ and nothing else,
+ * so "Non-Alcoholic" would have drawn its hyphen in the fallback face.
+ *
+ * A BROTH IS FOOD, so it is Savoury (the owner's ask in the same breath).
+ * "Herbal Broth" sat with the drinks on the strength of being sipped, which
+ * is the one thing about it that is not the point; it is stock with herbs
+ * in it and it belongs with the jerky and the braised pork. The rule is the
+ * bare word, so any broth the owner adds later lands there too — and with
+ * it gone, this family is drinks and nothing else, which is what lets it be
+ * called what it is now called.
  */
 const PAIRING_FAMILY = {
   Cannabis: ['(Hybrid)', '(Indica)', '(Sativa)', '(CBD)', 'Strains'],
   Alcohol: ['Stout', 'Mojito', 'White Wine', 'Gin', 'Lager', 'Bourbon', 'Vodka', 'Rum', 'Scotch', 'Champagne', 'Cider', 'Moscato', 'Amber Ale', 'Baijiu', 'Sake', 'Bordeaux', 'Syrah', 'Cognac', 'Sangria', 'Prosecco', 'Bellini', 'Mimosa', 'Cabernet', 'Whiskey', 'Ouzo', 'Soju', 'Amaretto', 'Jägermeister', 'Piña Colada', 'Margarita', 'Paloma', 'Port Wine', 'Plum Wine', 'Porter', 'Pilsner', 'IPA', 'Merlot', 'Rosé', 'Single Malt', "Bailey's", 'Orange Liqueur', 'Peppermint Schnapps', 'Sweet Wine', 'Wine', 'Beer'],
-  'Alcohol Free': ['Espresso', 'Green Tea', 'Ice Water', 'Iced Tea', 'Jasmine Tea', 'Oolong Tea', 'Black Coffee', 'Coffee', 'Mineral Water', 'Herbal Tea', 'Lemonade', 'Black Tea', 'Herbal Broth', 'Tonic'],
+  Beverage: ['Espresso', 'Green Tea', 'Ice Water', 'Iced Tea', 'Jasmine Tea', 'Oolong Tea', 'Black Coffee', 'Coffee', 'Mineral Water', 'Herbal Tea', 'Lemonade', 'Black Tea', 'Tonic'],
   Dessert: ['Chocolate', 'Biscuits', 'Jelly', 'Wafers', 'Tart', 'Macarons', 'Turkish Delight', 'Shortcake', 'Cake', 'Pudding', 'Ice Cream', 'Tiramisu', 'Cheesecake', 'Cobbler', 'Pie', 'Brownies', 'Pastries', 'Pastry', 'Parfait', 'Candies', 'Candy', 'Sorbet', 'Sundae', 'Macaroons', 'Cookies', 'Sticky Rice', 'Truffles', 'Peppermint Patty', 'Caramel Corn', 'Banana Bread', 'Fruit Salad', 'Watermelon', 'Melon', 'Green Apple', 'Dried Fruit', 'Dried Plums', 'Sponge'],
-  Savoury: ['Jerky', 'Pretzels', 'Cucumber Salad', 'Cured Meats', 'Ribs', 'Nuts', 'Smoked Meats', 'Sushi', 'Steak', 'Steamed Fish', 'Sunflower Seeds', 'Wagyu', 'Crackers', 'BBQ', 'Chicken', 'Salty Snacks', 'Peanuts', 'Steamed Veggies', 'Dim Sum', 'Duck', 'Foie Gras', 'Truffle Pasta', 'Braised Pork', 'Roasted Lamb', 'Olives', 'Ceviche', 'Lotus Root', 'Bitter Melon', 'Almonds', 'Walnuts', 'Brisket', 'Beef', 'Pork', 'Noodles', 'Tacos', 'Lily Soup', 'Rice Crackers'],
+  Savoury: ['Jerky', 'Pretzels', 'Cucumber Salad', 'Cured Meats', 'Ribs', 'Nuts', 'Smoked Meats', 'Sushi', 'Steak', 'Steamed Fish', 'Sunflower Seeds', 'Wagyu', 'Crackers', 'BBQ', 'Chicken', 'Salty Snacks', 'Peanuts', 'Steamed Veggies', 'Dim Sum', 'Duck', 'Foie Gras', 'Truffle Pasta', 'Braised Pork', 'Roasted Lamb', 'Olives', 'Ceviche', 'Lotus Root', 'Bitter Melon', 'Almonds', 'Walnuts', 'Brisket', 'Beef', 'Pork', 'Noodles', 'Tacos', 'Lily Soup', 'Broth', 'Rice Crackers'],
 };
 
 /** A note joins the one family that names it, or the build stops. */

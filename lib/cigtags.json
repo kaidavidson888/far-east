@@ -126,9 +126,9 @@
   },
   {
    "group": "pairings",
-   "value": "Alcohol Free",
-   "label": "Alcohol Free",
-   "em": 7.298
+   "value": "Beverage",
+   "label": "Beverage",
+   "em": 5.53
   },
   {
    "group": "pairings",
@@ -579,7 +579,7 @@
    ],
    "pairings": [
     "Dessert",
-    "Alcohol Free",
+    "Beverage",
     "Cannabis"
    ],
    "brand": "ESSE"
@@ -609,7 +609,7 @@
     "Earthy"
    ],
    "pairings": [
-    "Alcohol Free",
+    "Beverage",
     "Alcohol",
     "Cannabis"
    ],
@@ -670,7 +670,7 @@
    ],
    "pairings": [
     "Savoury",
-    "Alcohol Free",
+    "Beverage",
     "Cannabis"
    ],
    "brand": "Ashima"
@@ -761,7 +761,7 @@
    ],
    "pairings": [
     "Dessert",
-    "Alcohol Free",
+    "Beverage",
     "Cannabis"
    ],
    "brand": "Diamond"
@@ -807,7 +807,7 @@
    ],
    "pairings": [
     "Dessert",
-    "Alcohol Free",
+    "Beverage",
     "Cannabis"
    ],
    "brand": "Double Happiness"
@@ -896,7 +896,7 @@
    ],
    "pairings": [
     "Dessert",
-    "Alcohol Free",
+    "Beverage",
     "Cannabis"
    ],
    "brand": "ESSE"
@@ -1462,7 +1462,7 @@
    ],
    "pairings": [
     "Savoury",
-    "Alcohol Free",
+    "Beverage",
     "Cannabis"
    ],
    "brand": "Huanghelou"
@@ -1555,7 +1555,7 @@
     "Sweet"
    ],
    "pairings": [
-    "Alcohol Free",
+    "Savoury",
     "Alcohol",
     "Cannabis"
    ],
@@ -1645,7 +1645,7 @@
     "Fresh"
    ],
    "pairings": [
-    "Alcohol Free",
+    "Beverage",
     "Cannabis"
    ],
    "brand": "Huanghelou"
@@ -1674,7 +1674,7 @@
    ],
    "pairings": [
     "Savoury",
-    "Alcohol Free",
+    "Beverage",
     "Cannabis"
    ],
    "brand": "Mevius"
@@ -1809,7 +1809,7 @@
    ],
    "pairings": [
     "Savoury",
-    "Alcohol Free",
+    "Beverage",
     "Cannabis"
    ],
    "brand": "Changbaishan"
@@ -1823,7 +1823,7 @@
     "Fresh"
    ],
    "pairings": [
-    "Alcohol Free",
+    "Beverage",
     "Alcohol",
     "Cannabis"
    ],
@@ -2156,7 +2156,7 @@
    ],
    "pairings": [
     "Dessert",
-    "Alcohol Free",
+    "Beverage",
     "Cannabis"
    ],
    "brand": "Baisha"
@@ -2217,7 +2217,7 @@
    ],
    "pairings": [
     "Dessert",
-    "Alcohol Free",
+    "Beverage",
     "Cannabis"
    ],
    "brand": "Zhongnanhai"
@@ -2263,7 +2263,7 @@
     "Fresh"
    ],
    "pairings": [
-    "Alcohol Free",
+    "Beverage",
     "Alcohol",
     "Cannabis"
    ],
@@ -2322,7 +2322,7 @@
     "Fresh"
    ],
    "pairings": [
-    "Alcohol Free",
+    "Beverage",
     "Alcohol",
     "Cannabis"
    ],
@@ -2339,7 +2339,7 @@
    ],
    "pairings": [
     "Dessert",
-    "Alcohol Free",
+    "Beverage",
     "Cannabis"
    ],
    "brand": "Double Happiness"
@@ -2417,7 +2417,7 @@
     "Sweet"
    ],
    "pairings": [
-    "Alcohol Free",
+    "Beverage",
     "Alcohol",
     "Cannabis"
    ],
@@ -2434,7 +2434,7 @@
    ],
    "pairings": [
     "Dessert",
-    "Alcohol Free",
+    "Beverage",
     "Cannabis"
    ],
    "brand": "Mevius"
@@ -2448,7 +2448,7 @@
     "Floral"
    ],
    "pairings": [
-    "Alcohol Free",
+    "Beverage",
     "Dessert",
     "Cannabis"
    ],
@@ -2552,7 +2552,7 @@
    ],
    "pairings": [
     "Savoury",
-    "Alcohol Free",
+    "Beverage",
     "Cannabis"
    ],
    "brand": "Denim"
@@ -2789,7 +2789,7 @@
     "Fresh"
    ],
    "pairings": [
-    "Alcohol Free",
+    "Beverage",
     "Alcohol",
     "Cannabis"
    ],
@@ -2906,7 +2906,7 @@
     "Sweet"
    ],
    "pairings": [
-    "Alcohol Free",
+    "Beverage",
     "Alcohol",
     "Cannabis"
    ],
@@ -2970,7 +2970,7 @@
    ],
    "pairings": [
     "Dessert",
-    "Alcohol Free",
+    "Beverage",
     "Cannabis"
    ],
    "brand": "Liqun"
@@ -2998,7 +2998,7 @@
    ],
    "pairings": [
     "Savoury",
-    "Alcohol Free",
+    "Beverage",
     "Cannabis"
    ],
    "brand": "Zhongnanhai"
@@ -3012,7 +3012,7 @@
    ],
    "pairings": [
     "Dessert",
-    "Alcohol Free",
+    "Beverage",
     "Cannabis"
    ],
    "brand": "Huanghelou"
@@ -3221,7 +3221,7 @@
    ],
    "pairings": [
     "Dessert",
-    "Alcohol Free",
+    "Beverage",
     "Cannabis"
    ],
    "brand": "Nanjing"
@@ -3310,7 +3310,7 @@
    ],
    "pairings": [
     "Savoury",
-    "Alcohol Free",
+    "Beverage",
     "Cannabis"
    ],
    "brand": "Taishan"
@@ -3324,7 +3324,7 @@
     "Earthy"
    ],
    "pairings": [
-    "Alcohol Free",
+    "Beverage",
     "Alcohol",
     "Cannabis"
    ],
@@ -3340,7 +3340,7 @@
    ],
    "pairings": [
     "Savoury",
-    "Alcohol Free",
+    "Beverage",
     "Cannabis"
    ],
    "brand": "West"
@@ -3354,7 +3354,7 @@
    ],
    "pairings": [
     "Savoury",
-    "Alcohol Free",
+    "Beverage",
     "Cannabis"
    ],
    "brand": "West"
@@ -3512,7 +3512,7 @@
    ],
    "pairings": [
     "Savoury",
-    "Alcohol Free",
+    "Beverage",
     "Cannabis"
    ],
    "brand": "Rothmans"
@@ -3541,7 +3541,7 @@
    ],
    "pairings": [
     "Savoury",
-    "Alcohol Free",
+    "Beverage",
     "Cannabis"
    ],
    "brand": "Pall Mall"
@@ -3748,7 +3748,7 @@
     "Fresh"
    ],
    "pairings": [
-    "Alcohol Free",
+    "Beverage",
     "Alcohol",
     "Cannabis"
    ],
@@ -3794,7 +3794,7 @@
    ],
    "pairings": [
     "Dessert",
-    "Alcohol Free",
+    "Beverage",
     "Cannabis"
    ],
    "brand": "Raison"
@@ -3824,7 +3824,7 @@
    ],
    "pairings": [
     "Dessert",
-    "Alcohol Free",
+    "Beverage",
     "Cannabis"
    ],
    "brand": "Raison"
@@ -3913,7 +3913,7 @@
    ],
    "pairings": [
     "Savoury",
-    "Alcohol Free",
+    "Beverage",
     "Cannabis"
    ],
    "brand": "Fiit"
@@ -4016,7 +4016,7 @@
    ],
    "pairings": [
     "Savoury",
-    "Alcohol Free",
+    "Beverage",
     "Cannabis"
    ],
    "brand": "Che"
@@ -4133,7 +4133,7 @@
    ],
    "pairings": [
     "Dessert",
-    "Alcohol Free",
+    "Beverage",
     "Cannabis"
    ],
    "brand": "Gitanes"
