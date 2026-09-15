@@ -1050,25 +1050,33 @@ export function CigScroller({
             const token = tagToken(tag);
             const on = picked.has(token);
             return (
-              <button
+              // the wrapper is what arrives, so the button's own half-strength
+              // opacity and the arrival's never fight over the one property
+              <span
                 key={token}
-                type="button"
-                className="cig-tag"
-                // the first of each field starts a line — see the CSS
+                className="cig-tag-slot"
+                // the first of each field starts a line, and --i staggers the
+                // arrival so the buttons land nearest-the-plus first — see the CSS
                 data-first={i === 0 || CIG_TAG_BUTTONS[i - 1].key !== tag.key ? '' : undefined}
-                data-on={on ? '' : undefined}
-                aria-pressed={on}
-                tabIndex={tagsOpen ? undefined : -1}
-                onClick={() =>
-                  setPicked((prev) => {
-                    const next = new Set(prev);
-                    if (!next.delete(token)) next.add(token);
-                    return next;
-                  })
-                }
+                style={{ '--i': i } as React.CSSProperties}
               >
-                {tag.label}
-              </button>
+                <button
+                  type="button"
+                  className="cig-tag"
+                  data-on={on ? '' : undefined}
+                  aria-pressed={on}
+                  tabIndex={tagsOpen ? undefined : -1}
+                  onClick={() =>
+                    setPicked((prev) => {
+                      const next = new Set(prev);
+                      if (!next.delete(token)) next.add(token);
+                      return next;
+                    })
+                  }
+                >
+                  {tag.label}
+                </button>
+              </span>
             );
           })}
         </div>

@@ -529,8 +529,19 @@ cannot drift.
   It is keyed by PACK, resolving the twelve name-twins with the same rule
   `lib/cigPages.ts` uses, so the browser needs one lookup and never has to
   carry the page manifest. Anything unexpected in a page is a hard error.
-- **The grid unfolds out of the plus** by clip-path, not scale, so nothing
-  smears — the quantity menu's trick. Each field starts its own line
+- **The menu arrives on the compositor: opacity and translation only.** Each
+  button fades and drifts the last few pixels back from the plus, nearest
+  first (a stagger off its own `--i`), which reads as coming out of the plus
+  with nothing scaled — a scaled layer is rasterised once and stretched, so
+  every letterform would be soft for the length of it. Three passes were
+  clip-path first, which is NOT a composited property: every frame of it was
+  a main-thread repaint, and no amount of re-easing a curve fixes a frame
+  that arrives late. Two opacities are in play and they must not fight, so
+  the arrival is on a wrapper (`.cig-tag-slot`) and the button keeps its own
+  half strength; 1 x 0.5 is what the owner asked for. **A shut menu has to
+  refuse the pointer explicitly** — the clip used to stop it as a side
+  effect and opacity does not, and an invisible button that still takes a
+  click is a trap. Each field starts its own line
   (`[data-first]`), and `auto-fill` takes as many columns as there is room
   for: three lines at a laptop width. **How far right it may reach is the
   owner's rule** — the right edge of the pack left of the framed one, which

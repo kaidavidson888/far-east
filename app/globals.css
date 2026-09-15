@@ -1503,35 +1503,53 @@ ul, ol { list-style: none; }
   --cig-btn-h: 30px;
   --cig-btn-gap: 10px;
   --cig-top: calc(50% + var(--cig-band) / 2 + 8px);
-  /* HOW THE MENU GROWS, and how it goes back in. The grid and confirm share
-     these, so the two grow as one thing — the owner asked for the grid to
-     grow the way the confirm button does, only smoother.
+  /* HOW THE MENU COMES OUT OF THE PLUS.
 
-     Opening is an even deceleration (easeOutCubic) over 400ms: it covers
-     two thirds of the box in the first third of the time and settles the
-     rest, which reads as something growing into place. An exponential ease
-     was tried first and is the wrong kind of smooth here — 88% open inside
-     126ms, then a long crawl, which looks like a snap followed by a stall.
-     Closing accelerates instead and is shorter, so the menu gathers back
-     into the plus rather than dawdling on the way.
+     IT IS ONLY OPACITY AND TRANSLATION, which is the whole point: those two
+     are the properties a browser can hand to the compositor, so the frames
+     are drawn off the main thread and nothing the page is doing — the row
+     repainting on its 125ms timer, React reconciling a tick — can stutter
+     them. Three passes at this animation were clip-path, which is NOT a
+     composited property: every frame of it was a main-thread repaint, and
+     no amount of re-easing a curve fixes a frame that arrives late. That is
+     what "even smoother" needed.
 
-     A FADE RIDES WITH THE CLIP. A clip alone reveals by sweeping a hard
-     edge across the buttons, so a row of them is cut in half for a few
-     frames and the growth reads as a wipe however well it is eased. The
-     fade is shorter than the growth, so the box is solid well before it
-     stops moving, and opacity is composited — it costs nothing. */
-  --cig-grow-in: clip-path 400ms cubic-bezier(0.33, 1, 0.68, 1), opacity 220ms ease-out;
-  --cig-grow-out: clip-path 240ms cubic-bezier(0.32, 0, 0.67, 0), opacity 180ms ease-in;
+     Nothing scales. A scaled layer is rasterised once and stretched, so
+     every letterform is soft for the length of the animation; a translation
+     is drawn at its final size and moved, so the type is sharp in every
+     frame. The same reason the cigarette page's quantity menu clips rather
+     than scales — this just goes one better and moves instead.
+
+     It still reads as growing out of the plus because the buttons arrive in
+     order, nearest first (--cig-stagger against each button's own index),
+     each drifting the last few pixels back from the corner the plus is in.
+     Opening is a gentle deceleration; closing is quicker and reverses, so
+     the menu gathers back in rather than dawdling. */
+  --cig-ease-in: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  --cig-ease-out: cubic-bezier(0.55, 0.06, 0.68, 0.19);
+  --cig-grow-ms: 380ms;
+  --cig-fade-ms: 300ms;
+  --cig-shut-ms: 200ms;
+  --cig-stagger: 26ms;
+  /* where a closed button sits: back towards the plus, up and to the left */
+  --cig-from: translate(-10px, -12px);
   /* the second column: past reset, and the plus's own left edge */
   --cig-col: calc(var(--cig-edge) + var(--cig-btn-w) + var(--cig-btn-gap));
   /* the second line: under reset and the plus */
   --cig-line2: calc(var(--cig-top) + var(--cig-btn-h) + var(--cig-btn-gap));
 }
 .cig-controls > *,
+.cig-controls .cig-tag-slot,
 .cig-controls .cig-tag {
   pointer-events: auto;
 }
-.cig-controls [aria-hidden='true'] {
+/* A shut menu takes no presses. Its buttons are still laid out, merely at
+   zero opacity, and an invisible button that can still be clicked is a trap
+   — the clip that used to hide them stopped the pointer as a side effect,
+   and moving the animation onto opacity took that away with it. The
+   descendants need saying because the buttons ask for the pointer above. */
+.cig-controls [aria-hidden='true'],
+.cig-controls [aria-hidden='true'] * {
   pointer-events: none;
 }
 .cig-reset,
@@ -1634,22 +1652,55 @@ ul, ol { list-style: none; }
   display: grid;
   grid-template-columns: repeat(auto-fill, var(--cig-btn-w));
   gap: var(--cig-btn-gap);
-  clip-path: inset(0 100% 100% 0);
-  opacity: 0;
-  /* its own layer, so growing it repaints the menu and not the page behind it */
-  will-change: clip-path, opacity;
-  transition: var(--cig-grow-out);
 }
-.cig-tags[data-open] {
-  clip-path: inset(0 0 0 0);
+/* EACH BUTTON ARRIVES IN ITS OWN WRAPPER, and the wrapper is the only thing
+   that moves. Two opacities are needed here and they must not fight: the
+   arrival runs 0 to 1 over 300ms with a stagger, and the button's own rest
+   state is 50% until it is hovered or picked, over 120ms. On one element
+   that is the same property wanted at two speeds; on two it is a
+   multiplication, and 1 x 0.5 is the half strength the owner asked for.
+   Closing runs the wrapper back without the stagger, so the menu gathers in
+   as one piece rather than unravelling. */
+.cig-tag-slot {
+  display: block;
+  opacity: 0;
+  transform: var(--cig-from);
+  will-change: opacity, transform;
+  transition:
+    opacity var(--cig-shut-ms) var(--cig-ease-out),
+    transform var(--cig-shut-ms) var(--cig-ease-out);
+}
+.cig-tags[data-open] .cig-tag-slot {
   opacity: 1;
-  transition: var(--cig-grow-in);
+  transform: none;
+  transition:
+    opacity var(--cig-fade-ms) var(--cig-ease-in) calc(var(--i, 0) * var(--cig-stagger)),
+    transform var(--cig-grow-ms) var(--cig-ease-in) calc(var(--i, 0) * var(--cig-stagger));
+}
+.cig-confirm {
+  opacity: 0;
+  transform: var(--cig-from);
+  will-change: opacity, transform;
+  transition:
+    opacity var(--cig-shut-ms) var(--cig-ease-out),
+    transform var(--cig-shut-ms) var(--cig-ease-out),
+    background-color 120ms ease-out,
+    color 120ms ease-out;
+}
+.cig-confirm[data-open] {
+  opacity: 1;
+  transform: none;
+  transition:
+    opacity var(--cig-fade-ms) var(--cig-ease-in),
+    transform var(--cig-grow-ms) var(--cig-ease-in),
+    background-color 120ms ease-out,
+    color 120ms ease-out;
 }
 /* Each of the info page's three fields starts its own line, so the grid
    says what the values mean without a heading over them — menthol, then
    harshness, then price. A field wider than the room there is still wraps
    within itself; the next one still starts at the left. */
-.cig-tag[data-first] {
+.cig-tag-slot[data-first] {
   grid-column-start: 1;
 }
 .cig-tag {
@@ -1657,7 +1708,10 @@ ul, ol { list-style: none; }
   height: var(--cig-btn-h);
   background: transparent;
   color: #010101;
-  /* half strength until it is under the pointer, or picked for good */
+}
+/* Half strength at rest, full under the pointer or picked for good. This is
+   the BUTTON's own opacity, multiplied by the wrapper's arrival above. */
+.cig-tag {
   opacity: 0.5;
   transition: opacity 120ms ease-out;
 }
@@ -1678,15 +1732,6 @@ ul, ol { list-style: none; }
   border-color: #ff0000;
   background: transparent;
   color: #ff0000;
-  clip-path: inset(0 100% 100% 0);
-  opacity: 0;
-  will-change: clip-path, opacity;
-  transition: var(--cig-grow-out), background-color 120ms ease-out, color 120ms ease-out;
-}
-.cig-confirm[data-open] {
-  clip-path: inset(0 0 0 0);
-  opacity: 1;
-  transition: var(--cig-grow-in), background-color 120ms ease-out, color 120ms ease-out;
 }
 .cig-confirm:hover {
   background: #ff0000;
