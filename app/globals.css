@@ -1503,6 +1503,19 @@ ul, ol { list-style: none; }
   --cig-btn-h: 30px;
   --cig-btn-gap: 10px;
   --cig-top: calc(50% + var(--cig-band) / 2 + 8px);
+  /* HOW THE MENU GROWS, and how it goes back in. The grid and confirm share
+     these, so the two grow as one thing — the owner asked for the grid to
+     grow the way the confirm button does, only smoother.
+
+     Opening is an even deceleration (easeOutCubic) over 400ms: it covers
+     two thirds of the box in the first third of the time and settles the
+     rest, which reads as something growing into place. An exponential ease
+     was tried first and is the wrong kind of smooth here — 88% open inside
+     126ms, then a long crawl, which looks like a snap followed by a stall.
+     Closing accelerates instead and is shorter, so the menu gathers back
+     into the plus rather than dawdling on the way. */
+  --cig-grow-in: clip-path 400ms cubic-bezier(0.33, 1, 0.68, 1);
+  --cig-grow-out: clip-path 240ms cubic-bezier(0.32, 0, 0.67, 0);
   /* the second column: past reset, and the plus's own left edge */
   --cig-col: calc(var(--cig-edge) + var(--cig-btn-w) + var(--cig-btn-gap));
   /* the second line: under reset and the plus */
@@ -1616,10 +1629,11 @@ ul, ol { list-style: none; }
   grid-template-columns: repeat(auto-fill, var(--cig-btn-w));
   gap: var(--cig-btn-gap);
   clip-path: inset(0 100% 100% 0);
-  transition: clip-path 260ms ease-out;
+  transition: var(--cig-grow-out);
 }
 .cig-tags[data-open] {
   clip-path: inset(0 0 0 0);
+  transition: var(--cig-grow-in);
 }
 /* Each of the info page's three fields starts its own line, so the grid
    says what the values mean without a heading over them — menthol, then
@@ -1655,10 +1669,11 @@ ul, ol { list-style: none; }
   background: transparent;
   color: #ff0000;
   clip-path: inset(0 100% 100% 0);
-  transition: clip-path 260ms ease-out, background-color 120ms ease-out, color 120ms ease-out;
+  transition: var(--cig-grow-out), background-color 120ms ease-out, color 120ms ease-out;
 }
 .cig-confirm[data-open] {
   clip-path: inset(0 0 0 0);
+  transition: var(--cig-grow-in), background-color 120ms ease-out, color 120ms ease-out;
 }
 .cig-confirm:hover {
   background: #ff0000;
