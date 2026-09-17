@@ -9,6 +9,8 @@ import { PRESSABLE } from '@/lib/cigPages';
 import { CigScroller } from '@/components/CigScroller';
 import { SealButton } from '@/components/SealButton';
 import { SplashScreen } from '@/components/SplashScreen';
+import { SigilCount } from '@/components/SigilCount';
+import { bigShares } from '@/lib/db';
 
 /**
  * The landing page.
@@ -57,6 +59,8 @@ export default async function HomePage({
   const showHitboxes = dev && params.hitboxes !== undefined;
   const hideSplash = dev && params.nosplash !== undefined;
   const device = deviceOverride(params.device) ?? (await detectDevice());
+  // the number in the outline beside the sigil; a signed-out reader has none
+  const shares = user ? await bigShares(user.id) : 0;
 
   return (
     <>
@@ -67,7 +71,7 @@ export default async function HomePage({
         spec={LANDING_SPEC}
         device={device}
         showHitboxes={showHitboxes}
-        overlay={<><CigScroller withPages={PRESSABLE} /><LogoMenu menu="grow" /><SealButton size={LANDING_SPEC.sealSize} /></>}
+        overlay={<><CigScroller withPages={PRESSABLE} /><LogoMenu menu="grow" /><SealButton size={LANDING_SPEC.sealSize} /><SigilCount value={shares} /></>}
         decorative={['logo']}
       hide={['seal']}
       />

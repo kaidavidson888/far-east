@@ -477,12 +477,45 @@ export async function savedPackIds(userId: string): Promise<string[]> {
 }
 
 /* ---------- Profiles ---------- */
-export type Profile = { id: string; display_name: string; created_at: string };
+export type Profile = {
+  id: string; display_name: string; created_at: string;
+  /** Share links this reader has made worth SHARE_MILESTONE or more. See createShare. */
+  big_shares: number;
+};
 
 export async function profileById(id: string): Promise<Profile | null> {
   const sql = db();
   const rows = await sql<Profile[]>`SELECT * FROM profiles WHERE id = ${id}`;
   return rows[0] ?? null;
+}
+
+/**
+ * The number the landing page draws in the outline beside the sigil.
+ *
+ * One field rather than the whole profile, because that page wants nothing
+ * else from it. A reader with no row — which cannot happen, the trigger makes
+ * one at signup — reads as 0, the same as a signed-out one, so the page never
+ * has an absence to draw.
+ */
+export async function bigShares(userId: string): Promise<number> {
+  const sql = db();
+  try {
+    const rows = await sql<{ big_shares: number }[]>`
+      SELECT big_shares FROM profiles WHERE id = ${userId}
+    `;
+    return rows[0]?.big_shares ?? 0;
+  } catch (e) {
+    // 42703 is "column does not exist", and there is exactly one way to get it
+    // here: the code is deployed and migration 0006 has not been applied to the
+    // shared project yet. That window is built into how this team works —
+    // migrations are applied once, by hand, by their author — and the landing
+    // page is the site's front door, so it reads as 0 rather than 500ing over a
+    // number in the corner. ANY OTHER ERROR STILL THROWS: this is not a
+    // catch-all, it is one known and temporary state.
+    if ((e as { code?: string })?.code !== '42703') throw e;
+    console.warn('profiles.big_shares is missing — apply supabase/migrations/0006_big_shares.sql');
+    return 0;
+  }
 }
 
 /* ---------- Shares (snapshot links) ---------- */
@@ -513,8 +546,28 @@ export async function shareByToken(token: string): Promise<Share | null> {
 }
 
 /**
+ * What a share has to be worth to count towards `profiles.big_shares` — the
+ * number the landing page draws in the outline beside the sigil. The owner's
+ * figure (2026-09-17), in the dollars the catalogue is priced in.
+ */
+export const SHARE_MILESTONE = 100;
+
+/**
  * Freezes the shelf as it stands. Any previous link is revoked first, so a
  * person has at most one live link at a time.
+ *
+ * IT ALSO COUNTS THE BIG ONES. A share worth SHARE_MILESTONE or more adds one
+ * to the maker's `big_shares`, IN THIS TRANSACTION — the count and the shares
+ * it counts are written together or not at all. Worth is the sum of the
+ * `price_usd` of the products just frozen in, which is why it is taken after
+ * the snapshot insert rather than off `favorites`: what is counted is exactly
+ * what the link will show, and a favourite added a moment later is a different
+ * link's business.
+ *
+ * Counting at this moment is also the only reading that stays true. A share's
+ * worth is the worth it had when it was frozen; `share_items` keeps the
+ * products but the catalogue's prices can move underneath them, so the same
+ * link recomputed next year could answer differently. Hence a stored number.
  */
 export async function createShare(userId: string, token: string): Promise<Share> {
   const sql = db();
@@ -536,6 +589,18 @@ export async function createShare(userId: string, token: string): Promise<Share>
       LEFT JOIN reviews r ON r.user_id = f.user_id AND r.cigarette_id = f.cigarette_id
       WHERE f.user_id = ${userId}
     `;
+
+    // what the link is worth, off the rows just written
+    const [{ worth }] = await tx<{ worth: number }[]>`
+      SELECT COALESCE(SUM(c.price_usd), 0)::float8 AS worth
+      FROM share_items si
+      JOIN cigarettes c ON c.id = si.cigarette_id
+      WHERE si.share_id = ${share.id}
+    `;
+    if (worth >= SHARE_MILESTONE) {
+      await tx`UPDATE profiles SET big_shares = big_shares + 1 WHERE id = ${userId}`;
+    }
+
     return share;
   }) as Share;
 }

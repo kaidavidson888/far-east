@@ -79,6 +79,25 @@ overwrote this file twice during setup. `.env.example` is the template.
 - **A share link is a frozen snapshot** (`shares` + `share_items`) of the shelf at generation
   time, including the owner's rating and note. One live link per user (partial unique index).
   Cancelling soft-revokes (`revoked_at`); a cancelled link renders "no longer active", never 404.
+- **MAKING A SHARE WORTH $100 OR MORE ADDS ONE TO `profiles.big_shares`** — the number the
+  landing page draws in the outline beside the sigil (migration `0006`, the owner's
+  2026-09-17 ask). Three things about it:
+  - **It is counted inside `createShare`'s own transaction**, off the rows just frozen in, so
+    the count and the shares it counts are written together or not at all. Worth is
+    `SUM(cigarettes.price_usd)` over the snapshot. `SHARE_MILESTONE` in `lib/db.ts` is the
+    $100.
+  - **It has to be stored, not derived.** A share's worth is the worth it had WHEN FROZEN;
+    `share_items` keeps the products but the catalogue's prices can move underneath them, so
+    the same link recomputed later could answer differently.
+  - **It counts links MADE, not links live.** One live link at a time is the other rule, so a
+    reader on a $100 shelf can raise the number by regenerating. That is what the ask says.
+  - **THE SHARE IS OF THE CATALOGUE SHELF, WHICH IS NOT THE SHELF THE SIGIL BELONGS TO.**
+    `share_items` references `cigarettes` — the 32 placeholder products from
+    `lib/catalog.json`, which are the only things here with a `price_usd`. The seal, the
+    bookmark, the quantity wheels and the sigil all belong to the PACK shelf
+    (`pack_favorites`, the 247 photographed packs), which has quantity but no price and **no
+    share link at all**. The counter is wired to the share link that exists. If the owner
+    means the pack shelf, that shelf needs a share link and a price first.
 - **`slug` is permanent identity.** Reviews and favourites reference the product row; changing
   a slug in `lib/catalog.json` creates a new product and orphans its data.
 - **Design rules from the spec:** border-radius 0 everywhere except icon buttons/avatars; scores
@@ -789,13 +808,46 @@ took:
   belonged to a label standing on the page, not to a word in a menu. Git has
   the block if the column ever goes back.
 
-**The landing page has since moved off the design in four places, all the
+**THE SEAL AND THE SIGIL PAIR ARE BOTH DRAWN AT THE PLUS BUTTON'S SIZE, AND
+THE OUTLINE HAS A NUMBER IN IT** (the owner's 2026-09-17 ask). The top right
+is now: the seal at 30x30, then 13px below it the sigil and the outline, the
+outline also 30x30 — in that order. `MARK_SIZE` in `lib/landing.ts` is
+`CIG_CONTROLS.height`, so the one number comes from the button it is being
+matched to rather than being typed again.
+- **WHAT IS SCALED TO 30 IS THE SQUARE, NOT THE PAIR**, and that is a
+  judgement. The pair scaled to 30 wide puts the square at 12.8px with 11px
+  inside its own stroke, and there is a NUMBER in there now — about 6px of
+  type, under the 9px this site already knows is the floor for a line that has
+  to render solid. Scaling the square to 30 leaves 25.9px inside, which sets
+  the number at 13.5. The sigil keeps its drawn proportion either way and comes
+  out 37x18.
+- **THE NUMBER IS `profiles.big_shares`** — how many share links this reader
+  has made worth $100 or more. `components/SigilCount.tsx` draws it, in the
+  OVERLAY rather than the artwork: every ArtPart is an `<img>` of a cut SVG and
+  none carries a text node, so live type on these pages goes on top, where the
+  row's controls already set text in the owner's face. One size for every
+  value, taken from the widest it can show ("100", 1.919em off the ink table),
+  so it does not resize on reaching double figures. Signed-out reads 0.
+- **`LANDING_ROW_CLEAR` STILL DOES NOT MOVE, and shrinking the seal is exactly
+  what could have moved it.** The three labels' arithmetic is measured from the
+  seal's DESIGN size, so `DESIGN_SEAL` and `DESIGN_PAIR_SCALE` are kept beside
+  the new `MARK_SIZE` for that arithmetic alone. Checked after the change: 210,
+  as before.
+- **The seal's frames are baked at 174px for an 87px draw**
+  (`DRAWN` in `scripts/build-seal-frames.mjs`), so at 30 the browser downscales
+  them 2.9x and the red filigree softens. Accepted rather than re-baked: that
+  constant is shared with about/privacy/terms and all 235 cigarette pages,
+  which still draw at 87, so a second size means a second 179-frame set.
+
+**The landing page has since moved off the design in five places, all the
 owner's asks, all in `lib/landing.ts` and none in the artwork
 build:** TEST YOUR LUCK is no longer placed (the part is still cut, so it is
 one line to restore); **OFFERS, My Saved and RECOMMENDED are no longer placed
-either (2026-09-16), having moved into the logo menu — above**; the sigil and the square sit under the seal, scaled as
-one to the seal's 87px width, 13px below it (the design's gap from My Saved
-to RECOMMENDED) with 5px between them as drawn, which the scale takes to 4;
+either (2026-09-16), having moved into the logo menu — above**; **the seal and
+the sigil pair are drawn at the plus button's 30px with a count in the outline
+(2026-09-17, above)**; the sigil and the square sit under the seal, 13px below
+it (the design's gap from My Saved to RECOMMENDED) with 5px between them as
+drawn, which the scale takes to 3;
 and the three labels are a column whose top is the inside of that square's
 top edge — its top plus its 3px stroke at the pair's scale (2.5), less the
 1px the O's crown rises above the flat tops in the OFFERS drawing, rounded
@@ -1302,6 +1354,14 @@ the brand assets and review text in this repo are visible to anyone.
 - Commit as yourself. No identity workarounds are needed now that the repo is public.
 
 ## Known gaps / open work (priority order)
+0. **MIGRATION `0006_big_shares.sql` IS WRITTEN AND NOT YET APPLIED.** It adds
+   `profiles.big_shares`, the number the landing page draws in the outline beside the
+   sigil. `npm run verify:db` passes with it (46/46, five of them new and covering the
+   counter end to end through the real `createShare`), but the shared Supabase project does
+   not have the column yet — **the author applies it once, in the SQL Editor**, per the team
+   rule. Until then `bigShares()` catches Postgres `42703` ONLY and reads 0, so the landing
+   page does not 500 over a number in the corner; every other error still throws. Delete
+   that catch once the column is live.
 1. **Deploy is not yet green.** See HANDOFF.md → Deployment. The middleware was removed to get
    past `MIDDLEWARE_INVOCATION_FAILED`; that commit (`f6b03ff`) still needs pushing.
 2. **No session refresh on plain page loads** (middleware removed). Readers who only browse are

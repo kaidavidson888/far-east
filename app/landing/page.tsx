@@ -6,6 +6,9 @@ import { LogoMenu } from '@/components/LogoMenu';
 import { PRESSABLE } from '@/lib/cigPages';
 import { CigScroller } from '@/components/CigScroller';
 import { SealButton } from '@/components/SealButton';
+import { SigilCount } from '@/components/SigilCount';
+import { currentUser } from '@/lib/auth';
+import { bigShares } from '@/lib/db';
 
 export const metadata: Metadata = {
   // the root layout appends " · Far East"
@@ -31,13 +34,16 @@ export default async function LandingRoute({
   const dev = process.env.NODE_ENV !== 'production';
   const showHitboxes = dev && params.hitboxes !== undefined;
   const device = deviceOverride(params.device) ?? (await detectDevice());
+  // the number in the outline beside the sigil; a signed-out reader has none
+  const user = await currentUser();
+  const shares = user ? await bigShares(user.id) : 0;
 
   return (
     <ArtworkPage
       spec={LANDING_SPEC}
       device={device}
       showHitboxes={showHitboxes}
-      overlay={<><CigScroller withPages={PRESSABLE} /><LogoMenu menu="grow" /><SealButton size={LANDING_SPEC.sealSize} /></>}
+      overlay={<><CigScroller withPages={PRESSABLE} /><LogoMenu menu="grow" /><SealButton size={LANDING_SPEC.sealSize} /><SigilCount value={shares} /></>}
       decorative={['logo']}
       hide={['seal']}
     />

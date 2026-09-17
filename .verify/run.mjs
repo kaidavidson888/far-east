@@ -365,6 +365,42 @@ try {
   check('catalogue marks saved items as on the shelf', marked.length === favIds.length,
     `${marked.length} of ${favIds.length}`);
 
+  // — the number in the sigil's outline —
+  // profiles.big_shares counts the share links worth SHARE_MILESTONE or more.
+  // Exercised through the real createShare, so what is checked is the rule the
+  // site runs rather than a copy of it written here.
+  const bigOf = async () =>
+    (await sql`SELECT big_shares FROM profiles WHERE id = ${owner}`)[0].big_shares;
+  const worthOf = async () => (await sql`
+    SELECT COALESCE(SUM(c.price_usd), 0)::float8 AS w
+    FROM favorites f JOIN cigarettes c ON c.id = f.cigarette_id
+    WHERE f.user_id = ${owner}
+  `)[0].w;
+
+  check('big_shares starts at nothing', (await bigOf()) === 0, String(await bigOf()));
+
+  const smallWorth = await worthOf();
+  await lib.createShare(owner, randomBytes(9).toString('base64url'));
+  check(`a share worth $${smallWorth.toFixed(2)} does not count`,
+    smallWorth < lib.SHARE_MILESTONE && (await bigOf()) === 0,
+    `worth ${smallWorth}, count ${await bigOf()}`);
+
+  // fill the shelf past the milestone and freeze it again
+  await sql`INSERT INTO favorites (user_id, cigarette_id, note)
+            SELECT ${owner}, id, '' FROM cigarettes ON CONFLICT DO NOTHING`;
+  const bigWorth = await worthOf();
+  await lib.createShare(owner, randomBytes(9).toString('base64url'));
+  check(`a share worth $${bigWorth.toFixed(2)} counts`,
+    bigWorth >= lib.SHARE_MILESTONE && (await bigOf()) === 1,
+    `worth ${bigWorth}, count ${await bigOf()}`);
+
+  // it counts links MADE, not links live — one at a time is the other rule
+  await lib.createShare(owner, randomBytes(9).toString('base64url'));
+  check('regenerating a big link counts again', (await bigOf()) === 2, String(await bigOf()));
+
+  check('bigShares reads the count back', (await lib.bigShares(owner)) === 2,
+    String(await lib.bigShares(owner)));
+
   console.log(`\n${checks - failures}/${checks} checks passed`);
 } catch (e) {
   failures++;

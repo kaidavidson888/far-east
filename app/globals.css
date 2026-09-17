@@ -2163,6 +2163,37 @@ html:has(.cigpage) {
   max-width: none;
 }
 
+/* ------------------------------------------------ the sigil's own number --
+   How many share links this reader has made worth $100 or more, drawn inside
+   the outline beside the sigil (the owner's 2026-09-17 ask). The outline is
+   the artwork's; this is the only thing over it.
+
+   It is in the OVERLAY because every part of these pages is an <img> of a cut
+   SVG and none of them carries a text node — live type on an artwork page
+   goes on top, the way the cigarette row's controls do. Its box, its position
+   and its type size all come down from `LANDING_COUNT`, measured off the
+   square's own room, so the stylesheet holds no figure that could drift from
+   the layout.
+
+   It takes no pointer: the outline is not a control, and an invisible hit
+   area over the corner of the page is exactly the trap the shut tag menu
+   already taught us about. */
+.sigil-count {
+  position: absolute;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-typed);
+  font-weight: 400;
+  font-synthesis: none;
+  line-height: 1;
+  color: #010101;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
 .seal-button {
   position: absolute;
   z-index: 2;

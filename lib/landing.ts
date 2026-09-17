@@ -1,5 +1,8 @@
 import geometry from './landing-geometry.json';
 import { clusterBox, marginsOf, type ArtPageSpec, type ArtPart } from './artpage';
+// the plus button that opens the tag filter — the seal and the sigil pair are
+// both drawn at its size now, and this is the one copy of that number
+import { CIG_CONTROLS } from './cigRow';
 
 /**
  * The landing page's layout.
@@ -37,16 +40,47 @@ export const LANDING_MARGINS = marginsOf(viewBox, Object.values(parts));
  * RECOMMENDED. The marks are vectors, so they stay sharp at the new size.
  */
 const SIGIL_GAP = 5;
-const SEAL_SIZE = parts.logo.h;
 const LABEL_GAP = parts.recommended.y - (parts.saved.y + parts.saved.h);
+
+/**
+ * THE SEAL AND THE SIGIL PAIR ARE BOTH DRAWN AT THE PLUS BUTTON'S SIZE — the
+ * owner's 2026-09-17 ask, "decrease the seal logo size to the same as the +
+ * outline that opens the menu", and the sigil pair scaled to match. So the one
+ * number comes from `CIG_CONTROLS`, where that button's size already lives,
+ * rather than being typed again here.
+ *
+ * WHAT IS SCALED TO IT IS THE SQUARE, NOT THE PAIR, and that is a judgement
+ * worth stating. The pair scaled to 30 wide would put the square at 12.8px
+ * with 11px inside its own stroke — and there is a NUMBER in there now, which
+ * at that size would be about 6px of type, under the 9px this site has already
+ * learned is the floor for a line that has to render solid. Scaling the square
+ * to 30 leaves 26px inside it, which sets the number at 13.5. The sigil keeps
+ * its drawn proportion to the square either way.
+ */
+const MARK_SIZE = CIG_CONTROLS.height;
+
+/**
+ * The seal's size AS THE DESIGN DREW IT, which is not what is drawn any more.
+ *
+ * It is kept because the three labels' arithmetic below is measured from it,
+ * and that arithmetic is what `LANDING_ROW_CLEAR` — the cigarette row's
+ * ceiling — is made of. The row's size was its own ask and this is what
+ * decides it on a short window, so shrinking the seal deliberately does NOT
+ * move it. See the note on LANDING_ROW_CLEAR.
+ */
+const DESIGN_SEAL = parts.logo.h;
+/** And the scale the pair had at that size, frozen for the same reason. */
+const DESIGN_PAIR_SCALE = DESIGN_SEAL / (parts.cloud.w + SIGIL_GAP + parts.square.w);
+
 const cluster = (() => {
-  const drawnW = parts.cloud.w + SIGIL_GAP + parts.square.w;
-  const k = SEAL_SIZE / drawnW;
-  const square = { w: Math.round(parts.square.w * k), h: Math.round(parts.square.h * k) };
+  const k = MARK_SIZE / parts.square.w;
+  const square = { w: MARK_SIZE, h: Math.round(parts.square.h * k) };
   const cloud = { w: Math.round(parts.cloud.w * k), h: Math.round(parts.cloud.h * k) };
+  const gap = Math.round(SIGIL_GAP * k);
   const marks = {
+    // the sigil, then the outline: the owner's order, left to right
     cloud: { x: 0, y: Math.round((parts.cloud.y - parts.square.y) * k), ...cloud },
-    square: { x: SEAL_SIZE - square.w, y: 0, ...square },
+    square: { x: cloud.w + gap, y: 0, ...square },
   };
   return { marks, scale: k, ...clusterBox(Object.values(marks)) };
 })();
@@ -116,9 +150,9 @@ const OFFERS = (() => {
  */
 const LABEL_TOP =
   LANDING_MARGINS.top +
-  SEAL_SIZE +
+  DESIGN_SEAL +
   LABEL_GAP +
-  Math.round(OUTLINE_STROKE * cluster.scale - OFFERS_CROWN * (OFFERS.h / parts.offers.h));
+  Math.round(OUTLINE_STROKE * DESIGN_PAIR_SCALE - OFFERS_CROWN * (OFFERS.h / parts.offers.h));
 const OFFERS_TO_SAVED = parts.saved.y - (parts.offers.y + parts.offers.h);
 const LABELS = {
   offers: LABEL_TOP,
@@ -152,6 +186,35 @@ const inCluster = (id: keyof typeof CLUSTER, label: string, pressable: boolean):
 });
 
 /**
+ * WHERE THE NUMBER GOES, AND HOW BIG IT IS SET.
+ *
+ * The owner's 2026-09-17 ask: a number in the outline beside the sigil,
+ * counting the share links this reader has made worth $100 or more
+ * (`profiles.big_shares` — see the migration and `createShare`).
+ *
+ * The square is right-anchored inside the cluster and the cluster is
+ * right-anchored on the page, so the square's own box IS the page's right
+ * margin, at the cluster's top. The overlay draws the number there rather
+ * than the artwork carrying it: every ArtPart is an `<img>` of a cut SVG and
+ * none of them holds a text node, so live type on these pages belongs in the
+ * overlay — which is where the row's own controls already set text in the
+ * owner's face.
+ *
+ * ONE SIZE, TAKEN FROM THE WIDEST IT WILL EVER SHOW. "100" is 1.919em in the
+ * owner's face (off `far-east-ink.json`), and the room inside the square is
+ * its 30 less its own stroke at this scale (3 x 0.68 each side) — 25.9px. So
+ * the type is 13.5px and it does not resize as the count climbs, which a
+ * number that changed size on reaching double figures would.
+ */
+const COUNT_EM = 1.919;
+export const LANDING_COUNT = {
+  right: M.right,
+  top: M.top + MARK_SIZE + LABEL_GAP,
+  size: MARK_SIZE,
+  type: +((MARK_SIZE - 2 * OUTLINE_STROKE * cluster.scale) / COUNT_EM).toFixed(2),
+};
+
+/**
  * Mobile and desktop are described separately on purpose. They hold the same
  * margins today, because holding them is the requirement — what changes is
  * where the viewport's edges are, so the same distances put the seal beside
@@ -161,12 +224,12 @@ const inCluster = (id: keyof typeof CLUSTER, label: string, pressable: boolean):
 export const LANDING_SPEC: ArtPageSpec = {
   background,
   focus: '#010101',
-  sealSize: parts.logo.h,
+  sealSize: MARK_SIZE,
   minHeight: parts.recommended.y + parts.recommended.h + 80 + cluster.h + M.bottom,
   cluster: {
     w: cluster.w,
     h: cluster.h,
-    placement: both({ right: M.right, top: M.top + SEAL_SIZE + LABEL_GAP }),
+    placement: both({ right: M.right, top: M.top + MARK_SIZE + LABEL_GAP }),
   },
   /**
    * OFFERS, MY SAVED AND RECOMMENDED ARE NOT PLACED — THEY MOVED INTO THE
