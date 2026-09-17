@@ -2,47 +2,109 @@
 
 import Link from 'next/link';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import geometry from '@/lib/menu-geometry.json';
+import barGeometry from '@/lib/menu-geometry.json';
+import growGeometry from '@/lib/growmenu-geometry.json';
 
 /**
  * The 遠東 logo, which unfolds into a menu.
  *
- * Hovering the characters (or pressing them, on a touch screen) draws a red
- * box around them and unfolds three labelled boxes to the right. Pressing
- * the logo while that is running skips to the end. Once open it stays open —
- * hovering away does not close it — until the logo is pressed again or
- * something else on the page is, and then it runs backwards at twice speed.
+ * Hovering the characters (or pressing them, on a touch screen) draws a box
+ * around them and unfolds the menu. Pressing the logo while that is running
+ * skips to the end. Once open it stays open — hovering away does not close it
+ * — until the logo is pressed again or something else on the page is, and then
+ * it runs backwards at twice speed.
  *
  * WHY A CANVAS. The source is a GIF, and a GIF cannot be seeked, paused or
- * played backwards. Its frames are baked out by `npm run build:menu` and
- * scrubbed here, the same way the splash animation works.
+ * played backwards. Its frames are baked out by the build and scrubbed here,
+ * the same way the splash animation works.
  *
  * WHY IT PAINTS OVER THE LOGO. The first frame IS the logo, baked to land on
- * the page's own to half a pixel, so the canvas can simply cover it while
- * open rather than the two having to be swapped. Its white ground would
- * cover the seal too, so it is only as wide as the animation's content.
+ * the page's own to a fraction of a pixel, so the canvas can simply cover it
+ * while open rather than the two having to be swapped.
  *
- * HOW FAR IT PLAYS. The bake carries a fourth box, home, which the cigarette
- * pages need because there the logo is this switch rather than a link. The
- * landing page does not want it and simply stops one box earlier: `stop`
- * picks the length, and `stops` in the geometry carries the frame count,
- * the canvas width that length needs, and which boxes are in it.
+ * THERE ARE TWO MENUS, AND THIS DRAWS EITHER. They are the same machine — the
+ * same scrub, the same phases, the same rules about pressing — differing only
+ * in what was drawn and what the words do, so both are described entirely by
+ * their geometry and neither has its own copy of this component.
+ *
+ *   bar   the monkey bar (`npm run build:menu`): a red box round the logo and
+ *         three labelled boxes unfolding to the right, plus a fourth the bake
+ *         synthesises for home. The CIGARETTE PAGES use it, and they need
+ *         that fourth box, because there the logo is this switch rather than
+ *         a link. `stop` picks the length.
+ *
+ *   grow  the branching one (`npm run build:growmenu`): a box round the logo
+ *         and branches that grow out of it carrying six words — about us,
+ *         privacy policy and terms of service across the top, MY SAVED,
+ *         OFFERS and RECOMMENDED stacked under the logo — and then recede
+ *         again, leaving the words standing. The LANDING PAGE uses it. Those
+ *         last three used to be artwork parts printed on the page; the owner
+ *         asked for them to come off it and live in here.
+ *
+ * HOW A WORD ANSWERS THE POINTER is the geometry's `hover`:
+ *
+ *   invert  the bar's boxes fill and their label reverses out. It cannot be
+ *           done by painting over the frame — the label would go with it — so
+ *           the bake writes a second image per box and this draws it on top.
+ *
+ *   dim     the grow menu's words have no box to fill, so they dim instead:
+ *           half strength under the pointer and a quarter while held, which
+ *           is exactly what OFFERS, My Saved and RECOMMENDED did when they
+ *           were parts of the page. Nothing is baked — the word's own box is
+ *           cleared and the frame is drawn back into it at that alpha — so
+ *           the two states cannot drift apart.
  */
-type Phase = 'idle' | 'forward' | 'open' | 'reverse';
-export type MenuStop = keyof typeof geometry.stops;
+type MenuBox = {
+  id: string;
+  label: string;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  /** A link, and where to. */
+  href?: string;
+  /** Not a link: a button carrying this `data-part`, for a listener elsewhere. */
+  part?: string;
+  /** Drawn and hoverable, but it goes nowhere yet. */
+  inert?: boolean;
+};
 
-const { frame, frameMs, logoHit, boxes, stops } = geometry;
-const SCALE = frame.scale;
-const VIEW_H = frame.h;
+type MenuGeometry = {
+  dir?: string;
+  frame: { w: number; h: number; scale: number };
+  frames: number;
+  frameMs: number;
+  hover?: 'invert' | 'dim';
+  logoHit: { x: number; y: number; w: number; h: number };
+  boxes: MenuBox[];
+  stops: Record<string, { frames: number; viewW: number; boxes: string[] }>;
+};
+
+const MENUS: Record<string, MenuGeometry> = {
+  bar: barGeometry as MenuGeometry,
+  grow: growGeometry as MenuGeometry,
+};
+
+export type MenuName = keyof typeof MENUS;
+
+type Phase = 'idle' | 'forward' | 'open' | 'reverse';
 
 /** Backwards runs at twice the speed it went forwards. */
 const REVERSE_RATE = 2;
 
-const src = (i: number) => `/menu/frames/f${String(i).padStart(3, '0')}.webp`;
+/** Half strength under the pointer, a quarter while it is held. */
+const DIM = { hover: 0.5, press: 0.25 };
 
-export function LogoMenu({ stop = 'base' }: { stop?: MenuStop } = {}) {
-  const { frames: FRAMES, viewW: VIEW_W, boxes: inPlay } = stops[stop];
-  const shown = boxes.filter((b) => (inPlay as readonly string[]).includes(b.id));
+export function LogoMenu({ menu = 'bar', stop = 'base' }: { menu?: MenuName; stop?: string } = {}) {
+  const geometry = MENUS[menu];
+  const { frame, frameMs, logoHit, boxes, stops } = geometry;
+  const SCALE = frame.scale;
+  const VIEW_H = frame.h;
+  const DIR = geometry.dir ?? '/menu/frames';
+  const HOVER = geometry.hover ?? 'invert';
+
+  const { frames: FRAMES, viewW: VIEW_W, boxes: inPlay } = stops[stop] ?? stops.base;
+  const shown = boxes.filter((b) => inPlay.includes(b.id));
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const framesRef = useRef<HTMLImageElement[] | null>(null);
@@ -52,6 +114,7 @@ export function LogoMenu({ stop = 'base' }: { stop?: MenuStop } = {}) {
   const lastTsRef = useRef(0);
   const phaseRef = useRef<Phase>('idle');
   const hoverBoxRef = useRef<string | null>(null);
+  const heldBoxRef = useRef<string | null>(null);
 
   const [phase, setPhaseState] = useState<Phase>('idle');
   const [ready, setReady] = useState(false);
@@ -61,7 +124,7 @@ export function LogoMenu({ stop = 'base' }: { stop?: MenuStop } = {}) {
     setPhaseState(next);
   }, []);
 
-  /** Draw the frame the position is currently on, plus any pressed box. */
+  /** Draw the frame the position is currently on, plus any pressed word. */
   const paint = useCallback(() => {
     const canvas = canvasRef.current;
     const list = framesRef.current;
@@ -75,14 +138,32 @@ export function LogoMenu({ stop = 'base' }: { stop?: MenuStop } = {}) {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     if (img?.complete && img.naturalWidth) ctx.drawImage(img, 0, 0);
 
-    // the pressed state only exists once the boxes are fully drawn
+    // the answer to a pointer only exists once the menu is fully drawn
     const hovered = hoverBoxRef.current;
-    if (hovered && phaseRef.current === 'open') {
-      const box = shown.find((b) => b.id === hovered);
-      const overlay = box ? pressedRef.current[box.id] : null;
-      if (box && overlay?.complete) ctx.drawImage(overlay, box.x * SCALE, box.y * SCALE);
+    if (!hovered || phaseRef.current !== 'open') return;
+    const box = shown.find((b) => b.id === hovered);
+    if (!box) return;
+    const x = box.x * SCALE;
+    const y = box.y * SCALE;
+
+    if (HOVER === 'dim') {
+      if (!img?.complete || !img.naturalWidth) return;
+      const w = box.w * SCALE;
+      const h = box.h * SCALE;
+      // lift the word out and lay it back down fainter. Clearing first is what
+      // makes this a dim rather than a double exposure: drawing at half alpha
+      // over the word already there would only darken it.
+      ctx.clearRect(x, y, w, h);
+      ctx.save();
+      ctx.globalAlpha = heldBoxRef.current === box.id ? DIM.press : DIM.hover;
+      ctx.drawImage(img, x, y, w, h, x, y, w, h);
+      ctx.restore();
+      return;
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- stop never changes for a mounted menu
+
+    const overlay = pressedRef.current[box.id];
+    if (overlay?.complete) ctx.drawImage(overlay, x, y);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- menu and stop never change for a mounted menu
   }, [FRAMES]);
 
   /** Load every frame once, off the critical path. */
@@ -93,27 +174,31 @@ export function LogoMenu({ stop = 'base' }: { stop?: MenuStop } = {}) {
     for (let i = 0; i < FRAMES; i++) {
       const img = new Image();
       img.decoding = 'async';
-      img.src = src(i);
+      img.src = `${DIR}/f${String(i).padStart(3, '0')}.webp`;
       list[i] = img;
       jobs.push(img.decode().catch(() => {}));
     }
-    for (const box of shown) {
-      const img = new Image();
-      img.src = `/menu/${box.id}-pressed.webp`;
-      pressedRef.current[box.id] = img;
-      jobs.push(img.decode().catch(() => {}));
+    if (HOVER === 'invert') {
+      for (const box of shown) {
+        const img = new Image();
+        img.src = `/menu/${box.id}-pressed.webp`;
+        pressedRef.current[box.id] = img;
+        jobs.push(img.decode().catch(() => {}));
+      }
     }
     framesRef.current = list;
     return Promise.all(jobs).then(() => {
       setReady(true);
       paint();
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- stop never changes for a mounted menu
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- menu and stop never change for a mounted menu
   }, [paint, FRAMES]);
 
   useEffect(() => {
-    // 294KB of frames: worth having ready before the first hover, not worth
-    // competing with the page's own artwork for the initial load
+    // Frames are worth having ready before the first hover and not worth
+    // competing with the page's own artwork for the initial load. The bar is
+    // 294KB; the grow menu is several times that, which is what an animation
+    // drawn at four times the page's scale and twice the length costs.
     const w = window as Window & { requestIdleCallback?: (cb: () => void) => number };
     if (w.requestIdleCallback) w.requestIdleCallback(() => void load());
     else window.setTimeout(() => void load(), 600);
@@ -153,7 +238,7 @@ export function LogoMenu({ stop = 'base' }: { stop?: MenuStop } = {}) {
       rafRef.current = requestAnimationFrame(step);
     };
     rafRef.current = requestAnimationFrame(step);
-  }, [paint, setPhase, FRAMES]);
+  }, [paint, setPhase, FRAMES, frameMs]);
 
   useEffect(() => () => cancelAnimationFrame(rafRef.current), []);
 
@@ -200,6 +285,7 @@ export function LogoMenu({ stop = 'base' }: { stop?: MenuStop } = {}) {
     cancelAnimationFrame(rafRef.current);
     posRef.current = 0;
     hoverBoxRef.current = null;
+    heldBoxRef.current = null;
     setPhase('idle');
     paint();
   }, [paint, setPhase]);
@@ -246,24 +332,52 @@ export function LogoMenu({ stop = 'base' }: { stop?: MenuStop } = {}) {
 
   const setHover = (id: string | null) => {
     hoverBoxRef.current = id;
+    if (!id) heldBoxRef.current = null;
     paint();
   };
 
-  const pct = (v: number) => `${v}px`;
+  const setHeld = (id: string | null) => {
+    heldBoxRef.current = id;
+    paint();
+  };
+
+  const px = (v: number) => `${v}px`;
+
+  /** Everything a word needs, whether it ends up a link or a button. */
+  const wordProps = (box: MenuBox) => ({
+    className: 'logo-menu-box',
+    'aria-label': box.label,
+    tabIndex: phase === 'open' ? 0 : -1,
+    'aria-hidden': phase === 'open' ? undefined : (true as const),
+    style: {
+      left: px(box.x),
+      top: px(box.y),
+      width: px(box.w),
+      height: px(box.h),
+      pointerEvents: (phase === 'open' ? 'auto' : 'none') as 'auto' | 'none',
+    },
+    onPointerEnter: () => setHover(box.id),
+    onPointerLeave: () => setHover(null),
+    onPointerDown: () => setHeld(box.id),
+    onPointerUp: () => setHeld(null),
+    onFocus: () => setHover(box.id),
+    onBlur: () => setHover(null),
+  });
 
   return (
     <div
       data-menu-root
+      data-menu={menu}
       className="logo-menu"
       data-phase={phase}
-      style={{ width: pct(VIEW_W), height: pct(VIEW_H) }}
+      style={{ width: px(VIEW_W), height: px(VIEW_H) }}
     >
       <canvas
         ref={canvasRef}
         className="logo-menu-canvas"
         width={VIEW_W * SCALE}
         height={VIEW_H * SCALE}
-        style={{ width: pct(VIEW_W), height: pct(VIEW_H) }}
+        style={{ width: px(VIEW_W), height: px(VIEW_H) }}
         aria-hidden="true"
       />
 
@@ -274,10 +388,10 @@ export function LogoMenu({ stop = 'base' }: { stop?: MenuStop } = {}) {
         aria-label="遠東 — menu"
         aria-expanded={phase === 'open'}
         style={{
-          left: pct(logoHit.x),
-          top: pct(logoHit.y),
-          width: pct(logoHit.w),
-          height: pct(logoHit.h),
+          left: px(logoHit.x),
+          top: px(logoHit.y),
+          width: px(logoHit.w),
+          height: px(logoHit.h),
         }}
         onPointerEnter={(e) => {
           if (e.pointerType === 'mouse') void goForward();
@@ -302,42 +416,49 @@ export function LogoMenu({ stop = 'base' }: { stop?: MenuStop } = {}) {
         }}
       />
 
-      {shown.map((box) => (
-        <Link
-          key={box.id}
-          href={box.href}
-          className="logo-menu-box"
-          aria-label={box.label}
-          tabIndex={phase === 'open' ? 0 : -1}
-          aria-hidden={phase === 'open' ? undefined : true}
-          style={{
-            left: pct(box.x),
-            top: pct(box.y),
-            width: pct(box.w),
-            height: pct(box.h),
-            pointerEvents: phase === 'open' ? 'auto' : 'none',
-          }}
-          onPointerEnter={() => setHover(box.id)}
-          onPointerLeave={() => setHover(null)}
-          onClick={() => {
-            // Shut it before the route changes. The canvas is opaque white,
-            // and the pages it leads to are red — left up during the
-            // transition it shows as a white block in the corner.
-            //
-            // On CLICK, not pointerdown. Closing sets this link's
-            // pointer-events to none, and React flushes a discrete event's
-            // state before the browser dispatches the click that follows —
-            // so from pointerdown the link was already untouchable by the
-            // time the click looked for it, and the menu simply never went
-            // anywhere. The navigation runs from this same handler chain
-            // rather than from another hit test, so here it is safe.
-            setHover(null);
-            snapClosed();
-          }}
-          onFocus={() => setHover(box.id)}
-          onBlur={() => setHover(null)}
-        />
-      ))}
+      {shown.map((box) =>
+        box.href ? (
+          <Link
+            key={box.id}
+            {...wordProps(box)}
+            href={box.href}
+            onClick={() => {
+              // Shut it before the route changes. On the bar the canvas is
+              // opaque white and the pages it leads to are red, so left up
+              // during the transition it shows as a white block in the corner.
+              //
+              // On CLICK, not pointerdown. Closing sets this link's
+              // pointer-events to none, and React flushes a discrete event's
+              // state before the browser dispatches the click that follows —
+              // so from pointerdown the link was already untouchable by the
+              // time the click looked for it, and the menu simply never went
+              // anywhere. The navigation runs from this same handler chain
+              // rather than from another hit test, so here it is safe.
+              setHover(null);
+              snapClosed();
+            }}
+          />
+        ) : (
+          <button
+            key={box.id}
+            {...wordProps(box)}
+            type="button"
+            // The hook whatever owns this word is listening on. My Saved's is
+            // `saved`, which `CigScroller` claims in the capture phase to spin
+            // the row — the same attribute it used when this was a part of the
+            // page, so that listener did not have to change.
+            data-part={box.part}
+            // NOT `disabled` for an inert word: a disabled control takes no
+            // pointer events at all in Chrome, so it would stop answering the
+            // pointer as well as going nowhere. OFFERS and RECOMMENDED were
+            // pressable-but-inert as page parts too; this is the same thing.
+            onClick={() => {
+              setHover(null);
+              snapClosed();
+            }}
+          />
+        ),
+      )}
     </div>
   );
 }

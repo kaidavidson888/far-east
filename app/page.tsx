@@ -67,7 +67,7 @@ export default async function HomePage({
         spec={LANDING_SPEC}
         device={device}
         showHitboxes={showHitboxes}
-        overlay={<><CigScroller withPages={PRESSABLE} /><LogoMenu /><SealButton size={LANDING_SPEC.sealSize} /></>}
+        overlay={<><CigScroller withPages={PRESSABLE} /><LogoMenu menu="grow" /><SealButton size={LANDING_SPEC.sealSize} /></>}
         decorative={['logo']}
       hide={['seal']}
       />

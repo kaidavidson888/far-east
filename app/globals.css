@@ -1004,77 +1004,21 @@ ul, ol { list-style: none; }
   outline: 1px dashed var(--artpage-focus, #fd0000);
 }
 
-/* ---------------------------------------------- the three landing labels --
-   OFFERS, My Saved and RECOMMENDED answer a pointer the same way: the whole
-   button drops a quarter, and a dash appears one space after the word.
+/* --------------------------------------------- the three landing labels --
+   GONE, WITH THE LABELS THEMSELVES. OFFERS, My Saved and RECOMMENDED were
+   three marks printed under the logo, and this is where their answer to a
+   pointer lived: the whole button to 50% on hover and 25% held, with a 5px
+   dash appearing one space after the word, every figure measured off the
+   ink table.
 
-   THE DASH IS A CHILD OF THE BUTTON, so the button's own opacity carries it.
-   That is what "the same opacity as the text" means at both steps — 50% on
-   hover, 25% pressed — without either number being written twice or the two
-   drifting apart later. Both were a quarter higher to begin with; the owner
-   took another 25 off each, the same way they asked for the first 25.
+   The owner moved those three words into the logo menu (2026-09-16), so the
+   parts are no longer placed — see lib/landing.ts — and every selector here
+   matched nothing. The manner survives: the menu dims a word to the same 50
+   and 25 (DIM in components/LogoMenu.tsx), which is why those two numbers
+   still look familiar. The dash did not come with them; it belonged to a
+   label standing on the page, not to a word in a menu.
 
-   The gap is that label's OWN space, not one shared number. The three are
-   drawn at 51.5, 18.9 and 18.1px (their ink heights divided by the ink
-   extents of the letters actually in them), and a space is 0.32em in the
-   owner's face — advance 320 at 1000 upem, from scripts/assets/far-east-ink.json.
-   The dash sits on the middle of the x-height (510/1000) measured from each
-   label's own baseline, so it reads as sitting on the line of type rather
-   than floating above or below it. Measured off the ink like everything else
-   on these pages, not guessed.
-
-   OFFERS IS NOW SHOWN AT 14/37 OF ITS DRAWN SIZE — 19.5px, My Saved's size
-   to the whole pixel (lib/landing.ts, the owner's ask) — so its two figures
-   are the drawn ones scaled by the same 14/37: 16.5 → 6.2, 23.1 → 8.7. */
-.artpage-hit[data-part='offers'],
-.artpage-hit[data-part='saved'],
-.artpage-hit[data-part='recommended'] {
-  transition: opacity 120ms ease-out;
-}
-.artpage-hit[data-part='offers'] {
-  --dash-gap: 6.2px;
-  --dash-top: 8.7px;
-}
-.artpage-hit[data-part='saved'] {
-  --dash-gap: 6px;
-  --dash-top: 8.8px;
-}
-.artpage-hit[data-part='recommended'] {
-  --dash-gap: 5.8px;
-  --dash-top: 8.1px;
-}
-.artpage-hit[data-part='offers']:hover,
-.artpage-hit[data-part='saved']:hover,
-.artpage-hit[data-part='recommended']:hover {
-  opacity: 0.5;
-}
-.artpage-hit[data-part='offers']:active,
-.artpage-hit[data-part='saved']:active,
-.artpage-hit[data-part='recommended']:active {
-  opacity: 0.25;
-}
-.artpage-hit[data-part='offers']::after,
-.artpage-hit[data-part='saved']::after,
-.artpage-hit[data-part='recommended']::after {
-  content: '';
-  position: absolute;
-  left: calc(100% + var(--dash-gap));
-  top: var(--dash-top);
-  width: 5px;
-  height: 2px;
-  background: var(--artpage-focus, #010101);
-  opacity: 0;
-  transition: opacity 120ms ease-out;
-}
-/* :active as well as :hover — a touch or a keyboard press never hovers. */
-.artpage-hit[data-part='offers']:hover::after,
-.artpage-hit[data-part='saved']:hover::after,
-.artpage-hit[data-part='recommended']:hover::after,
-.artpage-hit[data-part='offers']:active::after,
-.artpage-hit[data-part='saved']:active::after,
-.artpage-hit[data-part='recommended']:active::after {
-  opacity: 1;
-}
+   Git has the block if the column ever goes back on the page. */
 
 /* ------------------------------------------------------- inner page nav --
    The three footer boxes. The one for the page you are already on goes
@@ -2225,15 +2169,21 @@ html:has(.cigpage) {
   transition: opacity 120ms linear;
 }
 /* The menu and the seal both want the top strip, and on a narrow screen
-   there is not enough of it. The boxes are drawn out to x=290 (see
-   lib/menu-geometry.json) and the seal takes 87 plus its 30 margin off the
-   right edge, so the two collide below 290 + 117 = 407. Where they do, the
-   seal stands down for as long as the menu is out — it is the static mark,
-   and the menu is only ever out because someone asked for it.
+   there is not enough of it. Where they collide the seal stands down for as
+   long as the menu is out — it is the static mark, and the menu is only ever
+   out because someone asked for it.
 
-   This only became true when the seal grew to the height of the character
-   logo; at the artwork's own 45px it cleared the boxes. */
-@media (max-width: 406px) {
+   WHERE THEY COLLIDE MOVED WHEN THE MENU DID. The monkey bar's boxes reached
+   x=290 and the seal takes 87 plus its 30 margin off the right edge, so the
+   two met below 290 + 117 = 407. The grow menu the landing page now carries
+   reaches x=365.5 (`boxes` in lib/growmenu-geometry.json — terms of service
+   ends there), so on that page they meet below 365.5 + 117 = 482.5. The
+   cigarette pages still carry the bar and keep the old line, in their own
+   copy of this rule.
+
+   This only became true at all when the seal grew to the height of the
+   character logo; at the artwork's own 45px it cleared the boxes. */
+@media (max-width: 482px) {
   .artpage-stage:has(.logo-menu:not([data-phase='idle'])) .seal-button {
     opacity: 0;
     pointer-events: none;

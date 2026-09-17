@@ -125,7 +125,20 @@ const LABELS = {
   saved: LABEL_TOP + OFFERS.h + OFFERS_TO_SAVED,
   recommended: LABEL_TOP + OFFERS.h + OFFERS_TO_SAVED + parts.saved.h + LABEL_GAP,
 };
-/** The page y the cigarette row must keep clear of: the column's foot plus the design's gap. See cigZoom. */
+/**
+ * The page y the cigarette row must keep clear of: the column's foot plus the
+ * design's gap. See cigZoom.
+ *
+ * THE COLUMN IS NO LONGER PRINTED ON THE PAGE (below) AND THIS LINE STAYS
+ * WHERE IT WAS. The row's size was its own ask — "just big enough where only
+ * 7 packs at max are visible" — and moving this would resize it on any window
+ * short enough for the height to be the binding constraint, which is not
+ * something that was asked for. So the arithmetic above still runs over the
+ * three labels' own geometry, which the build still cuts, and the row sits
+ * exactly where it sat. The menu's words reach 5px past it; on a window short
+ * enough for that to meet the row's top rule, it meets it only while the menu
+ * is open, and the menu is drawn over the row.
+ */
 export const LANDING_ROW_CLEAR = LABELS.recommended + parts.recommended.h + LABEL_GAP;
 
 const inCluster = (id: keyof typeof CLUSTER, label: string, pressable: boolean): ArtPart => ({
@@ -155,16 +168,23 @@ export const LANDING_SPEC: ArtPageSpec = {
     h: cluster.h,
     placement: both({ right: M.right, top: M.top + SEAL_SIZE + LABEL_GAP }),
   },
+  /**
+   * OFFERS, MY SAVED AND RECOMMENDED ARE NOT PLACED — THEY MOVED INTO THE
+   * MENU. The owner's 2026-09-16 ask: the logo's menu was re-drawn to grow
+   * branches carrying six words, three of them these, and the three standing
+   * on the page were to come off it. So the page is now the logo, the seal and
+   * the sigil pair, and everything you can press beyond the row is reached by
+   * hovering 遠東. `npm run build:growmenu` bakes that menu and measures the
+   * words off its last frame; `components/LogoMenu.tsx` draws it.
+   *
+   * The parts are still cut by `npm run build:landing` and their geometry is
+   * still read above — LABEL_TOP and LABELS decide where the row's ceiling is
+   * and are what keeps the row exactly where it was — so putting the column
+   * back on the page is three lines here, the way TEST YOUR LUCK is one.
+   */
   parts: [
     anchored('logo', '遠東', both({ left: M.left, top: parts.logo.y })),
     anchored('seal', 'Seal', both({ right: M.right, top: M.top })),
-    anchored('offers', 'Offers', both({ left: parts.offers.x, top: LABELS.offers }), OFFERS),
-    anchored('saved', 'My Saved', both({ left: parts.saved.x, top: LABELS.saved })),
-    anchored(
-      'recommended',
-      'Recommended',
-      both({ left: parts.recommended.x, top: LABELS.recommended }),
-    ),
     inCluster('cloud', '', false),
     inCluster('square', '', false),
   ],

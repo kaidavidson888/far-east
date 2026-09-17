@@ -48,6 +48,12 @@ no CSS framework (tokens in `app/globals.css`). Deploys to Vercel.
 - `npm run audit:cigtext` — estimates every line of type on the built cigarette
   pages against the box it sits in and lists the tight ones, worst first, with
   the width it had in the original digits beside it. Run it after a font change.
+- `npm run build:menu` / `npm run build:growmenu` — bake the two logo menus out of
+  their GIFs (`monkey-bar.gif` for the cigarette pages, `monkey-grow.gif` for the
+  landing page) into `public/menu` + `lib/menu-geometry.json` and `public/growmenu` +
+  `lib/growmenu-geometry.json`. The grow bake takes a couple of minutes and MEASURES
+  everything it can — the scale off the first frame, the six words off the last — and
+  stops rather than guessing. See "The logo menu" below.
 - `npm run build:cigpages` — rebuilds the 235 pages in `public/cigpages` and
   `lib/cigpages.json` from the owner's info-page vectors in `scripts/assets/cigpages`.
   **Takes about half an hour** (it re-encodes every raster in every vector), so background
@@ -128,13 +134,67 @@ artwork to fit a frame — that scales the margins with it, which is the thing b
   logo opens the menu and is marked `decorative` so it is not also a button.
 - Routes: `/` is the landing artwork behind the sign-in splash; `/landing` is the same page
   with no splash. `/about`, `/privacy`, `/terms` are the inner pages.
-- **The logo menu** (`components/LogoMenu.tsx`, `npm run build:menu`) is on the landing
-  routes and the cigarette pages — its ground is white, so it cannot go on the red inner
-  pages. Hovering 遠東 unfolds the linked boxes; pressing mid-run skips to the end; pressing
-  the logo again or anything else runs it back at 2x. Frames are baked from
-  `scripts/assets/monkey-bar.gif` because a GIF cannot be seeked, paused or reversed. The
-  canvas draws over the page's own logo rather than replacing it — frame 0 IS that logo, and
-  both put their ink at exactly 46,28, which is measured in the build, not assumed.
+- **The logo menu** (`components/LogoMenu.tsx`) is on the landing routes and the
+  cigarette pages — its ground is white, so it cannot go on the red inner pages. Hovering
+  遠東 unfolds it; pressing mid-run skips to the end; pressing the logo again or anything
+  else runs it back at 2x. Frames are baked from a GIF because a GIF cannot be seeked,
+  paused or reversed. The canvas draws over the page's own logo rather than replacing it —
+  frame 0 IS that logo, and the bake measures the alignment rather than assuming it.
+- **THERE ARE TWO MENUS AND ONE COMPONENT.** They are the same machine — same scrub, same
+  phases, same rules about pressing — and differ only in what was drawn and what the words
+  do, so each is described entirely by its geometry JSON and neither has its own copy of
+  `LogoMenu`. `menu="bar"` (the default) or `menu="grow"` picks one.
+  - **bar** — `npm run build:menu`, `scripts/assets/monkey-bar.gif`, `lib/menu-geometry.json`,
+    `public/menu/`. A red box round the logo and three labelled boxes unfolding right, plus
+    a fourth the bake synthesises for home. **The CIGARETTE PAGES use it** and need that
+    fourth box, because there the logo is the menu's switch rather than a link. Its logo ink
+    lands at 46,28.
+  - **grow** — `npm run build:growmenu`, `scripts/assets/monkey-grow.gif`,
+    `lib/growmenu-geometry.json`, `public/growmenu/`. The owner's 2026-09-16 drawing: a box
+    round the logo, then branches growing out of it carrying six words — about us, privacy
+    policy, terms of service across the top and MY SAVED, OFFERS, RECOMMENDED stacked under
+    the logo — which recede again over the last thirty frames and leave the words standing.
+    **The LANDING PAGE uses it, and the three labels that used to be printed on that page
+    are now three of those six words** (see the landing section below).
+- **The grow bake has to do three things the bar's did not**, and all three are measured
+  rather than chosen — read the header of `scripts/build-grow-menu.mjs`:
+  - **Scale.** The bar was drawn at the page's own size; this is drawn at **4.15x** it
+    (1840x1136 against a 390-wide page). The scale is the gif's first frame — which is the
+    logo and nothing else — over the logo part's own box, and **the two axes have to agree
+    or the source is not what we think it is**: 40/166 and 87/361 are both 0.2410, and the
+    build stops if they ever differ by more than a per cent.
+  - **Alignment.** Each frame is resized and then **extracted at a whole device pixel**
+    chosen to put the gif's logo ink on the page's logo box; the residual is printed and
+    asserted under a quarter pixel. It comes to 0.148 x 0.075 CSS px, and the canvas's
+    frame-0 ink measures 45,28 on the page's own 45,28 — where the bar's rule was half a
+    pixel.
+  - **The six words are found, not typed in.** The final frame's ink is grouped into blobs
+    (dilated by 4.5 PAGE px, which reaches across the line break inside "privacy policy" and
+    not across the gap to "terms of service"), the blob holding the logo is set aside, and
+    the rest are sorted into reading order. **Not exactly six and the build stops** rather
+    than shipping a menu with a word nobody can press. Only what each word DOES is a table
+    (`ITEMS`), because that is the one thing pixels cannot say.
+- **How a word answers the pointer is the geometry's `hover`.** `invert` is the bar's: the
+  box fills and the label reverses out, which cannot be painted over the frame (the label
+  would go with it), so the bake writes a second image per box. `dim` is the grow menu's:
+  its words have no box to fill, so the word's own rect is CLEARED and the frame drawn back
+  into it at 50% under the pointer and 25% held — which is exactly what OFFERS, My Saved and
+  RECOMMENDED did as page parts. Clearing first is what makes it a dim; drawing at half
+  alpha over the word already there would only darken it. Nothing is baked, so the two
+  states cannot drift apart. Verified in the page: 154.8 mean alpha at rest, 82.8 hovered,
+  45.8 held, back to 154.8 exactly on leave.
+- **A word that is not a link is a button carrying `data-part`.** My Saved's is `saved` —
+  the same attribute it had as a page part, so `CigScroller`'s capture-phase listener spins
+  the row with no change at all. OFFERS and RECOMMENDED are `inert`: drawn, hoverable and
+  going nowhere, as they were on the page. **Not `disabled`** — a disabled control takes no
+  pointer events in Chrome, so it would stop answering the pointer as well.
+- **The grow menu weighs 3.5MB** (197 frames, 744x468, lossless WebP), against the bar's
+  953KB. It loads on `requestIdleCallback`, after the page's own artwork. That is what the
+  frames genuinely cost: every ink pixel in it is pure black, and storing the alpha channel
+  alone comes to the same bytes, so WebP is already exploiting it — **and lossy WebP is not
+  an option, because sharp silently keeps lossless for an image with an alpha channel** (q10
+  and lossless came back byte-identical). The lever, if it is ever needed, is `SS` in the
+  bake: 1 instead of 2 quarters the pixels and costs sharpness on a dense screen.
 - **The frames carry no white.** The gif paints its background white and 90% of a finished
   frame was opaque white, which cut across whatever the canvas sat on — on the cigarette pages,
   the red rule round the info. The bake un-multiplies every frame out of white on the way out:
@@ -676,22 +736,34 @@ cannot drift.
   returns early). Verified end to end: Menthol + mid put exactly the 29 packs
   the manifest says, and only those, on the row.
 
-**OFFERS, My Saved and RECOMMENDED answer a pointer the same way**: the whole
-button drops to 50%, and a 5px dash appears one space after the word. Pressed,
-both go to 25%. (Those were 75 and 50 at first; the owner asked for another 25
-off each.) The dash is a `::after` INSIDE the button, so the button's own
-opacity carries it — which is what "the same opacity as the text" means at both
-steps without either number being written twice. The gap is each label's OWN
-space, because the three are drawn at different sizes (51.5, 18.9 and 18.1px):
-a space is 0.32em in the owner's face, and the dash sits on the middle of the
-x-height measured from that label's baseline. All of it is off the ink in
-`scripts/assets/far-east-ink.json`, like everything else on these pages. The
-block is in `globals.css` under "the three landing labels".
+**OFFERS, My Saved and RECOMMENDED ARE NO LONGER ON THE PAGE — they moved into
+the logo menu** (the owner's 2026-09-16 ask, with the new drawing). The landing
+page at rest is now the logo, the seal and the sigil pair, and everything you
+can press beyond the row is reached by hovering 遠東. Three notes on what that
+took:
+- **The parts are still cut and their geometry is still read.** Only the three
+  `anchored(...)` lines came out of `LANDING_SPEC.parts`, exactly as TEST YOUR
+  LUCK did — so putting the column back on the page is three lines.
+- **`LANDING_ROW_CLEAR` deliberately did not move.** It is still the old
+  column's foot plus the design's gap, because the row's size was its own ask
+  ("only 7 packs at max") and this constant is what decides it on any window
+  short enough for height to bind. The menu's lowest word reaches 5px past that
+  line; where a window is short enough for the two to meet, they meet only
+  while the menu is open, and the menu draws over the row.
+- **Their pointer treatment went with them**, and the block in `globals.css`
+  under "the three landing labels" is a tombstone pointing here. They dropped to
+  50% on hover and 25% held, with a 5px dash one space after the word (each gap
+  measured off that label's own space, 0.32em, since the three were drawn at
+  51.5, 18.9 and 18.1px). **The menu dims to the same 50 and 25** — that is
+  where those two numbers went — but **the dash did not come with them**: it
+  belonged to a label standing on the page, not to a word in a menu. Git has
+  the block if the column ever goes back.
 
-**The landing page has since moved off the design in three places, all the
-owner's asks (2026-09-14), all in `lib/landing.ts` and none in the artwork
+**The landing page has since moved off the design in four places, all the
+owner's asks, all in `lib/landing.ts` and none in the artwork
 build:** TEST YOUR LUCK is no longer placed (the part is still cut, so it is
-one line to restore); the sigil and the square sit under the seal, scaled as
+one line to restore); **OFFERS, My Saved and RECOMMENDED are no longer placed
+either (2026-09-16), having moved into the logo menu — above**; the sigil and the square sit under the seal, scaled as
 one to the seal's 87px width, 13px below it (the design's gap from My Saved
 to RECOMMENDED) with 5px between them as drawn, which the scale takes to 4;
 and the three labels are a column whose top is the inside of that square's
