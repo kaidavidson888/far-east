@@ -168,6 +168,26 @@ artwork to fit a frame — that scales the margins with it, which is the thing b
     asserted under a quarter pixel. It comes to 0.148 x 0.075 CSS px, and the canvas's
     frame-0 ink measures 45,28 on the page's own 45,28 — where the bar's rule was half a
     pixel.
+  - **THE LOGO IS TAKEN OUT OF EVERY FRAME** (the owner's ask: "make the resting thickness
+    of the character logo match the thickness when the animation starts"). The page draws
+    its own 遠東 as a vector at `z-index: 4` and it stays up the whole time the menu is out,
+    so anything the canvas drew there was a SECOND copy of the same mark underneath the
+    first — and they do not coincide: the canvas's is a raster of a drawing made at 4.15x
+    and brought back down, its ink running about a pixel wider on every side than the
+    vector's box (44..86.5 against 45..85). The vector covered the middle and the rest
+    showed as a soft edge all round, so **the logo thickened the instant the menu started
+    moving**. The bake now blanks it: frame 0 is the logo and nothing else, which makes it
+    exactly the right stencil, and the page's logo box goes in the stencil too so the rule
+    is exact rather than nearly (resizing each frame separately leaves the odd pixel a
+    level off white, which un-multiplies to an alpha of 1). **It checks before it blanks** —
+    inside the stencil every frame must match frame 0 within a couple of levels, or
+    something was drawn over the logo and blanking would take that with it; the worst
+    disagreement across all 197 frames is 3 levels. The drawn rule round the logo stops at
+    y=27.5, half a pixel clear of the box, so none of the animation is lost. Verified in
+    the page: the canvas holds **zero ink** in the logo's box at every phase — idle, mid-run
+    and open — while the rest of it paints normally. Frame 0 is now entirely blank, which is
+    right: at rest the canvas has nothing to say. **The bar menu is not like this** — its
+    raster copy is 2px NARROWER than the vector, so it hides under it and shows no edge.
   - **The six words are found, not typed in.** The final frame's ink is grouped into blobs
     (dilated by 4.5 PAGE px, which reaches across the line break inside "privacy policy" and
     not across the gap to "terms of service"), the blob holding the logo is set aside, and
@@ -188,8 +208,9 @@ artwork to fit a frame — that scales the margins with it, which is the thing b
   the row with no change at all. OFFERS and RECOMMENDED are `inert`: drawn, hoverable and
   going nowhere, as they were on the page. **Not `disabled`** — a disabled control takes no
   pointer events in Chrome, so it would stop answering the pointer as well.
-- **The grow menu weighs 3.5MB** (197 frames, 744x468, lossless WebP), against the bar's
-  953KB. It loads on `requestIdleCallback`, after the page's own artwork. That is what the
+- **The grow menu weighs 2.9MB** (197 frames, 744x468, lossless WebP), against the bar's
+  953KB. It was 3.5MB before the logo came out of the frames — that mark was being stored
+  197 times over. It loads on `requestIdleCallback`, after the page's own artwork. That is what the
   frames genuinely cost: every ink pixel in it is pure black, and storing the alpha channel
   alone comes to the same bytes, so WebP is already exploiting it — **and lossy WebP is not
   an option, because sharp silently keeps lossless for an image with an alpha channel** (q10

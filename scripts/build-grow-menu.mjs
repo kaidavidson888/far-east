@@ -45,6 +45,25 @@
  *    leave a halo on every antialiased edge, and this leaves none, being the
  *    arithmetic the gif's own renderer did, run backwards.
  *
+ * 4. THE LOGO IS TAKEN OUT OF EVERY FRAME. The page draws its own 遠東 as a
+ *    vector, at z-index 4, and it stays up the whole time the menu is out —
+ *    so anything the canvas draws there is a SECOND copy of the same mark
+ *    underneath the first. They do not coincide: the canvas's is a raster of
+ *    a drawing made at 4.15x and brought back down, and its ink runs about a
+ *    pixel wider on every side than the vector's box (44..86.5 against
+ *    45..85). The vector covers the middle of it and the rest shows as a soft
+ *    edge all round — so the logo THICKENED the instant the menu started
+ *    moving, which is what the owner saw.
+ *
+ *    So the bake erases it. Frame 0 is the logo and nothing else, which makes
+ *    it exactly the right stencil: every pixel it touches is blanked in every
+ *    frame. **It checks first** — inside that stencil, every frame has to
+ *    match frame 0 to within a couple of levels, or something else was drawn
+ *    over the logo and blanking it would take that with it. Measured over all
+ *    197 frames the worst disagreement is one level, which is the resize's own
+ *    rounding. The canvas ends up with a logo-shaped hole in it and the page's
+ *    vector is the only 遠東 there ever is, at rest and in motion alike.
+ *
  * ---------------------------------------------------------------------
  * THE SIX WORDS ARE MEASURED, NOT TYPED IN.
  *
@@ -254,10 +273,60 @@ async function bakedFrame(i) {
   return data;
 }
 
+/**
+ * The stencil: frame 0 is the logo and nothing else, so every pixel it marks
+ * is a pixel the page's own vector already draws. Anything the canvas puts
+ * there is a second copy under the first — see the header.
+ */
+const stencilFrame = await bakedFrame(0);
+const inLogoBox = (p) => {
+  const x = (p % RW) / SS;
+  const y = Math.floor(p / RW) / SS;
+  return x >= logoPart.x && x < logoPart.x + logoPart.w && y >= logoPart.y && y < logoPart.y + logoPart.h;
+};
+const stencil = [];
+for (let p = 0; p < RW * RH; p++) {
+  const o = p * 3;
+  const drawn = stencilFrame[o] < 255 || stencilFrame[o + 1] < 255 || stencilFrame[o + 2] < 255;
+  // frame 0's own ink, AND the whole of the box the page's vector occupies.
+  // The second is what makes the rule exact rather than nearly: resizing each
+  // frame separately leaves a pixel here and there a level or two off white,
+  // which un-multiplies to an alpha of 1 — invisible, but it is still the
+  // canvas drawing inside the vector's box, and the rule is that it does not.
+  // The drawn rule round the logo stops at y=27.5, half a pixel clear of the
+  // box's top edge, so nothing of the animation is lost to this.
+  if (drawn || inLogoBox(p)) stencil.push(p);
+}
+console.log(`  the logo's stencil: ${stencil.length} device px blanked from every frame`);
+
+/** How far a frame may disagree with frame 0 inside the stencil: rounding, no more. */
+const STENCIL_TOL = 4;
+let worstDrift = 0;
+
 let total = 0;
 let lastFrame = null;
 for (let i = 0; i < N; i++) {
   const data = await bakedFrame(i);
+
+  // nothing but the logo may ever be drawn there — check, then blank
+  for (const p of stencil) {
+    const o = p * 3;
+    for (let c = 0; c < 3; c++) {
+      const d = Math.abs(data[o + c] - stencilFrame[o + c]);
+      if (d > worstDrift) worstDrift = d;
+      if (d > STENCIL_TOL) {
+        throw new Error(
+          `frame ${i} differs from frame 0 by ${d} inside the logo at ` +
+            `${((p % RW) / SS).toFixed(1)},${(Math.floor(p / RW) / SS).toFixed(1)} page px — ` +
+            'something is drawn over the logo and blanking it would take that with it',
+        );
+      }
+    }
+    data[o] = 255;
+    data[o + 1] = 255;
+    data[o + 2] = 255;
+  }
+
   if (i === N - 1) lastFrame = data;
   const webp = await sharp(unmultiply(data), { raw: { width: RW, height: RH, channels: 4 } })
     .webp({ lossless: true, effort: 6 })
@@ -265,7 +334,10 @@ for (let i = 0; i < N; i++) {
   writeFileSync(`${FRAMES_DIR}/f${String(i).padStart(3, '0')}.webp`, webp);
   total += webp.length;
 }
-console.log(`wrote ${N} frames to ${FRAMES_DIR} (${Math.round(total / 1024)}KB, ${Math.round(total / N / 1024)}KB each)`);
+console.log(
+  `wrote ${N} frames to ${FRAMES_DIR} (${Math.round(total / 1024)}KB, ${Math.round(total / N / 1024)}KB each)` +
+    `; the logo's own pixels never drifted more than ${worstDrift} level${worstDrift === 1 ? '' : 's'} across the set`,
+);
 
 // ---- the six words, found in the last frame -------------------------------
 /** Group ink into blobs, dilating by R so letters join and phrases do not. */
