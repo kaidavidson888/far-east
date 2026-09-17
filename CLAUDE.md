@@ -206,11 +206,13 @@ artwork to fit a frame — that scales the margins with it, which is the thing b
 - **HOW FAST EACH MENU PLAYS IS `PLAY_RATE` IN THE COMPONENT, NOT THE GEOMETRY.**
   `frameMs` there is the gif's own measured rate and stays a measurement; this is the
   preference, and it is per menu because it is a judgement about one of them — the owner
-  asked for the grow menu to come out 20% slower (2026-09-17), so it runs at 0.8 and takes
-  10.3s where its gif's timing gives 8.3. The bar is untouched at 1. Reverse is
-  `REVERSE_RATE` times whatever forward is doing, so "backwards at twice the speed" holds
-  at any rate. Verified on a virtual clock (the pane cannot time rAF — see the gotchas):
-  forward 10.32s against the gif's 8.27, reverse exactly half of forward.
+  asked for the grow menu 20% slower than its gif and then 10% back the other way
+  (2026-09-17), which is 0.8 x 1.1, so it runs at **0.88** and takes 9.4s where the gif's
+  timing gives 8.3. The bar is untouched at 1. Reverse is `REVERSE_RATE` times whatever
+  forward is doing, so "backwards at twice the speed" holds at any rate. Verified on a
+  virtual clock (the pane cannot time rAF — see the gotchas): rate 0.882 measured, forward
+  9.39s, reverse 4.71s. **Note that a 10% faster RATE is a 9.1% shorter RUN** — 1 − 1/1.1 —
+  so if a future ask is about the length rather than the speed, that is the difference.
 - **A word that is not a link is a button carrying `data-part`.** My Saved's is `saved` —
   the same attribute it had as a page part, so `CigScroller`'s capture-phase listener spins
   the row with no change at all. OFFERS and RECOMMENDED are `inert`: drawn, hoverable and

@@ -97,14 +97,15 @@ const REVERSE_RATE = 2;
  *
  * `frameMs` in the geometry is the gif's measured rate and stays that — a
  * measurement, not a preference. This is the preference, and it is per menu
- * because it is the owner's judgement about one of them: they asked for the
- * grow menu to come out 20% slower (2026-09-17), so it runs at 80% and takes
- * 10.3s where the gif's own timing gives 8.3. The bar is untouched at 1.
+ * because it is the owner's judgement about one of them: 20% slower than the
+ * gif's own timing, then 10% back the other way (2026-09-17), which is 0.8 x
+ * 1.1 — so the grow menu runs at 0.88 and takes 9.4s where the gif gives 8.3.
+ * The bar is untouched at 1.
  *
  * Reverse still runs at REVERSE_RATE times whatever forward is doing, so
  * "backwards at twice the speed" holds at any rate.
  */
-const PLAY_RATE: Record<string, number> = { bar: 1, grow: 0.8 };
+const PLAY_RATE: Record<string, number> = { bar: 1, grow: 0.88 };
 
 /** Half strength under the pointer, a quarter while it is held. */
 const DIM = { hover: 0.5, press: 0.25 };
