@@ -92,6 +92,20 @@ type Phase = 'idle' | 'forward' | 'open' | 'reverse';
 /** Backwards runs at twice the speed it went forwards. */
 const REVERSE_RATE = 2;
 
+/**
+ * How fast each menu plays against the rate its own gif was drawn at.
+ *
+ * `frameMs` in the geometry is the gif's measured rate and stays that — a
+ * measurement, not a preference. This is the preference, and it is per menu
+ * because it is the owner's judgement about one of them: they asked for the
+ * grow menu to come out 20% slower (2026-09-17), so it runs at 80% and takes
+ * 10.3s where the gif's own timing gives 8.3. The bar is untouched at 1.
+ *
+ * Reverse still runs at REVERSE_RATE times whatever forward is doing, so
+ * "backwards at twice the speed" holds at any rate.
+ */
+const PLAY_RATE: Record<string, number> = { bar: 1, grow: 0.8 };
+
 /** Half strength under the pointer, a quarter while it is held. */
 const DIM = { hover: 0.5, press: 0.25 };
 
@@ -204,7 +218,7 @@ export function LogoMenu({ menu = 'bar', stop = 'base' }: { menu?: MenuName; sto
     else window.setTimeout(() => void load(), 600);
   }, [load]);
 
-  /** The scrub loop. Forward at the gif's own rate, back at twice it. */
+  /** The scrub loop. Forward at this menu's own rate, back at twice it. */
   const run = useCallback(() => {
     cancelAnimationFrame(rafRef.current);
     lastTsRef.current = 0;
@@ -214,8 +228,10 @@ export function LogoMenu({ menu = 'bar', stop = 'base' }: { menu?: MenuName; sto
       const dt = Math.min(64, ts - prev);
       const phaseNow = phaseRef.current;
 
+      const rate = (dt / frameMs) * (PLAY_RATE[menu] ?? 1);
+
       if (phaseNow === 'forward') {
-        posRef.current += dt / frameMs;
+        posRef.current += rate;
         if (posRef.current >= FRAMES - 1) {
           posRef.current = FRAMES - 1;
           paint();
@@ -223,7 +239,7 @@ export function LogoMenu({ menu = 'bar', stop = 'base' }: { menu?: MenuName; sto
           return;
         }
       } else if (phaseNow === 'reverse') {
-        posRef.current -= (dt / frameMs) * REVERSE_RATE;
+        posRef.current -= rate * REVERSE_RATE;
         if (posRef.current <= 0) {
           posRef.current = 0;
           paint();
@@ -238,7 +254,7 @@ export function LogoMenu({ menu = 'bar', stop = 'base' }: { menu?: MenuName; sto
       rafRef.current = requestAnimationFrame(step);
     };
     rafRef.current = requestAnimationFrame(step);
-  }, [paint, setPhase, FRAMES, frameMs]);
+  }, [paint, setPhase, FRAMES, frameMs, menu]);
 
   useEffect(() => () => cancelAnimationFrame(rafRef.current), []);
 

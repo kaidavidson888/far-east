@@ -203,6 +203,14 @@ artwork to fit a frame — that scales the margins with it, which is the thing b
   alpha over the word already there would only darken it. Nothing is baked, so the two
   states cannot drift apart. Verified in the page: 154.8 mean alpha at rest, 82.8 hovered,
   45.8 held, back to 154.8 exactly on leave.
+- **HOW FAST EACH MENU PLAYS IS `PLAY_RATE` IN THE COMPONENT, NOT THE GEOMETRY.**
+  `frameMs` there is the gif's own measured rate and stays a measurement; this is the
+  preference, and it is per menu because it is a judgement about one of them — the owner
+  asked for the grow menu to come out 20% slower (2026-09-17), so it runs at 0.8 and takes
+  10.3s where its gif's timing gives 8.3. The bar is untouched at 1. Reverse is
+  `REVERSE_RATE` times whatever forward is doing, so "backwards at twice the speed" holds
+  at any rate. Verified on a virtual clock (the pane cannot time rAF — see the gotchas):
+  forward 10.32s against the gif's 8.27, reverse exactly half of forward.
 - **A word that is not a link is a button carrying `data-part`.** My Saved's is `saved` —
   the same attribute it had as a page part, so `CigScroller`'s capture-phase listener spins
   the row with no change at all. OFFERS and RECOMMENDED are `inert`: drawn, hoverable and
