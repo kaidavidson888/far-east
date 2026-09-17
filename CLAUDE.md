@@ -1456,12 +1456,17 @@ the brand assets and review text in this repo are visible to anyone.
   no rAF at all, so `lastTsRef` is reset on `visibilitychange` and the time
   spent away contributes nothing. **Any other rAF loop on this site still has
   its clamp and will still ramp in the pane** — the splash and the seal.
-  Check a speed complaint in a real browser window before touching a rate. Both looked like site bugs for an afternoon. To drive an
-  rAF loop there, shim it with a `MessageChannel` (which the pane does not
-  throttle), never a timer; to read a transition, wait several seconds or
-  read the rule, not the computed value. And its scripted pointers have ids the
-  browser never issued, so `setPointerCapture` throws for them — stub it on
-  `Element.prototype` for a test, and read the guard above.
+  **Check a speed complaint in a real browser window before touching a rate.**
+
+  All three of these looked like site bugs for an afternoon apiece. Working
+  around the pane: to drive an rAF loop there, shim it with a `MessageChannel`
+  (which the pane does not throttle), never a timer — and if the thing under
+  test is a DURATION, give the shim a virtual clock whose gaps you choose, which
+  is the only way to tell a rate apart from a frame supply. To read a
+  transition, wait several seconds or read the rule, not the computed value.
+  And its scripted pointers have ids the browser never issued, so
+  `setPointerCapture` throws for them — stub it on `Element.prototype` for a
+  test, and read the guard above.
 - **A `'use server'` module may only export async functions.** Exporting a plain
   `const` from `app/actions.ts` does not fail the build and does not fail
   `tsc --noEmit` — it silently strips EVERY export from the module, and the first
