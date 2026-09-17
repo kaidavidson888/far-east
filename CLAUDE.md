@@ -1435,7 +1435,20 @@ the brand assets and review text in this repo are visible to anyone.
   fronted) and clamps timers to ~500ms, so anything rAF-driven — the splash's
   hold, the seal's run — sits at its first phase for ever, and a CSS transition
   read after 1s is still at its start (the OFFERS hover "did not dim"; read
-  again later it had). Both looked like site bugs for an afternoon. To drive an
+  again later it had).
+  **IT ALSO MAKES A dt-DRIVEN ANIMATION LOOK LIKE IT IS CHANGING SPEED, which
+  cost a round of bug-hunting.** The owner watched the logo menu in the pane and
+  reported it "increasing in speed exponentially each time I used it". Nothing
+  in the menu accumulates — measured, four consecutive open/close cycles came to
+  9.39s each with exactly one rAF callback per frame. What changes is the FRAME
+  SUPPLY: the pane delivers rAF in bursts, and measured over six seconds it gave
+  five frames — four at 16.7ms and **one gap of 2002ms**. Every scrub here
+  clamps `dt` at 64ms (so a backgrounded tab does not return and jump the whole
+  animation at once), so a 2002ms gap advances the animation by 64ms of its own
+  time and throws the other 1938 away. The more awake the pane is, the less time
+  is thrown away and the faster the same animation appears to run. **In a real
+  tab at a steady 60 or 120Hz the clamp never bites and every run is identical.**
+  Check a speed complaint in a real browser window before touching a rate. Both looked like site bugs for an afternoon. To drive an
   rAF loop there, shim it with a `MessageChannel` (which the pane does not
   throttle), never a timer; to read a transition, wait several seconds or
   read the rule, not the computed value. And its scripted pointers have ids the
