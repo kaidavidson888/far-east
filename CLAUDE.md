@@ -206,13 +206,12 @@ artwork to fit a frame — that scales the margins with it, which is the thing b
 - **HOW FAST EACH MENU PLAYS IS `PLAY_RATE` IN THE COMPONENT, NOT THE GEOMETRY.**
   `frameMs` there is the gif's own measured rate and stays a measurement; this is the
   preference, and it is per menu because it is a judgement about one of them — the owner
-  asked for the grow menu 20% slower than its gif and then 10% back the other way
-  (2026-09-17), which is 0.8 x 1.1, so it runs at **0.88** and takes 9.4s where the gif's
-  timing gives 8.3. The bar is untouched at 1. Reverse is `REVERSE_RATE` times whatever
-  forward is doing, so "backwards at twice the speed" holds at any rate. Verified on a
-  virtual clock (the pane cannot time rAF — see the gotchas): rate 0.882 measured, forward
-  9.39s, reverse 4.71s. **Note that a 10% faster RATE is a 9.1% shorter RUN** — 1 − 1/1.1 —
-  so if a future ask is about the length rather than the speed, that is the difference.
+  asked for the grow menu 20% slower than its gif (2026-09-17), so it runs at **0.8** and
+  takes 10.3s where the gif's timing gives 8.3. The bar is untouched at 1. Reverse is
+  `REVERSE_RATE` times whatever forward is doing, so "backwards at twice the speed" holds
+  at any rate. (It spent an afternoon at 0.88 and came back: that 10% was asked for against
+  a view that was ramping, so it was judging the pane's frame supply rather than this
+  number. **Judge a rate in a real browser window, never in the pane** — see the gotchas.)
 - **A word that is not a link is a button carrying `data-part`.** My Saved's is `saved` —
   the same attribute it had as a page part, so `CigScroller`'s capture-phase listener spins
   the row with no change at all. OFFERS and RECOMMENDED are `inert`: drawn, hoverable and
@@ -1442,12 +1441,21 @@ the brand assets and review text in this repo are visible to anyone.
   in the menu accumulates — measured, four consecutive open/close cycles came to
   9.39s each with exactly one rAF callback per frame. What changes is the FRAME
   SUPPLY: the pane delivers rAF in bursts, and measured over six seconds it gave
-  five frames — four at 16.7ms and **one gap of 2002ms**. Every scrub here
-  clamps `dt` at 64ms (so a backgrounded tab does not return and jump the whole
-  animation at once), so a 2002ms gap advances the animation by 64ms of its own
-  time and throws the other 1938 away. The more awake the pane is, the less time
-  is thrown away and the faster the same animation appears to run. **In a real
-  tab at a steady 60 or 120Hz the clamp never bites and every run is identical.**
+  five frames — four at 16.7ms and **one gap of 2002ms**. The scrub used to
+  clamp `dt` at 64ms (so a backgrounded tab could not return and jump the whole
+  animation at once), so a 2002ms gap advanced the animation by 64ms of its own
+  time and threw the other 1938 away. The more awake the pane was, the less time
+  was thrown away and the faster the same animation appeared to run.
+  **THE CLAMP IS GONE FROM `LogoMenu` — the owner asked for the speed without
+  the ramp.** Unclamped, a run takes the same wall-clock time whatever the frame
+  supply: measured on a virtual clock, 10.32s at a steady 60fps, 10.34s on the
+  pane's own pattern (four frames then a 2s stall — 24 frames for the whole
+  run), 11.0s on an absurd one. Where frames are scarce it now STEPS instead of
+  crawling, which is the honest picture of two seconds having passed. The case
+  the clamp was really there for is handled properly instead: a hidden tab gets
+  no rAF at all, so `lastTsRef` is reset on `visibilitychange` and the time
+  spent away contributes nothing. **Any other rAF loop on this site still has
+  its clamp and will still ramp in the pane** — the splash and the seal.
   Check a speed complaint in a real browser window before touching a rate. Both looked like site bugs for an afternoon. To drive an
   rAF loop there, shim it with a `MessageChannel` (which the pane does not
   throttle), never a timer; to read a transition, wait several seconds or

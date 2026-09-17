@@ -98,14 +98,17 @@ const REVERSE_RATE = 2;
  * `frameMs` in the geometry is the gif's measured rate and stays that — a
  * measurement, not a preference. This is the preference, and it is per menu
  * because it is the owner's judgement about one of them: 20% slower than the
- * gif's own timing, then 10% back the other way (2026-09-17), which is 0.8 x
- * 1.1 — so the grow menu runs at 0.88 and takes 9.4s where the gif gives 8.3.
- * The bar is untouched at 1.
+ * gif's own timing (2026-09-17), so the grow menu runs at 0.8 and takes 10.3s
+ * where the gif gives 8.3. The bar is untouched at 1.
+ *
+ * (It went to 0.88 for an afternoon and came back. That 10% was asked for
+ * against a view that was ramping — see the dt note in `run` — so it was
+ * judging the pane's frame supply rather than this number.)
  *
  * Reverse still runs at REVERSE_RATE times whatever forward is doing, so
  * "backwards at twice the speed" holds at any rate.
  */
-const PLAY_RATE: Record<string, number> = { bar: 1, grow: 0.88 };
+const PLAY_RATE: Record<string, number> = { bar: 1, grow: 0.8 };
 
 /** Half strength under the pointer, a quarter while it is held. */
 const DIM = { hover: 0.5, press: 0.25 };
@@ -219,14 +222,37 @@ export function LogoMenu({ menu = 'bar', stop = 'base' }: { menu?: MenuName; sto
     else window.setTimeout(() => void load(), 600);
   }, [load]);
 
-  /** The scrub loop. Forward at this menu's own rate, back at twice it. */
+  /**
+   * The scrub loop. Forward at this menu's own rate, back at twice it.
+   *
+   * EVERY MILLISECOND THAT PASSES COUNTS, AND THAT IS DELIBERATE. `dt` used to
+   * be clamped at 64ms so that a frame arriving late could not jump the
+   * animation. The cost of that clamp is that late time is DISCARDED: a frame
+   * 2 seconds late advanced the menu by 64ms and threw the other 1,938 away,
+   * so wherever frames were scarce the animation crawled and wherever they
+   * were plentiful it ran true. The owner saw exactly that and read it as the
+   * menu "increasing in speed exponentially each time I used it" — it was the
+   * frame supply changing, not the menu (the Browser pane hands out rAF in
+   * bursts: measured, five frames in six seconds, one gap of 2,002ms).
+   *
+   * Unclamped, a run takes the same wall-clock time whatever the frame rate.
+   * Where frames are scarce it now STEPS rather than crawling, which is the
+   * honest picture of two seconds having passed, and where they are plentiful
+   * — every real browser, at 60 or 120Hz — nothing changes at all, because dt
+   * was never near the clamp to begin with.
+   *
+   * The one case the clamp was really there for is handled properly below
+   * instead: a hidden tab gets no rAF at all, so its first frame back would
+   * carry the whole time it was away. `lastTsRef` is reset when the page
+   * becomes visible again, and that gap contributes nothing.
+   */
   const run = useCallback(() => {
     cancelAnimationFrame(rafRef.current);
     lastTsRef.current = 0;
     const step = (ts: number) => {
       const prev = lastTsRef.current || ts;
       lastTsRef.current = ts;
-      const dt = Math.min(64, ts - prev);
+      const dt = ts - prev;
       const phaseNow = phaseRef.current;
 
       const rate = (dt / frameMs) * (PLAY_RATE[menu] ?? 1);
@@ -258,6 +284,20 @@ export function LogoMenu({ menu = 'bar', stop = 'base' }: { menu?: MenuName; sto
   }, [paint, setPhase, FRAMES, frameMs, menu]);
 
   useEffect(() => () => cancelAnimationFrame(rafRef.current), []);
+
+  /**
+   * Time spent on another tab does not count. A hidden page gets no rAF, so
+   * the first frame after coming back carries however long that was — with an
+   * unclamped dt that would run the whole animation out in one step. Forget
+   * the last timestamp instead, and the gap contributes nothing.
+   */
+  useEffect(() => {
+    const onVisible = () => {
+      if (!document.hidden) lastTsRef.current = 0;
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, []);
 
   const reduced = () =>
     typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
