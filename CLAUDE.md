@@ -284,6 +284,20 @@ artwork to fit a frame — that scales the margins with it, which is the thing b
   so either can be re-composed alone.
 - Dev flags on these pages: `?hitboxes=1` outlines the buttons, `?device=mobile|desktop`
   forces an arrangement.
+- **`/dev/desktop` shows any page as a desktop browser draws it** (the owner's 2026-09-19
+  "make the dev accurate to the appearance of the website on desktop"). The Claude app's
+  preview pane is about half a screen wide, and these pages lay out against the window's
+  real edges, so the pane shows the narrow-window version of everything. `/dev/desktop`
+  loads the site in a frame laid out at the SCREEN's own size — `screen.width` by the
+  available height less 85px for Chrome's tab strip and toolbar (1920x947 on the owner's
+  1080p screen) — and scales the whole frame down to fit the pane. It is the real page:
+  clicks, scrolling and sign-in all work through the scale, and the address follows the
+  page inside so a reload stays put. `?path=/about`, `?w=1440&h=820` override. A route
+  handler (`app/dev/desktop/route.ts`), so the root layout is not wrapped round the frame
+  too; 404 in production. **Emulating a size in the pane itself does not stick** — the app
+  clears it at the end of each turn — which is why this exists. `devIndicators: false` in
+  `next.config.mjs` takes Next's "N" badge off dev pages for the same reason; error
+  overlays still show.
 
 ## Pages built from the owner's artwork
 The landing, about, privacy and terms pages are not laid out by hand. Each is built from a

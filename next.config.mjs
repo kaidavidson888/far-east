@@ -12,6 +12,11 @@ const nextConfig = {
   // somewhere else — `NEXT_DIST_DIR=.next-build npm run build` — so the
   // pre-commit build can run without stopping anyone's dev server.
   distDir: process.env.NEXT_DIST_DIR || '.next',
+  // No "N" badge in the corner of the dev server's pages: the owner checks the
+  // design in the preview (2026-09-19, "make the dev accurate to the appearance
+  // of the website on desktop"), and the live site has no such badge. Build
+  // and runtime errors still show their overlay.
+  devIndicators: false,
   // Next serves everything in public/ with max-age=0, so every page load
   // pays a revalidation round trip for a file that never changes. The font's
   // version is in its filename — bump it when the file is replaced, and the
