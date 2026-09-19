@@ -1498,8 +1498,60 @@ ul, ol { list-style: none; }
 }
 .cig-controls > *,
 .cig-controls .cig-tag-slot,
-.cig-controls .cig-tag {
+.cig-controls .cig-tag,
+.cig-menu .cig-tags-toggle,
+.cig-menu .cig-confirm,
+.cig-menu .cig-tags {
   pointer-events: auto;
+}
+
+/* THE MENU IS ONE BOX UNDER THE RED FRAME — the owner's 2026-09-19 ask:
+   the plus under the middle pack, halfway between the frame's foot and the
+   page's; on opening, sliding left onto the frame's left edge at the same
+   height; and the whole menu scaled to fit between the frame's edges.
+   `layoutMenu` in CigScroller works out where and how big, from the frame
+   at rest, and sets `left`, `top` and the zoom inline.
+
+   Two boxes, because CSS `zoom` multiplies an element's own offsets too:
+   the outer one is placed in screen px, unzoomed, and its `left` is what
+   slides; the inner one carries the zoom, and everything inside it is laid
+   out in the design's own px from its corner — the plus at 0,0, the bar one
+   gap past it, confirm under the plus, the tag grid beside confirm. Zoom
+   rather than a transform, so type is set at the size it is seen at and
+   stays sharp, which is the house rule (the shelf's rows are zoomed the
+   same way). The outer box takes no pointer; the controls in it do. */
+.cig-controls > .cig-menu {
+  position: absolute;
+  left: 0;
+  top: 0;
+  pointer-events: none;
+  /* placed only once measured, so it never flashes in the corner */
+  visibility: hidden;
+}
+.cig-controls > .cig-menu[data-placed] {
+  visibility: visible;
+}
+/* the slide onto the frame's edge and back — set only once the menu has
+   been placed, or its very first placement would slide in from the corner */
+.cig-menu[data-slides] {
+  transition:
+    left var(--cig-grow-ms) var(--cig-ease-in),
+    top var(--cig-grow-ms) var(--cig-ease-in);
+}
+/* Inside the zoom, the controls' own lines restart at the box's corner. The
+   line positions are restated rather than inherited: a custom property that
+   refers to another is worked out where it is declared, so --cig-line2 made
+   on .cig-controls would still carry the band's --cig-top. The grid is two
+   buttons wide (the design width, less confirm's column), and as tall as
+   `layoutMenu` found room for down to the page's foot. */
+.cig-menu-scale {
+  position: relative;
+  zoom: var(--cig-menu-zoom, 1);
+  --cig-edge: 0px;
+  --cig-top: 0px;
+  --cig-col: calc(var(--cig-btn-w) + var(--cig-btn-gap));
+  --cig-line2: calc(var(--cig-btn-h) + var(--cig-btn-gap));
+  --cig-tags-right: var(--cig-menu-w);
 }
 /* A shut menu takes no presses. Its buttons are still laid out, merely at
    zero opacity, and an invisible button that can still be clicked is a trap
@@ -1608,7 +1660,7 @@ ul, ol { list-style: none; }
    follows the band at every zoom. The bar takes no pointer (the controls
    layer hands its children the pointer back, so it is said again); the
    seal's hit and reset are the live things in it. */
-.cig-controls > .cig-bar {
+.cig-menu-scale > .cig-bar {
   position: absolute;
   left: calc(var(--cig-edge) + var(--cig-btn-h) + var(--cig-btn-gap));
   top: var(--cig-top);
@@ -1680,6 +1732,9 @@ ul, ol { list-style: none; }
      alternative was a shorter list of brands, which would have meant
      deciding for them which brands do not matter. */
   max-height: calc(100% - var(--cig-line2) - var(--cig-edge));
+  /* inside the menu box there is no 100% to take — the room down to the
+     page's foot is worked out by `layoutMenu`, in the box's own px */
+  max-height: var(--cig-menu-room, calc(100% - var(--cig-line2) - var(--cig-edge)));
   overflow-y: auto;
   overflow-x: hidden;
   /* room for the bar, so the last column is not sat under it */

@@ -785,14 +785,10 @@ cannot drift.
   refuse the pointer explicitly** — the clip used to stop it as a side
   effect and opacity does not, and an invisible button that still takes a
   click is a trap. Each field starts its own line
-  (`[data-first]`), and `auto-fill` takes as many columns as there is room
-  for: three lines at a laptop width. **How far right it may reach is the
-  owner's rule** — the right edge of the pack left of the framed one, which
-  is `pickX` less the row's own gap, times the zoom. **On a phone that leaves
-  no room at all** (50px at 375, which does not hold an 88px button), so
-  below about 700px the grid runs to the page's right margin instead:
-  `cigTagsRight`. That fallback is a judgement, not the owner's instruction,
-  the same call as the shelf's `ROW_SCALE_FLOOR`.
+  (`[data-first]`). **Since 2026-09-19 the grid is TWO BUTTONS WIDE, always**,
+  and the whole menu is scaled to the red frame's width — see "The menu under
+  the red frame" below. (It used to reach right to the pack left of the
+  framed one, `cigTagsRight`, with a phone fallback; that rule is gone.)
 - **The menu's scrollbar is the page's own colours**: a black thumb and
   black arrows on a white track, the WHOLE BAR going RED together the moment
   the pointer is anywhere on it and staying red while the thumb is dragged —
@@ -819,15 +815,44 @@ cannot drift.
   drawn back in as SVG triangles, since a custom bar has none unless asked,
   and the two crossed button states are hidden or Chrome lays the bar out
   with an up AND a down at both ends.
-- **That reach is MEASURED ONCE, WHEN THE PLUS IS PRESSED, and then held.**
-  The pack left of the framed one changes every time the row moves, so read
-  live the grid re-flowed under the reader's hand as the catalogue scrolled
-  and the column count jumped about with it; the owner asked for it to stay
-  as it first appears. The press sets it — so the opening frame is already
-  the width it keeps — and a resize is the only thing that refreshes it, a
-  stale width there being able to put the grid off the side of the screen.
-  Reopening takes a fresh measurement, which is what makes it right for
-  whatever pack is framed by then.
+- **THE MENU UNDER THE RED FRAME** (the owner's 2026-09-19 ask: "move the +
+  button under the middle cigarette aligned on its vertical axis equidistance
+  between the end of the red outline and the bottom edge of the page. On menu
+  open slide alignment with the left edge of the red outline and maintain the
+  same top and bottom margins. Change to minus. Scale all elements including
+  the + button to make the menu bar and menu catalogue fit within the edges of
+  the red outline"). Everything the plus owns — the plus, the bar (seal, 發,
+  outline, reset), confirm and the tag grid — is **one box**, `.cig-menu`,
+  placed by `layoutMenu` in `CigScroller`:
+  - **Shut**, the plus is centred under the middle pack, its line halfway
+    between the frame's foot and the page's foot (measured at 1920x947: 136
+    above, 137 below).
+  - **Open**, the box slides left (a transition on `left`) until its left is
+    the frame's left, **at the same height** — that is the reading of
+    "maintain the same top and bottom margins". The grid under it runs down
+    to 12px above the page's foot and scrolls inside that.
+  - **Scaled to the frame.** The design width is confirm plus a two-button
+    grid and its scrollbar (`MENU_DESIGN_W`, 299); the box's inner layer
+    carries `zoom` = the frame's width over that, so the menu runs from the
+    frame's left edge to its right edge. Zoom, not a transform — type is set
+    at the size it is seen at. Inside the zoomed layer everything restarts at
+    its corner in design px (`.cig-menu-scale` restates `--cig-top`,
+    `--cig-col` and `--cig-line2`, because a custom property referring to
+    another is resolved where it is declared).
+  - **Worked from the model at rest, not read off the DOM**: at rest the
+    framed pack is dead centre, so the frame is (pack width + 16) x the row's
+    zoom, centred, and its foot is the page's middle plus half the frame's
+    height. It is recomputed on every measure and whenever the row stops;
+    **while the row moves the menu holds**, then slides to the new frame and
+    takes its size when the row settles on a pack of another width (verified:
+    zoom 0.73 on a 50-wide pack, 0.82 on a wider one, the grid's right edge
+    on the frame's within a pixel both times).
+  - **`MENU_MIN_ZOOM` (0.7) is a judgement**, not the owner's: below it the
+    tags' type would fall under the 9px floor, so on a narrow window — and for
+    the narrowest few packs even at 1920 — the menu stops shrinking and runs
+    past the frame's right edge.
+  - First placement does not animate (`data-slides` comes on a moment after
+    `data-placed`), or the menu would slide in from the page's corner.
 - **Confirm spins the row down to the matches** through `startSpin`, the same
   throw, lap, catch and handover My Saved and reset use — three buttons, one
   code path. **Reset drops every tag and leaves the menu open**, which the
@@ -863,8 +888,10 @@ beyond those is reached by hovering 遠東. Three notes on what that took:
 OUTLINE HAS A NUMBER IN IT, AND ALL OF IT STANDS ON THE PLUS'S LINE, HIDDEN
 UNTIL THE PLUS IS PRESSED** (the owner's asks: 2026-09-17 the size and the
 number; 2026-09-19 the line, then the tile, reset to the end, the line moved
-left and the reveal). At rest the line under the row's left end is **the plus
-alone, on the row's 12px edge**. Pressing it reveals, left to right, **the
+left and the reveal; then the whole menu moved under the red frame — "The menu
+under the red frame" above). At rest **the plus stands alone, centred under the
+middle pack**. Pressing it slides it onto the frame's left edge and reveals,
+left to right, **the
 seal, the animated 發, the outline with the number, and reset** — one gap (10)
 between each, except the design's 3 between the 發 and the outline, which
 was the cloud's; all 30 tall — along with confirm (which opens straight under
@@ -879,10 +906,9 @@ comes from the button they are being matched to rather than being typed again.
   tree and the pointer — since an invisible control that can still be pressed
   is a trap. The page passes its marks as a keyed ARRAY (`marks={[seal,
   sigil]}`); a fragment would arrive as one slot and stagger as one.
-- **"Lined up vertically with the cigarette box above it" was read as the
-  row's own 12px edge** — where reset began. The packs above scroll, so no
-  one pack stays over the plus; the edge is the fixed line the controls
-  already hang from. The owner's call if they meant something else.
+- (For a few hours the plus stood on the row's own 12px edge — a reading of
+  "lined up vertically with the cigarette box above it". The owner then placed
+  it under the middle pack, which settles what that meant.)
 - **THE ANIMATED 發 REPLACED THE CLOUD — THE CHARACTER ALONE, NOT THE TILE**
   (`npm run build:tile`, `scripts/build-tile.mjs`). The owner's GIF
   (`scripts/assets/fa-tile.gif`) is a mahjong tile — three concentric rounded

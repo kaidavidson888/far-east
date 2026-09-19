@@ -353,44 +353,11 @@ export function cigZoom(screenW: number, screenH: number, clearAbove: number): n
  * off the viewport's edge (the row's own edge, not the page's 45px margin),
  * the plus beside it is as wide as reset is tall, and 10 is the gap between
  * any two of them. Declared here rather than in the stylesheet because the
- * component has to do arithmetic with them — where the tag grid may reach —
+ * component has to do arithmetic with them — where the menu stands and how big it is drawn —
  * and two copies of a number that must agree is one copy too many. The
  * stylesheet reads them as custom properties off `.cig-controls`.
  */
 export const CIG_CONTROLS = { edge: 12, width: 88, height: 30, gap: 10 };
-
-/**
- * How far right the tag grid may reach.
- *
- * The owner's rule is the right edge of the pack to the left of the framed
- * one. IT IS WORKED OUT FROM THE ROW'S MIDDLE, NOT FROM WHERE THE ROW
- * HAPPENS TO BE. The framed pack is centred once the row is at rest, so that
- * pack's left edge is half the row less half its width, and the pack before
- * it ends one gap earlier — the same answer whether the plus is pressed at
- * rest or in the middle of a throw. Reading the framed pack's live position
- * instead gave a different grid every time: measured across five throws,
- * pressing the plus at five different moments produced widths from 233 to
- * 311, which is two columns or three and five lines or four. Times the zoom,
- * because the row is drawn bigger than it is laid out and the controls are
- * not.
- *
- * ON A PHONE THAT LEAVES NO ROOM AT ALL. At 375 the framed pack's left edge
- * is around 160, the grid starts at 110 (past reset and the plus), and 50px
- * does not hold an 88px button — the grid would either overflow the rule it
- * is meant to obey or fall into a single column eight rows deep, which runs
- * off the bottom of the screen. So where the rule cannot fit one column the
- * grid runs to the page's own right margin instead, which at 375 gives two
- * columns and three lines. **That fallback is a judgement, not the owner's
- * instruction** — the same call, and for the same reason, as the shelf's
- * ROW_SCALE_FLOOR. It only bites below about 700px wide.
- */
-export function cigTagsRight(rowWidth: number, packWidth: number, zoom: number, screenW: number): number {
-  const { edge, width, gap } = CIG_CONTROLS;
-  const left = edge + width + gap;
-  const rule = Math.round((rowWidth / 2 - packWidth / 2 - CIG_GAP) * zoom);
-  if (rule - left >= width) return rule;
-  return Math.max(left + width, screenW - edge);
-}
 
 /**
  * How long the tag menu takes to go back into the plus.

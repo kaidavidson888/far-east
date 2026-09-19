@@ -25,7 +25,6 @@ import {
   SPEED,
   cigLayout,
   cigZoom,
-  cigTagsRight,
   CIG_CONTROLS,
   CIG_MENU_SHUT_MS,
   type CigPack,
@@ -111,6 +110,53 @@ const SLOP = 6;
 
 type Shown = { key: string; i: number; x: number };
 
+/**
+ * THE MENU LIVES UNDER THE RED FRAME, SCALED TO ITS WIDTH — the owner's
+ * 2026-09-19 ask, in full: "move the + button under the middle cigarette
+ * aligned on its vertical axis equidistance between the end of the red
+ * outline and the bottom edge of the page. On menu open slide alignment with
+ * the left edge of the red outline and maintain the same top and bottom
+ * margins. Change to minus. Scale all elements including the + button to make
+ * the menu bar and menu catalogue fit within the edges of the red outline."
+ *
+ * So everything the plus owns — the plus, the bar beside it (seal, 發, the
+ * outline, reset), confirm and the tag grid — is ONE BOX, laid out in the
+ * design's own px and drawn with a CSS `zoom` (which lays it out again at the
+ * new size, so type stays sharp; a transform would scale finished pixels).
+ *
+ * THE DESIGN WIDTH is the narrowest the menu can be while every part keeps
+ * its shape: confirm, then a tag grid two buttons wide — the headings are
+ * drawn two buttons wide — with its 15px scrollbar beside it. The bar (plus,
+ * seal, 發, outline, reset: 241) is narrower, so the grid decides. The zoom is
+ * the frame's width over that, so the menu runs from the frame's left edge to
+ * its right edge exactly.
+ */
+const MENU_DESIGN_W = CIG_CONTROLS.width * 3 + CIG_CONTROLS.gap * 2 + 15;
+/**
+ * The smallest the menu is ever drawn. At the owner's 1920x947 desktop the
+ * frame gives 0.73 to 0.82 for nine packs in ten (measured: 0.7286 on a
+ * 50-wide pack, 0.817 on a wider one), and only the narrowest few packs reach
+ * this. On a narrow window the frame is so small that the tags' type would
+ * fall under the 9px this site knows will not render solid (a heading is
+ * 12.86px at full size), so there the menu stops shrinking and runs past the
+ * frame's right edge instead. A judgement, not the owner's instruction — the
+ * same call as the shelf's ROW_SCALE_FLOOR.
+ */
+const MENU_MIN_ZOOM = 0.7;
+
+type MenuLayout = {
+  /** the menu's zoom */
+  s: number;
+  /** its top, in screen px from the controls' box: the plus's line */
+  top: number;
+  /** its left when shut: the plus centred under the middle pack */
+  shutLeft: number;
+  /** its left when open: the frame's left edge */
+  openLeft: number;
+  /** how tall the tag grid may be, in the menu's own (design) px */
+  room: number;
+};
+
 export function CigScroller({
   withPages,
   onPress,
@@ -160,30 +206,29 @@ export function CigScroller({
   /** How much bigger the row is drawn than it is laid out — see cigZoom. */
   const [zoom, setZoom] = useState(1);
   const zoomRef = useRef(1);
-  /** The viewport's width, which the tag grid's right edge is worked out from. */
-  const [screenW, setScreenW] = useState(0);
-  const screenRef = useRef(0);
   /** The tag menu: whether the plus has been opened, and what is picked in it. */
   const [tagsOpen, setTagsOpen] = useState(false);
   const [picked, setPicked] = useState<ReadonlySet<string>>(() => new Set());
   /**
-   * How far right the grid reaches, TAKEN WHEN IT OPENS AND THEN HELD.
-   *
-   * The owner's rule measures the pack to the left of the framed one, and
-   * which pack that is changes every time the row moves — so read live, the
-   * grid re-flowed under the reader's hand as the catalogue scrolled past.
-   * It is a snapshot: set when the plus is pressed, and left alone while the
-   * row runs. A resize is the one thing that refreshes it, because a stale
-   * width there could put the grid off the side of the screen.
-   *
-   * WHAT IS MEASURED MATTERS AS MUCH AS WHEN. `cigTagsRight` works the edge
-   * out from the row's middle and the framed pack's WIDTH, not from where
-   * that pack currently is, so pressing the plus mid-throw gives the same
-   * grid as pressing it at rest. Taken from the live position instead, five
-   * presses at five moments of a throw gave five different grids — 233px to
-   * 311px, which is the difference between two columns and three.
+   * WHERE THE MENU STANDS, AND HOW BIG IT IS DRAWN — worked out from the red
+   * frame, at rest. See `layoutMenu` below. Null until the first measure, and
+   * the menu is not shown until then, so it never flashes in the corner.
    */
-  const [tagsRight, setTagsRight] = useState(0);
+  const [menu, setMenu] = useState<MenuLayout | null>(null);
+  /**
+   * Whether the menu's moves are animated yet: from the frame after it was
+   * first placed, so its first placement lands rather than sliding in from
+   * the corner, and everything after — opening, closing, following the
+   * frame to a new pack — slides.
+   */
+  const [menuSlides, setMenuSlides] = useState(false);
+  useEffect(() => {
+    if (!menu || menuSlides) return;
+    const id = window.setTimeout(() => setMenuSlides(true), 50);
+    return () => window.clearTimeout(id);
+  }, [menu, menuSlides]);
+  /** The controls' own box, which is the page the menu is placed on. */
+  const controlsRef = useRef<HTMLDivElement | null>(null);
   /**
    * Whether the menu is PAINTED, which is not the same as open: it is held
    * on for the length of the close so the buttons can be seen leaving.
@@ -210,8 +255,6 @@ export function CigScroller({
   const [selected, setSelected] = useState(-1);
   /** Where the frame goes: the picked pack's own left edge on screen. */
   const [pickX, setPickX] = useState(0);
-  /** The framed pack's width, for the tag grid to read the instant it opens. */
-  const pickWRef = useRef(0);
   /**
    * Which pack the FRAME is on, which is not always the one nearest the
    * middle — see CIG_FRAME_HOLD_MS. `pendingSince` is when some other pack
@@ -412,6 +455,62 @@ export function CigScroller({
   }, [compute]);
 
   /**
+   * Where the menu goes, worked out from the red frame AT REST — which is
+   * when this is called: on every measure, and whenever the row comes to a
+   * stop. At rest the framed pack is dead centre (the row's own rule), so the
+   * frame is the pack's width plus its outline, times the row's zoom, centred
+   * on the page; and it is always the band's height, centred on the page's
+   * middle, so its foot is the middle plus half its height. Worked from that
+   * model rather than read off the DOM, because the tick decides it has
+   * stopped before React has drawn the frame where it stopped.
+   *
+   * While the row MOVES the menu holds where it was, the grid's old rule
+   * ("measured once, then held") — a menu that chased every pack sliding past
+   * would never be still. When the row settles on a pack of another width,
+   * the menu slides to its new frame and takes its new size.
+   *
+   *   - the plus, shut: centred under the middle pack, and its line halfway
+   *     between the frame's foot and the page's foot;
+   *   - open: the same line (the owner's "maintain the same top and bottom
+   *     margins"), slid left until the menu's left is the frame's;
+   *   - the tag grid below it runs down to the page's foot, less the
+   *     controls' own 12px edge, and scrolls inside that.
+   */
+  const layoutMenu = useCallback(() => {
+    const el = controlsRef.current;
+    if (!el) return;
+    const Wc = el.clientWidth;
+    const Hc = el.clientHeight;
+    const list = packsRef.current;
+    const i = frameRef.current.i;
+    if (!Wc || !Hc || i < 0 || i >= list.length) return;
+    const z = zoomRef.current;
+    const frameW = (list[i].w + CIG_OUTLINE.x * 2) * z;
+    const frameFoot = Hc / 2 + (CIG_FRAME_H * z) / 2;
+    const s = +Math.max(MENU_MIN_ZOOM, frameW / MENU_DESIGN_W).toFixed(4);
+    const plus = CIG_CONTROLS.height * s;
+    const top = Math.round(frameFoot + (Hc - frameFoot - plus) / 2);
+    const gridTop = top + (CIG_CONTROLS.height + CIG_CONTROLS.gap) * s;
+    const next: MenuLayout = {
+      s,
+      top,
+      shutLeft: Math.round(Wc / 2 - plus / 2),
+      openLeft: Math.round(Wc / 2 - frameW / 2),
+      room: Math.max(CIG_CONTROLS.height, Math.floor((Hc - CIG_CONTROLS.edge - gridTop) / s)),
+    };
+    setMenu((was) =>
+      was &&
+      was.s === next.s &&
+      was.top === next.top &&
+      was.shutLeft === next.shutLeft &&
+      was.openLeft === next.openLeft &&
+      was.room === next.room
+        ? was
+        : next,
+    );
+  }, []);
+
+  /**
    * Put a different set of packs on the row, mid-spin.
    *
    * The shelf holds ids; the row needs the packs themselves, in the shelf's
@@ -589,10 +688,12 @@ export function CigScroller({
           lockRef.current = false;
           setLocked(false);
         }
+        // ...and where the menu takes its place under the frame it stopped on
+        layoutMenu();
       }
     };
     timerRef.current = window.setTimeout(tick, PAINT_MS);
-  }, [offCentre, paint, swapTo]);
+  }, [layoutMenu, offCentre, paint, swapTo]);
 
   const nudge = useCallback(
     (dx: number) => {
@@ -752,10 +853,6 @@ export function CigScroller({
       // the zoom first: it changes the row's own width, and a change here
       // re-lays the row out and brings this observer straight back
       const screenW = document.documentElement.clientWidth;
-      if (screenW !== screenRef.current) {
-        screenRef.current = screenW;
-        setScreenW(screenW);
-      }
       const z = cigZoom(screenW, window.innerHeight, LANDING_ROW_CLEAR);
       if (z !== zoomRef.current) {
         zoomRef.current = z;
@@ -807,6 +904,9 @@ export function CigScroller({
       // measure leaves unfinished starts it, rather than being left until
       // somebody next touches the row.
       if (!timerRef.current && (frameRef.current.pendingSince !== 0 || Math.abs(offCentre()) > 0.5)) run();
+      // at rest already, the menu is placed now; otherwise the tick places it
+      // when it stops
+      if (!timerRef.current) layoutMenu();
     };
     measure();
     const ro = new ResizeObserver(measure);
@@ -819,7 +919,7 @@ export function CigScroller({
       ro.disconnect();
       window.removeEventListener('resize', measure);
     };
-  }, [offCentre, offFramed, paint, run]);
+  }, [layoutMenu, offCentre, offFramed, paint, run]);
 
   // Zeroed as well as cleared: `run()` treats a non-zero timer as "already
   // running" and returns, so a stale id surviving a remount (Fast Refresh in
@@ -831,17 +931,6 @@ export function CigScroller({
     },
     [],
   );
-
-  /**
-   * The grid's reach, refreshed when the window changes shape — not when the
-   * row moves. The press sets it too, so the very first frame the grid is
-   * drawn in is already the right width; this agrees with that value, so
-   * opening costs no second render.
-   */
-  useEffect(() => {
-    if (!tagsOpen) return;
-    setTagsRight(cigTagsRight(widthRef.current, pickWRef.current, zoom, screenW));
-  }, [tagsOpen, zoom, screenW]);
 
   /** Painted the instant it opens, and until the buttons have finished leaving. */
   useEffect(() => {
@@ -1038,7 +1127,6 @@ export function CigScroller({
   };
 
   const pick = selected >= 0 ? (packs[selected] ?? null) : null;
-  pickWRef.current = pick?.w ?? 0;
 
   return (
     <>
@@ -1193,21 +1281,23 @@ export function CigScroller({
     </div>
 
       {/*
-        THE ROW'S CONTROLS: reset, the tag menu's plus, the tags and confirm.
+        THE ROW'S CONTROLS: the plus, and everything it opens.
 
         Siblings of the row rather than children: the row is overflow:hidden
         so its packs do not spill past the edges, and a button inside it
         would be clipped the moment it sat below the band. The wrapper lets
-        the pointer through to the row and carries the two numbers the
-        stylesheet cannot work out for itself — the band's height at this
-        zoom, and how far right the tag grid may reach.
-
-        THAT RIGHT EDGE IS THE OWNER'S — the right edge of the pack left of
-        the framed one — with a phone fallback; both live in `cigTagsRight`.
-        The four sizes come down from `CIG_CONTROLS` so the arithmetic here
+        the pointer through to the row and is the page the menu is placed
+        on. The sizes come down from `CIG_CONTROLS` so the arithmetic here
         and the stylesheet's placement cannot drift apart.
+
+        THE MENU IS ONE BOX UNDER THE RED FRAME (the owner's 2026-09-19 ask;
+        see `layoutMenu`): placed in screen px by `left` and `top` — `left`
+        is what slides when it opens — and scaled by `zoom` on the inner box,
+        inside which everything is laid out in the design's own px from its
+        corner. Hidden until the first measure has placed it.
       */}
       <div
+        ref={controlsRef}
         className="cig-controls"
         style={
           {
@@ -1217,24 +1307,36 @@ export function CigScroller({
             '--cig-btn-h': `${CIG_CONTROLS.height}px`,
             '--cig-btn-gap': `${CIG_CONTROLS.gap}px`,
             '--cig-shut-ms': `${CIG_MENU_SHUT_MS}ms`,
-            '--cig-tags-right': `${tagsRight}px`,
+            '--cig-menu-w': `${MENU_DESIGN_W}px`,
           } as React.CSSProperties
         }
       >
+      <div
+        className="cig-menu"
+        data-open={tagsOpen ? '' : undefined}
+        data-placed={menu ? '' : undefined}
+        data-slides={menuSlides ? '' : undefined}
+        style={
+          menu
+            ? ({
+                left: `${tagsOpen ? menu.openLeft : menu.shutLeft}px`,
+                top: `${menu.top}px`,
+                '--cig-menu-zoom': menu.s,
+                '--cig-menu-room': `${menu.room}px`,
+              } as React.CSSProperties)
+            : undefined
+        }
+      >
+      <div className="cig-menu-scale">
         {/* the plus, and the minus it becomes — the owner's own marks, drawn
-            inline so they take the button's ink and invert with it. Since
-            2026-09-19 it is the ONLY thing on the line until it is pressed,
-            and it stands first, on the row's own 12px edge. */}
+            inline so they take the button's ink and invert with it. Shut, it
+            is the only thing showing: centred under the middle pack. */}
         <button
           type="button"
           className="cig-tags-toggle"
           aria-expanded={tagsOpen}
           aria-label={tagsOpen ? 'Hide the tag filters' : 'Filter by tag'}
-          onClick={() => {
-            // measured on the press, so the grid opens at the width it keeps
-            if (!tagsOpen) setTagsRight(cigTagsRight(widthRef.current, pickWRef.current, zoomRef.current, screenRef.current));
-            setTagsOpen((open) => !open);
-          }}
+          onClick={() => setTagsOpen((open) => !open)}
         >
           {(() => {
             const glyph = tagsOpen ? CIG_TOGGLE_GLYPH.minus : CIG_TOGGLE_GLYPH.plus;
@@ -1394,6 +1496,8 @@ export function CigScroller({
             );
           })}
         </div>
+      </div>
+      </div>
       </div>
     </>
   );
