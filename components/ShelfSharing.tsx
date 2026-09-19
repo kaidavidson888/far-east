@@ -20,7 +20,7 @@ function GenerateButton({ disabled, block = true }: { disabled: boolean; block?:
 function CancelButton() {
   const { pending } = useFormStatus();
   return (
-    <button type="submit" className="text-link" style={{ background: 'none', border: 0, cursor: 'pointer', padding: 0 }}>
+    <button type="submit" className="text-link" style={{ background: 'none', border: 0, padding: 0 }}>
       {pending ? 'Cancelling…' : 'Cancel link'}
     </button>
   );

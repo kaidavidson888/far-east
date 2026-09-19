@@ -468,6 +468,37 @@ carries a copy of that pack's cleaned mark (`fitPhoto` reads `public/cigs/<id>.s
 so `npm run build:cigpages` has to follow `npm run build:cigs` or the row and the
 page will disagree about the same cigarette.
 
+**AT REST, A PACK IS DEAD CENTRE AND THE RED FRAME IS ON IT — always** (the
+owner's 2026-09-19 "make sure the selector red rectangle always ends up on the
+middle image by the end of the scroll"). Four things broke it, all fixed in
+`CigScroller`, and each is worth knowing before touching the tick:
+- **The row's width is worked out, not read off the row.** `measure()` used to
+  take `el.clientWidth` straight after `setZoom(z)` — state, not yet applied —
+  so the width was the OLD zoom's (on a first load, the whole screen's: 1100
+  where the row is 582) and the middle the settle aimed at was out by the same
+  factor. Every scroll ended with the frame near the right edge (x=1040 of
+  1100, measured). It only came right when the applied zoom resized the row and
+  the ResizeObserver ran again, and a view that is not painting delivers no
+  ResizeObserver callbacks at all, so there it never did. The width is now the
+  (unzoomed) box the row stretches across, over the zoom just decided.
+- **A resize re-centres the FRAMED pack** (`offFramed`), not whichever pack is
+  nearest the new middle, and anything a measure leaves unfinished starts the
+  tick. A window listener covers a change of height alone, which moves the zoom
+  without resizing the row.
+- **The stop test asks the rule itself**: with nothing steering the row and no
+  pack within half a pixel of the middle, it is settling. A late tick braking
+  straight to 0, a seek landing on a stale target and a resize mid-motion all
+  used to stop the timer off-centre. The settle's last half pixel is snapped,
+  so the rest position is exact rather than wherever the exponential gave up.
+- **A mouse released off the row ends the drag.** The row captures only once a
+  press is really a drag, so a press that slid off the band first was released
+  elsewhere, `draggingRef` stayed true, the settle was shut out, and the row
+  then followed the bare mouse. The release is heard from the window too, and a
+  mouse move with no button down ends it.
+Checked in the pane at 1100 wide: load, a wheel throw, a press on a far pack,
+the arrow keys, a drag with a fling and a press slid off the band all rest with
+the frame on the middle pack, within a pixel.
+
 **Pressing a pack that is not in the frame fetches it, rather than opening it.**
 One press brings it to the middle, a second goes to its page. The travel uses
 the settle’s own exponential at half the time constant — the owner’s 200% — so
@@ -1121,6 +1152,23 @@ is source order that settles it, and anything wanting the hand back would have
 to come after it. Its keyword fallback is `pointer` rather than `auto`: if the
 image will not load, the hand is the right thing to land on, because the
 element really is pressable.
+
+**SOURCE ORDER ONLY SETTLES A TIE, SO A CONTROL THAT SETS ITS OWN CURSOR BY
+CLASS MUST BE IN THAT LIST BY CLASS** (the owner's 2026-09-19 "make the hover
+cursor the white fill cloud"). `button` is 0,0,1; `.cig-reset { cursor:
+pointer }` is 0,1,0 and beats it from anywhere in the file. That is how reset,
+the plus, confirm, all 81 tags, the cigarette page's plus and the shelf's
+bookmark came to show the operating system's hand while everything round them
+showed the white cloud — they were reached only by the bare `button`. **A new
+pressable with `cursor: pointer` in its own rule goes in BOTH lists** (the
+hover one and the `:active` one under it) and in the touch-callout list, or it
+does the same; an inline `cursor` in a component beats all of it, so there are
+none (`ShelfSharing`'s was removed). To check a page, read the COMPUTED cursor
+of every `button, a[href], [role=button]` in the console — a miss says
+`pointer` where the rest say `sigil-cursor-press`. The one deliberate
+exception added with this: reset and confirm are `disabled` while a spin runs,
+and keep the resting black cloud for those seconds (`.cig-reset:disabled`,
+after both lists).
 
 `:disabled` is deliberately NOT in that rule. `.btn:disabled` keeps `not-allowed` at
 a specificity it cannot reach, which is correct — a disabled control is exactly

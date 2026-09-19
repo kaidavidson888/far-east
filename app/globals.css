@@ -1964,8 +1964,16 @@ ul, ol { list-style: none; }
    the canvas being clipped, because the canvas has ink outside the logo from
    frame 0 onwards — a 3px sliver at x 31..33 — and clipping would take that
    with it. The two marks coincide, so the vector covering the raster is the
-   whole of the fix: nothing thickens, because only one of them is visible. */
-.artpage-stage [data-part='logo'],
+   whole of the fix: nothing thickens, because only one of them is visible.
+
+   ONLY THE DECORATIVE LOGO. The artwork pages' selector used to be the bare
+   `[data-part='logo']`, which also matched About, Privacy and Terms — where
+   there is no menu and the logo is the LINK HOME — so their logo took no
+   pointer at all: dead to a press, and showing the resting cloud rather than
+   the pressable one (found 2026-09-19, sweeping for the white cloud). The
+   landing page renders its logo as `.artpage-decor`, because the menu is the
+   control there, and that is the only one this is about. */
+.artpage-stage .artpage-decor[data-part='logo'],
 .cigpage-stage .cigpage-logo {
   /* 4, above the menu's own 3: equal z-index would hand it to whichever came
      later in the DOM, and the overlay is rendered after the parts. */
@@ -2373,6 +2381,16 @@ canvas {
    order that settles it — anything that wants the hand back has to come
    after this, and nothing does.
 
+   SOURCE ORDER ONLY SETTLES A TIE, SO A CONTROL THAT SETS ITS OWN CURSOR BY
+   CLASS MUST BE IN THIS LIST BY CLASS. `button` is 0,0,1; `.cig-reset {
+   cursor: pointer }` is 0,1,0 and beats it from anywhere in the file. That
+   is how reset, the plus, confirm, all 81 tags, the cigarette page's plus
+   and the shelf's bookmark came to show the operating system's hand while
+   everything round them showed the white cloud — the owner's 2026-09-19
+   "make the hover cursor the white fill cloud". A new pressable with
+   `cursor: pointer` in its own rule goes in BOTH lists below (and in the
+   touch-callout list further up), or it will do the same.
+
    The keyword fallback is pointer, not auto: if the image will not load, the
    hand is the right thing to fall back to, because the element really is
    pressable.
@@ -2404,10 +2422,17 @@ input[type='radio'],
 .splash-field-submit,
 .artpage-hit,
 .cigpage-bookmark-hit,
+.cigpage-plus-hit,
+.cigpage-wheel,
 .cig-slot,
 .cig-slot-picked,
+.cig-reset,
+.cig-tags-toggle,
+.cig-confirm,
+.cig-tag,
 .logo-menu-logo,
 .logo-menu-box,
+.shelf-bookmark-hit,
 .seal-button-hit {
   cursor: url('/sigil-cursor-press.png') 0 14, pointer;
   cursor: image-set(url('/sigil-cursor-press.png') 1x, url('/sigil-cursor-press@2x.png') 2x) 0 14, pointer;
@@ -2458,11 +2483,33 @@ input[type='radio']:active,
 .splash-field-submit:active,
 .artpage-hit:active,
 .cigpage-bookmark-hit:active,
+.cigpage-plus-hit:active,
+.cigpage-wheel:active,
 .cig-slot:active,
 .cig-slot-picked:active,
+.cig-reset:active,
+.cig-tags-toggle:active,
+.cig-confirm:active,
+.cig-tag:active,
 .logo-menu-logo:active,
 .logo-menu-box:active,
+.shelf-bookmark-hit:active,
 .seal-button-hit:active {
   cursor: url('/sigil-cursor.png') 0 14, pointer;
   cursor: image-set(url('/sigil-cursor.png') 1x, url('/sigil-cursor@2x.png') 2x) 0 14, pointer;
+}
+
+/* ---------- The row's controls while a spin is running ----------
+   Reset and confirm are `disabled` for the length of a spin, and a disabled
+   control is exactly the thing that is NOT pressable — so for those few
+   seconds they keep the resting cloud rather than promising a press that
+   will not land. It has to be said here, after both lists and one class
+   heavier than either, because the row's controls are in those lists by
+   class now (the owner's 2026-09-19 ask: their own `cursor: pointer` was
+   beating the bare `button` selector, so they showed the system's hand
+   instead of the white cloud). */
+.cig-reset:disabled,
+.cig-confirm:disabled {
+  cursor: url('/sigil-cursor.png') 0 14, auto;
+  cursor: image-set(url('/sigil-cursor.png') 1x, url('/sigil-cursor@2x.png') 2x) 0 14, auto;
 }

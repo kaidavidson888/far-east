@@ -202,6 +202,8 @@ export function CigScroller({
     hist: { t: number; x: number }[];
   }>({ x: 0, t: 0, moved: 0, hist: [] });
   const capturedRef = useRef(false);
+  /** Takes down the window's release listeners for the drag in progress. */
+  const releaseRef = useRef<(() => void) | null>(null);
 
   const [shown, setShown] = useState<Shown[]>([]);
   const [selected, setSelected] = useState(-1);
@@ -378,6 +380,37 @@ export function CigScroller({
   }, [compute]);
 
   /**
+   * How far the row is from having the FRAMED pack dead centre.
+   *
+   * What a resize wants: the pack in the frame is the one the reader was
+   * looking at, so it is the one to bring back to the new middle — the
+   * nearest pack to a middle that has just moved is somebody else. Where the
+   * framed pack is no longer on screen at all (or nothing is framed yet)
+   * there is nothing to keep, and the nearest is the answer after all; the
+   * paint that follows hands the frame over at once in that case.
+   */
+  const offFramed = useCallback(() => {
+    const m = compute();
+    if (!m || m.pick < 0) return 0;
+    const list = packsRef.current;
+    const i = frameRef.current.i;
+    let at: number | null = null;
+    if (i >= 0 && i < list.length) {
+      let best = Infinity;
+      for (const s of m.out) {
+        if (s.i !== i) continue;
+        const d = Math.abs(s.x + list[i].w / 2 - m.w / 2);
+        if (d < best) {
+          best = d;
+          at = s.x;
+        }
+      }
+    }
+    if (at === null) return m.pickAt + list[m.pick].w / 2 - m.w / 2;
+    return at + list[i].w / 2 - m.w / 2;
+  }, [compute]);
+
+  /**
    * Put a different set of packs on the row, mid-spin.
    *
    * The shelf holds ids; the row needs the packs themselves, in the shelf's
@@ -488,8 +521,38 @@ export function CigScroller({
           if (Math.abs(off) > 0.5) {
             offsetRef.current += off * Math.min(1, dt / SETTLE_TAU);
             settling = true;
+          } else {
+            // The last half pixel is taken in one go, so the row rests with
+            // the pack EXACTLY centred rather than wherever inside that half
+            // pixel the exponential happened to give up — times the zoom,
+            // that was up to a pixel and a half out on screen (measured:
+            // -1.6px after one throw, 0.3 after the next). Too small a step
+            // to see, and it makes where the row rests the same every time.
+            offsetRef.current += off;
           }
         }
+      }
+
+      // THE ROW MAY NOT STOP OFF-CENTRE, however it got here. The owner's
+      // rule (2026-09-19): "make sure the selector red rectangle always ends
+      // up on the middle image by the end of the scroll". The settle above is
+      // what centres a pack, but it only runs on a tick that reaches it, and
+      // three ways of arriving at rest skipped it: a late tick (a throttled
+      // timer, dt up to 0.25s) that braked the velocity straight to 0 from
+      // just above SETTLE_BELOW; a seek landing on a target worked out from a
+      // position a few px stale; and a resize while the row was moving. So
+      // the stop test asks the question itself rather than trusting how the
+      // row got here: if nothing is steering it and no pack is centred, it
+      // is settling, and the next tick settles it.
+      if (
+        !settling &&
+        !draggingRef.current &&
+        !spinRef.current &&
+        seekRef.current === null &&
+        velRef.current === 0 &&
+        Math.abs(offCentre()) > 0.5
+      ) {
+        settling = true;
       }
 
       paint();
@@ -553,8 +616,23 @@ export function CigScroller({
     (x: number, i: number) => {
       const m = compute();
       if (!m) return;
+      // Where the pressed pack is NOW. `x` is where the last paint drew it,
+      // and the offset can have moved since without a paint — the press's
+      // own few px of wobble, a wheel notch — so a target worked out from
+      // the drawn position lands that far off-centre. Take the instance of
+      // this pack nearest where it was drawn, at its live position.
+      let at = x;
+      let best = Infinity;
+      for (const s of m.out) {
+        if (s.i !== i) continue;
+        const d = Math.abs(s.x - x);
+        if (d < best) {
+          best = d;
+          at = s.x;
+        }
+      }
       velRef.current = 0;
-      seekRef.current = offsetRef.current + (x + packsRef.current[i].w / 2 - m.w / 2);
+      seekRef.current = offsetRef.current + (at + packsRef.current[i].w / 2 - m.w / 2);
       run();
     },
     [compute, run],
@@ -611,6 +689,8 @@ export function CigScroller({
       setLocked(true);
       seekRef.current = null;
       draggingRef.current = false;
+      capturedRef.current = false;
+      releaseRef.current?.();
       spinRef.current = { phase: 'throw', travelled: 0, ids: null };
       velRef.current = CIG_SPIN_SPEED;
       run();
@@ -680,8 +760,29 @@ export function CigScroller({
         zoomRef.current = z;
         setZoom(z);
       }
-      // clientWidth is in the row's own px — the screen's width over the zoom
-      widthRef.current = el.clientWidth;
+      // THE ROW'S WIDTH IN ITS OWN PX IS WORKED OUT, NOT READ OFF THE ROW.
+      // It used to be `el.clientWidth`, which is right only once the zoom
+      // set two lines up has been APPLIED — and it has not been: that is
+      // state, and the row is still laid out at the old zoom when this line
+      // runs. So the width was the old zoom's (on a first load, the whole
+      // screen's, 1100 where the row is really 582 wide), the middle the
+      // settle aims at was out by the same factor, and every scroll ended
+      // with the frame on a pack well right of the screen's middle (x=1040
+      // of 1100, measured). It only ever came right because applying the
+      // zoom resizes the row and brings this observer back for a second go —
+      // and an embedded webview that is not painting delivers no
+      // ResizeObserver callbacks at all (0 in two seconds, measured), so
+      // there it never came right. The row stretches across the box it is
+      // placed in, which is not zoomed, so that box's width over the zoom we
+      // have just decided is the row's width whatever has or has not been
+      // applied yet. It also stops being rounded to a whole px, which put
+      // the middle a quarter of a pixel out.
+      const box = el.offsetParent instanceof HTMLElement ? el.offsetParent : el.parentElement;
+      const w = (box ? box.clientWidth : 0) / z;
+      // Hidden, or not laid out yet: there is no middle to aim at. `first`
+      // stays set, so the arrival below happens when there is one.
+      if (!w) return;
+      widthRef.current = w;
       if (first) {
         // Arrive with the first pack framed dead centre rather than with
         // whichever one an offset of zero happens to leave nearest, so the
@@ -690,18 +791,45 @@ export function CigScroller({
         offsetRef.current = packsRef.current[0].w / 2 - widthRef.current / 2;
         first = false;
       } else if (!timerRef.current && !draggingRef.current) {
-        // a resize moves the middle; bring the framed pack back to it
-        offsetRef.current += offCentre();
+        // A resize moves the middle; bring the FRAMED pack back to it. It
+        // used to bring back whichever pack was NEAREST the new middle,
+        // which after a real change of width is a different pack from the
+        // one in the frame — and then the frame was owed a hand-over that
+        // nothing was running to deliver, so it sat on its old pack, off to
+        // one side, until the next scroll.
+        offsetRef.current += offFramed();
       }
       paint();
+      // THE RULE THIS COMPONENT KEEPS: at rest, a pack is dead centre and the
+      // frame is on it. Only the tick can finish either of those — it is what
+      // settles, and what lets a held frame change hands — so anything a
+      // measure leaves unfinished starts it, rather than being left until
+      // somebody next touches the row.
+      if (!timerRef.current && (frameRef.current.pendingSince !== 0 || Math.abs(offCentre()) > 0.5)) run();
     };
     measure();
     const ro = new ResizeObserver(measure);
     ro.observe(el);
-    return () => ro.disconnect();
-  }, [offCentre, paint]);
+    // The zoom is capped by the window's HEIGHT as well as set by its width,
+    // and a change of height alone does not resize the row, so the observer
+    // above never hears of it.
+    window.addEventListener('resize', measure);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener('resize', measure);
+    };
+  }, [offCentre, offFramed, paint, run]);
 
-  useEffect(() => () => window.clearTimeout(timerRef.current), []);
+  // Zeroed as well as cleared: `run()` treats a non-zero timer as "already
+  // running" and returns, so a stale id surviving a remount (Fast Refresh in
+  // dev) would leave the row unable to move again.
+  useEffect(
+    () => () => {
+      window.clearTimeout(timerRef.current);
+      timerRef.current = 0;
+    },
+    [],
+  );
 
   /**
    * The grid's reach, refreshed when the window changes shape — not when the
@@ -806,10 +934,34 @@ export function CigScroller({
       moved: 0,
       hist: [{ t: performance.now(), x: e.clientX }],
     };
+    // THE RELEASE IS HEARD FROM THE WINDOW TOO. The row only captures the
+    // pointer once a press has become a drag (below), so a press that slides
+    // off the band before that — the usual way to back out of a click — is
+    // released over something else, the row's own onPointerUp never runs,
+    // and the drag never ended: the row sat off-centre with the settle shut
+    // out, and then followed the bare mouse the next time it crossed. After
+    // the row's own handler, so this is a no-op whenever that one ran.
+    releaseRef.current?.();
+    const id = e.pointerId;
+    const onRelease = (ev: PointerEvent) => {
+      if (ev.pointerId === id) finishDrag(id);
+    };
+    window.addEventListener('pointerup', onRelease);
+    window.addEventListener('pointercancel', onRelease);
+    releaseRef.current = () => {
+      window.removeEventListener('pointerup', onRelease);
+      window.removeEventListener('pointercancel', onRelease);
+      releaseRef.current = null;
+    };
     run();
   };
   const onPointerMove = (e: React.PointerEvent) => {
     if (!draggingRef.current) return;
+    // a mouse with no button down is not dragging, whatever was missed
+    if (e.pointerType === 'mouse' && (e.buttons & 1) === 0) {
+      finishDrag(e.pointerId);
+      return;
+    }
     const now = performance.now();
     // the pointer moves in screen px and the row is zoomed, so a drag is
     // divided by the zoom to keep the packs under the hand one for one
@@ -845,15 +997,18 @@ export function CigScroller({
       try { e.currentTarget.setPointerCapture?.(e.pointerId); } catch { /* no pointer */ }
     }
   };
-  const endDrag = (e: React.PointerEvent) => {
+  /** End a drag from wherever the release was heard — the row, or the window. */
+  function finishDrag(pointerId: number) {
+    releaseRef.current?.();
     if (!draggingRef.current) return;
     draggingRef.current = false;
     if (capturedRef.current) {
       capturedRef.current = false;
-      try { e.currentTarget.releasePointerCapture?.(e.pointerId); } catch { /* was never captured */ }
+      try { rowRef.current?.releasePointerCapture?.(pointerId); } catch { /* was never captured */ }
     }
     run();
-  };
+  }
+  const endDrag = (e: React.PointerEvent) => finishDrag(e.pointerId);
 
   /**
    * One pack along.
