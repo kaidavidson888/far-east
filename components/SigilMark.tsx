@@ -5,15 +5,16 @@ import { LANDING_MARKS } from '@/lib/landing';
  * box, drawn on the plus's line under the cigarette row.
  *
  * THE TILE took the cloud's place on 2026-09-19 (the owner's GIF, its corners
- * redrawn square by `npm run build:tile`). It is an animated WebP, looping at
- * the GIF's own timing — an `<img>` plays it, since nothing here has to scrub
- * it the way the menu and the seal are scrubbed. There is ONE FILE PER PIXEL
- * DENSITY, picked by `srcSet`: each is sharpened at its own size so the
- * filigree's motion survives being 30px tall, and a 1x screen handed the 2x
- * file would shrink it with the browser's own filter and blur the motion
- * away again — which is what the owner saw as "not playing". A reader who
- * has asked for reduced motion gets the first frame instead, through
- * `<picture>`, which the browser settles before it fetches anything.
+ * redrawn square by `npm run build:tile`), and it PLAYS, LOOPED, WHILE THE
+ * MENU IS OPEN — the owner's words. Its 72 frames are one tall strip per
+ * pixel density (`srcSet` picks; each is sharpened at its own size so the
+ * filigree's motion survives being 30px tall), shown through a window one
+ * frame high, and `.cig-bar[data-open] .sigil-tile img` in the stylesheet
+ * steps the strip up a frame every 50ms. That animation only exists while
+ * the bar is open, so opening starts the tile from its first frame and
+ * closing stops it — which an animated image, running on the browser's own
+ * clock from the moment it loads, could not do. A reader who has asked for
+ * reduced motion sees the first frame.
  *
  * The outline is the artwork's own cut vector at the plus's size; the number
  * is live type over it, in the owner's face, because a cut part is an `<img>`
@@ -35,19 +36,28 @@ export function SigilMark({ count }: { count: number }) {
   const px = (n: number) => `${n}px`;
   return (
     <span className="sigil-mark" style={{ width: px(sigil.w), height: px(sigil.h) }}>
-      <picture>
-        <source srcSet={tile.stillSrcSet} media="(prefers-reduced-motion: reduce)" />
+      <span
+        className="sigil-tile"
+        style={
+          {
+            left: px(tile.left),
+            top: px(tile.top),
+            width: px(tile.w),
+            height: px(tile.h),
+            '--tile-frames': tile.frames,
+            '--tile-loop': `${tile.frames * tile.frameMs}ms`,
+          } as React.CSSProperties
+        }
+      >
         <img
-          className="sigil-mark-part"
-          src={tile.src}
-          srcSet={tile.srcSet}
+          src={tile.strip1x}
+          srcSet={`${tile.strip1x} 1x, ${tile.strip2x} 2x`}
           alt=""
           width={tile.w}
-          height={tile.h}
-          style={{ left: px(tile.left), top: px(tile.top) }}
+          height={tile.h * tile.frames}
           draggable={false}
         />
-      </picture>
+      </span>
       <img
         className="sigil-mark-part"
         src="/landing/parts/square.svg"

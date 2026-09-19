@@ -43,12 +43,12 @@
  * recovers the ink and its coverage exactly. The tile's face is then the page
  * showing through, which on this page is white anyway.
  *
- * OUTPUT. `public/tile/fa-tile-1x.webp` and `-2x.webp` are animated, lossless,
- * endlessly looping WebPs at the GIF's own timing — an `<img>` plays them,
- * since unlike the menu and the seal nothing has to scrub them. The `-still`
- * pair is each one's first frame, for a reader who has asked for reduced
- * motion. `lib/tile-geometry.json` carries the size and both srcsets. The
- * build stops if either animation would not visibly move.
+ * OUTPUT. `public/tile/fa-tile-strip-1x.webp` and `-2x.webp`: all 72 frames
+ * stacked top to bottom in one lossless image per density, which the
+ * stylesheet steps through at the GIF's own 50ms while the menu is open (see
+ * the note above the output code). `lib/tile-geometry.json` carries the size,
+ * the frame count and the timing. The build stops if either would not
+ * visibly move.
  */
 import { mkdirSync, writeFileSync } from 'node:fs';
 import sharp from 'sharp';
@@ -59,8 +59,6 @@ const GEOM = 'lib/tile-geometry.json';
 
 /** The outline's height in CSS px — MARK_SIZE in lib/landing.ts, which checks it. */
 const DRAWN_H = 30;
-
-
 /** How many rings the drawing has. */
 const RINGS = 3;
 /** The character must stay at least this far inside the innermost ring. */
@@ -314,49 +312,61 @@ const DENSITIES = [
   { scale: 2, sharpen: { sigma: 0.6, m1: 2, m2: 3 } },
 ];
 
+/**
+ * THE FRAMES GO OUT AS A STRIP, AND THE PAGE PLAYS THEM. The owner's ask is
+ * precise: the tile's GIF "playing looped while the menu is open". An
+ * animated image plays on the browser's own clock whether the menu is open
+ * or not, cannot be started from its first frame on demand, and cannot be
+ * checked from the page at all — drawing one onto a canvas gives its first
+ * frame, by spec. So each density is written as ONE TALL IMAGE, the 72
+ * frames stacked top to bottom, and `.sigil-tile` in the stylesheet steps it
+ * up one frame every 50ms — a CSS animation that only exists while the bar
+ * is open. Opening starts it from frame 0; closing stops it; it loops for as
+ * long as the menu stays open; and the page can read that it is running.
+ */
 mkdirSync(OUT_DIR, { recursive: true });
 const written = [];
 for (const d of DENSITIES) {
   const devW = CSS_W * d.scale;
   const devH = CSS_H * d.scale;
-  const baked = [];
-  for (const buf of composed) {
-    const small = await sharp(buf, { raw: { width: crop.w, height: crop.h, channels: 3 } })
+  const frameBytes = devW * devH * 4;
+  const strip = Buffer.alloc(frameBytes * N);
+  for (let p = 0; p < N; p++) {
+    const small = await sharp(composed[p], { raw: { width: crop.w, height: crop.h, channels: 3 } })
       .resize({ width: devW, height: devH, fit: 'fill', kernel: 'lanczos3' })
       .sharpen(d.sharpen)
       .raw()
       .toBuffer();
-    baked.push(await sharp(unmultiply(small), { raw: { width: devW, height: devH, channels: 4 } }).png().toBuffer());
+    unmultiply(small).copy(strip, p * frameBytes);
   }
-  const name = `fa-tile-${d.scale}x`;
-  const anim = await sharp(baked, { join: { animated: true } })
-    .webp({ lossless: true, effort: 6, loop: 0, delay: Array(N).fill(FRAME_MS) })
+  const name = `fa-tile-strip-${d.scale}x`;
+  const webp = await sharp(strip, { raw: { width: devW, height: devH * N, channels: 4 } })
+    .webp({ lossless: true, effort: 6 })
     .toBuffer();
-  writeFileSync(`${OUT_DIR}/${name}.webp`, anim);
-  const still = await sharp(baked[0]).webp({ lossless: true, effort: 6 }).toBuffer();
-  writeFileSync(`${OUT_DIR}/${name}-still.webp`, still);
+  writeFileSync(`${OUT_DIR}/${name}.webp`, webp);
 
-  // read the animation back: the right number of frames, at the right size
-  const check = await sharp(anim, { animated: true }).metadata();
-  if (check.pages !== N || check.width !== devW || check.pageHeight !== devH) {
-    fail(`${name}: wrote ${check.pages} frames of ${check.width}x${check.pageHeight}, expected ${N} of ${devW}x${devH}`);
+  // read it back: one frame wide, N frames tall
+  const check = await sharp(webp).metadata();
+  if (check.width !== devW || check.height !== devH * N) {
+    fail(`${name}: wrote ${check.width}x${check.height}, expected ${devW}x${devH * N}`);
   }
   // ...and it has to MOVE: frames half a loop apart must differ visibly
-  const alphaOf = async (p) =>
-    sharp(anim, { page: p }).ensureAlpha().extractChannel(3).raw().toBuffer();
-  const a = await alphaOf(0);
-  const b = await alphaOf(Math.floor(N / 2));
+  const alpha = (p) => {
+    const out = new Uint8Array(devW * devH);
+    for (let i = 0; i < out.length; i++) out[i] = strip[p * frameBytes + i * 4 + 3];
+    return out;
+  };
+  const a = alpha(0);
+  const b = alpha(Math.floor(N / 2));
   let moved = 0;
   for (let i = 0; i < a.length; i++) if (Math.abs(a[i] - b[i]) > 40) moved++;
   if (moved < a.length * 0.05) fail(`${name}: only ${moved} of ${a.length} pixels change across the loop — it would not read as moving`);
-  written.push({ d, name, anim, still, moved, px: a.length, devW, devH });
+  written.push({ d, name, bytes: webp.length, moved, px: a.length, devW, devH });
 }
 
-const srcSet = (suffix) => DENSITIES.map((d) => `/tile/fa-tile-${d.scale}x${suffix}.webp ${d.scale}x`).join(', ');
 const geometry = {
-  src: '/tile/fa-tile-1x.webp',
-  srcSet: srcSet(''),
-  stillSrcSet: srcSet('-still'),
+  strip1x: '/tile/fa-tile-strip-1x.webp',
+  strip2x: '/tile/fa-tile-strip-2x.webp',
   w: CSS_W,
   h: CSS_H,
   frames: N,
@@ -368,5 +378,5 @@ console.log(`rings (source px): ${rings.map((r, i) => `#${i + 1} ${r.thickness}p
 console.log(`tile ${tileW}x${tileH}, character ${reach.x1 - reach.x0 + 1}x${reach.y1 - reach.y0 + 1}, ${clearance}px clear of the inner ring`);
 console.log(`drawn ${CSS_W}x${CSS_H} CSS px, ${N} frames at ${FRAME_MS}ms (${((N * FRAME_MS) / 1000).toFixed(1)}s loop)`);
 for (const w of written) {
-  console.log(`${OUT_DIR}/${w.name}.webp ${w.devW}x${w.devH} ${(w.anim.length / 1024).toFixed(1)}KB, still ${(w.still.length / 1024).toFixed(1)}KB; ${w.moved} of ${w.px} px change across the loop`);
+  console.log(`${OUT_DIR}/${w.name}.webp ${w.devW}x${w.devH * N} ${(w.bytes / 1024).toFixed(1)}KB; ${w.moved} of ${w.px} px change across the loop`);
 }

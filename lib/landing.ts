@@ -239,9 +239,10 @@ export const LANDING_MARKS = {
     h: cluster.h,
     tile: {
       ...boxOf('tile'),
-      src: tileGeometry.src,
-      srcSet: tileGeometry.srcSet,
-      stillSrcSet: tileGeometry.stillSrcSet,
+      strip1x: tileGeometry.strip1x,
+      strip2x: tileGeometry.strip2x,
+      frames: tileGeometry.frames,
+      frameMs: tileGeometry.frameMs,
     },
     square: boxOf('square'),
   },

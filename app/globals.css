@@ -2280,6 +2280,37 @@ html:has(.cigpage) {
   max-width: none;
   -webkit-user-drag: none;
 }
+/* THE 發 TILE PLAYS, LOOPED, WHILE THE MENU IS OPEN — the owner's words.
+   The markup is a window one frame high over a strip of all 72 frames
+   (`npm run build:tile`), and this steps the strip up one frame at a time
+   at the GIF's own 50ms: `steps(72)` over the loop's 3.6s lands on each
+   frame's whole-pixel offset in turn, never between two. The animation only
+   exists while the bar is open, so opening starts it from the first frame
+   and closing stops it; it is a transform, so it runs on the compositor.
+   A reader who has asked for reduced motion keeps the first frame. */
+.sigil-tile {
+  position: absolute;
+  display: block;
+  overflow: hidden;
+}
+.sigil-tile img {
+  display: block;
+  max-width: none;
+  -webkit-user-drag: none;
+}
+.cig-bar[data-open] .sigil-tile img {
+  animation: sigil-tile var(--tile-loop) steps(var(--tile-frames)) infinite;
+}
+@keyframes sigil-tile {
+  to {
+    transform: translateY(-100%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cig-bar[data-open] .sigil-tile img {
+    animation: none;
+  }
+}
 .sigil-count {
   position: absolute;
   display: flex;

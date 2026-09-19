@@ -55,7 +55,7 @@ no CSS framework (tokens in `app/globals.css`). Deploys to Vercel.
   everything it can — the scale off the first frame, the six words off the last — and
   stops rather than guessing. See "The logo menu" below.
 - `npm run build:tile` — bakes the owner's 發 tile (`scripts/assets/fa-tile.gif`) into
-  `public/tile/fa-tile-{1x,2x}.webp` (animated) plus a still of each, and
+  `public/tile/fa-tile-strip-{1x,2x}.webp` (all 72 frames stacked; the page steps them) and
   `lib/tile-geometry.json`. Takes a few seconds, redraws the tile's rounded corners
   square, and stops rather than guessing — see "The seal, the tile and the outline" below.
 - `npm run build:cigpages` — rebuilds the 235 pages in `public/cigpages` and
@@ -888,9 +888,19 @@ comes from the button they are being matched to rather than being typed again.
   1x and a 2x file, `srcSet` picks, and each is SHARPENED AT ITS OWN SIZE after
   the reduction: 44 of 690 pixels now move at 1x, 398 of 2760 at 2x. The bake
   stops if either would move less than 5%. A reader asking for reduced motion
-  gets the first frame, through `<picture>`. **Note: drawing an animated image
-  onto a canvas always gives its FIRST frame, by spec** — that cannot test
-  whether it plays; `ImageDecoder` reads the frames and their timing.
+  gets the first frame. **Note: drawing an animated image onto a canvas always
+  gives its FIRST frame, by spec** — that cannot test whether one plays.
+  **IT PLAYS, LOOPED, ONLY WHILE THE MENU IS OPEN** — the owner's clarified
+  ask. So it is NOT an animated image: those run on the browser's own clock
+  from the moment they load and cannot be started or stopped by the page. The
+  bake writes each density as one tall strip of all 72 frames
+  (`public/tile/fa-tile-strip-{1x,2x}.webp`), `SigilMark` shows it through a
+  window one frame high, and `.cig-bar[data-open] .sigil-tile img` steps it
+  with `steps(72)` over 3.6s — a transform, on the compositor, landing on
+  whole-pixel frame offsets. The animation exists only while the bar is open,
+  so opening starts it at frame 0 and closing removes it. Verified with
+  `getAnimations()`: none while shut; running from 0 when opened, looping past
+  the last frame, every sampled offset a whole frame; gone again on close.
 - **THE ROW LAYS THEM OUT, NOT THE ARTWORK SPEC.** That line's height is the
   band's at the live zoom — `--cig-top` on `.cig-controls`, known only on the
   client — so nothing placed from `LANDING_SPEC` could find it. `CigScroller`
