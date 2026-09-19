@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Children, isValidElement, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { savedPacksAction } from '@/app/actions';
 import {
   CIG_BAND_H,
@@ -125,13 +125,14 @@ export function CigScroller({
   withPages?: string[];
   onPress?: (id: string) => void;
   /**
-   * What stands on the controls' line after the plus — on the landing page
-   * the seal, then the sigil with its outline and number (the owner's
-   * 2026-09-19 ask: "line up the seal logo and the sigil with its outline and
-   * number with the + that opens the menu"). It comes in from the page
-   * because the line it joins is laid out HERE, on the client, from the
-   * band's height at the live zoom; nothing placed from the artwork spec
-   * could find it. The marks size themselves; this only puts them in a row.
+   * What stands on the controls' line between the plus and reset — on the
+   * landing page the seal, then the tile with the outline and number (the
+   * owner's 2026-09-19 asks). It comes in from the page because the line it
+   * joins is laid out HERE, on the client, from the band's height at the
+   * live zoom; nothing placed from the artwork spec could find it. PASS AN
+   * ARRAY WITH KEYS, one entry per item: each entry becomes its own slot in
+   * the reveal's stagger, and a fragment would arrive as one. The marks size
+   * themselves; this only puts them in a row.
    */
   marks?: React.ReactNode;
 }) {
@@ -1220,27 +1221,10 @@ export function CigScroller({
           } as React.CSSProperties
         }
       >
-        {/*
-          RESET. Puts the whole catalogue back and clears the filtering —
-          the My Saved shelf and now the tags too — through the same spin,
-          because the owner asked for the same animation rather than a cut.
-          It drops every tag but LEAVES THE MENU OPEN, which is what they
-          asked for: reset undoes the filtering, not the reaching for it.
-        */}
-        <button
-          type="button"
-          className="cig-reset"
-          onClick={() => {
-            setPicked(new Set());
-            startSpin(allIds);
-          }}
-          disabled={locked}
-        >
-          reset
-        </button>
-
         {/* the plus, and the minus it becomes — the owner's own marks, drawn
-            inline so they take the button's ink and invert with it */}
+            inline so they take the button's ink and invert with it. Since
+            2026-09-19 it is the ONLY thing on the line until it is pressed,
+            and it stands first, on the row's own 12px edge. */}
         <button
           type="button"
           className="cig-tags-toggle"
@@ -1271,13 +1255,56 @@ export function CigScroller({
         </button>
 
         {/*
-          THE SEAL AND THE SIGIL, ON THE PLUS'S LINE. Laid out by the
-          stylesheet from the same custom properties as the plus, so they sit
-          one gap past it at the buttons' own height whatever the zoom. Only
-          the seal is a control; the wrapper and the sigil refuse the pointer
-          so nothing dead sits over the row.
+          THE REST OF THE LINE, WHICH THE PLUS REVEALS (the owner's
+          2026-09-19 ask): the seal, the tile, the outline with the number,
+          and reset at the end — one gap between each, reset standing off the
+          outline by the gap it used to stand off the plus. "Hidden to start
+          then revealed … on user click on the + button … with the same type
+          of animation as the menu": each item is a slot that fades in and
+          drifts the last few px out from the plus, nearest first, on the
+          compositor, exactly as the tag buttons below do; closing gathers
+          them back. A shut bar is `inert` — out of the tab order, out of the
+          accessibility tree and deaf to the pointer — because an invisible
+          control that can still be pressed is a trap (the tag menu learned
+          that one already).
+
+          Laid out by the stylesheet from the plus's own custom properties,
+          so the line follows the band at any zoom. Only the seal and reset
+          are controls; the slots and the tile refuse the pointer.
         */}
-        {marks ? <div className="cig-marks">{marks}</div> : null}
+        <div className="cig-bar" data-open={tagsOpen ? '' : undefined} inert={!tagsOpen}>
+          {[
+            ...Children.toArray(marks),
+            /*
+              RESET. Puts the whole catalogue back and clears the filtering —
+              the My Saved shelf and the tags too — through the same spin,
+              because the owner asked for the same animation rather than a
+              cut. It drops every tag but LEAVES THE MENU OPEN, which is what
+              they asked for: reset undoes the filtering, not the reaching
+              for it.
+            */
+            <button
+              key="reset"
+              type="button"
+              className="cig-reset"
+              onClick={() => {
+                setPicked(new Set());
+                startSpin(allIds);
+              }}
+              disabled={locked}
+            >
+              reset
+            </button>,
+          ].map((item, i) => (
+            <span
+              key={isValidElement(item) && item.key != null ? item.key : i}
+              className="cig-bar-slot"
+              style={{ '--i': i } as React.CSSProperties}
+            >
+              {item}
+            </span>
+          ))}
+        </div>
 
         {/*
           CONFIRM. The same spin My Saved runs, over the packs the tags

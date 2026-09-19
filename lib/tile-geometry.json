@@ -1,0 +1,9 @@
+{
+  "src": "/tile/fa-tile-1x.webp",
+  "srcSet": "/tile/fa-tile-1x.webp 1x, /tile/fa-tile-2x.webp 2x",
+  "stillSrcSet": "/tile/fa-tile-1x-still.webp 1x, /tile/fa-tile-2x-still.webp 2x",
+  "w": 23,
+  "h": 30,
+  "frames": 72,
+  "frameMs": 50
+}

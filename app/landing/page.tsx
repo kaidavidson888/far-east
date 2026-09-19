@@ -38,13 +38,12 @@ export default async function LandingRoute({
   const user = await currentUser();
   const shares = user ? await bigShares(user.id) : 0;
 
-  // the seal, then the sigil with its outline and number, on the plus's line
-  const marks = (
-    <>
-      <SealButton size={LANDING_SPEC.sealSize} placed={false} />
-      <SigilMark count={shares} />
-    </>
-  );
+  // the seal, then the tile with the outline and its number: one entry each,
+  // so each takes its own turn arriving when the plus opens the line
+  const marks = [
+    <SealButton key="seal" size={LANDING_SPEC.sealSize} placed={false} />,
+    <SigilMark key="sigil" count={shares} />,
+  ];
 
   return (
     <ArtworkPage

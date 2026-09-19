@@ -1489,9 +1489,11 @@ ul, ol { list-style: none; }
   --cig-stagger: 26ms;
   /* where a closed button sits: back towards the plus, up and to the left */
   --cig-from: translate(-10px, -12px);
-  /* the second column: past reset, and the plus's own left edge */
+  /* the second column: one button and a gap in from the edge — where the tag
+     grid begins, beside confirm. (It was also the plus's left until the plus
+     moved to the edge on 2026-09-19; the grid and confirm stayed put.) */
   --cig-col: calc(var(--cig-edge) + var(--cig-btn-w) + var(--cig-btn-gap));
-  /* the second line: under reset and the plus */
+  /* the second line: under the plus's line */
   --cig-line2: calc(var(--cig-top) + var(--cig-btn-h) + var(--cig-btn-gap));
 }
 .cig-controls > *,
@@ -1524,11 +1526,13 @@ ul, ol { list-style: none; }
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
+/* Reset is the LAST item on the plus's line now (2026-09-19), a flex item in
+   `.cig-bar` rather than a box of its own at the row's edge: see the bar
+   below for where it stands and how it arrives. */
 .cig-reset {
-  position: absolute;
-  left: var(--cig-edge);
-  top: var(--cig-top);
-  top: round(var(--cig-top), 1px);
+  position: relative;
+  display: block;
+  flex: none;
   width: var(--cig-btn-w);
   height: var(--cig-btn-h);
   background: #010101;
@@ -1560,7 +1564,10 @@ ul, ol { list-style: none; }
    face's would have been a different letterform beside the house one. */
 .cig-tags-toggle {
   position: absolute;
-  left: var(--cig-col);
+  /* FIRST ON THE LINE, ON THE ROW'S OWN 12PX EDGE — where reset began before
+     reset moved to the end (2026-09-19, "move the entire bar to the left").
+     Confirm opens straight under it, on the same edge. */
+  left: var(--cig-edge);
   top: var(--cig-top);
   top: round(var(--cig-top), 1px);
   width: var(--cig-btn-h);
@@ -1585,18 +1592,25 @@ ul, ol { list-style: none; }
   display: block;
 }
 
-/* THE SEAL AND THE SIGIL STAND ON THE PLUS'S LINE — the owner's 2026-09-19
-   ask: "line up the seal logo and the sigil with its outline and number
-   with the + that opens the menu". Reset, the plus, the seal, the sigil,
-   the outline with the number, left to right, one gap between each, all at
-   the buttons' own height. They come in through `CigScroller`'s `marks` and
-   are laid out here from the plus's own custom properties, so they follow
-   it at every zoom. The wrapper takes no pointer (the controls layer gives
-   its children the pointer back, so it is said again): the seal's own hit
-   is the one live thing in it. */
-.cig-controls > .cig-marks {
+/* THE PLUS'S LINE, AND THE PLUS REVEALS IT. The owner's 2026-09-19 asks, in
+   turn: "line up the seal logo and the sigil with its outline and number
+   with the + that opens the menu"; then the tile in the cloud's place, reset
+   moved to the end, the line moved left, and "the entire bar minus the +
+   button is hidden to start then revealed … on user click on the + button
+   … with the same type of animation as the menu". So the line reads the
+   plus, then — once it is pressed — the seal, the 發 tile, the outline with
+   the number, and reset, one gap between each, all at the buttons' own
+   height. Reset stands off the outline by the gap it used to stand off the
+   plus.
+
+   The items come in through `CigScroller`'s `marks` (reset is the row's
+   own) and are laid out here from the plus's custom properties, so the line
+   follows the band at every zoom. The bar takes no pointer (the controls
+   layer hands its children the pointer back, so it is said again); the
+   seal's hit and reset are the live things in it. */
+.cig-controls > .cig-bar {
   position: absolute;
-  left: calc(var(--cig-col) + var(--cig-btn-h) + var(--cig-btn-gap));
+  left: calc(var(--cig-edge) + var(--cig-btn-h) + var(--cig-btn-gap));
   top: var(--cig-top);
   top: round(var(--cig-top), 1px);
   height: var(--cig-btn-h);
@@ -1605,12 +1619,41 @@ ul, ol { list-style: none; }
   gap: var(--cig-btn-gap);
   pointer-events: none;
 }
-.cig-marks .seal-button-hit {
+.cig-bar .seal-button-hit,
+.cig-bar .cig-reset {
   pointer-events: auto;
 }
+/* THE REVEAL IS THE TAG MENU'S OWN: opacity and translation only, on the
+   compositor, each item fading in and drifting the last few px out from the
+   plus, nearest first (`--i`, the same stagger step), and gathering back
+   without the stagger on the way in. The drift is along the line — straight
+   out of the plus beside it — where the grid's is up and to the left,
+   because that is where the plus is from each of them. A shut bar is
+   `inert` in the markup, so nothing in it can be pressed or tabbed to while
+   it is invisible. */
+.cig-bar-slot {
+  display: block;
+  flex: none;
+  height: var(--cig-btn-h);
+  opacity: 0;
+  transform: translateX(-10px);
+  transition:
+    opacity var(--cig-shut-ms) var(--cig-ease-out),
+    transform var(--cig-shut-ms) var(--cig-ease-out);
+}
+.cig-bar[data-open] .cig-bar-slot {
+  opacity: 1;
+  transform: none;
+  transition:
+    opacity var(--cig-fade-ms) var(--cig-ease-in) calc(var(--i, 0) * var(--cig-stagger)),
+    transform var(--cig-grow-ms) var(--cig-ease-in) calc(var(--i, 0) * var(--cig-stagger));
+}
 
-/* The grid unfolds out of the plus: its top-left corner IS the plus's left
-   edge, one gap below it. Nothing here is clipped or scaled — the buttons
+/* The grid unfolds below the plus's line, one column in: confirm opens under
+   the plus on the row's edge, and the grid starts beside confirm. (Its
+   corner was the plus's own left edge until the plus moved to the edge on
+   2026-09-19; the grid and confirm did not move with it, which keeps confirm
+   under the plus.) Nothing here is clipped or scaled — the buttons
    arrive one at a time on the compositor, which is written up on
    `.cig-controls` above; this block is only where the grid sits and how
    wide it may be.

@@ -1,4 +1,5 @@
 import geometry from './landing-geometry.json';
+import tileGeometry from './tile-geometry.json';
 import { clusterBox, marginsOf, type ArtPageSpec, type ArtPart } from './artpage';
 // the plus button that opens the tag filter — the seal and the sigil pair are
 // both drawn at its size now, and this is the one copy of that number
@@ -78,15 +79,34 @@ const DESIGN_SEAL = parts.logo.h;
 /** And the scale the pair had at that size, frozen for the same reason. */
 const DESIGN_PAIR_SCALE = DESIGN_SEAL / (parts.cloud.w + SIGIL_GAP + parts.square.w);
 
+/**
+ * THE 發 TILE STANDS WHERE THE CLOUD STOOD (the owner's 2026-09-19 ask:
+ * "replace the cloud next to the outline with the gif … make the edges of the
+ * tile sharp instead of rounded and scale it to match the height of the
+ * outline with the same margins as the cloud relative to every other
+ * element"). `npm run build:tile` bakes it from `scripts/assets/fa-tile.gif`
+ * with its corners redrawn square, at the outline's height — checked here,
+ * since the bake cannot read this file — and as wide as its own proportion.
+ *
+ * The margins are the cloud's: the design's gap to the square at the square's
+ * scale (the 3px `gap` below), and the bar's own gap to the seal on the other
+ * side. It is as tall as the outline, so it stands on the line's top and foot
+ * as everything else on the line does; the cloud was centred on the square's
+ * height, which for a mark the square's own height is the same thing.
+ */
+if (tileGeometry.h !== MARK_SIZE) {
+  throw new Error(`lib/tile-geometry.json is baked ${tileGeometry.h} tall; the outline is ${MARK_SIZE}. Re-run npm run build:tile.`);
+}
+
 const cluster = (() => {
   const k = MARK_SIZE / parts.square.w;
   const square = { w: MARK_SIZE, h: Math.round(parts.square.h * k) };
-  const cloud = { w: Math.round(parts.cloud.w * k), h: Math.round(parts.cloud.h * k) };
+  const tile = { w: tileGeometry.w, h: tileGeometry.h };
   const gap = Math.round(SIGIL_GAP * k);
   const marks = {
-    // the sigil, then the outline: the owner's order, left to right
-    cloud: { x: 0, y: Math.round((parts.cloud.y - parts.square.y) * k), ...cloud },
-    square: { x: cloud.w + gap, y: 0, ...square },
+    // the tile, then the outline: the owner's order, left to right
+    tile: { x: 0, y: 0, ...tile },
+    square: { x: tile.w + gap, y: 0, ...square },
   };
   return { marks, scale: k, ...clusterBox(Object.values(marks)) };
 })();
@@ -185,11 +205,10 @@ export const LANDING_ROW_CLEAR = LABELS.recommended + parts.recommended.h + LABE
  * THE SEAL, THE SIGIL AND THE OUTLINE WITH THE NUMBER IN IT — how big each is,
  * for `SealButton` and `SigilMark` to draw on the plus's line.
  *
- * The sigil and the outline are one box, the cloud then the square in the
- * relation the design drew them (the cloud sits centred on the square's
- * height) at the square's scale — `cluster` above — with the design's gap
- * between them taken to the same scale. The marks are the artwork's own cut
- * vectors, `/landing/parts/cloud.svg` and `square.svg`, so they stay sharp.
+ * The tile and the outline are one box, the tile then the square, with the
+ * design's gap between the cloud and the square taken to the square's scale —
+ * `cluster` above. The square is the artwork's own cut vector,
+ * `/landing/parts/square.svg`; the tile is the animation `build:tile` bakes.
  *
  * THE NUMBER: the owner's 2026-09-17 ask, a number in the outline beside the
  * sigil counting the share links this reader has made worth $100 or more
@@ -214,11 +233,16 @@ const boxOf = (id: keyof typeof CLUSTER) => ({
 export const LANDING_MARKS = {
   /** the seal's square: the plus's size */
   seal: MARK_SIZE,
-  /** the sigil and the outline as one box, each mark's place inside it */
+  /** the tile and the outline as one box, each mark's place inside it */
   sigil: {
     w: cluster.w,
     h: cluster.h,
-    cloud: boxOf('cloud'),
+    tile: {
+      ...boxOf('tile'),
+      src: tileGeometry.src,
+      srcSet: tileGeometry.srcSet,
+      stillSrcSet: tileGeometry.stillSrcSet,
+    },
     square: boxOf('square'),
   },
   /** the count's type size, in px */

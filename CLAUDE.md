@@ -54,6 +54,10 @@ no CSS framework (tokens in `app/globals.css`). Deploys to Vercel.
   `lib/growmenu-geometry.json`. The grow bake takes a couple of minutes and MEASURES
   everything it can — the scale off the first frame, the six words off the last — and
   stops rather than guessing. See "The logo menu" below.
+- `npm run build:tile` — bakes the owner's 發 tile (`scripts/assets/fa-tile.gif`) into
+  `public/tile/fa-tile-{1x,2x}.webp` (animated) plus a still of each, and
+  `lib/tile-geometry.json`. Takes a few seconds, redraws the tile's rounded corners
+  square, and stops rather than guessing — see "The seal, the tile and the outline" below.
 - `npm run build:cigpages` — rebuilds the 235 pages in `public/cigpages` and
   `lib/cigpages.json` from the owner's info-page vectors in `scripts/assets/cigpages`.
   **Takes about half an hour** (it re-encodes every raster in every vector), so background
@@ -637,8 +641,10 @@ rather than to script an ending.
   wall-clock is not.
 
 **THE PLUS BESIDE RESET OPENS A TAG FILTER FOR THE ROW** (the owner's
-2026-09-14 ask). Four controls now sit under the row's left end, all of them
-the reset button's 88x30 with 10 between — `CIG_CONTROLS` in `lib/cigRow.ts`
+2026-09-14 ask; since 2026-09-19 the plus stands first on the row's edge and
+reveals the rest of its line — see "The seal, the tile and the outline").
+Four controls sit under the row's left end, all of them sized off the reset
+button's 88x30 with 10 between — `CIG_CONTROLS` in `lib/cigRow.ts`
 is the one copy of those numbers, handed to the stylesheet as custom
 properties on `.cig-controls` so the component's arithmetic and the CSS
 cannot drift.
@@ -839,26 +845,62 @@ beyond those is reached by hovering 遠東. Three notes on what that took:
   belonged to a label standing on the page, not to a word in a menu. Git has
   the block if the column ever goes back.
 
-**THE SEAL AND THE SIGIL PAIR ARE BOTH DRAWN AT THE PLUS BUTTON'S SIZE, THE
-OUTLINE HAS A NUMBER IN IT, AND ALL OF IT STANDS ON THE PLUS'S LINE** (the
-owner's 2026-09-17 ask for the size and the number; 2026-09-19 for the line:
-"line up the seal logo and the sigil with its outline and number with the +
-that opens the menu"). The line under the row's left end now reads **reset,
-the plus, the seal, the sigil, the outline with the number** — left to right,
-one gap (10) between each, all 30 tall — and the top right of the page is
-empty at rest, which is where the menu's words unfold. `MARK_SIZE` in
-`lib/landing.ts` is `CIG_CONTROLS.height`, so the one number comes from the
-button they are being matched to rather than being typed again.
+**The seal, the tile and the outline** — **ALL AT THE PLUS BUTTON'S SIZE, THE
+OUTLINE HAS A NUMBER IN IT, AND ALL OF IT STANDS ON THE PLUS'S LINE, HIDDEN
+UNTIL THE PLUS IS PRESSED** (the owner's asks: 2026-09-17 the size and the
+number; 2026-09-19 the line, then the tile, reset to the end, the line moved
+left and the reveal). At rest the line under the row's left end is **the plus
+alone, on the row's 12px edge**. Pressing it reveals, left to right, **the
+seal, the 發 tile, the outline with the number, and reset** — one gap (10)
+between each, except the design's 3 between the tile and the outline, which
+was the cloud's; all 30 tall — along with confirm (which opens straight under
+the plus) and the tag grid (beside confirm, where it always was). The top right
+of the page is empty at rest, which is where the menu's words unfold.
+`MARK_SIZE` in `lib/landing.ts` is `CIG_CONTROLS.height`, so the one number
+comes from the button they are being matched to rather than being typed again.
+- **THE REVEAL IS THE TAG MENU'S OWN.** `.cig-bar` holds each item in a
+  `.cig-bar-slot` that fades in and drifts the last 10px out from the plus,
+  nearest first on the same `--cig-stagger`, compositor-only, and gathers back
+  on close. A shut bar is **`inert`** — out of the tab order, the accessibility
+  tree and the pointer — since an invisible control that can still be pressed
+  is a trap. The page passes its marks as a keyed ARRAY (`marks={[seal,
+  sigil]}`); a fragment would arrive as one slot and stagger as one.
+- **"Lined up vertically with the cigarette box above it" was read as the
+  row's own 12px edge** — where reset began. The packs above scroll, so no
+  one pack stays over the plus; the edge is the fixed line the controls
+  already hang from. The owner's call if they meant something else.
+- **THE 發 TILE REPLACED THE CLOUD** (`npm run build:tile`,
+  `scripts/build-tile.mjs`). The owner's GIF is three concentric rounded
+  rings — 10, 8 and 5px, hard black on white — round a 發 whose cloud
+  filigree moves on a 72-frame, 50ms loop; only the character animates. "Make
+  the edges of the tile sharp": the bake MEASURES each ring off the straight
+  middle of all four sides (they must agree), checks that nothing outside the
+  character changes across the frames, and redraws the rings as square bands
+  at those edges with the character copied in untouched — a rounded corner
+  cannot be straightened by editing pixels near it. Drawn 30 tall (checked
+  against `MARK_SIZE`) and 23 wide at its own proportion, the half pixel taken
+  up as white rather than by stretching.
+  **AT 30PX THE FILIGREE IS FINER THAN A PIXEL, AND THAT IS WHY IT IS BAKED
+  TWICE.** The first bake was one 2x file; the owner said it was not playing.
+  It was, but an honest reduction averages the moving filigree to a grey that
+  barely changes (16 of 690 pixels moved visibly on a 1x screen), and a 1x
+  screen shrank the 2x file again with the browser's own filter. So there is a
+  1x and a 2x file, `srcSet` picks, and each is SHARPENED AT ITS OWN SIZE after
+  the reduction: 44 of 690 pixels now move at 1x, 398 of 2760 at 2x. The bake
+  stops if either would move less than 5%. A reader asking for reduced motion
+  gets the first frame, through `<picture>`. **Note: drawing an animated image
+  onto a canvas always gives its FIRST frame, by spec** — that cannot test
+  whether it plays; `ImageDecoder` reads the frames and their timing.
 - **THE ROW LAYS THEM OUT, NOT THE ARTWORK SPEC.** That line's height is the
   band's at the live zoom — `--cig-top` on `.cig-controls`, known only on the
   client — so nothing placed from `LANDING_SPEC` could find it. `CigScroller`
-  takes them as `marks` and `.cig-marks` puts them one gap past the plus from
-  the plus's own custom properties; `lib/landing.ts` only SIZES them now
-  (`LANDING_MARKS`) and places the logo alone. `SealButton` gets
-  `placed={false}` there and becomes a flex item; `components/SigilMark.tsx`
-  is the sigil, the outline and the number as one box. The seal, the cloud and
-  the square are still cut by `build:landing`; putting any of them back in the
-  corner is a line in the spec.
+  takes them as `marks`, adds its own reset at the end, and `.cig-bar` puts
+  them one gap past the plus from the plus's own custom properties;
+  `lib/landing.ts` only SIZES them now (`LANDING_MARKS`) and places the logo
+  alone. `SealButton` gets `placed={false}` there and becomes a flex item;
+  `components/SigilMark.tsx` is the tile, the outline and the number as one
+  box. The seal, the cloud and the square are still cut by `build:landing`;
+  putting any of them back in the corner is a line in the spec.
 - **THE LINE IS ROUNDED TO A WHOLE PIXEL** — `top: round(var(--cig-top), 1px)`
   after the plain `top`, at every use of both lines. The zoom put the line at
   577.33 and the sigil and the square are vector `<img>`s, which a fractional

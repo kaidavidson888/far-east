@@ -28,7 +28,8 @@
     "audit:cigtext": "node scripts/audit-cigpage-text.mjs",
     "build:cigtags": "node scripts/build-cigtags.mjs",
     "audit:cigs": "node scripts/audit-cigs.mjs",
-    "build:growmenu": "node scripts/build-grow-menu.mjs"
+    "build:growmenu": "node scripts/build-grow-menu.mjs",
+    "build:tile": "node scripts/build-tile.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.5",
