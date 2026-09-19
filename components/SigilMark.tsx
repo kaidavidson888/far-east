@@ -1,12 +1,15 @@
 import { LANDING_MARKS } from '@/lib/landing';
 
 /**
- * The 發 tile, the outline beside it, and the number inside the outline — one
+ * The animated 發, the outline beside it, and the number inside the outline — one
  * box, drawn on the plus's line under the cigarette row.
  *
- * THE TILE took the cloud's place on 2026-09-19 (the owner's GIF, its corners
- * redrawn square by `npm run build:tile`), and it PLAYS, LOOPED, WHILE THE
- * MENU IS OPEN — the owner's words. Its 72 frames are one tall strip per
+ * THE ANIMATED 發 took the cloud's place on 2026-09-19 — the character from
+ * the owner's tile GIF, without the tile's rings, at the bar's 30px height
+ * (`npm run build:tile`) — and it PLAYS, LOOPED, WHILE THE MENU IS OPEN, the
+ * owner's words. The whole tile was tried first at this height and its
+ * moving swirls came out thinner than a pixel; the character alone is nearly
+ * twice the size it had inside the tile, and the motion reads. Its 72 frames are one tall strip per
  * pixel density (`srcSet` picks; each is sharpened at its own size so the
  * filigree's motion survives being 30px tall), shown through a window one
  * frame high, and `.cig-bar[data-open] .sigil-tile img` in the stylesheet

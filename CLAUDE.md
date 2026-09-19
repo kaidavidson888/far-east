@@ -54,10 +54,10 @@ no CSS framework (tokens in `app/globals.css`). Deploys to Vercel.
   `lib/growmenu-geometry.json`. The grow bake takes a couple of minutes and MEASURES
   everything it can — the scale off the first frame, the six words off the last — and
   stops rather than guessing. See "The logo menu" below.
-- `npm run build:tile` — bakes the owner's 發 tile (`scripts/assets/fa-tile.gif`) into
-  `public/tile/fa-tile-strip-{1x,2x}.webp` (all 72 frames stacked; the page steps them) and
-  `lib/tile-geometry.json`. Takes a few seconds, redraws the tile's rounded corners
-  square, and stops rather than guessing — see "The seal, the tile and the outline" below.
+- `npm run build:tile` — bakes the animated 發 out of the owner's tile GIF (`scripts/assets/fa-tile.gif`) into
+  `public/tile/fa-char-strip-{1x,2x}.webp` (all 72 frames stacked; the page steps them) and
+  `lib/tile-geometry.json`. Takes a few seconds, keeps the character and drops the tile's
+  rings, and stops rather than guessing — see "The seal, the tile and the outline" below.
 - `npm run build:cigpages` — rebuilds the 235 pages in `public/cigpages` and
   `lib/cigpages.json` from the owner's info-page vectors in `scripts/assets/cigpages`.
   **Takes about half an hour** (it re-encodes every raster in every vector), so background
@@ -851,8 +851,8 @@ UNTIL THE PLUS IS PRESSED** (the owner's asks: 2026-09-17 the size and the
 number; 2026-09-19 the line, then the tile, reset to the end, the line moved
 left and the reveal). At rest the line under the row's left end is **the plus
 alone, on the row's 12px edge**. Pressing it reveals, left to right, **the
-seal, the 發 tile, the outline with the number, and reset** — one gap (10)
-between each, except the design's 3 between the tile and the outline, which
+seal, the animated 發, the outline with the number, and reset** — one gap (10)
+between each, except the design's 3 between the 發 and the outline, which
 was the cloud's; all 30 tall — along with confirm (which opens straight under
 the plus) and the tag grid (beside confirm, where it always was). The top right
 of the page is empty at rest, which is where the menu's words unfold.
@@ -869,32 +869,40 @@ comes from the button they are being matched to rather than being typed again.
   row's own 12px edge** — where reset began. The packs above scroll, so no
   one pack stays over the plus; the edge is the fixed line the controls
   already hang from. The owner's call if they meant something else.
-- **THE 發 TILE REPLACED THE CLOUD** (`npm run build:tile`,
-  `scripts/build-tile.mjs`). The owner's GIF is three concentric rounded
-  rings — 10, 8 and 5px, hard black on white — round a 發 whose cloud
-  filigree moves on a 72-frame, 50ms loop; only the character animates. "Make
-  the edges of the tile sharp": the bake MEASURES each ring off the straight
-  middle of all four sides (they must agree), checks that nothing outside the
-  character changes across the frames, and redraws the rings as square bands
-  at those edges with the character copied in untouched — a rounded corner
-  cannot be straightened by editing pixels near it. Drawn 30 tall (checked
-  against `MARK_SIZE`) and 23 wide at its own proportion, the half pixel taken
-  up as white rather than by stretching.
-  **AT 30PX THE FILIGREE IS FINER THAN A PIXEL, AND THAT IS WHY IT IS BAKED
-  TWICE.** The first bake was one 2x file; the owner said it was not playing.
-  It was, but an honest reduction averages the moving filigree to a grey that
-  barely changes (16 of 690 pixels moved visibly on a 1x screen), and a 1x
-  screen shrank the 2x file again with the browser's own filter. So there is a
-  1x and a 2x file, `srcSet` picks, and each is SHARPENED AT ITS OWN SIZE after
-  the reduction: 44 of 690 pixels now move at 1x, 398 of 2760 at 2x. The bake
-  stops if either would move less than 5%. A reader asking for reduced motion
-  gets the first frame. **Note: drawing an animated image onto a canvas always
-  gives its FIRST frame, by spec** — that cannot test whether one plays.
+- **THE ANIMATED 發 REPLACED THE CLOUD — THE CHARACTER ALONE, NOT THE TILE**
+  (`npm run build:tile`, `scripts/build-tile.mjs`). The owner's GIF
+  (`scripts/assets/fa-tile.gif`) is a mahjong tile — three concentric rounded
+  rings, 10, 8 and 5px, hard black on white — round a 發 whose cloud filigree
+  moves on a 72-frame, 50ms loop; only the character animates. How it got to
+  the character alone, all 2026-09-19:
+  1. The whole tile went in at the outline's 30px with its corners redrawn
+     square ("make the edges of the tile sharp"): the rings measured off the
+     straight middle of every side and redrawn as square bands.
+  2. The owner said it was not playing. It was, but at 30px the tile's
+     character is about 16px across and its moving swirls are thinner than a
+     pixel: 16 of 690 pixels changed visibly on a 1x screen. Sharpening per
+     density (below) took that to 44 and it still read as still.
+  3. Shown the tile playing at 30 to 120px, the owner chose: "remove the
+     outline and just scale the character's dimensions and its animation up to
+     be the same height as the rest of the bar". So the rings are **not drawn
+     at all** — the bake still MEASURES them, because they are how it finds
+     the face and proves that only the character moves and that the crop takes
+     no sliver of a ring — and the crop is the character's own reach across all
+     72 frames (444x446 source px), drawn **30x30**, nearly twice the size it
+     had inside the tile. **309 of 900 pixels now change across the loop at
+     1x**, and the swirls read as moving.
+  **Two densities, each SHARPENED AT ITS OWN SIZE** after the reduction
+  (`fa-char-strip-{1x,2x}.webp`, `srcSet` picks): a 1x screen handed a 2x file
+  shrinks it again with the browser's own filter and blurs fine motion away.
+  The bake stops if either would move less than 5%. A reader asking for
+  reduced motion gets the first frame. **Note: drawing an animated image onto
+  a canvas always gives its FIRST frame, by spec** — that cannot test whether
+  one plays.
   **IT PLAYS, LOOPED, ONLY WHILE THE MENU IS OPEN** — the owner's clarified
   ask. So it is NOT an animated image: those run on the browser's own clock
   from the moment they load and cannot be started or stopped by the page. The
   bake writes each density as one tall strip of all 72 frames
-  (`public/tile/fa-tile-strip-{1x,2x}.webp`), `SigilMark` shows it through a
+  (`public/tile/fa-char-strip-{1x,2x}.webp`), `SigilMark` shows it through a
   window one frame high, and `.cig-bar[data-open] .sigil-tile img` steps it
   with `steps(72)` over 3.6s — a transform, on the compositor, landing on
   whole-pixel frame offsets. The animation exists only while the bar is open,

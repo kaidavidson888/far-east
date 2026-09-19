@@ -1,49 +1,45 @@
 /**
- * Bakes the 發 tile that stands beside the outline on the landing page.
+ * Bakes the animated 發 that stands beside the outline on the landing page.
  *
  *   npm run build:tile
  *
- * The owner's 2026-09-19 ask: "replace the cloud next to the outline with the
- * gif … just make the edges of the tile sharp instead of rounded and scale it
- * to match the height of the outline with the same margins as the cloud".
- * The source is `scripts/assets/fa-tile.gif`: a mahjong tile drawn as three
- * concentric rounded rectangles with the character 發 in the middle, cloud
- * filigree moving through the character on a 72-frame loop.
+ * The source is the owner's `scripts/assets/fa-tile.gif`: a mahjong tile
+ * drawn as three concentric rounded rectangles round the character 發, with
+ * cloud filigree moving through the character on a 72-frame loop. The
+ * owner's asks, 2026-09-19, in order: put it where the cloud was, at the
+ * outline's height, with its corners made sharp; then — having seen that the
+ * whole tile at 30px left the moving swirls thinner than a pixel — "remove
+ * the outline and just scale the character's dimensions and its animation up
+ * to be the same height as the rest of the bar". So what is baked now is THE
+ * CHARACTER ALONE, 30px tall, and the rings are not drawn at all.
  *
- * THE CORNERS ARE REDRAWN, NOT PATCHED. Everything here is measured off the
- * frames rather than typed in, and the build stops rather than guessing:
+ * THE RINGS ARE STILL MEASURED, because they are how the character is found
+ * and how the build proves it is taking only the character. Everything is
+ * read off the frames rather than typed in, and the build stops rather than
+ * guessing:
  *
  *   1. The three rings are read off the straight middle of every side — each
  *      ring's position and thickness — and the four sides must agree with
  *      each other at every sample, or the tile is not the shape this assumes.
- *      They are hard-edged (pure black on pure white; no grey anywhere on
- *      them), so each is exactly a rectangle band with whole-pixel edges.
  *   2. Everything outside the character must be identical in all 72 frames —
- *      only the character animates — so the frame can be drawn once.
+ *      only the character animates.
  *   3. The character's reach across all 72 frames is measured, and must stay
- *      clear of the innermost ring, or copying it would take ring with it.
+ *      clear of the innermost ring; the crop is that reach, so no sliver of a
+ *      ring can come along.
  *
- * Then every frame is the three rings drawn as SQUARE-cornered bands at the
- * measured edges, on white, with the character copied in from the source
- * frame untouched. A rounded corner cannot be straightened by editing pixels
- * near it — the arc has to go and the straight edges have to meet — and
- * drawing the bands from the measured edges is exactly that.
- *
- * SIZE. The outline beside it is 30 CSS px tall (the plus button's height,
- * `MARK_SIZE` in lib/landing.ts), so the tile is drawn 30 tall and as wide as
- * its own proportion makes it, rounded to a whole pixel. Baked at 1x AND 2x,
- * each sharpened at its own size — see DENSITIES for why a tile this small
- * needs both. The rounding to a whole pixel is taken
- * up as a hair of white either side rather than by stretching the drawing —
- * a mark is never stretched here. lib/landing.ts checks the height it reads
- * back is its own.
+ * SIZE. The rest of the bar is 30 CSS px tall (the plus button's height,
+ * `MARK_SIZE` in lib/landing.ts), so the character is drawn 30 tall and as
+ * wide as its own proportion makes it, rounded to a whole pixel — the
+ * rounding taken up as a hair of white either side, never by stretching.
+ * Baked at 1x AND 2x, each sharpened at its own size — see DENSITIES.
+ * lib/landing.ts checks the height it reads back is its own.
  *
  * NO WHITE. Un-multiplied out of white on the way out, as every baked frame on
  * this site is: ink over white is p = C*a + 255*(1-a), so a = 1 - min(r,g,b)/255
- * recovers the ink and its coverage exactly. The tile's face is then the page
- * showing through, which on this page is white anyway.
+ * recovers the ink and its coverage exactly. The white swirls inside the
+ * character are then the page showing through, which on this page is white.
  *
- * OUTPUT. `public/tile/fa-tile-strip-1x.webp` and `-2x.webp`: all 72 frames
+ * OUTPUT. `public/tile/fa-char-strip-1x.webp` and `-2x.webp`: all 72 frames
  * stacked top to bottom in one lossless image per density, which the
  * stylesheet steps through at the GIF's own 50ms while the menu is open (see
  * the note above the output code). `lib/tile-geometry.json` carries the size,
@@ -235,19 +231,29 @@ for (let y = face.y0; y <= face.y1; y++) {
 
 /* ------------------------------------------------------------ drawing ---- */
 
-// The crop: the outer ring's box, widened by a hair of white each side so the
-// whole-pixel width is reached without stretching the drawing.
-const tileW = tile.x1 - tile.x0 + 1;
-const tileH = tile.y1 - tile.y0 + 1;
+/**
+ * THE CHARACTER ALONE, AT THE BAR'S HEIGHT. The owner's 2026-09-19 answer,
+ * after seeing that the whole tile at 30px left the moving swirls thinner
+ * than a pixel: "remove the outline and just scale the character's dimensions
+ * and its animation up to be the same height as the rest of the bar". So the
+ * rings are not drawn at all — they are still MEASURED above, because they
+ * are what finds the face and proves that only the character moves — and the
+ * crop is the character's own reach across all 72 frames, which the reach
+ * check has already shown sits clear of every ring. At 30px tall that is
+ * about 1.9 times the size the character had inside the tile.
+ *
+ * The crop is widened by a hair of white each side to reach a whole-pixel
+ * width, rather than stretching the drawing.
+ */
+const charW = reach.x1 - reach.x0 + 1;
+const charH = reach.y1 - reach.y0 + 1;
 const CSS_H = DRAWN_H;
-const CSS_W = Math.round((CSS_H * tileW) / tileH);
-const cropW = Math.round((CSS_W * tileH) / CSS_H);
-const padL = Math.floor((cropW - tileW) / 2);
-const crop = { x0: tile.x0 - padL, y0: tile.y0, w: cropW, h: tileH };
-if (crop.x0 < 0 || crop.x0 + crop.w > W) fail('the widened crop runs off the source');
-
-const inBox = (b, x, y) => x >= b.x0 && x <= b.x1 && y >= b.y0 && y <= b.y1;
-const onRing = (x, y) => rings.some((r) => inBox(r.outer, x, y) && !inBox(r.inner, x, y));
+const CSS_W = Math.round((CSS_H * charW) / charH);
+const cropW = Math.max(charW, Math.round((CSS_W * charH) / CSS_H));
+const padL = Math.floor((cropW - charW) / 2);
+const crop = { x0: reach.x0 - padL, y0: reach.y0, w: cropW, h: charH };
+// the widened crop must still be clear of the rings, or a sliver of one comes along
+if (crop.x0 < face.x0 + CLEAR || crop.x0 + crop.w - 1 > face.x1 - CLEAR) fail('the widened crop reaches the rings');
 
 /** Ink over white, back to ink over nothing. */
 function unmultiply(rgb) {
@@ -265,23 +271,12 @@ function unmultiply(rgb) {
   return out;
 }
 
-/** Frame `f` at full size: the square rings drawn, the character copied in. */
+/** Frame `f` at full size: the character's box, copied untouched. */
 function compose(f) {
-  const buf = Buffer.alloc(crop.w * crop.h * 3, 255);
+  const buf = Buffer.alloc(crop.w * crop.h * 3);
   for (let y = 0; y < crop.h; y++) {
-    for (let x = 0; x < crop.w; x++) {
-      const sx = crop.x0 + x;
-      const sy = crop.y0 + y;
-      const o = (y * crop.w + x) * 3;
-      if (inBox(keep, sx, sy)) {
-        const i = (sy * W + sx) * 3;
-        buf[o] = f.rgb[i];
-        buf[o + 1] = f.rgb[i + 1];
-        buf[o + 2] = f.rgb[i + 2];
-      } else if (onRing(sx, sy)) {
-        buf[o] = buf[o + 1] = buf[o + 2] = 0;
-      }
-    }
+    const from = ((crop.y0 + y) * W + crop.x0) * 3;
+    f.rgb.copy(buf, y * crop.w * 3, from, from + crop.w * 3);
   }
   return buf;
 }
@@ -339,7 +334,7 @@ for (const d of DENSITIES) {
       .toBuffer();
     unmultiply(small).copy(strip, p * frameBytes);
   }
-  const name = `fa-tile-strip-${d.scale}x`;
+  const name = `fa-char-strip-${d.scale}x`;
   const webp = await sharp(strip, { raw: { width: devW, height: devH * N, channels: 4 } })
     .webp({ lossless: true, effort: 6 })
     .toBuffer();
@@ -365,8 +360,8 @@ for (const d of DENSITIES) {
 }
 
 const geometry = {
-  strip1x: '/tile/fa-tile-strip-1x.webp',
-  strip2x: '/tile/fa-tile-strip-2x.webp',
+  strip1x: '/tile/fa-char-strip-1x.webp',
+  strip2x: '/tile/fa-char-strip-2x.webp',
   w: CSS_W,
   h: CSS_H,
   frames: N,
@@ -375,7 +370,7 @@ const geometry = {
 writeFileSync(GEOM, `${JSON.stringify(geometry, null, 2)}\n`);
 
 console.log(`rings (source px): ${rings.map((r, i) => `#${i + 1} ${r.thickness}px at ${r.outer.x0},${r.outer.y0}`).join(', ')}`);
-console.log(`tile ${tileW}x${tileH}, character ${reach.x1 - reach.x0 + 1}x${reach.y1 - reach.y0 + 1}, ${clearance}px clear of the inner ring`);
+console.log(`character ${reach.x1 - reach.x0 + 1}x${reach.y1 - reach.y0 + 1}, ${clearance}px clear of the inner ring; the rings are measured, not drawn`);
 console.log(`drawn ${CSS_W}x${CSS_H} CSS px, ${N} frames at ${FRAME_MS}ms (${((N * FRAME_MS) / 1000).toFixed(1)}s loop)`);
 for (const w of written) {
   console.log(`${OUT_DIR}/${w.name}.webp ${w.devW}x${w.devH * N} ${(w.bytes / 1024).toFixed(1)}KB; ${w.moved} of ${w.px} px change across the loop`);

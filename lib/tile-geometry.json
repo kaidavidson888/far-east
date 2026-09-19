@@ -1,7 +1,7 @@
 {
-  "strip1x": "/tile/fa-tile-strip-1x.webp",
-  "strip2x": "/tile/fa-tile-strip-2x.webp",
-  "w": 23,
+  "strip1x": "/tile/fa-char-strip-1x.webp",
+  "strip2x": "/tile/fa-char-strip-2x.webp",
+  "w": 30,
   "h": 30,
   "frames": 72,
   "frameMs": 50

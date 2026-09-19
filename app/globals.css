@@ -2280,7 +2280,9 @@ html:has(.cigpage) {
   max-width: none;
   -webkit-user-drag: none;
 }
-/* THE 發 TILE PLAYS, LOOPED, WHILE THE MENU IS OPEN — the owner's words.
+/* THE ANIMATED 發 PLAYS, LOOPED, WHILE THE MENU IS OPEN — the owner's words
+   (the character alone since 2026-09-19, the tile's rings taken off so its
+   swirls could be seen at the bar's height).
    The markup is a window one frame high over a strip of all 72 frames
    (`npm run build:tile`), and this steps the strip up one frame at a time
    at the GIF's own 50ms: `steps(72)` over the loop's 3.6s lands on each

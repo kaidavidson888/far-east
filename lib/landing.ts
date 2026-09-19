@@ -80,13 +80,15 @@ const DESIGN_SEAL = parts.logo.h;
 const DESIGN_PAIR_SCALE = DESIGN_SEAL / (parts.cloud.w + SIGIL_GAP + parts.square.w);
 
 /**
- * THE 發 TILE STANDS WHERE THE CLOUD STOOD (the owner's 2026-09-19 ask:
- * "replace the cloud next to the outline with the gif … make the edges of the
- * tile sharp instead of rounded and scale it to match the height of the
- * outline with the same margins as the cloud relative to every other
- * element"). `npm run build:tile` bakes it from `scripts/assets/fa-tile.gif`
- * with its corners redrawn square, at the outline's height — checked here,
- * since the bake cannot read this file — and as wide as its own proportion.
+ * THE ANIMATED 發 STANDS WHERE THE CLOUD STOOD (the owner's 2026-09-19 asks:
+ * the tile GIF in the cloud's place "with the same margins as the cloud
+ * relative to every other element", then "remove the outline and just scale
+ * the character's dimensions and its animation up to be the same height as
+ * the rest of the bar"). So it is the character alone, without the tile's
+ * rings, drawn at the bar's height — checked here, since the bake cannot read
+ * this file — and as wide as its own proportion. `npm run build:tile` bakes
+ * it from `scripts/assets/fa-tile.gif`. The `tile` names below are kept from
+ * when it was the whole tile.
  *
  * The margins are the cloud's: the design's gap to the square at the square's
  * scale (the 3px `gap` below), and the bar's own gap to the seal on the other
