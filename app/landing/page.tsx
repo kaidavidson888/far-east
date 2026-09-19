@@ -6,7 +6,7 @@ import { LogoMenu } from '@/components/LogoMenu';
 import { PRESSABLE } from '@/lib/cigPages';
 import { CigScroller } from '@/components/CigScroller';
 import { SealButton } from '@/components/SealButton';
-import { SigilCount } from '@/components/SigilCount';
+import { SigilMark } from '@/components/SigilMark';
 import { currentUser } from '@/lib/auth';
 import { bigShares } from '@/lib/db';
 
@@ -38,14 +38,21 @@ export default async function LandingRoute({
   const user = await currentUser();
   const shares = user ? await bigShares(user.id) : 0;
 
+  // the seal, then the sigil with its outline and number, on the plus's line
+  const marks = (
+    <>
+      <SealButton size={LANDING_SPEC.sealSize} placed={false} />
+      <SigilMark count={shares} />
+    </>
+  );
+
   return (
     <ArtworkPage
       spec={LANDING_SPEC}
       device={device}
       showHitboxes={showHitboxes}
-      overlay={<><CigScroller withPages={PRESSABLE} /><LogoMenu menu="grow" /><SealButton size={LANDING_SPEC.sealSize} /><SigilCount value={shares} /></>}
+      overlay={<><CigScroller withPages={PRESSABLE} marks={marks} /><LogoMenu menu="grow" /></>}
       decorative={['logo']}
-      hide={['seal']}
     />
   );
 }

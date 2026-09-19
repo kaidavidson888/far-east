@@ -32,7 +32,19 @@ const SHELF = '/shelf';
 
 const src = (i: number) => `/seal/frames/f${String(i).padStart(3, '0')}.webp`;
 
-export function SealButton({ size = placement.w }: { size?: number }) {
+export function SealButton({
+  size = placement.w,
+  placed = true,
+}: {
+  size?: number;
+  /**
+   * Whether it puts itself in the seal's own corner (the inner pages and the
+   * cigarette pages), or lets whatever renders it say where it goes. The
+   * landing page stands it on the cigarette row's controls line beside the
+   * plus, which the row lays out on the client, so there the row places it.
+   */
+  placed?: boolean;
+}) {
   const router = useRouter();
   // 1.8MB of frames: fetched when someone actually reaches for it, not on
   // every page load. The run starts immediately and they arrive underneath.
@@ -40,11 +52,10 @@ export function SealButton({ size = placement.w }: { size?: number }) {
 
   return (
     <div
-      className="seal-button"
+      className={placed ? 'seal-button' : 'seal-button seal-button-inline'}
       data-phase={scrub.phase}
       style={{
-        right: `${placement.right}px`,
-        top: `${placement.top}px`,
+        ...(placed ? { right: `${placement.right}px`, top: `${placement.top}px` } : null),
         width: `${size}px`,
         height: `${size}px`,
       }}

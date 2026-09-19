@@ -787,9 +787,9 @@ cannot drift.
 
 **OFFERS, My Saved and RECOMMENDED ARE NO LONGER ON THE PAGE — they moved into
 the logo menu** (the owner's 2026-09-16 ask, with the new drawing). The landing
-page at rest is now the logo, the seal and the sigil pair, and everything you
-can press beyond the row is reached by hovering 遠東. Three notes on what that
-took:
+page at rest is now the logo and the row with its controls line (which the
+seal and the sigil have since joined — below), and everything you can press
+beyond those is reached by hovering 遠東. Three notes on what that took:
 - **The parts are still cut and their geometry is still read.** Only the three
   `anchored(...)` lines came out of `LANDING_SPEC.parts`, exactly as TEST YOUR
   LUCK did — so putting the column back on the page is three lines.
@@ -808,12 +808,35 @@ took:
   belonged to a label standing on the page, not to a word in a menu. Git has
   the block if the column ever goes back.
 
-**THE SEAL AND THE SIGIL PAIR ARE BOTH DRAWN AT THE PLUS BUTTON'S SIZE, AND
-THE OUTLINE HAS A NUMBER IN IT** (the owner's 2026-09-17 ask). The top right
-is now: the seal at 30x30, then 13px below it the sigil and the outline, the
-outline also 30x30 — in that order. `MARK_SIZE` in `lib/landing.ts` is
-`CIG_CONTROLS.height`, so the one number comes from the button it is being
-matched to rather than being typed again.
+**THE SEAL AND THE SIGIL PAIR ARE BOTH DRAWN AT THE PLUS BUTTON'S SIZE, THE
+OUTLINE HAS A NUMBER IN IT, AND ALL OF IT STANDS ON THE PLUS'S LINE** (the
+owner's 2026-09-17 ask for the size and the number; 2026-09-19 for the line:
+"line up the seal logo and the sigil with its outline and number with the +
+that opens the menu"). The line under the row's left end now reads **reset,
+the plus, the seal, the sigil, the outline with the number** — left to right,
+one gap (10) between each, all 30 tall — and the top right of the page is
+empty at rest, which is where the menu's words unfold. `MARK_SIZE` in
+`lib/landing.ts` is `CIG_CONTROLS.height`, so the one number comes from the
+button they are being matched to rather than being typed again.
+- **THE ROW LAYS THEM OUT, NOT THE ARTWORK SPEC.** That line's height is the
+  band's at the live zoom — `--cig-top` on `.cig-controls`, known only on the
+  client — so nothing placed from `LANDING_SPEC` could find it. `CigScroller`
+  takes them as `marks` and `.cig-marks` puts them one gap past the plus from
+  the plus's own custom properties; `lib/landing.ts` only SIZES them now
+  (`LANDING_MARKS`) and places the logo alone. `SealButton` gets
+  `placed={false}` there and becomes a flex item; `components/SigilMark.tsx`
+  is the sigil, the outline and the number as one box. The seal, the cloud and
+  the square are still cut by `build:landing`; putting any of them back in the
+  corner is a line in the spec.
+- **THE LINE IS ROUNDED TO A WHOLE PIXEL** — `top: round(var(--cig-top), 1px)`
+  after the plain `top`, at every use of both lines. The zoom put the line at
+  577.33 and the sigil and the square are vector `<img>`s, which a fractional
+  top resamples row by row; reset and the plus, which always sat there, get a
+  crisp rule out of it too. The rounding is at the use, not in the custom
+  property, because a custom property cannot carry a fallback declaration.
+- **The seal no longer stands down for the menu.** The `@media (max-width:
+  482px)` rule that hid it while the menu was out came off with the corner;
+  the cigarette pages keep their own copy, since their seal is still there.
 - **WHAT IS SCALED TO 30 IS THE SQUARE, NOT THE PAIR**, and that is a
   judgement. The pair scaled to 30 wide puts the square at 12.8px with 11px
   inside its own stroke, and there is a NUMBER in there now — about 6px of
@@ -822,12 +845,12 @@ matched to rather than being typed again.
   the number at 13.5. The sigil keeps its drawn proportion either way and comes
   out 37x18.
 - **THE NUMBER IS `profiles.big_shares`** — how many share links this reader
-  has made worth $100 or more. `components/SigilCount.tsx` draws it, in the
-  OVERLAY rather than the artwork: every ArtPart is an `<img>` of a cut SVG and
-  none carries a text node, so live type on these pages goes on top, where the
-  row's controls already set text in the owner's face. One size for every
-  value, taken from the widest it can show ("100", 1.919em off the ink table),
-  so it does not resize on reaching double figures. Signed-out reads 0.
+  has made worth $100 or more. `components/SigilMark.tsx` draws it as live
+  type over the square rather than as artwork: every cut part is an `<img>`
+  of an SVG and none carries a text node, so type on these pages goes on top,
+  where the row's controls already set text in the owner's face. One size for
+  every value, taken from the widest it can show ("100", 1.919em off the ink
+  table), so it does not resize on reaching double figures. Signed-out reads 0.
 - **`LANDING_ROW_CLEAR` STILL DOES NOT MOVE, and shrinking the seal is exactly
   what could have moved it.** The three labels' arithmetic is measured from the
   seal's DESIGN size, so `DESIGN_SEAL` and `DESIGN_PAIR_SCALE` are kept beside
@@ -845,9 +868,9 @@ build:** TEST YOUR LUCK is no longer placed (the part is still cut, so it is
 one line to restore); **OFFERS, My Saved and RECOMMENDED are no longer placed
 either (2026-09-16), having moved into the logo menu — above**; **the seal and
 the sigil pair are drawn at the plus button's 30px with a count in the outline
-(2026-09-17, above)**; the sigil and the square sit under the seal, 13px below
-it (the design's gap from My Saved to RECOMMENDED) with 5px between them as
-drawn, which the scale takes to 3;
+(2026-09-17) and stand on the plus's line under the row rather than in the top
+right (2026-09-19) — above**; the sigil and the square keep 5px between them
+as drawn, which the scale takes to 3;
 and the three labels are a column whose top is the inside of that square's
 top edge — its top plus its 3px stroke at the pair's scale (2.5), less the
 1px the O's crown rises above the flat tops in the OFFERS drawing, rounded

@@ -1447,6 +1447,17 @@ ul, ol { list-style: none; }
   --cig-btn-h: 30px;
   --cig-btn-gap: 10px;
   --cig-top: calc(50% + var(--cig-band) / 2 + 8px);
+  /* THE TWO LINES ARE ROUNDED TO WHOLE PIXELS WHERE THEY ARE USED — every
+     `top: var(--cig-top)` below is followed by `top: round(var(--cig-top),
+     1px)`, and the same for --cig-line2. The band is the row's height at the
+     live zoom, so the line lands on a fraction (577.33 at 961 wide), and
+     since the seal and the sigil joined it (`.cig-marks`) it carries vector
+     `<img>`s, which a fractional top resamples row by row — the site's
+     whole-pixel rule. Rounding at the use rather than in the property is
+     what keeps the fallback honest: a custom property cannot carry a second
+     declaration, and an engine without round() would have dropped `top`
+     altogether. Both lines round the same fraction, so the gap between them
+     stays exactly one button and one gap. */
   /* HOW THE MENU COMES OUT OF THE PLUS.
 
      IT IS ONLY OPACITY AND TRANSLATION, which is the whole point: those two
@@ -1517,6 +1528,7 @@ ul, ol { list-style: none; }
   position: absolute;
   left: var(--cig-edge);
   top: var(--cig-top);
+  top: round(var(--cig-top), 1px);
   width: var(--cig-btn-w);
   height: var(--cig-btn-h);
   background: #010101;
@@ -1550,6 +1562,7 @@ ul, ol { list-style: none; }
   position: absolute;
   left: var(--cig-col);
   top: var(--cig-top);
+  top: round(var(--cig-top), 1px);
   width: var(--cig-btn-h);
   height: var(--cig-btn-h);
   background: transparent;
@@ -1572,6 +1585,30 @@ ul, ol { list-style: none; }
   display: block;
 }
 
+/* THE SEAL AND THE SIGIL STAND ON THE PLUS'S LINE — the owner's 2026-09-19
+   ask: "line up the seal logo and the sigil with its outline and number
+   with the + that opens the menu". Reset, the plus, the seal, the sigil,
+   the outline with the number, left to right, one gap between each, all at
+   the buttons' own height. They come in through `CigScroller`'s `marks` and
+   are laid out here from the plus's own custom properties, so they follow
+   it at every zoom. The wrapper takes no pointer (the controls layer gives
+   its children the pointer back, so it is said again): the seal's own hit
+   is the one live thing in it. */
+.cig-controls > .cig-marks {
+  position: absolute;
+  left: calc(var(--cig-col) + var(--cig-btn-h) + var(--cig-btn-gap));
+  top: var(--cig-top);
+  top: round(var(--cig-top), 1px);
+  height: var(--cig-btn-h);
+  display: flex;
+  align-items: flex-start;
+  gap: var(--cig-btn-gap);
+  pointer-events: none;
+}
+.cig-marks .seal-button-hit {
+  pointer-events: auto;
+}
+
 /* The grid unfolds out of the plus: its top-left corner IS the plus's left
    edge, one gap below it. Nothing here is clipped or scaled — the buttons
    arrive one at a time on the compositor, which is written up on
@@ -1587,6 +1624,7 @@ ul, ol { list-style: none; }
   position: absolute;
   left: var(--cig-col);
   top: var(--cig-line2);
+  top: round(var(--cig-line2), 1px);
   width: max(var(--cig-btn-w), calc(var(--cig-tags-right, 0px) - var(--cig-col)));
   display: grid;
   grid-template-columns: repeat(auto-fill, var(--cig-btn-w));
@@ -1837,6 +1875,7 @@ ul, ol { list-style: none; }
   position: absolute;
   left: var(--cig-edge);
   top: var(--cig-line2);
+  top: round(var(--cig-line2), 1px);
   width: var(--cig-btn-w);
   height: var(--cig-btn-h);
   border-color: #ff0000;
@@ -2163,24 +2202,35 @@ html:has(.cigpage) {
   max-width: none;
 }
 
-/* ------------------------------------------------ the sigil's own number --
-   How many share links this reader has made worth $100 or more, drawn inside
-   the outline beside the sigil (the owner's 2026-09-17 ask). The outline is
-   the artwork's; this is the only thing over it.
-
-   It is in the OVERLAY because every part of these pages is an <img> of a cut
-   SVG and none of them carries a text node — live type on an artwork page
-   goes on top, the way the cigarette row's controls do. Its box, its position
-   and its type size all come down from `LANDING_COUNT`, measured off the
+/* ------------------------------------- the sigil, the outline, the number --
+   One box on the plus's line (see `.cig-marks`): the two marks at the places
+   `lib/landing` gives them inside it, and over the square the number — how
+   many share links this reader has made worth $100 or more (the owner's
+   2026-09-17 ask). The number is live type because every cut part of these
+   pages is an <img> of an SVG and none of them carries a text node; its box
+   and its type size come down from `LANDING_MARKS`, measured off the
    square's own room, so the stylesheet holds no figure that could drift from
    the layout.
 
-   It takes no pointer: the outline is not a control, and an invisible hit
-   area over the corner of the page is exactly the trap the shut tag menu
-   already taught us about. */
+   Decorative, so none of it takes the pointer or a selection: the outline is
+   not a control, and an invisible hit area beside the seal's live one is
+   exactly the trap the shut tag menu already taught us about. */
+.sigil-mark {
+  position: relative;
+  display: block;
+  flex: none;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.sigil-mark-part {
+  position: absolute;
+  display: block;
+  max-width: none;
+  -webkit-user-drag: none;
+}
 .sigil-count {
   position: absolute;
-  z-index: 2;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2199,27 +2249,20 @@ html:has(.cigpage) {
   z-index: 2;
   transition: opacity 120ms linear;
 }
-/* The menu and the seal both want the top strip, and on a narrow screen
-   there is not enough of it. Where they collide the seal stands down for as
-   long as the menu is out — it is the static mark, and the menu is only ever
-   out because someone asked for it.
-
-   WHERE THEY COLLIDE MOVED WHEN THE MENU DID. The monkey bar's boxes reached
-   x=290 and the seal takes 87 plus its 30 margin off the right edge, so the
-   two met below 290 + 117 = 407. The grow menu the landing page now carries
-   reaches x=365.5 (`boxes` in lib/growmenu-geometry.json — terms of service
-   ends there), so on that page they meet below 365.5 + 117 = 482.5. The
-   cigarette pages still carry the bar and keep the old line, in their own
-   copy of this rule.
-
-   This only became true at all when the seal grew to the height of the
-   character logo; at the artwork's own 45px it cleared the boxes. */
-@media (max-width: 482px) {
-  .artpage-stage:has(.logo-menu:not([data-phase='idle'])) .seal-button {
-    opacity: 0;
-    pointer-events: none;
-  }
+/* Placed by its parent instead — the landing page stands it on the row's
+   controls line (`.cig-marks`), where it is a flex item like the sigil. */
+.seal-button-inline {
+  position: relative;
+  z-index: auto;
+  flex: none;
 }
+/* THE SEAL NO LONGER STANDS DOWN FOR THE MENU ON THE ARTWORK PAGES. There
+   used to be a rule here hiding it while the logo menu was out below 482px,
+   because the two shared the top strip and on a narrow screen the menu's
+   words reached the seal's corner. The seal has left that corner for the
+   plus's line under the row (2026-09-19), so there is nothing to collide
+   with; the cigarette pages keep their own copy of the rule, since the seal
+   is still in the corner there. Git has the rule if it ever goes back. */
 /* Always on: the first frame IS the seal, at the size the owner asked for
    (as tall as the character logo), so the page leaves its own smaller seal
    out and this draws it at rest too. Hiding it until hover made the mark

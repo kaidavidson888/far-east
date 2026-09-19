@@ -29,15 +29,12 @@ export const LANDING_MARGINS = marginsOf(viewBox, Object.values(parts));
  * to 5px". The cloud keeps its drawn place in the cluster and the square
  * comes to it.
  *
- * THE PAIR SITS UNDER THE SEAL, AS WIDE AS THE SEAL. The owner's next ask:
- * "put the sigil and the outline under the seal logo and scale it so it fits
- * within the sides of the seal", with "a margin between them equal to the one
- * between the my saved and recommended". So the pair is scaled as one until
- * its width is the seal's (the seal button's drawn size, the logo's height),
- * each mark rounded to whole pixels with the square held to the right edge so
- * the width comes out exact; hung from the seal's own right margin; and set
- * below the seal by the design's gap from the foot of My Saved to the top of
- * RECOMMENDED. The marks are vectors, so they stay sharp at the new size.
+ * THE PAIR USED TO SIT UNDER THE SEAL, AS WIDE AS THE SEAL — the owner's
+ * earlier ask, "put the sigil and the outline under the seal logo and scale
+ * it so it fits within the sides of the seal", with "a margin between them
+ * equal to the one between the my saved and recommended" (LABEL_GAP). Both
+ * marks and the seal have since gone down to the plus's line (below); the
+ * pair still keeps its drawn relation and its gap, at the square's scale.
  */
 const SIGIL_GAP = 5;
 const LABEL_GAP = parts.recommended.y - (parts.saved.y + parts.saved.h);
@@ -48,6 +45,15 @@ const LABEL_GAP = parts.recommended.y - (parts.saved.y + parts.saved.h);
  * outline that opens the menu", and the sigil pair scaled to match. So the one
  * number comes from `CIG_CONTROLS`, where that button's size already lives,
  * rather than being typed again here.
+ *
+ * AND SINCE 2026-09-19 THEY STAND ON THE PLUS'S OWN LINE ("line up the seal
+ * logo and the sigil with its outline and number with the + that opens the
+ * menu"): reset, the plus, the seal, the sigil, the outline, left to right
+ * under the row's left end. That line is laid out by the row's controls on
+ * the client — its height is the band's at the live zoom — so this module no
+ * longer PLACES them; it only says how big they are (`LANDING_MARKS`, below)
+ * and `CigScroller` puts them beside the plus. The top right of the page is
+ * empty at rest now, which is where the logo menu's words unfold.
  *
  * WHAT IS SCALED TO IT IS THE SQUARE, NOT THE PAIR, and that is a judgement
  * worth stating. The pair scaled to 30 wide would put the square at 12.8px
@@ -175,30 +181,22 @@ const LABELS = {
  */
 export const LANDING_ROW_CLEAR = LABELS.recommended + parts.recommended.h + LABEL_GAP;
 
-const inCluster = (id: keyof typeof CLUSTER, label: string, pressable: boolean): ArtPart => ({
-  id,
-  label,
-  src: `/landing/parts/${id}.svg`,
-  w: CLUSTER[id].w,
-  h: CLUSTER[id].h,
-  pressable,
-  inCluster: { left: CLUSTER[id].x - cluster.x, top: CLUSTER[id].y - cluster.y },
-});
-
 /**
- * WHERE THE NUMBER GOES, AND HOW BIG IT IS SET.
+ * THE SEAL, THE SIGIL AND THE OUTLINE WITH THE NUMBER IN IT — how big each is,
+ * for `SealButton` and `SigilMark` to draw on the plus's line.
  *
- * The owner's 2026-09-17 ask: a number in the outline beside the sigil,
- * counting the share links this reader has made worth $100 or more
- * (`profiles.big_shares` — see the migration and `createShare`).
+ * The sigil and the outline are one box, the cloud then the square in the
+ * relation the design drew them (the cloud sits centred on the square's
+ * height) at the square's scale — `cluster` above — with the design's gap
+ * between them taken to the same scale. The marks are the artwork's own cut
+ * vectors, `/landing/parts/cloud.svg` and `square.svg`, so they stay sharp.
  *
- * The square is right-anchored inside the cluster and the cluster is
- * right-anchored on the page, so the square's own box IS the page's right
- * margin, at the cluster's top. The overlay draws the number there rather
- * than the artwork carrying it: every ArtPart is an `<img>` of a cut SVG and
- * none of them holds a text node, so live type on these pages belongs in the
- * overlay — which is where the row's own controls already set text in the
- * owner's face.
+ * THE NUMBER: the owner's 2026-09-17 ask, a number in the outline beside the
+ * sigil counting the share links this reader has made worth $100 or more
+ * (`profiles.big_shares` — see the migration and `createShare`). It is live
+ * type over the square rather than part of the artwork — every cut part is
+ * an `<img>` and none holds a text node — set in the owner's face like the
+ * row's own controls beside it.
  *
  * ONE SIZE, TAKEN FROM THE WIDEST IT WILL EVER SHOW. "100" is 1.919em in the
  * owner's face (off `far-east-ink.json`), and the room inside the square is
@@ -207,10 +205,23 @@ const inCluster = (id: keyof typeof CLUSTER, label: string, pressable: boolean):
  * number that changed size on reaching double figures would.
  */
 const COUNT_EM = 1.919;
-export const LANDING_COUNT = {
-  right: M.right,
-  top: M.top + MARK_SIZE + LABEL_GAP,
-  size: MARK_SIZE,
+const boxOf = (id: keyof typeof CLUSTER) => ({
+  left: CLUSTER[id].x - cluster.x,
+  top: CLUSTER[id].y - cluster.y,
+  w: CLUSTER[id].w,
+  h: CLUSTER[id].h,
+});
+export const LANDING_MARKS = {
+  /** the seal's square: the plus's size */
+  seal: MARK_SIZE,
+  /** the sigil and the outline as one box, each mark's place inside it */
+  sigil: {
+    w: cluster.w,
+    h: cluster.h,
+    cloud: boxOf('cloud'),
+    square: boxOf('square'),
+  },
+  /** the count's type size, in px */
   type: +((MARK_SIZE - 2 * OUTLINE_STROKE * cluster.scale) / COUNT_EM).toFixed(2),
 };
 
@@ -226,29 +237,24 @@ export const LANDING_SPEC: ArtPageSpec = {
   focus: '#010101',
   sealSize: MARK_SIZE,
   minHeight: parts.recommended.y + parts.recommended.h + 80 + cluster.h + M.bottom,
-  cluster: {
-    w: cluster.w,
-    h: cluster.h,
-    placement: both({ right: M.right, top: M.top + MARK_SIZE + LABEL_GAP }),
-  },
   /**
    * OFFERS, MY SAVED AND RECOMMENDED ARE NOT PLACED — THEY MOVED INTO THE
    * MENU. The owner's 2026-09-16 ask: the logo's menu was re-drawn to grow
    * branches carrying six words, three of them these, and the three standing
-   * on the page were to come off it. So the page is now the logo, the seal and
-   * the sigil pair, and everything you can press beyond the row is reached by
-   * hovering 遠東. `npm run build:growmenu` bakes that menu and measures the
-   * words off its last frame; `components/LogoMenu.tsx` draws it.
+   * on the page were to come off it. `npm run build:growmenu` bakes that menu
+   * and measures the words off its last frame; `components/LogoMenu.tsx`
+   * draws it.
    *
-   * The parts are still cut by `npm run build:landing` and their geometry is
-   * still read above — LABEL_TOP and LABELS decide where the row's ceiling is
-   * and are what keeps the row exactly where it was — so putting the column
-   * back on the page is three lines here, the way TEST YOUR LUCK is one.
+   * THE SEAL, THE SIGIL AND THE OUTLINE ARE NOT PLACED HERE EITHER — THEY
+   * STAND ON THE PLUS'S LINE (2026-09-19, see LANDING_MARKS). So the artwork
+   * the page places is the logo alone; everything else on it is the row and
+   * what stands under it, and everything you can press beyond those is
+   * reached by hovering 遠東.
+   *
+   * The parts are all still cut by `npm run build:landing` and their geometry
+   * is still read above — LABEL_TOP and LABELS decide where the row's ceiling
+   * is and are what keeps the row exactly where it was — so putting any of
+   * them back on the page is a line here, the way TEST YOUR LUCK is one.
    */
-  parts: [
-    anchored('logo', '遠東', both({ left: M.left, top: parts.logo.y })),
-    anchored('seal', 'Seal', both({ right: M.right, top: M.top })),
-    inCluster('cloud', '', false),
-    inCluster('square', '', false),
-  ],
+  parts: [anchored('logo', '遠東', both({ left: M.left, top: parts.logo.y }))],
 };

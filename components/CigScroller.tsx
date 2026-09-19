@@ -114,6 +114,7 @@ type Shown = { key: string; i: number; x: number };
 export function CigScroller({
   withPages,
   onPress,
+  marks,
 }: {
   /**
    * The packs that have a page of their own. The owner supplied 227
@@ -123,6 +124,16 @@ export function CigScroller({
    */
   withPages?: string[];
   onPress?: (id: string) => void;
+  /**
+   * What stands on the controls' line after the plus — on the landing page
+   * the seal, then the sigil with its outline and number (the owner's
+   * 2026-09-19 ask: "line up the seal logo and the sigil with its outline and
+   * number with the + that opens the menu"). It comes in from the page
+   * because the line it joins is laid out HERE, on the client, from the
+   * band's height at the live zoom; nothing placed from the artwork spec
+   * could find it. The marks size themselves; this only puts them in a row.
+   */
+  marks?: React.ReactNode;
 }) {
   const linked = useMemo(() => new Set(withPages ?? []), [withPages]);
 
@@ -1103,6 +1114,15 @@ export function CigScroller({
             );
           })()}
         </button>
+
+        {/*
+          THE SEAL AND THE SIGIL, ON THE PLUS'S LINE. Laid out by the
+          stylesheet from the same custom properties as the plus, so they sit
+          one gap past it at the buttons' own height whatever the zoom. Only
+          the seal is a control; the wrapper and the sigil refuse the pointer
+          so nothing dead sits over the row.
+        */}
+        {marks ? <div className="cig-marks">{marks}</div> : null}
 
         {/*
           CONFIRM. The same spin My Saved runs, over the packs the tags
