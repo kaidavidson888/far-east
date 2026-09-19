@@ -498,6 +498,12 @@ export function CigScroller({
       openLeft: Math.round(Wc / 2 - frameW / 2),
       room: Math.max(CIG_CONTROLS.height, Math.floor((Hc - CIG_CONTROLS.edge - gridTop) / s)),
     };
+    // The logo menu is drawn at the same scale as the plus (the owner's
+    // 2026-09-19 ask), and it is a sibling of this component's controls, so
+    // the scale is published on the stage they share rather than threaded
+    // through the page. A page with no such menu simply has a property
+    // nothing reads.
+    el.parentElement?.style.setProperty('--logo-menu-zoom', String(s));
     setMenu((was) =>
       was &&
       was.s === next.s &&

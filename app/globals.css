@@ -2035,8 +2035,17 @@ ul, ol { list-style: none; }
    button over the characters is what listens. */
 .logo-menu {
   position: absolute;
-  left: 0;
-  top: 0;
+  /* divided by the zoom below, because `zoom` multiplies an element's own
+     offsets as well as its contents — the shelf's rows do the same */
+  left: calc(var(--logo-menu-x, 0px) / var(--logo-menu-zoom, 1));
+  top: calc(var(--logo-menu-y, 0px) / var(--logo-menu-zoom, 1));
+  /* THE LANDING MENU IS DRAWN AT THE ROW'S OWN SCALE — the owner's "the same
+     scale as the + button" (2026-09-19). `CigScroller` puts the scale it
+     gives the plus on the stage as `--logo-menu-zoom`, and the menu is laid
+     out from the I button's corner and placed at the page's margin, so the
+     zoom takes everything with it and leaves the margin alone. The cigarette
+     pages set no such property and their bar menu draws at 1. */
+  zoom: var(--logo-menu-zoom, 1);
   /* above the seal: on a narrow screen the unfolded boxes reach into the
      seal's corner, and the seal is the static one of the two */
   z-index: 3;
@@ -2136,13 +2145,19 @@ ul, ol { list-style: none; }
   justify-content: center;
   z-index: 1;
 }
+/* NO SYNTHETIC BOLD ON THE I. Everywhere else on this site bold is a 0.03em
+   stroke on the outline, the face having one weight — but this face draws
+   its I as a ring with a hole above a stem, and at the plus's size that hole
+   is under two pixels: a stroke that grows the ink from both sides closes it
+   and fills the gap under the ring (the owner: "make sure the circle and dot
+   in the I are clearly visible"). The face is drawn at weight 700 anyway, so
+   the letter is bold as it stands. */
 .logo-menu-badge-letter {
   display: block;
   font-family: var(--font-typed);
   font-weight: 400;
   font-synthesis: none;
   line-height: 1;
-  -webkit-text-stroke: 0.03em #010101;
   pointer-events: none;
   user-select: none;
   -webkit-user-select: none;

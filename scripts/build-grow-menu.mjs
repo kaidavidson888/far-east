@@ -30,20 +30,21 @@
  * nothing the enlargement touches goes soft:
  *
  *   - THE I BUTTON is the page's, not the canvas's (LogoMenu draws it from
- *     `badge` below): a 36px box — the plus's 30 plus 20% — at 10,10, with a
- *     bold I in the owner's face. It is always there, so the gif's first
- *     sixty frames, which only DRAW the box round the logo, are dropped: the
- *     run starts on the frame before the first vine appears, and the drawn
- *     box and the logo are never copied at all.
+ *     `badge` below): a 30px box — the plus button's own size — with an I in
+ *     the owner's face, at the page's 10,10, and drawn at the row's scale so
+ *     that it and the plus are always the same size on screen. It is always
+ *     there, so the gif's first frames, which only DRAW the box round the
+ *     logo, are dropped: the run starts on the frame before the first vine
+ *     appears, and the drawn box and the logo are never copied at all.
  *
  *   - THE TOP ROW is cut into pieces along x and each piece is scaled and
  *     moved on its own:
- *       * each WORD is scaled uniformly so that its x-height is the one that
- *         makes "about us" 36px from the top of its tall letters to its
- *         baseline — the I button's height — with every baseline on the I
- *         button's foot. Measured, not assumed: the gif drew "terms of
- *         service" about 10% smaller than the other two, and this brings it
- *         to the same size ("the same size as the about us").
+ *       * each WORD is scaled uniformly so that its X-HEIGHT is the reset
+ *         button's — 15px in the owner's face — and centred on the I
+ *         button's middle line. The x-height is the measure because a
+ *         drawing has no type size to copy. Measured, not assumed: the gif
+ *         drew "terms of service" about 10% smaller than the other two, and
+ *         this brings all three to one size.
  *       * "privacy / policy" and "terms / of service" were drawn on TWO
  *         lines. Each is split into its lines — glyph by glyph, because the
  *         descenders of one line and the ascenders of the next share rows —
@@ -65,13 +66,11 @@
  * Everything the new top row covers is measured off the gif every build and
  * the build stops if the pieces are not what it expects.
  *
- * TWO CONSEQUENCES THE OWNER SHOULD KNOW, both printed by the build:
- *   - the swirls rise well above the words (about 13px in the drawing, so
- *     about 35 at the new size), and the words' tops are 10px from the page's
- *     top, so while the menu grows the upper swirls run off the top of the
- *     page. They are gone again by the time it is open.
- *   - the top row is about 1100px wide now, so it fits a desktop and runs off
- *     the side of a phone.
+ * WHAT IS STILL ROUGH, while it grows — the open state is clean: a few swirl
+ * fragments belonging to a split word's second line are left standing under
+ * its first, because that line has moved along the row. (The words were the
+ * I button's height for an afternoon, and at that size the swirls above them
+ * ran off the top of the page; at the reset button's size they do not.)
  *
  * THE GROUND. The gif paints white paper; every frame is un-multiplied out of
  * white on the way out (ink over white is p = C*a + 255*(1-a), so
@@ -93,28 +92,77 @@ const SS = 2;
 /** Room past the outermost ink, so the frame never stops dead on a stroke. */
 const SLACK = 6;
 
-/** The I button: the plus button's 30px, and 20% more. 10px off the top and the left. */
+/**
+ * THE I BUTTON IS THE PLUS BUTTON'S SIZE — 30px square with a 2px rule, 10px
+ * off the page's top and left. It went in 20% larger (36) on the owner's
+ * first ask and came back to the plus's own scale on the second ("scale all
+ * elements related to the I button including the button itself to be the
+ * same scale as the + button"), and everything the menu draws scales with it,
+ * the words' height included: they are the button's height by the owner's
+ * rule, so 36 became 30 throughout.
+ */
 const PLUS = 30;
-const BADGE = { x: 10, y: 10, size: Math.round(PLUS * 1.2) };
-/** Its rule: the plus's 2px, which 20% more leaves at 2 on a whole pixel. */
-const BADGE_RULE = Math.round(2 * 1.2);
-/** The I is as tall inside it as the plus's mark is inside the plus (16 of 30), plus 20%. */
-const BADGE_CAP = Math.round(16 * 1.2);
+/**
+ * THE MENU IS LAID OUT FROM THE BUTTON'S OWN CORNER, and the page's 10px
+ * margin is where the page puts that corner. The menu is DRAWN AT THE ROW'S
+ * OWN SCALE — the plus button is scaled to the red frame (see `layoutMenu` in
+ * CigScroller), so the I is scaled with it, which is the owner's "the same
+ * scale as the + button". A zoom about the menu's corner keeps the 10px
+ * margins whatever that scale is; laid out from the page's corner instead,
+ * the margins would shrink with everything else.
+ */
+const MARGIN = 10;
+const BADGE = { x: 0, y: 0, size: PLUS };
+const BADGE_RULE = 2;
+/**
+ * THE I NEARLY FILLS THE BOX, and it is NOT given the house's synthetic bold.
+ *
+ * The owner's "make sure the circle and dot in the I are clearly visible":
+ * this face draws its I as a ring with a hole in it above a stem, with a gap
+ * between the two, and both of those are small fractions of the letter — the
+ * hole is about 0.07 of the cap height and the gap about 0.05. At the plus's
+ * size they are around a pixel, so two things buy them back: the letter is
+ * set nearly as tall as the rule leaves (24 of the 26 inside, where the plus
+ * puts its own mark at 16), and the 0.03em stroke this site uses for bold is
+ * dropped — the face is drawn at weight 700 already, and that stroke grows
+ * the ink from both sides, which closes a hole this size outright.
+ */
+const BADGE_CAP = 23;
 /**
  * The I's type size and how far to nudge it so its INK, not its em box, is
  * centred in the box. Off the owner's face as Chrome renders it
  * (scripts/assets/far-east-ink.json): the I stands 781 units above the
- * baseline and 16 below, and a line-height:1 box puts the baseline 0.825 of
- * the size down (measured in Chrome for the shelf). So the ink's middle sits
- * 0.4425 of the size from the top, 0.0575 above the box's middle.
+ * baseline, so this is the type size that makes it BADGE_CAP tall. WHERE it
+ * then sits in the box is worked out in the page, off the letter's own ink
+ * (`inkAt` in LogoMenu): at this size whether the ring's hole lands on a
+ * pixel or across two is the difference between seeing it and not. 23 is the
+ * tallest that leaves the ink a pixel clear of the rule top and bottom, and
+ * it happens to put the hole across two rows rather than one.
  */
 const INK = JSON.parse(readFileSync('scripts/assets/far-east-ink.json', 'utf8'));
 const BADGE_FONT = +(BADGE_CAP / (INK.asc.I / INK.em)).toFixed(2);
-const BADGE_DY = +(BADGE_FONT * (0.5 - (0.825 - (INK.asc.I - INK.desc.I) / 2 / INK.em))).toFixed(2);
 
 /** The new top row: tall letters from the button's top, baselines on its foot. */
-const ROW_TOP = BADGE.y;
-const ROW_BASE = BADGE.y + BADGE.size;
+/**
+ * THE WORDS ARE SET AT THE RESET BUTTON'S SIZE, on the button's middle line.
+ *
+ * The owner's 2026-09-19 ask, after seeing them at the I button's height:
+ * "make the text of the text buttons the same size as the reset button".
+ * That button's label is 15px in the owner's face (`.cig-reset` in
+ * globals.css), and the two are drawn at the same scale now — this menu
+ * takes the row's zoom — so matching the design size matches what is seen.
+ *
+ * "The same size" is matched on the X-HEIGHT, which is what the eye reads a
+ * size by, and it is the one measure both have: the gif's words are a
+ * drawing, so they have no type size to copy. The row's letters run to
+ * `asc.x` of an em in the ink table.
+ *
+ * They sit centred on the I button's middle rather than on its foot: at this
+ * size a baseline shared with a button three times their height would hang
+ * them off the bottom of it.
+ */
+const RESET_TYPE = 15;
+const ROW_MIDDLE = BADGE.y + BADGE.size / 2;
 /** "increase the margins between the text buttons 2 times" */
 const GAP_FACTOR = 2;
 
@@ -424,8 +472,9 @@ const about = measured[0];
 const aboutLine = about.lines[0];
 const aboutTall = aboutLine.base - aboutLine.y0;
 const xh = (m) => m.lines.reduce((s, L) => s + (L.base - L.xTop), 0) / m.lines.length;
-const kAbout = BADGE.size / aboutTall;
-const X_STAR = xh(about) * kAbout;
+/** The x-height the row's own buttons are set at: that is the size to match. */
+const X_STAR = (RESET_TYPE * INK.asc.x) / INK.em;
+const kAbout = X_STAR / xh(about);
 const spaceGif = (() => {
   const { m, w, h } = about.G;
   const [a, b] = lineBands(about.G, 1)[0];
@@ -452,7 +501,8 @@ measured.forEach((m, i) => console.log(`    ${ITEMS[i].id.padEnd(8)} x-height ${
  */
 const TOP_Y0 = Math.max(0, BOX.y0 - 30); // everything the branch ever draws is below this
 const TOP_Y1 = BOX.y1; // and above the box's foot, where the stack begins
-const aboutBase = aboutLine.base;
+/** The middle of "about us"'s letters: what the row's pieces hang from. */
+const aboutMid = (aboutLine.xTop + aboutLine.base) / 2;
 const pieces = [];
 let cursor = BADGE.x + BADGE.size; // the button's right edge
 const addPiece = (p) => {
@@ -460,7 +510,7 @@ const addPiece = (p) => {
   cursor = p.newX0 + (p.x1 - p.x0) * p.sx;
 };
 // the stretch from the drawn box to "about us" — scaled with the words, not doubled
-addPiece({ name: 'to about', x0: BOX.x1, x1: topWords[0].x0, sx: kAbout, sy: kAbout, refY: aboutBase, newRefY: ROW_BASE, newX0: cursor });
+addPiece({ name: 'to about', x0: BOX.x1, x1: topWords[0].x0, sx: kAbout, sy: kAbout, refY: aboutMid, newRefY: ROW_MIDDLE, newX0: cursor });
 const wordPieces = [];
 for (let wi = 0; wi < 3; wi++) {
   const m = measured[wi];
@@ -474,31 +524,31 @@ for (let wi = 0; wi < 3; wi++) {
     const g0 = topWords[wi - 1].x1, g1 = topWords[wi].x0;
     const kg = (k[wi - 1] + kw) / 2;
     const prev = pieces[pieces.length - 1];
-    const firstLineBase = m.lines[0].base;
+    const firstLineMid = (m.lines[0].xTop + m.lines[0].base) / 2;
     addPiece({
       name: `gap ${wi}`,
       x0: g0,
       x1: g1,
       sx: kg * GAP_FACTOR,
       sy: kg,
-      refY: aboutBase,
-      newRefY: ROW_BASE,
+      refY: aboutMid,
+      newRefY: ROW_MIDDLE,
       newX0: cursor,
-      gap: { left: { refY: prev.refY, k: prev.sy }, right: { refY: firstLineBase, k: kw } },
+      gap: { left: { refY: prev.refY, k: prev.sy }, right: { refY: firstLineMid, k: kw } },
     });
   }
   const x0 = topWords[wi].x0, x1 = topWords[wi].x1;
   if (m.lines.length === 1) {
-    const p = { name: ITEMS[wi].id, x0, x1, sx: kw, sy: kw, refY: m.lines[0].base, newRefY: ROW_BASE, newX0: cursor };
+    const p = { name: ITEMS[wi].id, x0, x1, sx: kw, sy: kw, refY: (m.lines[0].xTop + m.lines[0].base) / 2, newRefY: ROW_MIDDLE, newX0: cursor };
     addPiece(p);
     wordPieces[wi] = [{ p, L: m.lines[0] }];
   } else {
     const [L1, L2] = m.lines;
-    const p1 = { name: `${ITEMS[wi].id} 1`, x0, x1, sx: kw, sy: kw, refY: L1.base, newRefY: ROW_BASE, newX0: cursor, line: 0, word: wi };
+    const p1 = { name: `${ITEMS[wi].id} 1`, x0, x1, sx: kw, sy: kw, refY: (L1.xTop + L1.base) / 2, newRefY: ROW_MIDDLE, newX0: cursor, line: 0, word: wi };
     // the second line starts one word-space after the first line's last letter
     const glyphRight1 = p1.newX0 + (L1.x1 - x0) * kw;
     const newX0_2 = glyphRight1 + SPACE_REL * X_STAR - (L2.x0 - x0) * kw;
-    const p2 = { name: `${ITEMS[wi].id} 2`, x0, x1, sx: kw, sy: kw, refY: L2.base, newRefY: ROW_BASE, newX0: newX0_2, line: 1, word: wi };
+    const p2 = { name: `${ITEMS[wi].id} 2`, x0, x1, sx: kw, sy: kw, refY: (L2.xTop + L2.base) / 2, newRefY: ROW_MIDDLE, newX0: newX0_2, line: 1, word: wi };
     pieces.push(p1);
     addPiece(p2);
     wordPieces[wi] = [{ p: p1, L: L1 }, { p: p2, L: L2 }];
@@ -514,13 +564,13 @@ for (let wi = 0; wi < 3; wi++) {
   if (farX > topWords[2].x1 + 0.5) {
     // mapped as the line it follows, so nothing tears where the two meet
     const lastLine = measured[2].lines[measured[2].lines.length - 1];
-    addPiece({ name: 'tail', x0: topWords[2].x1, x1: farX + 1, sx: k[2], sy: k[2], refY: lastLine.base, newRefY: ROW_BASE, newX0: cursor });
+    addPiece({ name: 'tail', x0: topWords[2].x1, x1: farX + 1, sx: k[2], sy: k[2], refY: (lastLine.xTop + lastLine.base) / 2, newRefY: ROW_MIDDLE, newX0: cursor });
   }
 }
 
 // ---- the stack: the same size, moved up under the button -------------------
 const STACK_DX = BADGE.x - stackWords[0].x0; // MY SAVED's left on the button's left
-const STACK_DY = ROW_BASE - BOX.y1; // its vine starting at the button's foot
+const STACK_DY = BADGE.y + BADGE.size - BOX.y1; // its vine starting at the button's foot
 let stackFar = { x1: 0, y1: 0 };
 for (let i = START; i < N; i += 2) {
   const b = inkBox(await gifPage(i), (x, y) => pageY(y) >= BOX.y1);
@@ -628,7 +678,7 @@ async function renderPiece(data, p, y0, y1, own) {
 function renderGap(data, p) {
   const { left: L, right: R } = p.gap;
   const newW = (p.x1 - p.x0) * p.sx;
-  const mapY = (y, t) => ROW_BASE + (y - ((1 - t) * L.refY + t * R.refY)) * ((1 - t) * L.k + t * R.k);
+  const mapY = (y, t) => ROW_MIDDLE + (y - ((1 - t) * L.refY + t * R.refY)) * ((1 - t) * L.k + t * R.k);
   // how far down the warped piece can reach, at either end
   const yTop = Math.min(mapY(TOP_Y0, 0), mapY(TOP_Y0, 1));
   const yBot = Math.max(mapY(TOP_Y1, 0), mapY(TOP_Y1, 1));
@@ -656,7 +706,7 @@ function renderGap(data, p) {
     const a = (1 - t) * L.k + t * R.k;
     const ref = (1 - t) * L.refY + t * R.refY;
     for (let Y = Y0; Y < Y1; Y++) {
-      const oy = ref + ((Y + 0.5) / SS - ROW_BASE) / a;
+      const oy = ref + ((Y + 0.5) / SS - ROW_MIDDLE) / a;
       if (oy < TOP_Y0 || oy >= TOP_Y1) continue;
       const c = sample(gifX(ox) - 0.5, gifY(oy) - 0.5);
       if (!c) continue;
@@ -767,8 +817,9 @@ writeFileSync(
       frameMs,
       scale: +K.toFixed(5),
       hover: 'dim',
+      place: { left: MARGIN, top: MARGIN },
       logoHit: { x: BADGE.x, y: BADGE.y, w: BADGE.size, h: BADGE.size },
-      badge: { letter: 'I', rule: BADGE_RULE, cap: BADGE_CAP, font: BADGE_FONT, dy: BADGE_DY },
+      badge: { letter: 'I', rule: BADGE_RULE, cap: BADGE_CAP, font: BADGE_FONT },
       boxes: BOXES,
       stops: { base: { frames: FRAMES, viewW: VIEW_W, boxes: BOXES.map((b) => b.id) } },
     },

@@ -83,7 +83,14 @@ type MenuGeometry = {
    * `letter` in the owner's face, set at `font` px and nudged down `dy` px so
    * its ink rather than its em box is centred. See `npm run build:growmenu`.
    */
-  badge?: { letter: string; rule: number; cap: number; font: number; dy: number };
+  badge?: { letter: string; rule: number; cap: number; font: number };
+  /**
+   * Where the menu's own corner goes on the page. The grow menu is laid out
+   * from the I button's corner and placed at the page's 10px margin, so that
+   * scaling it (see `--logo-menu-zoom`) keeps that margin. The bar menu has
+   * no `place` and is laid out from the page's corner, as it always was.
+   */
+  place?: { left: number; top: number };
   boxes: MenuBox[];
   stops: Record<string, { frames: number; viewW: number; boxes: string[] }>;
 };
@@ -133,6 +140,24 @@ export function LogoMenu({ menu = 'bar', stop = 'base' }: { menu?: MenuName; sto
   const shown = boxes.filter((b) => inPlay.includes(b.id));
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  /**
+   * WHERE THE I SITS IN ITS BOX, WORKED OUT FROM ITS OWN INK.
+   *
+   * The owner: "make sure the circle and dot in the I are clearly visible".
+   * This face draws its I as a ring with a hole above a stem, and at the
+   * plus's size the hole is about two pixels and the gap under the ring
+   * about one — so whether they read at all comes down to whether they land
+   * ON pixels or across them. Centring the letter's em box leaves its ink on
+   * a fraction and both of them turn to grey mush.
+   *
+   * So the ink is measured in the page, on a canvas with the letter's own
+   * computed font once the face has loaded (the shelf's price does the
+   * same), and the letter is placed by where its ink has to land: centred in
+   * the box, rounded to whole pixels. Until then the flex centring in the
+   * stylesheet holds it, which is right to within half a pixel.
+   */
+  const letterRef = useRef<HTMLSpanElement | null>(null);
+  const [inkAt, setInkAt] = useState<{ left: number; top: number } | null>(null);
   const framesRef = useRef<HTMLImageElement[] | null>(null);
   const pressedRef = useRef<Record<string, HTMLImageElement>>({});
   const posRef = useRef(0);
@@ -376,6 +401,68 @@ export function LogoMenu({ menu = 'bar', stop = 'base' }: { menu?: MenuName; sto
   }, [goForward, goReverse, paint, setPhase, FRAMES]);
 
   /**
+   * The I, placed by its ink rather than by its em box — see `inkAt`.
+   *
+   * Measured in the PAGE's pixels, not the menu's own: this menu is drawn at
+   * the row's scale, so a whole pixel inside it is not a whole pixel on the
+   * page, and it is the page's that the hole has to land on. The button is
+   * watched for a change of size, which is how a change of that scale
+   * arrives.
+   */
+  const badge = geometry.badge;
+  useEffect(() => {
+    const el = letterRef.current;
+    const btn = el?.parentElement;
+    if (!badge || !el || !btn) return;
+    let live = true;
+    const place = () => {
+      if (!live) return;
+      const cs = getComputedStyle(el);
+      const ctx = document.createElement('canvas').getContext('2d');
+      const box = btn.getBoundingClientRect();
+      if (!ctx || !box.width) return;
+      // The scale comes from the button's own drawn size: `getComputedStyle`
+      // reports the font size BEFORE a CSS zoom while a rect is after it, so
+      // the two cannot be mixed. Everything below is in the page's px.
+      const z = box.width / logoHit.w;
+      const size = badge.font * z;
+      ctx.font = `${size}px ${cs.fontFamily}`;
+      const m = ctx.measureText(badge.letter);
+      if (!m.actualBoundingBoxAscent) return;
+      const rule = badge.rule * z;
+      const inkW = m.actualBoundingBoxRight + m.actualBoundingBoxLeft;
+      const inkH = m.actualBoundingBoxAscent + m.actualBoundingBoxDescent;
+      // where the ink has to land: centred in the box, on the page's own pixels
+      const wantLeft = Math.round(box.left + rule + (box.width - 2 * rule - inkW) / 2);
+      const wantTop = Math.round(box.top + rule + (box.height - 2 * rule - inkH) / 2);
+      // the pen sits `left` inside the ink, and a line-height:1 box puts the
+      // baseline 0.825 of the size down (measured in Chrome for the shelf)
+      const penX = wantLeft + m.actualBoundingBoxLeft;
+      const spanTop = wantTop + m.actualBoundingBoxAscent - 0.825 * size;
+      const next = {
+        left: +((penX - (box.left + rule)) / z).toFixed(2),
+        top: +((spanTop - (box.top + rule)) / z).toFixed(2),
+      };
+      setInkAt((was) => (was && was.left === next.left && was.top === next.top ? was : next));
+    };
+    place();
+    // WATCHING THE SCALE, NOT THE BOX. A CSS zoom on an ancestor does not
+    // change this element's own layout size, so a ResizeObserver on it never
+    // fires; what changes is the custom property the row writes on the stage
+    // (see `layoutMenu` in CigScroller), which is an attribute change.
+    const stage = btn.closest('[data-menu-root]')?.parentElement ?? null;
+    const mo = stage ? new MutationObserver(place) : null;
+    mo?.observe(stage as Element, { attributes: true, attributeFilter: ['style'] });
+    window.addEventListener('resize', place);
+    if (document.fonts && !document.fonts.check(`${badge.font}px "Far East"`)) void document.fonts.ready.then(place);
+    return () => {
+      live = false;
+      mo?.disconnect();
+      window.removeEventListener('resize', place);
+    };
+  }, [badge, logoHit.w]);
+
+  /**
    * Pressing anywhere else. An open menu retracts; one already retracting
    * gives up and snaps shut.
    */
@@ -435,7 +522,19 @@ export function LogoMenu({ menu = 'bar', stop = 'base' }: { menu?: MenuName; sto
       data-menu={menu}
       className="logo-menu"
       data-phase={phase}
-      style={{ width: px(VIEW_W), height: px(VIEW_H) }}
+      style={{
+        width: px(VIEW_W),
+        height: px(VIEW_H),
+        // The stylesheet divides these by the zoom: `zoom` multiplies an
+        // element's own offsets too, so a margin stated here would shrink
+        // with the menu instead of holding at the page's 10px.
+        ...(geometry.place
+          ? ({
+              '--logo-menu-x': px(geometry.place.left),
+              '--logo-menu-y': px(geometry.place.top),
+            } as React.CSSProperties)
+          : null),
+      }}
     >
       <canvas
         ref={canvasRef}
@@ -484,11 +583,12 @@ export function LogoMenu({ menu = 'bar', stop = 'base' }: { menu?: MenuName; sto
       >
         {geometry.badge ? (
           <span
+            ref={letterRef}
             className="logo-menu-badge-letter"
             aria-hidden="true"
             style={{
               fontSize: px(geometry.badge.font),
-              transform: `translateY(${geometry.badge.dy}px)`,
+              ...(inkAt ? { position: 'absolute', left: px(inkAt.left), top: px(inkAt.top) } : null),
             }}
           >
             {geometry.badge.letter}
