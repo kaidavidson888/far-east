@@ -76,6 +76,14 @@ type MenuGeometry = {
   frameMs: number;
   hover?: 'invert' | 'dim';
   logoHit: { x: number; y: number; w: number; h: number };
+  /**
+   * A trigger the page can SEE, drawn by this component rather than being an
+   * invisible hit over a logo the page draws. The landing page's I button
+   * (the owner's 2026-09-19 ask): a black box `rule` px wide round a bold
+   * `letter` in the owner's face, set at `font` px and nudged down `dy` px so
+   * its ink rather than its em box is centred. See `npm run build:growmenu`.
+   */
+  badge?: { letter: string; rule: number; cap: number; font: number; dy: number };
   boxes: MenuBox[];
   stops: Record<string, { frames: number; viewW: number; boxes: string[] }>;
 };
@@ -438,17 +446,19 @@ export function LogoMenu({ menu = 'bar', stop = 'base' }: { menu?: MenuName; sto
         aria-hidden="true"
       />
 
-      {/* the characters: hover to open, press to skip ahead or to close */}
+      {/* the trigger — the characters, or the I button where the geometry
+          has one: hover to open, press to skip ahead or to close */}
       <button
         type="button"
-        className="logo-menu-logo"
-        aria-label="遠東 — menu"
+        className={geometry.badge ? 'logo-menu-logo logo-menu-badge' : 'logo-menu-logo'}
+        aria-label={geometry.badge ? 'Menu' : '遠東 — menu'}
         aria-expanded={phase === 'open'}
         style={{
           left: px(logoHit.x),
           top: px(logoHit.y),
           width: px(logoHit.w),
           height: px(logoHit.h),
+          ...(geometry.badge ? { borderWidth: px(geometry.badge.rule) } : null),
         }}
         onPointerEnter={(e) => {
           if (e.pointerType === 'mouse') void goForward();
@@ -471,7 +481,20 @@ export function LogoMenu({ menu = 'bar', stop = 'base' }: { menu?: MenuName; sto
           e.preventDefault();
           onLogoPress();
         }}
-      />
+      >
+        {geometry.badge ? (
+          <span
+            className="logo-menu-badge-letter"
+            aria-hidden="true"
+            style={{
+              fontSize: px(geometry.badge.font),
+              transform: `translateY(${geometry.badge.dy}px)`,
+            }}
+          >
+            {geometry.badge.letter}
+          </span>
+        ) : null}
+      </button>
 
       {shown.map((box) =>
         box.href ? (

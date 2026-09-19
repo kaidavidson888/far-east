@@ -2114,6 +2114,39 @@ ul, ol { list-style: none; }
   outline: 2px solid #010101;
   outline-offset: 2px;
 }
+/* THE I BUTTON — the landing page's menu grows out of it (the owner's
+   2026-09-19 ask: "an outline box with a capital I from the webfont bolded
+   inside … the box and letter black … 20% larger than the + button … 10px
+   margins between the top and left of the page and itself"). The menu's
+   geometry says so with `badge` (lib/growmenu-geometry.json, written by
+   `npm run build:growmenu`), and LogoMenu draws the trigger as this instead
+   of an invisible hit over a logo: 36px, the plus's 30 plus 20%, a black
+   rule, and an I in the owner's face made bold the house's way — a stroke on
+   the outline, the face having one weight and `font-synthesis` being off.
+   The size and the ink offset come in inline from the badge. It sits above
+   the menu's canvas, which draws nothing where it is. */
+.logo-menu-logo.logo-menu-badge {
+  box-sizing: border-box;
+  border-style: solid;
+  border-color: #010101;
+  background: transparent;
+  color: #010101;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1;
+}
+.logo-menu-badge-letter {
+  display: block;
+  font-family: var(--font-typed);
+  font-weight: 400;
+  font-synthesis: none;
+  line-height: 1;
+  -webkit-text-stroke: 0.03em #010101;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
 
 /* ----------------------------------------------------------- seal button --
    The seal animates when approached. Its first frame IS the seal, so this

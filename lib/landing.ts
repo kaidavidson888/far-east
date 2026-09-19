@@ -283,5 +283,14 @@ export const LANDING_SPEC: ArtPageSpec = {
    * is and are what keeps the row exactly where it was — so putting any of
    * them back on the page is a line here, the way TEST YOUR LUCK is one.
    */
-  parts: [anchored('logo', '遠東', both({ left: M.left, top: parts.logo.y }))],
+  /*
+   * AND THE 遠東 LOGO IS NOT PLACED EITHER (2026-09-19): the owner replaced it
+   * on this page, and in the menu's animation, with the I button — "an
+   * outline box with a capital I from the webfont bolded inside … this is the
+   * new button that opens into the current menu". The menu draws that button
+   * itself (`badge` in lib/growmenu-geometry.json, `LogoMenu`), at 10,10. The
+   * part is still cut, so `anchored('logo', '遠東', both({ left: M.left, top:
+   * parts.logo.y }))` puts it back. The other pages' logos are untouched.
+   */
+  parts: [],
 };

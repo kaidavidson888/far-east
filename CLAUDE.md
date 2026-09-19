@@ -51,7 +51,8 @@ no CSS framework (tokens in `app/globals.css`). Deploys to Vercel.
 - `npm run build:menu` / `npm run build:growmenu` — bake the two logo menus out of
   their GIFs (`monkey-bar.gif` for the cigarette pages, `monkey-grow.gif` for the
   landing page) into `public/menu` + `lib/menu-geometry.json` and `public/growmenu` +
-  `lib/growmenu-geometry.json`. The grow bake takes a couple of minutes and MEASURES
+  `lib/growmenu-geometry.json`. The grow bake (now the I button's menu, re-composited
+  from the gif's pieces) takes under a minute and MEASURES
   everything it can — the scale off the first frame, the six words off the last — and
   stops rather than guessing. See "The logo menu" below.
 - `npm run build:tile` — bakes the animated 發 out of the owner's tile GIF (`scripts/assets/fa-tile.gif`) into
@@ -179,8 +180,44 @@ artwork to fit a frame — that scales the margins with it, which is the thing b
     the logo — which recede again over the last thirty frames and leave the words standing.
     **The LANDING PAGE uses it, and the three labels that used to be printed on that page
     are now three of those six words** (see the landing section below).
-- **The grow bake has to do three things the bar's did not**, and all three are measured
-  rather than chosen — read the header of `scripts/build-grow-menu.mjs`:
+- **SINCE 2026-09-19 THE LANDING MENU GROWS OUT OF AN I BUTTON, NOT THE LOGO, AND ITS TOP
+  ROW IS RE-LAID** (the owner's ask: replace the character logo "and all instances of it in
+  the animation" with "an outline box with a capital I from the webfont bolded inside",
+  black, 20% larger than the plus, 10px off the page's top and left; "privacy policy" and
+  "terms of service" each on one line and the same size as "about us", all three as tall
+  as the I button; the gaps between them doubled; "adjust the animation accordingly").
+  - **The I button is drawn by `LogoMenu`, from `badge` in the geometry** — a 36px box at
+    10,10 with a 2px black rule and a bold I in the owner's face (a 0.03em stroke, the house
+    bold), sized and nudged off `far-east-ink.json` so its INK is centred (measured: 6.3 and
+    5.7 clear above and below, centred across). The landing spec no longer places the 遠東
+    part (it is still cut; one line puts it back). The cigarette pages' bar menu has no
+    `badge` and still sits invisibly over their logo.
+  - **The bake RE-COMPOSITES the gif from its own pieces**, at full source resolution, rather
+    than baking it as one picture — read the header of `scripts/build-grow-menu.mjs`. The
+    first 57 frames, which only draw the box round the logo, are dropped (the run is frames
+    57..196, 142 frames; the first vine leaves the box after 57, and frame 0 is checked
+    empty). The drawn box and the logo are never copied. Each top word is scaled so its
+    x-height matches "about us" at 36px tall (the gif drew "terms of service" 10% smaller;
+    measured x-heights 8.68 / 8.55 / 7.71 → x2.621 / x2.658 / x2.948); the two-line words are
+    split into their lines **glyph by glyph** (a descender of one line and an ascender of
+    the next share rows) and set one word-space apart; every baseline is on the I button's
+    foot. **Each gap between words is STRETCHED to twice its width, not cut open** — no
+    column of any gap is empty in every frame, so a cut tears swirls — and **warped** so its
+    left edge follows the word before and its right edge the word after. The stack (MY
+    SAVED, OFFERS, RECOMMENDED) keeps its size and moves up under the button, its words'
+    left on the button's left.
+  - **Known roughness, while it grows only** — the open state is clean: the swirls rise ~35px
+    above the words at this size and the words start 10px from the top, so the upper swirls
+    run off the page's top edge; and a few swirl fragments that belonged to a two-line
+    word's second line are left behind under the first. The top row is ~1200px wide, so it
+    runs off a phone. The gif's paper carries faint off-white bands, which are now treated
+    as paper (they un-multiplied to alphas of 8-10 across the whole canvas).
+  - **sharp's `composite` returns FOUR channels** even onto a 3-channel base; the bake reads
+    `info.channels` and strips the alpha. Read as RGB it scrambles every frame into bands.
+- **The grow bake as it was before the I button** — the notes below still describe how the
+  gif's own geometry is measured (the scale off the logo, the alignment), which the new bake
+  reuses to find its pieces; the logo stencil and the single-picture crop are gone with the
+  logo:
   - **Scale.** The bar was drawn at the page's own size; this is drawn at **4.15x** it
     (1840x1136 against a 390-wide page). The scale is the gif's first frame — which is the
     logo and nothing else — over the logo part's own box, and **the two axes have to agree
@@ -240,9 +277,10 @@ artwork to fit a frame — that scales the margins with it, which is the thing b
   the row with no change at all. OFFERS and RECOMMENDED are `inert`: drawn, hoverable and
   going nowhere, as they were on the page. **Not `disabled`** — a disabled control takes no
   pointer events in Chrome, so it would stop answering the pointer as well.
-- **The grow menu weighs 2.9MB** (197 frames, 744x468, lossless WebP), against the bar's
-  953KB. It was 3.5MB before the logo came out of the frames — that mark was being stored
-  197 times over. It loads on `requestIdleCallback`, after the page's own artwork. That is what the
+- **The grow menu weighs 5.2MB** since the I button (142 frames, 2400x430 — the top row is
+  ~1200 page px wide now), against the bar's 953KB; it was 2.9MB when it grew out of the
+  logo at the drawing's own size (197 frames, 744x468), and 3.5MB before the logo came out
+  of those frames — that mark was being stored 197 times over. It loads on `requestIdleCallback`, after the page's own artwork. That is what the
   frames genuinely cost: every ink pixel in it is pure black, and storing the alpha channel
   alone comes to the same bytes, so WebP is already exploiting it — **and lossy WebP is not
   an option, because sharp silently keeps lossless for an image with an alpha channel** (q10
@@ -876,9 +914,10 @@ cannot drift.
 
 **OFFERS, My Saved and RECOMMENDED ARE NO LONGER ON THE PAGE — they moved into
 the logo menu** (the owner's 2026-09-16 ask, with the new drawing). The landing
-page at rest is now the logo and the row with its controls line (which the
-seal and the sigil have since joined — below), and everything you can press
-beyond those is reached by hovering 遠東. Three notes on what that took:
+page at rest is now the I button (which replaced the 遠東 logo there on
+2026-09-19 — see "The logo menu") and the row with its plus, and everything
+you can press beyond those is reached by hovering the I. Three notes on what
+that took:
 - **The parts are still cut and their geometry is still read.** Only the three
   `anchored(...)` lines came out of `LANDING_SPEC.parts`, exactly as TEST YOUR
   LUCK did — so putting the column back on the page is three lines.
