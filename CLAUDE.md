@@ -853,6 +853,19 @@ cannot drift.
     past the frame's right edge.
   - First placement does not animate (`data-slides` comes on a moment after
     `data-placed`), or the menu would slide in from the page's corner.
+  - **IT CLOSES THE MOMENT THE READER STARTS TO SCROLL THE ROW** (the owner's
+    2026-09-19 "make it so the menu automatically closes and plays the closing
+    animation as soon as the user begins to scroll"), with the minus's own
+    closing animation, because it is simply the same state set. Four places,
+    one call each: the wheel on the row, the arrow keys (`nudge`), a press
+    the moment it becomes a drag (past `SLOP`, so a click on a pack with a
+    few px of wobble does not count), and pressing another pack to fetch it
+    (`seekTo`). Scrolling the tag list itself does not close it, and nor does
+    the row moving on its own — a spin from My Saved, reset or confirm; reset
+    leaving the menu open is an earlier rule of the owner's. Verified: all four
+    close it, the grid's own scroll and a sub-`SLOP` wobble do not, and at the
+    moment of closing the slide back (`left`) and the bar's and tags' fades are
+    all running transitions.
 - **Confirm spins the row down to the matches** through `startSpin`, the same
   throw, lap, catch and handover My Saved and reset use — three buttons, one
   code path. **Reset drops every tag and leaves the menu open**, which the

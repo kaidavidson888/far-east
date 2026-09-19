@@ -699,6 +699,20 @@ export function CigScroller({
     (dx: number) => {
       // a hand on the row outranks a seek it did not ask for
       seekRef.current = null;
+      // THE MENU CLOSES THE MOMENT THE READER STARTS TO SCROLL (the owner's
+      // 2026-09-19 ask: "make it so the menu automatically closes and plays
+      // the closing animation as soon as the user begins to scroll"). It
+      // stands under the red frame, sized to it, and the frame is about to
+      // move to another pack. Closing is just the state the minus sets, so
+      // the closing animation is the minus's own: the bar gathers back into
+      // the plus, the tags leave, the plus slides back to the middle. Four
+      // ways a reader moves the row, four calls: the arrow keys (here), the
+      // wheel, a press that becomes a drag, and pressing another pack to
+      // fetch it. The row moving on its own — a spin from My Saved, reset
+      // or confirm — does not close it; reset in particular leaves it open
+      // by the owner's earlier rule. Already shut, it costs nothing: React
+      // drops a state set to the value it already has.
+      setTagsOpen(false);
       offsetRef.current += dx;
       run();
     },
@@ -735,6 +749,8 @@ export function CigScroller({
       }
       velRef.current = 0;
       seekRef.current = offsetRef.current + (at + packsRef.current[i].w / 2 - m.w / 2);
+      // fetching a pack scrolls the row to it, so the menu goes away — see `nudge`
+      setTagsOpen(false);
       run();
     },
     [compute, run],
@@ -993,6 +1009,8 @@ export function CigScroller({
       const d = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
       if (!d) return;
       e.preventDefault();
+      // a hand on the row puts the menu away — see `nudge`
+      setTagsOpen(false);
       // screen px in, row px out: the row is zoomed (see cigZoom)
       const by = (d / zoomRef.current) * WHEEL;
       offsetRef.current += by;
@@ -1085,6 +1103,8 @@ export function CigScroller({
       capturedRef.current = true;
       // guarded: throws InvalidPointerId if the pointer has already gone
       try { e.currentTarget.setPointerCapture?.(e.pointerId); } catch { /* no pointer */ }
+      // the press has become a scroll, so the menu goes away — see `nudge`
+      setTagsOpen(false);
     }
   };
   /** End a drag from wherever the release was heard — the row, or the window. */
