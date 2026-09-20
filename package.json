@@ -32,7 +32,8 @@
     "build:searchglyph": "node scripts/build-search-glyph.mjs",
     "build:dotsglyph": "node scripts/build-dots-glyph.mjs",
     "build:dotsmenu": "node scripts/build-dots-menu.mjs",
-    "build:tile": "node scripts/build-tile.mjs"
+    "build:tile": "node scripts/build-tile.mjs",
+    "build:sealglyph": "node scripts/build-seal-glyph.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.5",

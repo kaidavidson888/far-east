@@ -70,6 +70,11 @@ no CSS framework (tokens in `app/globals.css`). Deploys to Vercel.
   writes `public/dotsmenu/frames` + `lib/dotsmenu-geometry.json` in a few
   seconds. `DOTS_DEBUG=1` draws the finished network instead of the frames and
   `DOTS_PROBE=1` dumps the buffer the canvas is measured in. See "THE DOTS" below.
+- `npm run build:sealglyph` — cuts the owner's 遠東 out of
+  `scripts/assets/logo-characters.svg`, lays the two characters side by side as
+  their seal does and hollows them out into `lib/sealGlyph.ts`, the corner
+  seal's mark. `SEAL_LINE=<px> SEAL_MARK=<px> SEAL_PREVIEW=1` draws it at
+  48/66/132px each way round for looking. See "THE CORNER SEAL".
 - `npm run build:searchglyph` — traces the owner's spiral glass
   (`scripts/assets/search-glass.jpg`) into `lib/searchGlyph.ts`, the row's search
   mark. `GLYPH_OPEN=<px> GLYPH_PREVIEW=1` draws the button at 21/30/60px for
@@ -329,13 +334,24 @@ artwork to fit a frame — that scales the margins with it, which is the thing b
     the sky reached 100% on the very frame the first ink crossed the outline, which is true
     to the ask with nothing to see it by; it is now full at frame 17 and the first ink
     leaves at 20, 158ms later as played),
-    **2.08 to 0 over the growth** (the level falls back down the sky and carries on into the
-    mountain), **and then stays at 0**. So the mark is drained for as long as the menu is
-    open. Measured across the run: the mark's ink rises 1604 → 2371, falls to 335 by
-    frame 103 and holds there to the last frame, with ZERO frames anywhere after the peak
-    in which it rises again.
+    **2.08 to 0 over the growth** (the level falls back down the sky), **and then stays at
+    0**. So the mark is drained for as long as the menu is open.
     The dial's ends are kept clear of the soft edge (0.08..0.90, not 0..1) so that the
     resting frame is SOLID and the drained one is empty rather than half-grey.
+  - **AND THE MOUNTAIN DRAINS AS THE BOX FILLS** (the owner's 2026-09-20 "make it so the
+    mountain drains as the outline fills"). One field, TWO HANDS on it, going opposite
+    ways: `sky` is the dial above, unchanged, and `mtn` runs 1 -> 0 over exactly the
+    stretch the sky comes up. The mountain gives its ink to the box rather than waiting
+    for the growth to take it, and it reaches 0 as the box reaches full — so by the time
+    anything leaves the outline the mark is already a white mountain in a black box, and
+    it stays that way for the rest of the run. It used to hold full through the fill and
+    drain over the growth instead.
+  - **THE KEYLINE CLOSES BEHIND IT.** The sky is held a line's width off the silhouette
+    (below) so that a full sky over a FULL mountain is not one black rectangle — but a
+    drained mountain is white, and the gap then drew a second, redundant edge round it:
+    white keyline, black contour, white interior. The gap is scaled by the mountain's own
+    dial, so it is the full line while there is black to separate and nothing at all once
+    the mountain is a white shape in a black box.
   - **THE SKY STOPS A LINE SHORT OF THE MOUNTAIN.** Both are black, so a full sky over a
     full mountain would be one black rectangle with the drawing gone; the sky's ink is held
     off the silhouette by the width of the line the drain leaves behind, so the mountain
@@ -1253,6 +1269,55 @@ pressed again".
   menu's words are `inert`. Verified signed out: pressing SAVED starts the spin
   and then the action sends the reader to the splash with `next=/landing`,
   which is the shelf's own rule and not this menu's business.
+
+**THE CORNER SEAL** (the owner's 2026-09-20 ask, with their seal artwork attached:
+"turn just the chinese characters in this image into a square seal button 2x
+as big as the mountain button in the right corner of the screen with 10px
+margins on its top and right edges. Make the characters just a black
+outline"). `components/CornerSeal.tsx`, `lib/sealGlyph.ts`,
+`npm run build:sealglyph`.
+- **THE CHARACTERS COME OFF THE OWNER'S OWN VECTOR, not the picture.** The
+  same 遠東 is already in the repo as `scripts/assets/logo-characters.svg` —
+  the landing page's logo, which the seal in that picture is set from — so
+  tracing a screenshot of them would cost fidelity for nothing. They are
+  STACKED there and SIDE BY SIDE in the seal, so the build cuts each one out
+  and lays the pair out again the way the seal does, **with the gap the owner
+  drew them with**: 192px against a 657px character, 29%, measured off the
+  render rather than chosen. The two are split at the LARGEST gap between
+  bands of ink, not at a threshold — a character's own strokes leave gaps too
+  (26px inside 遠), and a threshold set between those two numbers would work
+  today and break on the next drawing.
+- **"JUST A BLACK OUTLINE" IS A RING**: the silhouette less the silhouette
+  eroded by the line's width, traced by the shared `scripts/lib/trace-mark.mjs`
+  as one even-odd path, so it fills with `currentColor` and inverts with its
+  box like every other mark on this page. The line is stated in the px the
+  mark is DRAWN at (1.2 of 58) and converted into the trace's scale, because
+  it is a line on the page rather than a fraction of a character. The build
+  stops if the ring keeps more than 90% of the ink — at that point the line is
+  thicker than the strokes and the "outline" is just the character again.
+- **IT IS THE MOUNTAIN BUTTON'S MIRROR.** Twice `logoHit.w` out of the grow
+  menu's geometry (66 design px against 33), the same `badge.rule`, drawn at
+  the same `--logo-menu-zoom` the row publishes on the stage so the two keep
+  their ratio at every width, and the same 10px margin — measured from the
+  page's top and RIGHT where the mountain takes top and left. Measured in the
+  page at 1920x947: 48x48 against the mountain's 24x24, exactly 2.00x, 10px
+  from both edges.
+  - **The rule stays 2px.** Doubling the box does not double its line: every
+    box on these pages carries the same 2px, and the seal in the owner's
+    artwork draws its own frame at about 4% of its width, which at 66 is 2.6.
+  - **At 48 screen px the outline is legible but not delicate** — the pair is
+    58 x 26 design px, so each character is about 19px on a 1x screen and its
+    strokes about two, which a 1.2px line most of the way fills. It is a
+    vector, so a dense screen draws it properly; on a 1x screen it reads as a
+    heavy outline. Judged against 0.7px (grey mush at this size) and against
+    the solid characters. Making it read as finely as the artwork does would
+    take a bigger button, which is the owner's call.
+- **It goes to the shelf** (the owner chose, asked). A plain `<Link>`, not a
+  button: it navigates, so a keyboard and a middle click should both get what
+  they expect. The site's OTHER seal — `SealButton`, the animated one on the
+  row's bar — still leads there too, on its second press.
+- It is on both landing routes. On `/` it sits behind the splash, which is
+  opaque there; checked with `elementFromPoint`.
 
 **ONE MENU AT A TIME, AND THE NEXT WAITS FOR THE LAST TO GO** (the owner's
 2026-09-20 "make sure the previously opened menu or button has fully

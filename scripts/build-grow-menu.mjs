@@ -810,13 +810,32 @@ for (let f = 0; f < FRAMES; f++) {
   const grown = u <= SPREAD ? 0 : easeInOut(Math.min(1, (u - SPREAD) / (GROW - SPREAD)));
   const back = u <= GROW ? 0 : easeIn((u - GROW) / (1 - GROW));
   /**
-   * THE DIAL. 1 -> SKY_TOP as the sky fills, SKY_TOP -> 0 as the ink leaves,
-   * and it STAYS AT 0 for the whole recede: the mountain is drained for as
-   * long as the menu is open, and fills again only when the frames themselves
-   * are run backwards — the owner's "the mountain remains drained at the end
-   * until the animation is fully reversed … until the menu is closed".
+   * THE TWO DIALS. One field, read by two hands going opposite ways — the
+   * owner's 2026-09-20 "make it so the mountain drains as the outline fills".
+   *
+   * `sky` is the hand it always had: 1 -> SKY_TOP as the sky fills, then
+   * SKY_TOP -> 0 as the ink leaves, at the pace it always emptied at.
+   * `mtn` is the new one, and it runs DOWN over exactly the stretch the sky
+   * comes up: the mountain gives its ink to the box rather than waiting for
+   * the growth to take it. It reaches 0 as the box reaches full and STAYS at
+   * 0 for the whole run after — the mountain is drained for as long as the
+   * menu is open, and fills again only when the frames themselves are run
+   * backwards ("the mountain remains drained at the end until the animation
+   * is fully reversed … until the menu is closed").
    */
-  const level = u <= FILL ? 1 + (SKY_TOP - 1) * easeInOut(Math.min(1, u / FILL)) : SKY_TOP * (1 - grown);
+  const fill = easeInOut(Math.min(1, u / FILL));
+  const sky = u <= FILL ? 1 + (SKY_TOP - 1) * fill : SKY_TOP * (1 - grown);
+  const mtn = 1 - fill;
+  /*
+   * AND THE GAP CLOSES AS THE MOUNTAIN EMPTIES. The sky is held a line's
+   * width off the silhouette so that a full sky over a FULL mountain is not
+   * one black rectangle — but a drained mountain is white, and the gap then
+   * put a second, redundant edge round it: white keyline, black contour,
+   * white interior. It is scaled by the mountain's own dial, so it is the
+   * full line while there is black to separate and nothing at all once the
+   * mountain is a white shape in a black box.
+   */
+  const gap = SKY_GAP * mtn;
   const erode = (arrival) => (back <= 0 ? 0 : E_KILL * smoothstep(0, E_RAMP, back - (1 - arrival) * (1 - E_RAMP)));
   ink.clear();
 
@@ -839,12 +858,12 @@ for (let f = 0; f < FRAMES; f++) {
       // the sky is paper and has no coverage of its own, so it inks to
       // whatever the silhouette leaves — the two sum to a solid frame with no
       // seam along the mountain's edge
-      const a = isSky ? (1 - mark.body[i]) * smoothstep(SKY_GAP, SKY_GAP + 1, SKY_CLEAR[i]) : mark.ink[i];
+      const a = isSky ? (1 - mark.body[i]) * smoothstep(gap, gap + 1, SKY_CLEAR[i]) : mark.ink[i];
       if (a <= 0) continue;
       // ink is there while the dial stands at or above this pixel; the traces
       // (the outline, the veins, the tipi) are what the mountain keeps whatever
       // the dial says
-      const on = smoothstep(LEVEL[i] - DRAIN_SOFT, LEVEL[i] + DRAIN_SOFT, level);
+      const on = smoothstep(LEVEL[i] - DRAIN_SOFT, LEVEL[i] + DRAIN_SOFT, isSky ? sky : mtn);
       const v = a * Math.max(on, isSky ? 0 : keep[i]);
       if (v <= 0) continue;
       const X = MX + x, Y = MY + y;

@@ -1354,6 +1354,47 @@ ul, ol { list-style: none; }
   }
 }
 
+/* --------------------------------------------------- the corner seal ----
+   THE OWNER'S 遠東, HOLLOWED OUT, IN A SQUARE IN THE TOP RIGHT — their
+   2026-09-20 ask: "a square seal button 2x as big as the mountain button in
+   the right corner of the screen with 10px margins on its top and right
+   edges. Make the characters just a black outline".
+
+   It is the mountain button's mirror and is built the same way: the box is
+   twice that button's, it is drawn at the row's own `--logo-menu-zoom` so
+   that the two keep their ratio at every width, and its margin is in PAGE px
+   — divided by the zoom, because `zoom` multiplies an element's own offsets
+   as well as its contents, which is the shelf's rows and the logo menu
+   again. The mark inside is `currentColor`, so it inverts with the box. */
+.corner-seal {
+  position: absolute;
+  top: calc(var(--seal-margin, 10px) / var(--logo-menu-zoom, 1));
+  right: calc(var(--seal-margin, 10px) / var(--logo-menu-zoom, 1));
+  zoom: var(--logo-menu-zoom, 1);
+  box-sizing: border-box;
+  width: var(--seal-box);
+  height: var(--seal-box);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: var(--seal-rule) solid #010101;
+  background: transparent;
+  color: #010101;
+  z-index: 4;
+  transition: background-color 120ms ease-out, color 120ms ease-out;
+}
+.corner-seal:hover {
+  background: #010101;
+  color: #ffffff;
+}
+.corner-seal:focus-visible {
+  outline: 2px solid #010101;
+  outline-offset: 3px;
+}
+.corner-seal svg {
+  display: block;
+}
+
 /* -------------------------------------------------------- cigarette row --
    A row of packs across the middle of the page that scrolls forever, with a
    red frame at the centre marking the one you can press.
@@ -2891,6 +2932,7 @@ input[type='reset'],
 .cig-search-toggle,
 .cig-dots-toggle,
 .cig-dots-box,
+.corner-seal,
 .cig-tag,
 .cig-confirm,
 .logo-menu,
@@ -2983,6 +3025,7 @@ input[type='radio'],
 .cig-search-toggle,
 .cig-dots-toggle,
 .cig-dots-box,
+.corner-seal,
 .cig-confirm,
 .cig-tag,
 .logo-menu-logo,
@@ -3047,6 +3090,7 @@ input[type='radio']:active,
 .cig-search-toggle:active,
 .cig-dots-toggle:active,
 .cig-dots-box:active,
+.corner-seal:active,
 .cig-confirm:active,
 .cig-tag:active,
 .logo-menu-logo:active,
