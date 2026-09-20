@@ -290,12 +290,15 @@ artwork to fit a frame — that scales the margins with it, which is the thing b
     (1 - its distance from the spouts) and 1.05..2.0 for the sky, by height — and a pixel
     carries ink while the dial stands at or above it. The dial runs **1 to 2.08 over the
     first 12% of the run** (the sky fills as a level rising round the mountain; nothing
-    grows, measured: the first ink outside the box is frame 19, the sky is full at 17),
+    grows), **holds full for a beat** (`SPREAD`, three frames — measured on the first cut,
+    the sky reached 100% on the very frame the first ink crossed the outline, which is true
+    to the ask with nothing to see it by; it is now full at frame 17 and the first ink
+    leaves at 20, 158ms later as played),
     **2.08 to 0 over the growth** (the level falls back down the sky and carries on into the
     mountain), **and then stays at 0**. So the mark is drained for as long as the menu is
-    open, and it fills again only when LogoMenu scrubs the frames BACKWARDS to close —
-    which is exactly what the owner meant by reversed. Measured across the run: the mark's
-    ink rises 1604 → 2484, falls to 439 by frame 96 and holds there to the last frame.
+    open. Measured across the run: the mark's ink rises 1604 → 2371, falls to 409 by
+    frame 102 and holds there to the last frame, with ZERO frames anywhere after the peak
+    in which it rises again.
     The dial's ends are kept clear of the soft edge (0.08..0.90, not 0..1) so that the
     resting frame is SOLID and the drained one is empty rather than half-grey.
   - **THE SKY STOPS A LINE SHORT OF THE MOUNTAIN.** Both are black, so a full sky over a
@@ -304,6 +307,23 @@ artwork to fit a frame — that scales the margins with it, which is the thing b
     stays there as a white keyline — the same keyline the drain ends on. (Left to the
     antialiasing the edge came out a half-covered grey seam that looked like this by
     accident; this is the same picture, measured.)
+  - **THE LANDING MENU IS A ONE-WAY DOOR — IT DOES NOT CLOSE** (the owner's 2026-09-19
+    "make the last frame of the animation the new default after the full animation plays
+    regardless of user input"). `LATCH` in `LogoMenu` is the table, beside `PLAY_RATE` and
+    for the same reason: it is a judgement about one menu, not a property of the drawing.
+    For a latched menu, leaving mid-run no longer turns it around, pressing it once open
+    does nothing, pressing the page does nothing, and pressing a word that goes nowhere
+    does nothing; a press MID-RUN still skips to the end, because that lands on the same
+    last frame the run was going to anyway. So after one run the landing page's resting
+    state is the six words standing and the mountain drained, and only a fresh page load
+    puts it back — nothing is stored between loads. **The BAR menu is not latched**: on the
+    cigarette pages it is the only way home and it sits over the page's own logo.
+    - **This is what makes the drain hold, and before the latch it did not.** The close is
+      a REVERSE SCRUB of the same frames, so it necessarily refills the mark on the way
+      back: measured, 99% refilled 1.8s before the menu was shut, and the last 683ms played
+      the sky-fill backwards, flashing a near-solid black button just before rest. If the
+      landing menu is ever un-latched, that is what comes back, and the fix is to hold the
+      drained mark over the reverse rather than to re-bake anything.
   - **THE CANVAS STARTS ABOVE THE BUTTON.** The growth reaches over the top row, so the
     canvas is given that room (`SHIFT`, measured off the finished network, capped at the
     margin) and the button sits at 0,`SHIFT` inside it. **`place` is therefore where the

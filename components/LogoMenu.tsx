@@ -131,6 +131,25 @@ const REVERSE_RATE = 2;
  */
 const PLAY_RATE: Record<string, number> = { bar: 1, grow: 0.8 };
 
+/**
+ * WHICH MENU STAYS OPEN ONCE IT HAS OPENED — the owner's 2026-09-19 "make the
+ * last frame of the animation the new default after the full animation plays
+ * regardless of user input".
+ *
+ * A latched menu is a ONE-WAY DOOR. Hovering it runs it; leaving mid-run no
+ * longer turns it around; pressing it once open does nothing; pressing the
+ * page does nothing; pressing a word that goes nowhere does nothing. The last
+ * frame is where it stays, which on the landing page means the six words stand
+ * and the mountain in the button stays drained — the state the owner's
+ * previous ask described, now the resting one. A fresh page load is the only
+ * thing that puts it back, since nothing is stored between them.
+ *
+ * The BAR menu is not latched: on the cigarette pages it is the only way home,
+ * it sits over the page's own logo, and closing it is how a reader gets the
+ * page back.
+ */
+const LATCH: Record<string, boolean> = { bar: false, grow: true };
+
 /** Half strength under the pointer, a quarter while it is held. */
 const DIM = { hover: 0.5, press: 0.25 };
 
@@ -141,6 +160,8 @@ export function LogoMenu({ menu = 'bar', stop = 'base' }: { menu?: MenuName; sto
   const VIEW_H = frame.h;
   const DIR = geometry.dir ?? '/menu/frames';
   const HOVER = geometry.hover ?? 'invert';
+  /** Does this one stay open once it is open? See LATCH. */
+  const latched = LATCH[menu] ?? false;
 
   const { frames: FRAMES, viewW: VIEW_W, boxes: inPlay } = stops[stop] ?? stops.base;
   const shown = boxes.filter((b) => inPlay.includes(b.id));
@@ -370,11 +391,14 @@ export function LogoMenu({ menu = 'bar', stop = 'base' }: { menu?: MenuName; sto
 
   /**
    * Pressing the logo. Mid-unfold it skips to the end; once open it starts
-   * retracting; mid-retraction it turns around.
+   * retracting, unless this menu is latched, where open is where it stays;
+   * mid-retraction it turns around.
    */
   const onLogoPress = useCallback(() => {
     const now = phaseRef.current;
     if (now === 'forward') {
+      // Still a skip, not an interruption: it lands on the last frame, which
+      // is where the run was going anyway.
       cancelAnimationFrame(rafRef.current);
       posRef.current = FRAMES - 1;
       setPhase('open');
@@ -382,11 +406,11 @@ export function LogoMenu({ menu = 'bar', stop = 'base' }: { menu?: MenuName; sto
       return;
     }
     if (now === 'open') {
-      goReverse();
+      if (!latched) goReverse();
       return;
     }
     void goForward(); // idle, or turning a retraction around
-  }, [goForward, goReverse, paint, setPhase, FRAMES]);
+  }, [goForward, goReverse, latched, paint, setPhase, FRAMES]);
 
   /**
    * The mark in the button. It is a still of the animation's first frame, so
@@ -406,6 +430,7 @@ export function LogoMenu({ menu = 'bar', stop = 'base' }: { menu?: MenuName; sto
    * gives up and snaps shut.
    */
   useEffect(() => {
+    if (latched) return; // it does not close, so nothing is listening for it
     if (phase !== 'open' && phase !== 'reverse') return;
     const onDown = (e: PointerEvent) => {
       const el = e.target as HTMLElement | null;
@@ -415,7 +440,7 @@ export function LogoMenu({ menu = 'bar', stop = 'base' }: { menu?: MenuName; sto
     };
     document.addEventListener('pointerdown', onDown, true);
     return () => document.removeEventListener('pointerdown', onDown, true);
-  }, [phase, goReverse, snapClosed]);
+  }, [phase, latched, goReverse, snapClosed]);
 
   useEffect(() => {
     paint();
@@ -508,9 +533,9 @@ export function LogoMenu({ menu = 'bar', stop = 'base' }: { menu?: MenuName; sto
           if (e.pointerType === 'mouse') void goForward();
         }}
         onPointerLeave={(e) => {
-          // Leaving mid-unfold turns it straight around. Once it is open it
-          // stays open — only a press closes that.
-          if (e.pointerType === 'mouse' && phaseRef.current === 'forward') goReverse();
+          // Leaving mid-unfold turns it straight around — unless the menu is
+          // latched, where the run finishes whatever the pointer does.
+          if (!latched && e.pointerType === 'mouse' && phaseRef.current === 'forward') goReverse();
         }}
         onPointerDown={(e) => {
           e.preventDefault();
@@ -565,7 +590,7 @@ export function LogoMenu({ menu = 'bar', stop = 'base' }: { menu?: MenuName; sto
               // anywhere. The navigation runs from this same handler chain
               // rather than from another hit test, so here it is safe.
               setHover(null);
-              snapClosed();
+              if (!latched) snapClosed();
             }}
           />
         ) : (
@@ -584,7 +609,7 @@ export function LogoMenu({ menu = 'bar', stop = 'base' }: { menu?: MenuName; sto
             // pressable-but-inert as page parts too; this is the same thing.
             onClick={() => {
               setHover(null);
-              snapClosed();
+              if (!latched) snapClosed();
             }}
           />
         ),

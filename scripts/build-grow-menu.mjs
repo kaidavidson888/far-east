@@ -978,6 +978,13 @@ const FRAMES = N - START;
  * fifth the ink thins away and the words are left standing.
  */
 const FILL = 0.12;
+/**
+ * AND IT HOLDS FULL FOR A BEAT BEFORE ANYTHING LEAVES. Measured on the first
+ * cut, the sky reached 100% on the very frame the first ink crossed the
+ * outline: true to the ask, but with nothing to see it by. Three frames of a
+ * full box says it.
+ */
+const SPREAD = FILL + 0.02;
 const GROW = 0.8;
 /** The dial's soft edge — half a level line, in dial units. */
 const DRAIN_SOFT = 0.08;
@@ -1067,8 +1074,8 @@ const ink = new Ink(RW, RH, SS);
 let total = 0;
 for (let f = 0; f < FRAMES; f++) {
   const u = FRAMES === 1 ? 1 : f / (FRAMES - 1);
-  // nothing grows until the sky is full
-  const grown = u <= FILL ? 0 : easeInOut(Math.min(1, (u - FILL) / (GROW - FILL)));
+  // nothing grows until the sky is full, and has stood full for a beat
+  const grown = u <= SPREAD ? 0 : easeInOut(Math.min(1, (u - SPREAD) / (GROW - SPREAD)));
   const back = u <= GROW ? 0 : easeIn((u - GROW) / (1 - GROW));
   /**
    * THE DIAL. 1 -> SKY_TOP as the sky fills, SKY_TOP -> 0 as the ink leaves,
