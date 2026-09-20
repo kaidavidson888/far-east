@@ -1270,11 +1270,14 @@ pressed again".
   and then the action sends the reader to the splash with `next=/landing`,
   which is the shelf's own rule and not this menu's business.
 
-**THE CORNER SEAL** (the owner's 2026-09-20 ask, with their seal artwork attached:
-"turn just the chinese characters in this image into a square seal button 2x
-as big as the mountain button in the right corner of the screen with 10px
-margins on its top and right edges. Make the characters just a black
-outline"). `components/CornerSeal.tsx`, `lib/sealGlyph.ts`,
+**THE CORNER SEAL** (three asks of the owner's on 2026-09-20, with their seal
+artwork attached: "turn just the chinese characters in this image into a
+square seal button 2x as big as the mountain button in the right corner of
+the screen with 10px margins on its top and right edges. Make the characters
+just a black outline"; then "stretch the characters so they are a square
+together"; then "make them two seperate characters in square outlines and
+scale them to be individually square but make them 1 button with 5px margin
+between"). `components/CornerSeal.tsx`, `lib/sealGlyph.ts`,
 `npm run build:sealglyph`.
 - **THE CHARACTERS COME OFF THE OWNER'S OWN VECTOR, not the picture.** The
   same 遠東 is already in the repo as `scripts/assets/logo-characters.svg` —
@@ -1287,13 +1290,25 @@ outline"). `components/CornerSeal.tsx`, `lib/sealGlyph.ts`,
   bands of ink, not at a threshold — a character's own strokes leave gaps too
   (26px inside 遠), and a threshold set between those two numbers would work
   today and break on the next drawing.
-- **THE PAIR IS STRETCHED INTO THE SQUARE** (the owner's "stretch the
-  characters so they are a square together"). Two square characters side by
-  side make a box twice as wide as it is tall, which left the seal's own
-  square mostly air; a two-character seal is cut the other way round, each
-  character taking half the field and the FULL height of it. So each is drawn
-  to the strip's full height — a vertical stretch of 2.30 — and both to the
-  SAME height rather than each keeping its own, because they share one field.
+- **TWO SQUARES, ONE BUTTON.** Each character is cut on its own and
+  stretched into its own square — which costs it a part in five hundred, the
+  two being 639x637 and 675x675 as drawn — and the page puts a box round each
+  with the owner's 5px between. One `<Link>` wraps the pair, so there is one
+  press target, one focus ring and one hover: both boxes invert together.
+  There is no shared field and no strip any more.
+  - **It got here in three steps, and the middle one is worth keeping.** The
+    pair first sat side by side at their drawn proportion in one square,
+    which left that square mostly air; stretched to fill it together (2.30x
+    taller) they read as a cut seal, and that stretch is what first made the
+    outline legible — it took the ink the 1.2px line keeps from 82% to 53%.
+    Given a box each they are bigger again (each character now fills 58
+    design px where it had 27 of a shared 58), so the hollows are plainer
+    still: 38.4% and 34.1% of the ink kept.
+  - **The gap is in PAGE px, the boxes in design px.** 5px on the screen at
+    any width, like the 10px margins on the same button, while the squares
+    scale with the row as the mountain does — the stylesheet divides the gap
+    by the zoom. Measured at 1920x947: two 48x48 boxes, gap exactly 5, each
+    2.00x the mountain, 10 from the top and 10 from the right.
 - **"JUST A BLACK OUTLINE" IS A RING**: the silhouette less the silhouette
   eroded by the line's width, traced by the shared `scripts/lib/trace-mark.mjs`
   as one even-odd path, so it fills with `currentColor` and inverts with its
@@ -1304,17 +1319,12 @@ outline"). `components/CornerSeal.tsx`, `lib/sealGlyph.ts`,
   thicker than the strokes and the "outline" is just the character again (2.4
   trips it; 1.8 is legal and heavy; 1.2 keeps 53%).
   - **THE STRETCH COMES FIRST, THE RING SECOND.** Scaling a finished outline
-    would scale its line with it, and the mark would carry a 2.3x heavier line
+    would scale its line with it, and the mark would carry a heavier line
     across the top of every stroke than down its side. Stretched first and
-    eroded after, there is one line all the way round. What the stretch does
-    show is the STROKES — a horizontal one is 2.3x deeper than it was drawn
-    and a vertical one untouched, so the hollows are generous one way and
-    tight the other, which is what stretching type does and what a cut seal
-    does on purpose.
-  - **And it is what made the outline legible at this size.** Unstretched, a
-    1.2px line kept 82% of the ink and the mark read as a fuzzy solid; the
-    stretch takes that to 53%, and at 48 screen px the hollows are plainly
-    there.
+    eroded after, there is one line all the way round. The stretch is tiny
+    now that each character has its own square, but the order is the same so
+    the reason does not have to be rediscovered — it mattered when the pair
+    shared a field and was stretched 2.3x.
 - **IT IS THE MOUNTAIN BUTTON'S MIRROR.** Twice `logoHit.w` out of the grow
   menu's geometry (66 design px against 33), the same `badge.rule`, drawn at
   the same `--logo-menu-zoom` the row publishes on the stage so the two keep
@@ -1325,9 +1335,9 @@ outline"). `components/CornerSeal.tsx`, `lib/sealGlyph.ts`,
   - **The rule stays 2px.** Doubling the box does not double its line: every
     box on these pages carries the same 2px, and the seal in the owner's
     artwork draws its own frame at about 4% of its width, which at 66 is 2.6.
-  - **The mark is 58 x 58 design px in the 62 the rule leaves**, 2px of air
+  - **Each mark is 58 x 58 design px in the 62 its rule leaves**, 2px of air
     all round, and 42 x 42 on screen at the row's own zoom. Judged at 48, 66
-    and 120px against line widths of 0.7, 1.2 and 1.8: 1.2 is where the
+    and 120px a box against line widths of 0.7, 1.2 and 1.8: 1.2 is where the
     hollows first read at 48 and still look like a line at 120.
 - **It goes to the shelf** (the owner chose, asked). A plain `<Link>`, not a
   button: it navigates, so a keyboard and a middle click should both get what

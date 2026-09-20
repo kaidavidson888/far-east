@@ -1371,6 +1371,16 @@ ul, ol { list-style: none; }
   top: calc(var(--seal-margin, 10px) / var(--logo-menu-zoom, 1));
   right: calc(var(--seal-margin, 10px) / var(--logo-menu-zoom, 1));
   zoom: var(--logo-menu-zoom, 1);
+  display: flex;
+  /* the owner's 5px between the two squares, in PAGE px like the margins on
+     the same button — so it stays 5 on the screen while the boxes scale */
+  gap: calc(var(--seal-gap, 5px) / var(--logo-menu-zoom, 1));
+  color: #010101;
+  z-index: 4;
+}
+/* ONE CONTROL, TWO BOXES: the hover and the focus ring belong to the link,
+   so both squares invert together and there is one press target. */
+.corner-seal-box {
   box-sizing: border-box;
   width: var(--seal-box);
   height: var(--seal-box);
@@ -1379,13 +1389,13 @@ ul, ol { list-style: none; }
   justify-content: center;
   border: var(--seal-rule) solid #010101;
   background: transparent;
-  color: #010101;
-  z-index: 4;
-  transition: background-color 120ms ease-out, color 120ms ease-out;
+  transition: background-color 120ms ease-out;
 }
 .corner-seal:hover {
-  background: #010101;
   color: #ffffff;
+}
+.corner-seal:hover .corner-seal-box {
+  background: #010101;
 }
 .corner-seal:focus-visible {
   outline: 2px solid #010101;

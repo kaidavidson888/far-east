@@ -109,123 +109,126 @@ const GAP = (() => {
   return g / mean;
 })();
 
-// ---- side by side, at the trace's own scale ---------------------------------
+// ---- one square each ---------------------------------------------------------
 /**
- * THE PAIR IS STRETCHED INTO A SQUARE — the owner's "stretch the characters so
- * they are a square together". Two square characters side by side make a box
- * twice as wide as it is tall, which left the seal's own square mostly air;
- * a two-character seal is cut the other way round, each character taking half
- * the field and the full height of it. So the strip is square and each
- * character is drawn to its FULL height, which is a vertical stretch of about
- * 2.2 — and both to the SAME height rather than each keeping its own, because
- * they share one field.
+ * EACH CHARACTER IS CUT ON ITS OWN, STRETCHED INTO ITS OWN SQUARE — the
+ * owner's "make them two seperate characters in square outlines and scale
+ * them to be individually square but make them 1 button with 5px margin
+ * between". So there is no strip and no shared field any more: the page draws
+ * two boxes with a gap, and each box holds one character filling it.
  *
- * IT IS STRETCHED BEFORE THE RING IS TAKEN, not after. Scaling the finished
- * outline would scale its line with it and the mark would carry a 2.2x
- * heavier line across the top of every stroke than down its side; stretching
- * the silhouette first and eroding it after gives one line all the way round.
- * What the stretch does show is the STROKES: a horizontal one is 2.2x deeper
- * than it was drawn and a vertical one is untouched, so the hollows are
- * generous one way and tight the other. That is what stretching type does,
- * and it is what a cut seal does on purpose.
- */
-const wide = chars[0].w + chars[1].w + GAP * ((chars[0].w + chars[1].w) / 2);
-const K = TRACE / wide;
-const SW = Math.round(wide * K), SH = SW;
-const strip = new Uint8Array(SW * SH);
-{
-  let at = 0;
-  for (const c of chars) {
-    const dx = Math.round(at * K);
-    const cw = Math.round(c.w * K), ch = SH;
-    for (let y = 0; y < ch; y++) {
-      const sy = c.y0 + Math.min(c.h - 1, Math.floor((y / ch) * c.h));
-      for (let x = 0; x < cw; x++) {
-        const sx = c.x0 + Math.min(c.w - 1, Math.floor((x / cw) * c.w));
-        if (!ink(sx, sy)) continue;
-        const X = dx + x, Y = y;
-        if (X >= 0 && Y >= 0 && X < SW && Y < SH) strip[Y * SW + X] = 1;
-      }
-    }
-    at += c.w + GAP * ((chars[0].w + chars[1].w) / 2);
-  }
-  console.log(`  stretched into a square: ${SW}x${SH}, each character x${(SH / ((chars[0].h + chars[1].h) / 2) / K).toFixed(2)} taller than it was drawn`);
-}
-
-// ---- the ring ----------------------------------------------------------------
-/**
- * The silhouette less itself eroded by the line's width: what is left is a
- * band that follows every edge, outside and in, which is what "just a black
- * outline" means. The erosion is a distance transform against the COMPLEMENT
- * — the distance to the nearest paper — the way trace-mark's own `erode`
- * learned to do it.
+ * They are very nearly square as drawn (639x637 and 675x675), so this is a
+ * stretch of about a part in five hundred — the shape is the owner's, and
+ * saying "scale them to be individually square" costs it nothing.
+ *
+ * THE STRETCH COMES BEFORE THE RING, as it did when the pair shared a field:
+ * scaling a finished outline scales its line with it, and the mark would
+ * carry a heavier line one way than the other. Here the stretch is tiny, but
+ * the order is the same so the reason does not have to be rediscovered.
  */
 const lineTrace = (LINE * TRACE) / MARK;
-const ring = (() => {
-  const paper = new Uint8Array(SW * SH);
-  for (let i = 0; i < SW * SH; i++) paper[i] = strip[i] ? 0 : 1;
-  const d = distanceTo(paper, SW, SH); // 0 on paper, growing into the ink
-  const m = { ink: new Uint8Array(SW * SH), W: SW, H: SH };
-  let kept = 0;
-  for (let i = 0; i < SW * SH; i++) {
-    m.ink[i] = strip[i] && d[i] <= lineTrace ? 1 : 0;
-    kept += m.ink[i];
+const cut = (c, i) => {
+  const S = TRACE;
+  const box = new Uint8Array(S * S);
+  for (let y = 0; y < S; y++) {
+    const sy = c.y0 + Math.min(c.h - 1, Math.floor((y / S) * c.h));
+    for (let x = 0; x < S; x++) {
+      const sx = c.x0 + Math.min(c.w - 1, Math.floor((x / S) * c.w));
+      if (ink(sx, sy)) box[y * S + x] = 1;
+    }
   }
-  const all = strip.reduce((n, v) => n + v, 0);
-  console.log(`  the line is ${LINE}px drawn (${lineTrace.toFixed(1)} traced): ${((100 * kept) / all).toFixed(1)}% of the ink is kept`);
-  if (kept / all > 0.9) fail('the outline keeps almost all of the ink: the line is too thick for these strokes');
-  return m;
-})();
-
-const loops = contours(ring).filter((p) => Math.abs(loopArea(p)) >= MIN_AREA).map((p) => simplify(p, EPS));
-if (!loops.length) fail('nothing was traced');
-const { d, vw: VW, vh: VH, points } = toPath(loops);
+  /*
+   * The silhouette less itself eroded by the line's width: what is left is a
+   * band following every edge, outside and in, which is what "just a black
+   * outline" means. The erosion is a distance transform against the
+   * COMPLEMENT — the distance to the nearest paper — the way trace-mark's own
+   * `erode` learned to do it.
+   */
+  const paper = new Uint8Array(S * S);
+  for (let j = 0; j < S * S; j++) paper[j] = box[j] ? 0 : 1;
+  const dist = distanceTo(paper, S, S);
+  const m = { ink: new Uint8Array(S * S), W: S, H: S };
+  let kept = 0, all = 0;
+  for (let j = 0; j < S * S; j++) {
+    all += box[j];
+    m.ink[j] = box[j] && dist[j] <= lineTrace ? 1 : 0;
+    kept += m.ink[j];
+  }
+  console.log(`  character ${i + 1}: stretched x${(c.w / c.h).toFixed(3)} into its square; the ${LINE}px line keeps ${((100 * kept) / all).toFixed(1)}% of its ink`);
+  if (kept / all > 0.9) fail(`character ${i + 1}'s outline keeps almost all of its ink: the line is too thick for these strokes`);
+  const loops = contours(m).filter((p) => Math.abs(loopArea(p)) >= MIN_AREA).map((p) => simplify(p, EPS));
+  if (!loops.length) fail(`character ${i + 1} traced to nothing`);
+  const out = toPath(loops);
+  console.log(`    ${loops.length} loops, ${out.points} points, ${out.d.length} bytes, ${out.vw} x ${out.vh} units`);
+  return { ...out, loops: loops.length };
+};
+const marks = chars.map(cut);
 
 writeFileSync(
   OUT,
   `/**
- * THE CORNER SEAL'S MARK — the owner's 遠東, side by side and hollowed out.
- * Generated by \`npm run build:sealglyph\` from scripts/assets/logo-characters.svg;
- * do not edit by hand. Drawn inline and filled with \`currentColor\`, EVEN-ODD,
- * so that it inverts with its button as every other mark on this row does.
+ * THE CORNER SEAL'S MARKS — the owner's 遠 and 東, each hollowed out and each
+ * squared into its own box. Generated by \`npm run build:sealglyph\` from
+ * scripts/assets/logo-characters.svg; do not edit by hand. Drawn inline and
+ * filled with \`currentColor\`, EVEN-ODD, so they invert with their button as
+ * every other mark on this page does.
  *
- * ${loops.length} loops, ${points} points, ${d.length} bytes of path. The line
- * is ${LINE}px at a drawn width of ${MARK}.
+ * TWO GLYPHS, ONE BUTTON: the page draws a square round each and 5px between
+ * them, and the whole thing is one control (the owner's ask). The line is
+ * ${LINE}px at a drawn width of ${MARK}.
  */
 import type { CigGlyph } from './cigToggleGlyph';
 
-export const SEAL_GLYPH: CigGlyph = {
-  viewBox: '0 0 ${VW} ${VH}',
-  transform: '',
-  d: '${d}',
-  fillRule: 'evenodd',
-  width: ${MARK},
-  height: ${+((MARK * VH) / VW).toFixed(2)},
-};
+export const SEAL_GLYPHS: CigGlyph[] = [
+${marks
+  .map(
+    (m) => `  {
+    viewBox: '0 0 ${m.vw} ${m.vh}',
+    transform: '',
+    d: '${m.d}',
+    fillRule: 'evenodd',
+    width: ${MARK},
+    height: ${+((MARK * m.vh) / m.vw).toFixed(2)},
+  },`,
+  )
+  .join('\n')}
+];
 `,
 );
-console.log(`  ${loops.length} loops, ${points} points, ${d.length} bytes`);
-console.log(`  the mark is ${VW} x ${VH} units, drawn ${MARK} x ${+((MARK * VH) / VW).toFixed(2)}`);
-console.log(`wrote ${OUT}`);
+console.log(`wrote ${OUT}: ${marks.length} marks, ${marks.reduce((n, m) => n + m.d.length, 0)} bytes of path`);
 
 if (process.env.SEAL_PREVIEW) {
   mkdirSync('.tmp', { recursive: true });
-  const B = 66, RULE = 2, k = MARK / VW;
-  const svg = (px, fg, bg) =>
-    `<svg xmlns="http://www.w3.org/2000/svg" width="${px * 8}" height="${px * 8}" viewBox="0 0 ${B} ${B}">` +
-    `<rect width="${B}" height="${B}" fill="#010101"/><rect x="${RULE}" y="${RULE}" width="${B - 2 * RULE}" height="${B - 2 * RULE}" fill="${bg}"/>` +
-    `<g transform="translate(${(B - VW * k) / 2} ${(B - VH * k) / 2}) scale(${k})">` +
-    `<path d="${d}" fill="${fg}" fill-rule="evenodd"/></g></svg>`;
+  /** The button as the page draws it: two boxes, a gap, one control. */
+  const B = 66, RULE = 2, SPACE = 5;
+  const svg = (px, fg, bg) => {
+    const k = px / B;
+    const W = B * 2 + SPACE;
+    const boxes = marks
+      .map((m, i) => {
+        const ox = i * (B + SPACE), s = MARK / m.vw;
+        return (
+          `<rect x="${ox}" y="0" width="${B}" height="${B}" fill="${fg}"/>` +
+          `<rect x="${ox + RULE}" y="${RULE}" width="${B - 2 * RULE}" height="${B - 2 * RULE}" fill="${bg}"/>` +
+          `<g transform="translate(${ox + (B - MARK) / 2} ${(B - m.vh * s) / 2}) scale(${s})">` +
+          `<path d="${m.d}" fill="${fg}" fill-rule="evenodd"/></g>`
+        );
+      })
+      .join('');
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="${W * k * 8}" height="${B * k * 8}" viewBox="0 0 ${W} ${B}">${boxes}</svg>`;
+  };
   const tiles = [];
-  for (const px of [48, 66, 132]) {
+  for (const px of [48, 66, 120]) {
     for (const [fg, bg] of [['#010101', '#ffffff'], ['#ffffff', '#010101']]) {
-      const small = await sharp(Buffer.from(svg(px, fg, bg))).resize({ width: px, kernel: 'lanczos3' }).png().toBuffer();
-      tiles.push(await sharp(small).resize({ width: 240, kernel: 'nearest' }).png().toBuffer());
+      const w = Math.round((px * (B * 2 + SPACE)) / B);
+      const small = await sharp(Buffer.from(svg(px, fg, bg))).resize({ width: w, kernel: 'lanczos3' }).png().toBuffer();
+      tiles.push(await sharp(small).resize({ width: 460, kernel: 'nearest' }).png().toBuffer());
     }
   }
-  await sharp({ create: { width: 246 * 6, height: 248, channels: 3, background: '#cccccc' } })
-    .composite(tiles.map((t, i) => ({ input: t, left: i * 246 + 3, top: 4 })))
+  const meta = await sharp(tiles[0]).metadata();
+  await sharp({ create: { width: 466 * 3, height: 2 * (meta.height + 6) + 2, channels: 3, background: '#cccccc' } })
+    .composite(tiles.map((t, i) => ({ input: t, left: (i >> 1) * 466 + 3, top: (i & 1) * (meta.height + 6) + 3 })))
     .png()
     .toFile(`.tmp/seal-glyph-${LINE}.png`);
-  console.log(`  SEAL_PREVIEW: wrote .tmp/seal-glyph-${LINE}.png (48 / 66 / 132px, each way round)`);
+  console.log(`  SEAL_PREVIEW: wrote .tmp/seal-glyph-${LINE}.png (48 / 66 / 120px, each way round)`);
 }
