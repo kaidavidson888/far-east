@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { SplashLogin } from './splash/SplashLogin';
+import { loginEmerge, EMERGE } from '@/lib/loginEmerge';
+import { LOGIN_BOX, loginBoxRect } from '@/lib/loginBox';
 import {
   splashFrames,
   edgeImage,
@@ -70,6 +72,13 @@ export function SplashScreen({ next = '', notice = null }: {
   const edgeRef = useRef<HTMLImageElement | null>(null);
   const settleRef = useRef<HTMLImageElement | null>(null);
   const fillRef = useRef<HTMLImageElement | null>(null);
+  /*
+   * THE RECTANGLE COMES OUT OF THE SEAL (lib/loginEmerge.ts). It is grown
+   * once and handed the two footprints per frame, so a resize needs no
+   * rebuild, and it lives in a ref because paint() reads everything through
+   * refs and has no deps.
+   */
+  const emergeRef = useRef(loginEmerge());
   const inkLayerRef = useRef<HTMLDivElement | null>(null);
   const offRef = useRef<HTMLCanvasElement | null>(null);
   const fieldOnRef = useRef(false); // a splash text field is focused
@@ -156,14 +165,44 @@ export function SplashScreen({ next = '', notice = null }: {
      */
     const fill = fillRef.current;
     const fillA = inForm ? 1 : smooth(rampUp(p, SPLASH_FILL_FROM, SPLASH_FILL_TO));
+    // the square's own footprint on screen, which the emergence starts from
+    const sq = {
+      x: r.x + SPLASH_GEOM.box.x0 * r.w,
+      y: fy + SPLASH_GEOM.box.y0 * r.h,
+      w: (SPLASH_GEOM.box.x1 - SPLASH_GEOM.box.x0) * r.w,
+      h: (SPLASH_GEOM.box.y1 - SPLASH_GEOM.box.y0) * r.h,
+    };
     if (fillA > 0.004 && fill?.complete && fill.naturalWidth) {
+      /*
+       * THE PATCH IS LAID DOWN AT THE STRENGTH THE FIELD AROUND IT IS AT (the
+       * owner's "make the square that you are filling with the background
+       * pattern the same opacity as the pattern around it").
+       *
+       * It is cut from the LAST frame, where the cloud field is at full; drawn
+       * as it was, it put a rectangle of finished pattern into a field that is
+       * still coming up, and the patch read as a darker panel. The frames'
+       * own ramp is `cloudRise = 0.12 + 0.88 * p^0.7` (scripts/
+       * build-splash-frames.mjs), and in the middle of the picture that is
+       * what the red is multiplied by — the seal's own `sealFade` is the
+       * larger of the two only before p = 0.28, which is before this starts.
+       * So the ink is drawn at exactly that coverage.
+       *
+       * The white goes down first and at the patch's OWN alpha, because it is
+       * what erases the baked square; the pattern then comes back over it at
+       * the field's strength. Two passes, because one cannot both cover
+       * something and be half transparent at the same time.
+       */
+      const px0 = r.x + SPLASH_FILL.x0 * r.w;
+      const py0 = fy + SPLASH_FILL.y0 * r.h;
+      const pw = (SPLASH_FILL.x1 - SPLASH_FILL.x0) * r.w;
+      const ph = (SPLASH_FILL.y1 - SPLASH_FILL.y0) * r.h;
+      const rise = clamp01(0.12 + 0.88 * Math.pow(p, 0.7));
       ctx.save();
       ctx.globalAlpha = fillA;
-      ctx.drawImage(
-        fill, 0, 0, fill.naturalWidth, fill.naturalHeight,
-        r.x + SPLASH_FILL.x0 * r.w, fy + SPLASH_FILL.y0 * r.h,
-        (SPLASH_FILL.x1 - SPLASH_FILL.x0) * r.w, (SPLASH_FILL.y1 - SPLASH_FILL.y0) * r.h,
-      );
+      ctx.fillStyle = '#fcfcfc';
+      ctx.fillRect(px0, py0, pw, ph);
+      ctx.globalAlpha = fillA * (inForm ? 1 : rise);
+      ctx.drawImage(fill, 0, 0, fill.naturalWidth, fill.naturalHeight, px0, py0, pw, ph);
       ctx.restore();
     }
 
@@ -302,8 +341,31 @@ export function SplashScreen({ next = '', notice = null }: {
     // CSS filters a background-image far better than drawImage does, most of all
     // for the 1538px label art landing at ~43px — and the text visibly gained
     // weight the moment it swapped.
+    /*
+     * THE LOGIN RECTANGLE, COMING OUT OF THE SEAL. Drawn last, above the
+     * vignette, because the row itself is a DOM layer over this canvas and is
+     * not washed by it — under the wash the handover would be a visible
+     * change of contrast rather than nothing at all.
+     */
+    {
+      const rc = loginBoxRect(vw, sq.x + sq.w / 2, sq.y + sq.h / 2);
+      emergeRef.current.draw(ctx, inForm ? 1 : p, sq, { ...rc, h: LOGIN_BOX.h });
+    }
+
     const layer = inkLayerRef.current;
     if (layer) {
+      /*
+       * The row's own outline and paper are held back until the emergence has
+       * finished drawing them, and then taken over in one frame. Both are the
+       * same flat rectangle on the same whole pixels, so the swap is nothing
+       * to look at — unlike the raster-for-vector handovers this site has
+       * been caught by, there is no resampling on either side of it.
+       */
+      const grown = inForm || p >= EMERGE.redTo;
+      if (grown !== (layer.dataset.emerged === '')) {
+        if (grown) layer.dataset.emerged = '';
+        else delete layer.dataset.emerged;
+      }
       // Only touch the DOM when the number actually moves. The ramp is clamped
       // at 0 for the first 36% of the run and at 1 once latched, so most frames
       // have nothing to say — and a write here invalidates a subtree of a dozen

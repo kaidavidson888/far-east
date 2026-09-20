@@ -979,18 +979,33 @@ ul, ol { list-style: none; }
   z-index: 3;
   box-sizing: border-box;
   border-style: solid;
-  /* the artwork's own red, as the cigarette page's frame is. NOT --negative:
-     that token is warm grey and is never an error colour, per the spec. */
-  border-color: #ff0000;
-  background: #fcfcfc; /* the flat white the WebP frames are baked on */
+  border-color: transparent;
+  background: transparent;
 }
+/* THE CANVAS DRAWS THE RECTANGLE UNTIL IT HAS FINISHED COMING OUT OF THE SEAL
+   (lib/loginEmerge.ts), and the row takes it over in one frame. Both are the
+   same flat rectangle on the same whole pixels — the artwork's own #FF0000
+   and the flat white the frames are baked on — so there is nothing to see at
+   the handover. NOT --negative for the red: that token is warm grey and is
+   never an error colour, per the spec. */
+[data-emerged] .login-row {
+  border-color: #ff0000;
+  background: #fcfcfc;
+}
+/* The row’s own coordinate system: the rectangle’s OUTER corner. An
+   absolutely placed child of a bordered box is positioned from the padding
+   edge, so everything inside would otherwise sit a rule’s width in and down
+   from where lib/loginBox.ts puts it. */
+.login-row-stage { position: absolute; pointer-events: none; }
+.login-row-stage > * { pointer-events: auto; }
 .login-row-inner {
   position: absolute;
   box-sizing: border-box;
   border-style: solid;
-  border-color: #010101;
+  border-color: transparent;
   pointer-events: none;
 }
+[data-emerged] .login-row-inner { border-color: #010101; }
 /* THE WORD STANDS AT HALF STRENGTH AND GOES WHEN THE READER ARRIVES — the
    owner's 2026-09-20 "start the every instance of text in the box at 50%
    opacity with the text fading out completely as the user interacts with the
@@ -1054,7 +1069,7 @@ ul, ol { list-style: none; }
    footprint so no paper shows at the edge. */
 .login-row-flash {
   position: absolute;
-  inset: calc(-1 * var(--login-rule, 5px));
+  inset: 0;
   background: #ff0000;
   opacity: 0;
   transition: opacity 150ms ease;

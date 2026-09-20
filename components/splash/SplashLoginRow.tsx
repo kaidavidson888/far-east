@@ -304,18 +304,13 @@ export function SplashLoginRow({
    * the reader is.
    */
   /*
-   * THE ☁ KEEPS THE SIZE IT IS DRAWN AT. It was scaled with the type for an
-   * hour, at the 2.013-of-the-ink-height the old row draws it at, and the two
-   * asks then fight: at that proportion the mark is 107px wide and PHONE # at
-   * the rule's full height leaves 52 for it, so either the mark is clamped on
-   * top of the word or the word comes down a fifth and stops being "the same
-   * height as the altered vertical dashed line", which is the instruction.
-   * The instruction is about the TYPE, so the type gets the height and the
-   * mark stays the ornament it was drawn as. LOGIN_ROW.sigilOfType is kept
-   * beside it for the day that is wanted the other way round.
+   * THE ☁ IS THE TYPE'S OWN HEIGHT AND STANDS ON ITS AXIS — the owner's "have
+   * the sigil be centered on the same vertical axis as the text and make it
+   * the same height". Both are the row's common ink band, so the mark and the
+   * line it marks are one thing however long the word is.
    */
-  const sigilW = LOGIN_ROW.sigilDrawn;
-  const sigilH = sigilW * LOGIN_ROW.sigilAspect;
+  const sigilH = LOGIN_TYPE.band;
+  const sigilW = sigilH * LOGIN_ROW.sigilAspect;
   const SPACE = (320 / 1000) * ink.size;
   const caretX = Math.min(
     LOGIN_ROW.lineX1 - sigilW,
@@ -332,6 +327,14 @@ export function SplashLoginRow({
         '--login-rule': `${R}px`,
       } as React.CSSProperties}
     >
+      {/* EVERYTHING INSIDE IS PLACED FROM THE RECTANGLE'S OUTER CORNER.
+          An absolutely placed child of a bordered box is positioned from its
+          PADDING edge, so without this stage every mark in the row sat five
+          pixels in and five pixels down from where lib/loginBox.ts puts it —
+          measured, the rule landed at 19.31 for its 14.32 and the black
+          outline stood a clear 5px inside the red instead of on its inner
+          edge. It is the same trap the shelf's `inside()` was written for. */}
+      <div className="login-row-stage" style={{ inset: -R }}>
       {/* "a second rectangle outline on the inner edge of the red one this one
           in black" — the reservoir the word's ink comes out of and goes back
           into. It is a border rather than ink on the canvas because it never
@@ -369,7 +372,7 @@ export function SplashLoginRow({
           height: LOGIN_ROW.ruleH,
         }}
       >
-        {Array.from({ length: Math.ceil(LOGIN_ROW.ruleH / LOGIN_ROW.ruleTile) }, (_, i) => (
+        {Array.from({ length: LOGIN_ROW.ruleTiles }, (_, i) => (
           <span
             key={i}
             style={{
@@ -377,9 +380,11 @@ export function SplashLoginRow({
               width: LOGIN_ROW.ruleW,
               height: LOGIN_ROW.ruleTile,
               backgroundImage: `url(${splashAsset('blackbox.webp')})`,
-              backgroundSize: `${OLD_BOX_W}px ${OLD_BOX_W}px`,
+              // squeezed along its own length only, so the mark keeps the
+              // width it was drawn with and six of them fill the span exactly
+              backgroundSize: `${OLD_BOX_W}px ${OLD_BOX_W * LOGIN_ROW.ruleSqueeze}px`,
               backgroundPosition:
-                `${-SPLASH_GEOM.parts.email.x0 * OLD_BOX_W}px ${-SPLASH_GEOM.parts.email.y0 * OLD_BOX_W}px`,
+                `${-SPLASH_GEOM.parts.email.x0 * OLD_BOX_W}px ${-SPLASH_GEOM.parts.email.y0 * OLD_BOX_W * LOGIN_ROW.ruleSqueeze}px`,
             }}
           />
         ))}
@@ -439,7 +444,7 @@ export function SplashLoginRow({
           className="login-row-sigil-hit"
           style={{
             left: caretX,
-            top: dashTop - sigilH,
+            top: LOGIN_TYPE.top,
             width: sigilW,
             height: sigilH,
           }}
@@ -458,6 +463,7 @@ export function SplashLoginRow({
       {/* the rejection the box already had, in the new shape: the whole
           rectangle floods with the artwork's own red for half a second */}
       <div className="login-row-flash" aria-hidden data-on={rejected ? '' : undefined} />
+      </div>
 
       {error || notice ? (
         <p className="splash-fields-error login-row-say">{error ?? notice}</p>

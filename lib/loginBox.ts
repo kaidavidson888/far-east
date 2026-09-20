@@ -60,25 +60,40 @@ export const LOGIN_BOX = {
 } as const;
 
 /**
- * THE VERTICAL RULE IS AS TALL AS THE ROW, AND IT SETS EVERYTHING ELSE.
+ * THE VERTICAL RULE RUNS THE HEIGHT OF THE ROW.
  *
  * The owner's 2026-09-20 follow-up: "extend the vertical dashed line so the
- * top and bottom margins match the left margins", then "make the size of the
- * typed characters the same height as the altered vertical dashed line".
+ * top and bottom margins match the left margins", and then, when the first
+ * cut measured those margins from the rectangle's outer edge: "make sure the
+ * top and bottom of the vertical dashed lane both have the same margins with
+ * the black outline".
  *
- * The left margin is the old box's own 0.100 held as the absolute distance it
- * was — 14.32px from the rectangle's outer edge to the rule. Matched top and
- * bottom, the rule runs from 14.32 to 87 − 14.32, which is 58.36px tall.
+ * So the margin is measured from the BLACK OUTLINE, not from the red one, and
+ * the same margin is held on all three sides. The left one is the old box's
+ * own 0.100 held as the absolute distance it was — 14.32px from the outer
+ * edge, which is 7.32 inside the black — so the rule runs from 7 + 7.32 to
+ * 80 − 7.32 and is 58.36px tall.
  *
- * Everything in the row then falls out of that one measurement, and it falls
- * out CONSISTENTLY, which is what makes the ask a good one: the type's ink
- * spans exactly the rule, and the drawing's own rule-meets-dashes corner
- * (y1 === dY0 on every row of the old box) puts the dashed line at the rule's
- * foot — which is the typed text's own baseline-and-descender line. One
- * number, and the row is laid out.
+ * IT IS A WHOLE NUMBER OF TILES, AND THE TILE GIVES THE FRACTION. The drawn
+ * mark is a 10.31px length of dashed line whose ink runs edge to edge (sprite
+ * rows 63..93 of a 63..94 window, so a dash meets a dash at every join and the
+ * repeat is seamless) — but a PARTIAL tile is cut mid-dash, which leaves one
+ * end of the rule with a stub where the other has a full dash. The span wants
+ * 5.66 of them, so six are used and each is squeezed by 5.6% to fit: both ends
+ * are a whole dash, all three margins are the same 7.32, and what it costs is
+ * a dash pattern a twentieth shorter than drawn. Squeezing a drawn line along
+ * its own length is what the search bar already does to this same sprite.
  */
-const RULE_TOP = px(E.x0);
-const RULE_H = LOGIN_BOX.h - 2 * RULE_TOP;
+const MAX_ASC = 781; // I
+const MAX_DESC = 78; // P
+const TYPE_EM = px(E.y1 - E.y0) / ((703 + 78) / 1000);
+const BAND = ((MAX_ASC + MAX_DESC) / 1000) * TYPE_EM;
+const RULE_DRAWN = px(E.dY0 - E.y0);
+const RULE_MARGIN = px(E.x0) - (LOGIN_BOX.rule + LOGIN_BOX.inner);
+const RULE_H = LOGIN_BOX.h - 2 * (LOGIN_BOX.rule + LOGIN_BOX.inner) - 2 * RULE_MARGIN;
+const RULE_TILES = Math.max(1, Math.round(RULE_H / RULE_DRAWN));
+const RULE_TILE = RULE_H / RULE_TILES;
+const RULE_TOP = LOGIN_BOX.rule + LOGIN_BOX.inner + RULE_MARGIN;
 
 /** Where the row's marks sit, in px, from the rectangle's OUTER top-left. */
 export const LOGIN_ROW = {
@@ -92,7 +107,10 @@ export const LOGIN_ROW = {
   /** one tile of the drawn rule, which is repeated down the new length —
    *  EXTENDED, as the owner asked, not stretched: a dashed line made longer
    *  gains dashes, it does not gain longer dashes. */
-  ruleTile: px(E.dY0 - E.y0),
+  ruleTile: RULE_TILE,
+  ruleTiles: RULE_TILES,
+  /** how much the drawn tile is squeezed along its length to make them fit */
+  ruleSqueeze: RULE_TILE / RULE_DRAWN,
   /** where the word and what is typed both begin: the rule's ink end + the
    *  0.0023 of box that every row leaves after it. */
   textX: px(E.textX0),
@@ -111,54 +129,62 @@ export const LOGIN_ROW = {
    * The gaps between the pieces are the letters' own side bearings, which is
    * what makes a row of them read as a dashed line at all — pieces cut to each
    * letter's ADVANCE would meet and draw one continuous rule.
+   *
+   * It sits under the TYPE rather than at the rule's foot, because the type is
+   * back at its own size and centred (LOGIN_TYPE) — the drawing's own gap
+   * between a label's band and its dashes is 0.76px, and that is what is kept.
    */
-  dashY: RULE_TOP + RULE_H + (96 / 430 - E.dY0) * OLD_BOX_W,
+  dashY: LOGIN_BOX.h / 2 + BAND / 2 + (96 / 430 - E.dY0) * OLD_BOX_W,
   dashStroke: (5 / 430) * OLD_BOX_W,
   /**
-   * THE ☁ IS SIZED OFF THE TYPE, at the proportion the drawing gives it.
-   *
-   * In the old row the mark is 20.76 wide beside a label whose ink is 10.31
-   * tall — it is 2.013 times the type's own height. The type in this row is
-   * the rule's height now rather than 10px, so holding the mark at its drawn
-   * 20.76 would leave a caret a fifth the size of the letters it is standing
-   * between. The RATIO is what the drawing actually states, so the ratio is
-   * what is kept, and the mark grows and shrinks with the line it marks.
+   * THE ☁ IS THE HEIGHT OF THE TYPE AND STANDS ON ITS AXIS (the owner's
+   * 2026-09-20 "have the sigil be centered on the same vertical axis as the
+   * text and make it the same height"). So its height is the row's own ink
+   * band and its width follows the mark's drawn 126 x 60 — it comes out at
+   * 23.8 x 11.3, which is within a pixel and a half of the 20.76 the old row
+   * drew it at, the difference being that it is now stated as a relationship
+   * rather than as a number.
    */
-  sigilDrawn: px(E.cloudX1 - E.mid),
-  sigilOfType: px(E.cloudX1 - E.mid) / px(E.y1 - E.y0),
-  sigilAspect: 60 / 126,
+  sigilAspect: 126 / 60,
 } as const;
 
 /**
- * THE ROW'S TYPE, AND WHY IT IS ONE NOMINAL SIZE WITH A SHRINK UNDER IT.
+ * THE ROW'S TYPE: ONE SIZE FOR EVERY WORD, CENTRED IN THE BOX.
  *
- * ROW_EM is the point size at which a word's ink fills the rule exactly. It is
- * worked out from the FACE'S OWN EXTREMES rather than from any one word — the
- * tallest ascent it carries is the I's 781 and the deepest descent the P's 78 —
- * so no character of any word can poke outside the rule's span. The baseline
- * follows from the same two numbers and is FIXED for the row: a shrunken word
- * sits on the line with the others rather than floating to its own centre,
- * which is what a line of type does.
+ * The owner's 2026-09-20 correction, after a round at the rule's full height:
+ * "revert the phone # text to the original size just center it on the vertical
+ * axis and use that same text size for each new text element."
  *
- * A word too long for the line is set smaller, the box's own `fit` rule and the
- * search bar's. That is why VERIFICATION CODE is about half the height of
- * PHONE # — the owner's instruction is that the type is as tall as the rule,
- * and the only honest way to keep that for a word twice as long is to let the
- * width decide.
+ * The original size is the one the old box set a row in, matched by INK as the
+ * shelf and the cigarette pages match all their type: PHONE #'s ink is the
+ * label band the drawing gives it (10.31px), and its tallest and deepest
+ * characters are the H's 703 and the P's 78, so its point size is 13.20. That
+ * one size is then used for every word — which is what the instruction asks
+ * for, and is also the only way a prompt can become an answer in the same
+ * place without the line jumping as it does.
+ *
+ * THE BAND THAT IS CENTRED IS THE FACE'S, NOT ANY ONE WORD'S. Centring each
+ * word's own ink would move the baseline between PHONE # and EMAIL, because
+ * one has a descender and the other has none. The band is the tallest ascent
+ * the face carries (the I's 781) over the deepest descent (the P's 78), so the
+ * baseline is fixed, no character can leave the band, and every word sits on
+ * the one line.
  */
-const MAX_ASC = 781; // I
-const MAX_DESC = 78; // P
+
 export const LOGIN_TYPE = {
-  em: RULE_H / ((MAX_ASC + MAX_DESC) / 1000),
-  baseline: RULE_TOP + (RULE_H * MAX_ASC) / (MAX_ASC + MAX_DESC),
+  em: TYPE_EM,
+  /** the common ink band, centred on the box's own middle */
+  band: BAND,
+  top: LOGIN_BOX.h / 2 - BAND / 2,
+  baseline: LOGIN_BOX.h / 2 - BAND / 2 + (MAX_ASC / 1000) * TYPE_EM,
   /**
    * The room one line of it has — LESS THE ☁ AND THE SPACE BEFORE IT, because
-   * the mark has to stand at the end of the line too. It costs a short word
-   * nothing (PHONE # wants 325 of the 356 that leaves) and only bites on a
-   * word that was going to be shrunk anyway.
+   * the mark has to stand at the end of the line too. At this size it never
+   * bites on a prompt (VERIFICATION CODE, the longest, wants 143 of 360) and
+   * only on a typed run of forty characters or more.
    */
   lineW: Math.round(3 * OLD_BOX_W) - 2 * px(E.x0) - (px(E.textX0) - px(E.x0))
-    - px(E.cloudX1 - E.mid) - 0.32 * (RULE_H / ((781 + 78) / 1000)),
+    - BAND * (126 / 60) - 0.32 * TYPE_EM,
   /** under this it stops reading, whatever the room (the site's own floor) */
   min: 9,
 } as const;
