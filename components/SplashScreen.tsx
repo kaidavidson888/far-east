@@ -72,6 +72,8 @@ export function SplashScreen({ next = '', notice = null }: {
   const edgeRef = useRef<HTMLImageElement | null>(null);
   const settleRef = useRef<HTMLImageElement | null>(null);
   const fillRef = useRef<HTMLImageElement | null>(null);
+  /** the patch, composed against its own white so it REPLACES rather than overlays */
+  const patchRef = useRef<HTMLCanvasElement | null>(null);
   /*
    * THE RECTANGLE COMES OUT OF THE SEAL (lib/loginEmerge.ts). It is grown
    * once and handed the two footprints per frame, so a resize needs no
@@ -187,27 +189,41 @@ export function SplashScreen({ next = '', notice = null }: {
        * larger of the two only before p = 0.28, which is before this starts.
        * So the ink is drawn at exactly that coverage.
        *
-       * TWO PASSES, AND THE PATTERN'S IS NOT SCALED BY THE ERASE. The white
-       * goes down at `fillA`, because that is what dissolves the baked square;
-       * the pattern then comes back at the FIELD's strength, full stop. Drawn
-       * at `fillA * rise` instead, the patch was lighter than its surroundings
-       * for the whole of the crossfade — the square's white interior showing
-       * through the gap — which is exactly the panel the owner could see. At
-       * every point of the ramp the ink is now at the same coverage as the
-       * frame beside it, and only the square underneath is fading.
+       * IT IS BUILT WHOLE OFF-SCREEN AND CROSS-FADED IN, and that is the only
+       * way it can be right. Drawn straight onto the canvas the patch sits
+       * OVER the frame's own pattern rather than replacing it, so for the
+       * whole of the crossfade the region carried both — the patch at `rise`
+       * plus what was already there at `1 - fillA` — and read as a darker
+       * panel in the middle of a field that was still coming up. Composed
+       * against its own white first, the region is exactly `rise` of the
+       * pattern at every point of the ramp, the same coverage as the frame
+       * beside it, and `fillA` only decides how much of the old square still
+       * shows through underneath.
        */
       const px0 = r.x + SPLASH_FILL.x0 * r.w;
       const py0 = fy + SPLASH_FILL.y0 * r.h;
       const pw = (SPLASH_FILL.x1 - SPLASH_FILL.x0) * r.w;
       const ph = (SPLASH_FILL.y1 - SPLASH_FILL.y0) * r.h;
       const rise = clamp01(0.12 + 0.88 * Math.pow(p, 0.7));
-      ctx.save();
-      ctx.globalAlpha = fillA;
-      ctx.fillStyle = '#fcfcfc';
-      ctx.fillRect(px0, py0, pw, ph);
-      ctx.globalAlpha = inForm ? 1 : rise;
-      ctx.drawImage(fill, 0, 0, fill.naturalWidth, fill.naturalHeight, px0, py0, pw, ph);
-      ctx.restore();
+      const po = patchRef.current ?? (patchRef.current = document.createElement('canvas'));
+      const bw = Math.max(1, Math.round(pw * dpr));
+      const bh = Math.max(1, Math.round(ph * dpr));
+      if (po.width !== bw || po.height !== bh) { po.width = bw; po.height = bh; }
+      const pc = po.getContext('2d');
+      if (pc) {
+        pc.setTransform(dpr, 0, 0, dpr, 0, 0);
+        pc.imageSmoothingEnabled = true;
+        pc.imageSmoothingQuality = 'high';
+        pc.globalAlpha = 1;
+        pc.fillStyle = '#fcfcfc';
+        pc.fillRect(0, 0, pw, ph);
+        pc.globalAlpha = inForm ? 1 : rise;
+        pc.drawImage(fill, 0, 0, fill.naturalWidth, fill.naturalHeight, 0, 0, pw, ph);
+        ctx.save();
+        ctx.globalAlpha = fillA;
+        ctx.drawImage(po, 0, 0, bw, bh, px0, py0, pw, ph);
+        ctx.restore();
+      }
     }
 
     // Continue the red design out to the screen edges. edge.webp is the box-free

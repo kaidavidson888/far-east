@@ -291,7 +291,9 @@ export function SplashLoginRow({
   // the word steps aside for the caret: while the field has focus or anything
   // is typed, the row is the reader's, not the prompt's
   const wordOut = focused || value.length > 0;
-  const dashTop = LOGIN_ROW.dashY;
+  // the dashes ride the foot of what is typed, which is centred and changes
+  // size with every character, so they move with it
+  const dashTop = LOGIN_TYPED.centre + typed.h / 2 + LOGIN_ROW.dashDrop;
   const textLeft = LOGIN_ROW.textX;
   /*
    * THE ☁ STANDS WHERE THE NEXT LETTER WILL GO (the owner's "a sigil which
@@ -309,10 +311,9 @@ export function SplashLoginRow({
    * the same height". Both are the row's common ink band, so the mark and the
    * line it marks are one thing however long the word is.
    */
-  // the mark is the band of the line it marks — the rule's height while the
-  // line can hold it, and down with the type when it cannot
-  const sigilH = wordOut ? typed.h : LOGIN_ROW.sigilH;
-  const sigilW = sigilH * LOGIN_ROW.sigilAspect;
+  // the mark does not move or change size, ever: fixed furniture
+  const sigilH = LOGIN_ROW.sigilH;
+  const sigilW = LOGIN_ROW.sigilW;
   const SPACE = (320 / 1000) * ink.size;
   const caretX = Math.min(
     LOGIN_ROW.lineX1 - sigilW,
@@ -413,7 +414,7 @@ export function SplashLoginRow({
             // the size, measured in Chrome — the figure the shelf places all
             // its type by.
             left: textLeft,
-            top: LOGIN_TYPED.baseline - typedSize * BASELINE,
+            top: typed.top + typed.ascent - typedSize * BASELINE,
             width: LOGIN_ROW.lineX1 - textLeft,
             height: typedSize,
             fontSize: typedSize,
@@ -446,7 +447,7 @@ export function SplashLoginRow({
           className="login-row-sigil-hit"
           style={{
             left: caretX,
-            top: LOGIN_BOX.h / 2 - sigilH / 2,
+            top: LOGIN_ROW.sigilTop,
             width: sigilW,
             height: sigilH,
           }}

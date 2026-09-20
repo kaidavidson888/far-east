@@ -93,6 +93,12 @@ const RULE_MARGIN = px(E.x0) - (LOGIN_BOX.rule + LOGIN_BOX.inner);
 const RULE_H = LOGIN_BOX.h - 2 * (LOGIN_BOX.rule + LOGIN_BOX.inner) - 2 * RULE_MARGIN;
 const RULE_TILES = Math.max(1, Math.round(RULE_H / RULE_DRAWN));
 const RULE_TILE = RULE_H / RULE_TILES;
+/**
+ * How much of the rule the ☁ is. Measured off the row the owner approved —
+ * a ten-digit number, where the mark had come down to 69.4 x 33.1 — and then
+ * held there whatever is typed.
+ */
+const SIGIL_OF_RULE = 0.5665;
 const RULE_TOP = LOGIN_BOX.rule + LOGIN_BOX.inner + RULE_MARGIN;
 
 /** Where the row's marks sit, in px, from the rectangle's OUTER top-left. */
@@ -143,17 +149,25 @@ export const LOGIN_ROW = {
    * foot of that band — the drawing's own gap between a label's band and its
    * dashes is 0.76px, and that is what is kept.
    */
-  dashY: LOGIN_BOX.h / 2 + RULE_H / 2 + (96 / 430 - E.dY0) * OLD_BOX_W,
+  dashDrop: (96 / 430 - E.dY0) * OLD_BOX_W,
   dashStroke: (5 / 430) * OLD_BOX_W,
   /**
-   * THE ☁ IS AS TALL AS THE VERTICAL DASHED LINE, ON THE TYPE'S OWN AXIS (the
-   * owner's "have the sigil be centered on the same vertical axis as the
-   * text", then "make the sigil height the same size as the vertical dashed
-   * line"). Its width follows the mark's drawn 126 x 60, so it comes out
-   * 122.6 x 58.4 — which is a quarter of the line, and is why what is typed
-   * is fitted WITHOUT reserving room for it: see LOGIN_TYPED.
+   * THE ☁ NEVER CHANGES SIZE (the owner's "keep the exact top and bottom
+   * margins and scale that the sigil currently has permanently", pointing at
+   * a row with a ten-digit number in it).
+   *
+   * It rode the type for a while — the same height as whatever it stood
+   * beside — which meant it grew and shrank with every character. The size it
+   * had at a full line is the size it keeps: 0.5665 of the vertical rule, so
+   * 69.4 x 33.1 with 27.0 above and below. Stated as a fraction of the rule
+   * rather than as two numbers, because everything else in this row is, and
+   * because the rule is the one measurement the box is laid out from.
+   *
+   * It is fixed furniture now and the TYPE is what gives: see LOGIN_TYPED.
    */
-  sigilH: RULE_H,
+  sigilH: RULE_H * SIGIL_OF_RULE,
+  sigilW: RULE_H * SIGIL_OF_RULE * (126 / 60),
+  sigilTop: (LOGIN_BOX.h - RULE_H * SIGIL_OF_RULE) / 2,
   sigilAspect: 126 / 60,
 } as const;
 
@@ -209,27 +223,35 @@ export const LOGIN_TYPE = {
  * way to a large black one in the same place — which is the picture, the
  * prompt being a whisper and the answer being the thing.
  *
- * THE ☁ IS FITTED WITH IT, AND SHRINKS WITH IT. At the rule's height the mark
- * is 122.6px wide — near a third of the line — so a ten-digit number and a
- * full-size mark cannot both stand on it: left to clamp, the mark came down on
- * top of the last three digits, which is what the first cut of this did.
+ * THE ☁ IS FIXED FURNITURE AND THE TYPE IS WHAT GIVES. The mark never changes
+ * size, so its 122.6px is taken off the line before the type is fitted at all
+ * — a third of it, spoken for. A six-digit code then comes out at 54 of the
+ * rule's 58; a ten-digit number at 33; a long address smaller again, as any
+ * line of type does. Reserving it is what keeps the mark off the letters:
+ * left to clamp at the line's end it came down on top of the last three
+ * digits, which is what the first cut of this did.
  *
- * So the line is solved for BOTH at once — `size x (advance + a space + the
- * mark) <= the line` — and the mark is the type's own band, as it has been
- * since the owner put it on the text's axis. A six-digit code comes out at
- * 55 of the rule's 58; a long address comes down further, as any line of type
- * does. Both are as tall as the rule wherever the line can hold them, and
- * neither ever lands on the other.
+ * AND IT STAYS CENTRED AS IT SHRINKS (the owner's "even as the scale of the
+ * user typed words gets smaller they are still centered on the vertical
+ * axis"). So what is typed hangs from `centre` — its own ink band placed
+ * about the box's middle line — where the PROMPTS hang from a fixed baseline
+ * instead. The two want different things and it is worth saying why: the
+ * prompts are all ONE size, so a fixed baseline centres them and keeps them
+ * on a line with each other; what is typed changes size with every character,
+ * and a fixed baseline would walk it down the box as it shrank.
  */
-const MARK_EM = (126 / 60) * ((MAX_ASC + MAX_DESC) / 1000);
 export const LOGIN_TYPED = {
   em: RULE_H / ((MAX_ASC + MAX_DESC) / 1000),
   band: RULE_H,
   top: LOGIN_BOX.h / 2 - RULE_H / 2,
   baseline: LOGIN_BOX.h / 2 - RULE_H / 2 + (MAX_ASC / 1000) * (RULE_H / ((MAX_ASC + MAX_DESC) / 1000)),
+  /** its own ink band is centred here, at whatever size it ends up */
+  centre: LOGIN_BOX.h / 2,
   lineW: Math.round(3 * OLD_BOX_W) - px(E.x0) - (px(E.x0) + px(E.ruleX1 - E.x0) + RULE_MARGIN),
-  /** the mark's width, as a multiple of the size — counted against the line */
-  mark: MARK_EM + 0.32,
+  /** the mark's own width, in px, off the line before anything is fitted */
+  reserve: RULE_H * (126 / 60),
+  /** and a word space between the run and the mark, which does scale */
+  mark: 0.32,
   min: 9,
 } as const;
 
@@ -278,15 +300,20 @@ export function fitRow(
   text: string,
   ink: { asc: Record<string, number>; desc: Record<string, number>; adv: Record<string, number>; em: number },
   /** LOGIN_TYPE for a prompt, LOGIN_TYPED for what the reader types. */
-  spec: { em: number; baseline: number; lineW: number; min: number; mark?: number } = LOGIN_TYPE,
+  spec: {
+    em: number; baseline: number; lineW: number; min: number;
+    mark?: number; reserve?: number; centre?: number;
+  } = LOGIN_TYPE,
 ) {
   let w = 0;
   for (const c of text) w += ink.adv[c] ?? 700;
-  // the ☁ stands at the end of the line and is a multiple of the size, so it
-  // is solved for with the run rather than clamped on top of it afterwards
+  // the ☁ stands at the end of the line and never changes size, so its width
+  // comes off the line before anything is fitted, and the word space after
+  // the run — which does scale — is counted with the run
+  const room = Math.max(1, spec.lineW - (spec.reserve ?? 0));
   const advEm = w / ink.em + (spec.mark ?? 0);
-  const size = advEm * spec.em > spec.lineW
-    ? Math.max(spec.min, spec.lineW / Math.max(1e-6, advEm))
+  const size = advEm * spec.em > room
+    ? Math.max(spec.min, room / Math.max(1e-6, advEm))
     : spec.em;
   let a = 0;
   let d = 0;
@@ -301,8 +328,15 @@ export function fitRow(
     w: (w / ink.em) * size,
     ascent: (a / ink.em) * size,
     drop: (d / ink.em) * size,
-    /** its ink's own top, on the row's fixed baseline */
-    top: spec.baseline - (a / ink.em) * size,
+    /**
+     * Where its ink sits. `centre` places the run's OWN band about a line, so
+     * it stays centred at whatever size it has shrunk to; without it the run
+     * hangs from a fixed baseline, which is what keeps the five prompts — all
+     * one size — on a line with one another.
+     */
+    top: spec.centre !== undefined
+      ? spec.centre - (((a + d) / ink.em) * size) / 2
+      : spec.baseline - (a / ink.em) * size,
     h: ((a + d) / ink.em) * size,
   };
 }
