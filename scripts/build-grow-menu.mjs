@@ -812,40 +812,20 @@ const keep = new Float32Array(MW * MH);
   for (let i = 0; i < MW * MH; i++) if (solid[i] && dEdge[i] <= CONTOUR + 1) {
     keep[i] = Math.min(1, CONTOUR + 1.2 - dEdge[i]);
   }
-  // the veins: two short runs up from the exits, with their own twigs
-  const vrng = mulberry32(SEED + 7);
-  const inMark = (p) => ({ x: p.x * SS - MX, y: p.y * SS - MY }); // page -> mark device
-  const vTop = inMark({ x: BADGE.size - BADGE_RULE - MARK_SIDE_AIR, y: ROW_MIDDLE + SHIFT });
-  const vDown = inMark({ x: BADGE.x + BADGE.size / 2, y: BADGE.y + BADGE.size - BADGE_RULE + SHIFT });
-  const peak = { x: MW * 0.5, y: MH * 0.28 };
-  const veins = [];
-  for (const start of [vTop, vDown]) {
-    const way = [
-      { x: start.x, y: start.y },
-      { x: (start.x + peak.x) / 2 + (vrng() * 2 - 1) * MW * 0.06, y: (start.y + peak.y) / 2 },
-      { x: peak.x + (vrng() * 2 - 1) * MW * 0.05, y: peak.y + MH * 0.12 },
-    ];
-    veins.push(channel({ pts: spline(way, 0.5), w0: 1.5, w1: 0.9, t0: 0, speed: 1 }));
-  }
-  const vInk = new Ink(MW, MH, 1);
-  for (const v of veins) {
-    vInk.stroke(v, v.len, { scale: 1 });
-    // one twig off each, ending in a curl: the seal's own language, at this size
-    const at = atArc(v, v.len * 0.55);
-    const side = vrng() < 0.5 ? 1 : -1;
-    const dir = at.dir + side * 0.8;
-    const tip = { x: at.x + Math.cos(dir) * MW * 0.16, y: at.y + Math.sin(dir) * MW * 0.16 };
-    const pts = spline([{ x: at.x, y: at.y }, tip], 0.5);
-    pts.push(...curl(tip, dir, MW * 0.07, 0.8, side, 0.5));
-    vInk.stroke(channel({ pts, w0: 1.1, w1: 0.7, t0: 0, speed: 1 }), 1e9, { scale: 1 });
-  }
-  for (let i = 0; i < MW * MH; i++) {
-    const v = Math.min(vInk.a[i], mark.body[i]);
-    if (v > keep[i]) keep[i] = v;
-    // the tipi stays: it is the mark's one detail, and its white rule needs
-    // something to be a rule against
-    if (mark.tipi[i] > keep[i]) keep[i] = mark.tipi[i];
-  }
+  /**
+   * AND NOTHING ELSE. There were VEINS in here — two runs up from the two
+   * spouts with a curl on each, grown by the same generator as the branches
+   * outside, so that what the mark kept was of a piece with what left it. The
+   * owner: "remove the stray black stroke inside the drained mountain". At
+   * this size they were not filigree; a 24px mountain has room for its own
+   * outline and nothing more, and the longer of the two read as a scratch
+   * from the base to the summit. The generator is still here for anything
+   * bigger — it is `sprout` and `curl` in scripts/lib/ink-growth.mjs.
+   *
+   * The tipi stays: it is the mark's one detail, and the white rule round it
+   * needs something to be a rule against.
+   */
+  for (let i = 0; i < MW * MH; i++) if (mark.tipi[i] > keep[i]) keep[i] = mark.tipi[i];
 }
 /**
  * HOW FAR THROUGH THE MOUNTAIN EACH PIXEL IS FROM THE TWO EXITS, 0..1 — the

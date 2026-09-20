@@ -132,21 +132,24 @@ const REVERSE_RATE = 2;
 const PLAY_RATE: Record<string, number> = { bar: 1, grow: 0.8 };
 
 /**
- * WHICH MENU STAYS OPEN ONCE IT HAS OPENED — the owner's 2026-09-19 "make the
- * last frame of the animation the new default after the full animation plays
- * regardless of user input".
+ * WHICH MENU CLOSES ONLY BY ITS OWN BUTTON — the owner's 2026-09-19 asks, in
+ * the order they came: "make the last frame of the animation the new default
+ * after the full animation plays regardless of user input", and then "on click
+ * on the mountain button everything retracts and the animation plays in
+ * reverse".
  *
- * A latched menu is a ONE-WAY DOOR. Hovering it runs it; leaving mid-run no
- * longer turns it around; pressing it once open does nothing; pressing the
- * page does nothing; pressing a word that goes nowhere does nothing. The last
- * frame is where it stays, which on the landing page means the six words stand
- * and the mountain in the button stays drained — the state the owner's
- * previous ask described, now the resting one. A fresh page load is the only
- * thing that puts it back, since nothing is stored between them.
+ * So a latched menu's last frame IS its resting state, and the ONE thing that
+ * takes it back is a press on the button itself: leaving mid-run no longer
+ * turns it around, pressing the page does nothing, pressing a word that goes
+ * nowhere does nothing. On the landing page that means the six words stand and
+ * the mountain in the button stays drained until the reader presses the
+ * mountain again, and then the whole thing runs backwards — the branches
+ * retract, the ink comes home and the mark fills, which is the same frames
+ * played the other way.
  *
- * The BAR menu is not latched: on the cigarette pages it is the only way home,
- * it sits over the page's own logo, and closing it is how a reader gets the
- * page back.
+ * The BAR menu is not latched: on the cigarette pages anything pressed
+ * elsewhere closes it, because it sits over the page's own logo and that is
+ * how a reader gets the page back.
  */
 const LATCH: Record<string, boolean> = { bar: false, grow: true };
 
@@ -406,11 +409,13 @@ export function LogoMenu({ menu = 'bar', stop = 'base' }: { menu?: MenuName; sto
       return;
     }
     if (now === 'open') {
-      if (!latched) goReverse();
+      // THE BUTTON IS THE WAY BACK, latched or not: "on click on the mountain
+      // button everything retracts and the animation plays in reverse".
+      goReverse();
       return;
     }
     void goForward(); // idle, or turning a retraction around
-  }, [goForward, goReverse, latched, paint, setPhase, FRAMES]);
+  }, [goForward, goReverse, paint, setPhase, FRAMES]);
 
   /**
    * The mark in the button. It is a still of the animation's first frame, so

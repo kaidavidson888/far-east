@@ -287,7 +287,13 @@ artwork to fit a frame — that scales the margins with it, which is the thing b
     ink holds longest and the silhouette keeps its own outline as it empties; and a `keep`
     field protects the contour, the tipi with its white rule, and **two veins grown by the
     same generator, rooted at the same two spouts, with a curl on each** — order from the
-    physics, residue in the branches' own grammar.
+    physics. **The residue is the outline and the tipi, and nothing else**: there were
+    VEINS in there too — two runs up from the two spouts with a curl on each, grown by the
+    same generator as the branches outside so that what the mark kept was of a piece with
+    what left it — and the owner had them out ("remove the stray black stroke inside the
+    drained mountain"). At 24px they were not filigree: the longer of the two read as a
+    scratch from the base to the summit. A mountain this small has room for its own outline
+    and no more; the generator is still there for anything bigger.
   - **THE SKY FILLS BEFORE ANYTHING LEAVES THE BOX, AND THE MARK STAYS DRAINED UNTIL THE
     MENU IS CLOSED** (the owner's asks: "make it so the sky fills before it spreads out of
     the outline"; "the mountain remains drained at the end until the animation is fully
@@ -302,8 +308,8 @@ artwork to fit a frame — that scales the margins with it, which is the thing b
     leaves at 20, 158ms later as played),
     **2.08 to 0 over the growth** (the level falls back down the sky and carries on into the
     mountain), **and then stays at 0**. So the mark is drained for as long as the menu is
-    open. Measured across the run: the mark's ink rises 1604 → 2371, falls to 409 by
-    frame 102 and holds there to the last frame, with ZERO frames anywhere after the peak
+    open. Measured across the run: the mark's ink rises 1604 → 2371, falls to 335 by
+    frame 103 and holds there to the last frame, with ZERO frames anywhere after the peak
     in which it rises again.
     The dial's ends are kept clear of the soft edge (0.08..0.90, not 0..1) so that the
     resting frame is SOLID and the drained one is empty rather than half-grey.
@@ -313,23 +319,26 @@ artwork to fit a frame — that scales the margins with it, which is the thing b
     stays there as a white keyline — the same keyline the drain ends on. (Left to the
     antialiasing the edge came out a half-covered grey seam that looked like this by
     accident; this is the same picture, measured.)
-  - **THE LANDING MENU IS A ONE-WAY DOOR — IT DOES NOT CLOSE** (the owner's 2026-09-19
-    "make the last frame of the animation the new default after the full animation plays
-    regardless of user input"). `LATCH` in `LogoMenu` is the table, beside `PLAY_RATE` and
-    for the same reason: it is a judgement about one menu, not a property of the drawing.
-    For a latched menu, leaving mid-run no longer turns it around, pressing it once open
-    does nothing, pressing the page does nothing, and pressing a word that goes nowhere
-    does nothing; a press MID-RUN still skips to the end, because that lands on the same
-    last frame the run was going to anyway. So after one run the landing page's resting
-    state is the six words standing and the mountain drained, and only a fresh page load
-    puts it back — nothing is stored between loads. **The BAR menu is not latched**: on the
-    cigarette pages it is the only way home and it sits over the page's own logo.
-    - **This is what makes the drain hold, and before the latch it did not.** The close is
-      a REVERSE SCRUB of the same frames, so it necessarily refills the mark on the way
-      back: measured, 99% refilled 1.8s before the menu was shut, and the last 683ms played
-      the sky-fill backwards, flashing a near-solid black button just before rest. If the
-      landing menu is ever un-latched, that is what comes back, and the fix is to hold the
-      drained mark over the reverse rather than to re-bake anything.
+  - **THE LANDING MENU CLOSES ONLY BY ITS OWN BUTTON** — two asks of the owner's, in the
+    order they came: "make the last frame of the animation the new default after the full
+    animation plays regardless of user input", and then "on click on the mountain button
+    everything retracts and the animation plays in reverse". `LATCH` in `LogoMenu` is the
+    table, beside `PLAY_RATE` and for the same reason: it is a judgement about one menu,
+    not a property of the drawing. For a latched menu, leaving mid-run no longer turns it
+    around, pressing the page does nothing, and pressing a word that goes nowhere does
+    nothing; a press MID-RUN still skips to the end, because that lands on the same last
+    frame the run was going to anyway. **The one thing that takes it back is a press on the
+    button**, which runs the whole thing backwards at 2x — the branches retract, the ink
+    comes home and the mark fills, being the same frames the other way. So the landing
+    page's resting state after a run is the six words standing and the mountain drained,
+    until the reader presses the mountain again. **The BAR menu is not latched**: on the
+    cigarette pages anything pressed elsewhere closes it, because it sits over the page's
+    own logo and that is how a reader gets the page back.
+    - **Worth knowing about the close, since it is a REVERSE SCRUB of the same frames**: it
+      necessarily replays the sky fill backwards at the end, so the button floods black for
+      about 680ms just before it settles. That is what "the animation plays in reverse"
+      gives; making the close anything other than those frames run backwards would mean
+      baking a second set.
   - **THE CANVAS STARTS ABOVE THE BUTTON.** The growth reaches over the top row, so the
     canvas is given that room (`SHIFT`, measured off the finished network, capped at the
     margin) and the button sits at 0,`SHIFT` inside it. **`place` is therefore where the
