@@ -1211,7 +1211,12 @@ writeFileSync(
       badge: {
         rule: BADGE_RULE,
         // the mark as the page draws it at rest, in the canvas's coordinates
-        mark: { src: '/growmenu/badge.webp', x: +(MX / SS).toFixed(2), y: +(MY / SS).toFixed(2), w: MARK_W, h: +MARK_H.toFixed(2) },
+        // THE SIZE IS THE RASTER'S OWN, not the size it was worked out from:
+        // the mark is rounded to whole device px when it is drawn, and a page
+        // that then draws it at the unrounded height (23.94 against the baked
+        // 24) resamples every row of it for a twentieth of a pixel. Whole
+        // pixels, as everywhere else here.
+        mark: { src: '/growmenu/badge.webp', x: MX / SS, y: MY / SS, w: MW / SS, h: MH / SS },
       },
       boxes: BOXES,
       stops: { base: { frames: FRAMES, viewW: VIEW_W, boxes: BOXES.map((b) => b.id) } },

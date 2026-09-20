@@ -2136,7 +2136,8 @@ ul, ol { list-style: none; }
    box"). The menu's geometry says so with `badge`
    (lib/growmenu-geometry.json, written by `npm run build:growmenu`), and
    LogoMenu draws the trigger as this instead of an invisible hit over a logo:
-   30px square, a black rule, and the mark inside it as a picture.
+   33px square — the plus's 30 and a tenth, the owner's "make the button 10%
+   bigger" — with a black rule and the mark inside it as a picture.
 
    (It was a bold I from the owner's face for a day, which had to be placed by
    measuring its ink in the page so the hole in its ring landed on a whole

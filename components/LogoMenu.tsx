@@ -6,40 +6,37 @@ import barGeometry from '@/lib/menu-geometry.json';
 import growGeometry from '@/lib/growmenu-geometry.json';
 
 /**
- * The 遠東 logo, which unfolds into a menu.
+ * A mark that unfolds into a menu.
  *
- * Hovering the characters (or pressing them, on a touch screen) draws a box
- * around them and unfolds the menu. Pressing the logo while that is running
- * skips to the end. Once open it stays open — hovering away does not close it
- * — until the logo is pressed again or something else on the page is, and then
- * it runs backwards at twice speed.
+ * Hovering it (or pressing it, on a touch screen) unfolds the menu; pressing
+ * while that runs skips to the end. What happens after that is per menu — see
+ * LATCH: the bar closes again, the landing page's does not.
  *
- * WHY A CANVAS. The source is a GIF, and a GIF cannot be seeked, paused or
- * played backwards. Its frames are baked out by the build and scrubbed here,
- * the same way the splash animation works.
- *
- * WHY IT PAINTS OVER THE LOGO. The first frame IS the logo, baked to land on
- * the page's own to a fraction of a pixel, so the canvas can simply cover it
- * while open rather than the two having to be swapped.
+ * WHY A CANVAS. The frames have to be seeked, paused and run backwards, and
+ * neither a GIF nor a CSS animation can be; they are baked out by the build
+ * and scrubbed here, the same way the splash works.
  *
  * THERE ARE TWO MENUS, AND THIS DRAWS EITHER. They are the same machine — the
  * same scrub, the same phases, the same rules about pressing — differing only
  * in what was drawn and what the words do, so both are described entirely by
  * their geometry and neither has its own copy of this component.
  *
- *   bar   the monkey bar (`npm run build:menu`): a red box round the logo and
- *         three labelled boxes unfolding to the right, plus a fourth the bake
- *         synthesises for home. The CIGARETTE PAGES use it, and they need
- *         that fourth box, because there the logo is this switch rather than
- *         a link. `stop` picks the length.
+ *   bar   the monkey bar (`npm run build:menu`), baked from the owner's GIF: a
+ *         red box round the 遠東 logo and three labelled boxes unfolding to the
+ *         right, plus a fourth the bake synthesises for home. The CIGARETTE
+ *         PAGES use it, and they need that fourth box, because there the logo
+ *         is this switch rather than a link. `stop` picks the length. ITS
+ *         FRAME 0 IS THE PAGE'S OWN LOGO, baked to land on it to a fraction of
+ *         a pixel, so the canvas covers that mark rather than replacing it.
  *
- *   grow  the branching one (`npm run build:growmenu`): a box round the logo
- *         and branches that grow out of it carrying six words — about us,
- *         privacy policy and terms of service across the top, MY SAVED,
- *         OFFERS and RECOMMENDED stacked under the logo — and then recede
- *         again, leaving the words standing. The LANDING PAGE uses it. Those
- *         last three used to be artwork parts printed on the page; the owner
- *         asked for them to come off it and live in here.
+ *   grow  the landing page's (`npm run build:growmenu`), GENERATED rather than
+ *         baked from a drawing: ink grows out of a mountain button carrying
+ *         six words — about us, privacy policy and terms of service across the
+ *         top, MY SAVED, OFFERS and RECOMMENDED stacked under it — writing
+ *         each as it passes, and then thins away and leaves them standing.
+ *         Only the words are the owner's drawing. Its frame 0 is the button's
+ *         mark alone, which is what the page shows at rest (`badge`), and it
+ *         is LATCHED: once it has run it stays open.
  *
  * HOW A WORD ANSWERS THE POINTER is the geometry's `hover`:
  *
@@ -91,10 +88,13 @@ type MenuGeometry = {
    */
   badge?: { rule: number; mark: { src: string; x: number; y: number; w: number; h: number } };
   /**
-   * Where the menu's own corner goes on the page. The grow menu is laid out
-   * from the I button's corner and placed at the page's 10px margin, so that
-   * scaling it (see `--logo-menu-zoom`) keeps that margin. The bar menu has
-   * no `place` and is laid out from the page's corner, as it always was.
+   * WHERE THE BUTTON GOES ON THE PAGE — not the canvas's corner. The grow
+   * menu's canvas starts above and left of its button by `logoHit`, because
+   * the growth reaches over the top row; that offset is in the menu's own px
+   * and shrinks with the zoom, while the page's 10px margin must not, so the
+   * stylesheet divides this by the zoom and subtracts the offset after
+   * (`--logo-menu-ox/oy`). The bar menu has no `place` and is laid out from
+   * the page's corner, as it always was.
    */
   place?: { left: number; top: number };
   boxes: MenuBox[];
@@ -119,8 +119,8 @@ const REVERSE_RATE = 2;
  * `frameMs` in the geometry is the gif's measured rate and stays that — a
  * measurement, not a preference. This is the preference, and it is per menu
  * because it is the owner's judgement about one of them: 20% slower than the
- * gif's own timing (2026-09-17), so the grow menu runs at 0.8 and takes 10.3s
- * where the gif gives 8.3. The bar is untouched at 1.
+ * gif's own timing (2026-09-17), so the grow menu runs at 0.8 and takes 7.4s
+ * where the frames' own rate gives 5.9. The bar is untouched at 1.
  *
  * (It went to 0.88 for an afternoon and came back. That 10% was asked for
  * against a view that was ramping — see the dt note in `run` — so it was

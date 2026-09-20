@@ -56,7 +56,10 @@ no CSS framework (tokens in `app/globals.css`). Deploys to Vercel.
   scale they are laid out on. It takes about a minute, MEASURES everything it
   can and stops rather than guessing, and `GROW_DEBUG=1 node
   scripts/build-grow-menu.mjs` draws the finished network on its own instead
-  of the frames. See "The logo menu" below.
+  of the frames. **It also cuts the button's mark** out of
+  `scripts/assets/mountain.svg` and writes the page's still of it
+  (`public/growmenu/badge.webp`), so a change to the mountain means running
+  this. See "The logo menu" below.
 - `npm run build:tile` — bakes the animated 發 out of the owner's tile GIF (`scripts/assets/fa-tile.gif`) into
   `public/tile/fa-char-strip-{1x,2x}.webp` (all 72 frames stacked; the page steps them) and
   `lib/tile-geometry.json`. Takes a few seconds, keeps the character and drops the tile's
@@ -177,13 +180,14 @@ artwork to fit a frame — that scales the margins with it, which is the thing b
     a fourth the bake synthesises for home. **The CIGARETTE PAGES use it** and need that
     fourth box, because there the logo is the menu's switch rather than a link. Its logo ink
     lands at 46,28.
-  - **grow** — `npm run build:growmenu`, `scripts/assets/monkey-grow.gif`,
-    `lib/growmenu-geometry.json`, `public/growmenu/`. The owner's 2026-09-16 drawing: a box
-    round the logo, then branches growing out of it carrying six words — about us, privacy
-    policy, terms of service across the top and MY SAVED, OFFERS, RECOMMENDED stacked under
-    the logo — which recede again over the last thirty frames and leave the words standing.
-    **The LANDING PAGE uses it, and the three labels that used to be printed on that page
-    are now three of those six words** (see the landing section below).
+  - **grow** — `npm run build:growmenu`, `lib/growmenu-geometry.json`,
+    `public/growmenu/`. A mountain button, and ink that grows out of it carrying six words —
+    about us, privacy policy, terms of service across the top and MY SAVED, OFFERS,
+    RECOMMENDED stacked under it. **The LANDING PAGE uses it, and the three labels that
+    used to be printed on that page are now three of those six words** (see the landing
+    section below). **Only the words are the owner's drawing now**: they are cut from
+    `scripts/assets/monkey-grow.gif`'s last frame and everything that moves is generated —
+    see the next entry. **And it does not close** (`LATCH`).
 - **SINCE 2026-09-19 THE LANDING MENU GROWS OUT OF A MOUNTAIN BUTTON, AND THE ANIMATION IS
   GENERATED RATHER THAN THE GIF'S.** Three asks in a row got here. First: replace the
   character logo "and all instances of it in the animation" with "an outline box with a
@@ -227,8 +231,10 @@ artwork to fit a frame — that scales the margins with it, which is the thing b
     scale with it** (2.2 would land on a fraction and go soft), and it is the same 2px round
     the tipi, which is what "the same thickness as the outline box" means. The mark inside
     therefore grew by an eighth rather than a tenth, since the rule and the pixel of air are
-    fixed. THE WORDS MOVED DOWN 1.5PX WITH IT: they hang from the button's middle line,
-    which is where the owner's earlier ask put them, so a taller button lowers them.
+    fixed. THE WORDS MOVED WITH IT: the top row hangs from the button's right edge and its
+    middle line, so it went 3px right and 1.5px down, and the stack hangs from the button's
+    foot, so it went 3px down. Both are the rules the owner's earlier asks set; the button
+    growing is what moved them.
   - **THE MARK IS DRAWN BY THE CANVAS, NOT THE PAGE, BECAUSE IT DRAINS.** At rest the
     canvas is invisible, so the page shows `public/growmenu/badge.webp` — **a still the
     bake cuts out of the animation's own frame 0**, the same pixels, which is what makes
@@ -356,7 +362,8 @@ artwork to fit a frame — that scales the margins with it, which is the thing b
   `frameMs` there is the gif's own measured rate and stays a measurement; this is the
   preference, and it is per menu because it is a judgement about one of them — the owner
   asked for the grow menu 20% slower than its gif (2026-09-17), so it runs at **0.8** and
-  takes 10.3s where the gif's timing gives 8.3. The bar is untouched at 1. Reverse is
+  takes 7.4s where the frames' own rate gives 5.9. (It was 10.3s against 8.3 when the run
+  was the gif's whole 197 frames; it has been 142 since the top row was re-laid.) The bar is untouched at 1. Reverse is
   `REVERSE_RATE` times whatever forward is doing, so "backwards at twice the speed" holds
   at any rate. (It spent an afternoon at 0.88 and came back: that 10% was asked for against
   a view that was ramping, so it was judging the pane's frame supply rather than this
@@ -450,8 +457,10 @@ Two rules that cost real time to learn:
   measurement cannot see this because canvas draws at integer coordinates — compare
   `getBoundingClientRect` against `naturalWidth/Height` on the live page instead.
 
-Baked animations (splash, logo menu, seal) are GIF frames rendered to WebP and scrubbed on a
-canvas, because a GIF cannot be seeked, paused or reversed. `lib/useFrameScrub.ts` is the
+Baked animations (the splash, the seal, the cigarette pages' bar menu) are GIF frames
+rendered to WebP and scrubbed on a canvas, because a GIF cannot be seeked, paused or
+reversed. **The landing page's menu is the exception: its frames are GENERATED** (see "The
+logo menu"), and they are scrubbed the same way. `lib/useFrameScrub.ts` is the
 shared state machine; `LogoMenu` still carries its own copy and should be folded into it.
 Flat-coloured frames must be quantised to a fixed palette and written lossless — a lossy encode
 will not keep a flat field flat, and per-frame palette choice drifts the white frame to frame.
