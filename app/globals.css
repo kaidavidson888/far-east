@@ -2764,6 +2764,16 @@ ul, ol { list-style: none; }
   /* white ground, so it says so — see the note on .artpage */
   color-scheme: light;
   padding: 0 var(--shelf-margin) var(--shelf-margin);
+  /* THE ONE MEASUREMENT A CARD IS BUILT FROM: the drawing’s own 137, grown
+     with the page and capped so a desktop row is not five 530px packs.
+
+     IT IS DECLARED HERE, beside the properties that read it, and not on the
+     grid below — a custom property referring to another is resolved WHERE IT
+     IS DECLARED, so --card-box-h on this element could not see a --pack-h on
+     a descendant, every calc on the card fell back to auto, and the rows came
+     out the height of the page. The tag menu’s zoomed layer was caught by
+     the same thing. */
+  --pack-h: clamp(137px, 14vw, 220px);
   font-family: var(--font-typed);
   font-synthesis: none;
 }
@@ -2820,62 +2830,108 @@ ul, ol { list-style: none; }
   .shelf-grid { --cols: 3; }
 }
 
-/* A CARD IS THE PACK'S OWN WIDTH, CENTRED IN ITS TRACK. The boxes over it are
-   exactly as wide as the pack, which is what the drawing does — so the card
-   is sized by the pack and the track's spare width is air on either side. */
+/* A CARD IS THE DRAWING'S FIRST PACK, which is the only one drawn with its
+   whole interface. Two outlined boxes over it — the amount and the bookmark —
+   and two under — the clouds and a solid red comment bar. The narrow box
+   swaps sides between the rows, and each row spans exactly the pack's width.
+
+   THE CARD IS THE PACK'S OWN WIDTH, CENTRED IN ITS TRACK, because the rows
+   are as wide as the pack under them; stretched to the track instead, a 346px
+   desktop track gave a 346px pair of boxes over a 141px pack.
+
+   EVERY DISTANCE IS A FRACTION OF THE PACK'S HEIGHT (lib/shelfGrid.ts), so
+   the card holds its proportions from a phone to a desktop rather than
+   carrying one set of numbers that only look right at 390px. */
 .shelf-card {
-  /* THE CARD IS THE PACK’S OWN WIDTH, CENTRED IN ITS TRACK. The drawing
-     makes the two boxes exactly as wide as the pack under them, so the pack
-     is what sets the width and the track’s spare is air either side.
-     Stretched to the track instead, a 346px track on a desktop gave a 346px
-     pair of boxes over a 141px pack. */
   width: fit-content;
   max-width: 100%;
   margin-inline: auto;
   display: flex;
   flex-direction: column;
+  /* THE RULE HAS ITS OWN ROOM. It is drawn outside the image now, so it
+     stands IN the gap the drawing leaves between the pack and the rows —
+     4.8px of gap against a 5px rule left the grey touching the red boxes.
+     The drawing’s 3-of-137 is kept and the rule is added to it. */
+  gap: calc(var(--card-drop) + var(--pack-rule));
 }
-.shelf-card-boxes {
+.shelf-card-row {
   display: flex;
-  align-self: stretch;
-  /* the pair is the pack's width: the pack sets the card's width and these
-     stretch across it */
+  gap: var(--card-gap);
+  height: var(--card-box-h);
 }
-.shelf-card-amount { position: relative; display: flex; }
-.shelf-card-amount-hit,
-.shelf-card-mark {
+/* the wide box and the narrow one, in the drawing's own 19:86 */
+.shelf-card-wide { position: relative; flex: 1 1 0; min-width: 0; display: flex; }
+.shelf-card-narrow { flex: 0 0 auto; display: flex; aspect-ratio: 19 / 18; }
+
+.shelf-card-box {
   flex: 1 1 auto;
   display: flex;
   align-items: center;
   justify-content: center;
   box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
   padding: 0;
   background: transparent;
-  border-style: solid;
-  border-color: #ff0000;
+  border: var(--card-rule) solid #ff0000;
   color: #ff0000;
   font-family: var(--font-typed);
   font-weight: 700;
   font-synthesis: none;
   line-height: 1;
+  overflow: hidden;
 }
-.shelf-card-amount-hit { width: 100%; font-size: 12px; }
-.shelf-card-drop { display: flex; flex: 0 0 auto; }
-.shelf-card-mark { height: 100%; aspect-ratio: 19 / 18; }
+.shelf-card-amount { font-size: calc(var(--card-box-h) * 0.62); }
 .shelf-card-mark svg { display: block; height: 62%; width: auto; }
-.shelf-card-amount-hit:hover,
-.shelf-card-mark:hover,
-.shelf-card-amount-hit:focus-visible,
-.shelf-card-mark:focus-visible {
+.shelf-card-box:hover,
+.shelf-card-box:focus-visible {
   background: #ff0000;
   color: #ffffff;
   outline: none;
 }
+/* the clouds keep their own ground when the box fills: they are the mark, and
+   a red mark on red is nothing at all */
+.shelf-clouds:hover,
+.shelf-clouds:focus-visible { color: #ffffff; }
+.shelf-clouds svg { display: block; width: 100%; height: 100%; }
 
-/* THE PACK, WITH THE HALF-BLACK RULE THE DRAWING FRAMES IT WITH. It is drawn
-   as an inset shadow rather than a border so the rule sits INSIDE the pack's
-   own box, which is where the drawing puts it (a 5px stroke on a rect inset
-   2.5 from the image) — a border would grow the card instead. */
+/* the solid red bar, with the drawing's own words. It is inert: the pack
+   shelf has nowhere to keep a note (see lib/shelfGrid.ts). */
+/* THE BAR IS ABSOLUTELY PLACED IN ITS SLOT, and that is not decoration: a
+   flex item with nowrap text contributes its WHOLE run to the card’s
+   intrinsic width, so “Leave a comment <3” was what sized the card and the
+   two rows ran well past the pack on every card. An absolutely placed child
+   contributes nothing, so the pack is left as the only thing that can set
+   the width — which is what the drawing says it is. */
+.shelf-card-comment-slot { position: relative; flex: 1 1 0; min-width: 0; }
+.shelf-card-comment {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  padding-inline: calc(var(--card-box-h) * 0.22);
+  background: #ff0000;
+  color: #ffffff;
+  font-family: var(--font-typed);
+  font-weight: 700;
+  font-synthesis: none;
+  line-height: 1;
+  /* 0.36 of the box is 6.5px on a phone, under the 9 this site knows a line
+     needs to render solid, so the floor wins there and the drawing's ratio
+     takes over on anything larger */
+  font-size: max(9px, calc(var(--card-box-h) * 0.36));
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+/* THE PACK, AND THE HALF-BLACK RULE ON ITS EDGE. The drawing puts that rule
+   OVER the picture — measured across the first pack's left edge, the image
+   starts at x=34 and is darkened through to x=38 — and the owner's word is
+   "on the edge of the image not over it", so it is drawn entirely outside
+   with its inner edge on the image's. Absolutely placed rather than a border,
+   so it costs the card no width. */
 .shelf-card-pack {
   display: block;
   position: relative;
@@ -2885,41 +2941,19 @@ ul, ol { list-style: none; }
 .shelf-card-pack img {
   display: block;
   /* EVERY PACK THE SAME HEIGHT, whatever its width — which is what the
-     drawing does, and what makes a row of them read as a shelf. It grows
-     with the page between the drawing’s own 137 and the ceiling
-     lib/shelfGrid.ts sets, so it is one rule rather than a measurement. */
-  height: clamp(137px, 14vw, 220px);
+     drawing does, and what makes a row of them read as a shelf. */
+  height: var(--pack-h);
   width: auto;
   max-width: none;
 }
 .shelf-card-pack::after {
   content: '';
   position: absolute;
-  inset: var(--pack-rule-inset);
+  inset: calc(-1 * var(--pack-rule));
   border: var(--pack-rule) solid rgb(0 0 0 / var(--pack-rule-alpha));
   pointer-events: none;
 }
-.shelf-card-pack:focus-visible { outline: 2px solid #ff0000; outline-offset: 3px; }
-
-/* THE OUTLINE AT THE FOOT, and the clouds that open inside it. */
-.shelf-foot {
-  box-sizing: border-box;
-  border-style: solid;
-  border-color: #ff0000;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.shelf-clouds {
-  display: block;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  line-height: 0;
-  color: #ff0000;
-}
-.shelf-clouds svg { display: block; }
-.shelf-clouds:focus-visible { outline: 2px solid #ff0000; outline-offset: 6px; }
+.shelf-card-pack:focus-visible { outline: 2px solid #ff0000; outline-offset: 7px; }
 
 /* ------------------------------------- the sigil, the outline, the number --
    One box on the plus's line (see `.cig-marks`): the two marks at the places
@@ -3096,9 +3130,7 @@ input[type='reset'],
 .seal-button,
 .seal-button-hit,
 .shelf-logo,
-.shelf-card-mark,
-.shelf-card-amount-hit,
-.shelf-clouds {
+.shelf-card-box {
   -webkit-touch-callout: none;
   user-select: none;
   -webkit-user-select: none;
@@ -3186,9 +3218,7 @@ input[type='radio'],
 .cig-tag,
 .logo-menu-logo,
 .logo-menu-box,
-.shelf-card-mark,
-.shelf-card-amount-hit,
-.shelf-clouds,
+.shelf-card-box,
 .seal-button-hit {
   cursor: url('/sigil-cursor-press.png') 0 14, pointer;
   cursor: image-set(url('/sigil-cursor-press.png') 1x, url('/sigil-cursor-press@2x.png') 2x) 0 14, pointer;
@@ -3254,9 +3284,7 @@ input[type='radio']:active,
 .cig-tag:active,
 .logo-menu-logo:active,
 .logo-menu-box:active,
-.shelf-card-mark:active,
-.shelf-card-amount-hit:active,
-.shelf-clouds:active,
+.shelf-card-box:active,
 .seal-button-hit:active {
   cursor: url('/sigil-cursor.png') 0 14, pointer;
   cursor: image-set(url('/sigil-cursor.png') 1x, url('/sigil-cursor@2x.png') 2x) 0 14, pointer;

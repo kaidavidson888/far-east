@@ -33,13 +33,10 @@ const OPEN_MS = 520;
 const SHUT_MS = 420;
 
 export function ShelfClouds({
-  size,
   label,
   onPress,
   className,
 }: {
-  /** the square the clouds open inside, in px */
-  size: number;
   label: string;
   onPress?: () => void;
   className?: string;
@@ -94,8 +91,7 @@ export function ShelfClouds({
   return (
     <button
       type="button"
-      className={`shelf-clouds${className ? ` ${className}` : ''}`}
-      style={{ width: size, height: size }}
+      className={`shelf-card-box shelf-clouds${className ? ` ${className}` : ''}`}
       aria-label={label}
       aria-expanded={t > 0.5}
       onPointerEnter={() => { if (!latched.current) aim(1); }}
@@ -108,12 +104,15 @@ export function ShelfClouds({
         onPress?.();
       }}
     >
+      {/* THE BOX IS THE DRAWING'S OWN EMPTY OUTLINE, and the clouds open
+          INSIDE it — so the square they are drawn in is sized off the OPEN
+          pose (the ring is 100 units across against the shut rosette's 68)
+          or they would open straight through the rule. */}
       <svg
         viewBox={`0 0 ${SHELF_CLOUD_VIEW} ${SHELF_CLOUD_VIEW}`}
-        width={size}
-        height={size}
         aria-hidden="true"
         focusable="false"
+        preserveAspectRatio="xMidYMid meet"
       >
         {SHELF_CLOUDS.map((c, i) => {
           const x = c.shut.x + (c.open.x - c.shut.x) * u;

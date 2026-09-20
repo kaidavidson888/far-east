@@ -23,28 +23,20 @@ export function ShelfCardQuantity({
   name,
   amount,
   unit,
-  grow,
-  height,
-  rule,
 }: {
   id: string;
   name: string;
   amount: number | null;
   unit: PackUnit | null;
-  /** its share of the pair of boxes, so the two together are the pack's width */
-  grow: number;
-  height: number;
-  rule: number;
 }) {
   const [open, setOpen] = useState(false);
   const says = amount && unit ? `${amount}${unit.toLowerCase()}` : '';
 
   return (
-    <div className="shelf-card-amount" style={{ flexGrow: grow, flexBasis: 0 }}>
+    <div className="shelf-card-wide">
       <button
         type="button"
-        className="shelf-card-amount-hit"
-        style={{ height, borderWidth: rule }}
+        className="shelf-card-box shelf-card-amount"
         aria-label={says ? `${name}: ${says}. Change it.` : `Set how much ${name} you have`}
         aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
