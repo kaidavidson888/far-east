@@ -24,3 +24,7 @@ tsconfig.tsbuildinfo
 
 # flattened full-page artwork: a build by-product, not served
 .artwork/
+
+# scratch: GROW_DEBUG's network dump and anything else a build is asked
+# to draw for looking at
+.tmp/

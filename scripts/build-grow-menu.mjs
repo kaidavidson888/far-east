@@ -703,6 +703,7 @@ console.log(`  canvas ${VIEW_W}x${VIEW_H} page px; the button sits at 0,${SHIFT}
  * shape: a frame shows what has grown so far, which is not the same thing.
  */
 if (process.env.GROW_DEBUG) {
+  mkdirSync('.tmp', { recursive: true });
   const COL = { trunk: [0, 0, 0], bypass: [220, 0, 0], twig: [0, 130, 0], branch: [0, 60, 220], fork: [190, 0, 190], link: [220, 140, 0] };
   const rgb = Buffer.alloc(RW * RH * 3, 255);
   const counts = {};
