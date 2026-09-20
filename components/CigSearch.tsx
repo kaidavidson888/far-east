@@ -50,11 +50,18 @@ function win(x0: number, y0: number, x1: number, y1: number, left: number, top: 
  * — "fit between the edges of the red outline appearing from left to right
  * from the magnifying button like the menu from the + button".
  *
- * THE BAR IS A ROW OF THE LOGIN BOX, LARGER. See `CIG_SEARCH` for why its
- * marks are windows onto the splash's own sprite rather than drawn here. The
- * ☁ stands where typing starts and steps aside once there is something typed,
- * as the login box's does; it is a masked block rather than an image so that
- * going red is one colour changing.
+ * THE BAR IS A ROW OF THE LOGIN BOX, LARGER, AND IT IS THE WHOLE ROW: the
+ * glass fades out as it arrives and the line runs edge to edge of the red
+ * frame (the owner's 2026-09-20 ask). See `CIG_SEARCH` for why its marks are
+ * windows onto the splash's own sprite rather than drawn here.
+ *
+ * THE ☁ IS THE CARET. It used to step aside once anything was typed, as the
+ * login box's does; the owner asked instead for it to blink and "mark where
+ * the next text will appear". So it stands at the end of the typed run —
+ * measured with the field's own font — and blinks while the field has the
+ * caret, and the browser's own caret is turned off, there being no sense in
+ * two. It is a masked block rather than an image so that going red on a miss
+ * is one colour changing.
  *
  * THE BUTTON IS ALSO "SEARCH". The owner: "hits enter or search". Shut, a
  * press opens the bar; open with something typed, it searches, exactly as
@@ -88,6 +95,9 @@ export function CigSearch({
   const [query, setQuery] = useState('');
   const [miss, setMiss] = useState(false);
   const [size, setSize] = useState<number>(CIG_SEARCH.type);
+  /** Where the ☁ stands: the end of what is typed, in the bar's own px. */
+  const [caret, setCaret] = useState(0);
+  const [focused, setFocused] = useState(false);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const toggleRef = useRef<HTMLButtonElement | null>(null);
   /** What was last searched for and found: the glass shuts the bar on that, rather than searching it again. */
@@ -110,7 +120,12 @@ export function CigSearch({
 
   const run = useCallback(() => {
     const q = query.trim();
-    if (!q) return;
+    // Enter on an empty bar shuts it. With the glass faded out there would
+    // otherwise be no way back but Escape or a hand on the row.
+    if (!q) {
+      onOpenChange(false);
+      return;
+    }
     // The spin is unskippable, so a search asked for during one is HELD and
     // run when the row lands — it used to be dropped without a sign.
     if (locked) {
@@ -129,7 +144,7 @@ export function CigSearch({
     clearTimeout(missTimer.current);
     missTimer.current = setTimeout(() => setMiss(false), SEARCH_MISS_MS);
     inputRef.current?.focus({ preventScroll: true });
-  }, [locked, onSearch, query]);
+  }, [locked, onOpenChange, onSearch, query]);
 
   useEffect(() => {
     if (!locked && pending.current) run();
@@ -147,6 +162,7 @@ export function CigSearch({
     const el = inputRef.current;
     if (!el || !query) {
       setSize(CIG_SEARCH.type);
+      setCaret(0);
       return;
     }
     const ctx = document.createElement('canvas').getContext('2d');
@@ -161,7 +177,12 @@ export function CigSearch({
     const s = place?.s ?? 1;
     const coarse = window.matchMedia('(pointer: coarse)').matches;
     const floor = Math.min(CIG_SEARCH.type, Math.max(CIG_SEARCH.typeMin, (coarse ? 16 : 9) / s));
-    setSize(w <= avail ? CIG_SEARCH.type : Math.max(floor, +((CIG_SEARCH.type * avail) / w).toFixed(2)));
+    const next = w <= avail ? CIG_SEARCH.type : Math.max(floor, +((CIG_SEARCH.type * avail) / w).toFixed(2));
+    setSize(next);
+    // where the next letter will go: the run at the size it is actually set,
+    // clamped to the line's end for a query long enough to scroll in the field
+    ctx.font = `700 ${next}px ${getComputedStyle(el).fontFamily}`;
+    setCaret(Math.min(avail, ctx.measureText(query).width) + next * CIG_SEARCH.caretGap);
   }, [avail, query, place?.s]);
 
   const g = SEARCH_GLYPH;
@@ -189,6 +210,10 @@ export function CigSearch({
           ref={toggleRef}
           type="button"
           className="cig-search-toggle"
+          // IT FADES OUT WHEN THE BAR ARRIVES and takes no press while it is
+          // gone: a button nobody can see is not one anybody should be able to
+          // hit or tab to. Escape, or scrolling the row, is the way back.
+          inert={open || undefined}
           aria-expanded={open}
           aria-label={open ? (query.trim() && query.trim() !== lastHit.current ? 'Search' : 'Close the search') : 'Search the cigarettes'}
           onClick={() => {
@@ -228,11 +253,19 @@ export function CigSearch({
             })}
           </div>
 
-          <span className="cig-search-slot" style={{ '--i': 1, left: `${TEXT_LEFT}px`, top: `${BAND_H - CIG_SEARCH.sigilH}px` } as React.CSSProperties} aria-hidden="true">
+          <span
+            className="cig-search-slot cig-search-caret"
+            style={{ '--i': 1, left: `${+(TEXT_LEFT + caret).toFixed(2)}px`, top: `${BAND_H - CIG_SEARCH.sigilH}px` } as React.CSSProperties}
+            aria-hidden="true"
+          >
+            {/* KEYED ON THE QUERY so that the blink restarts, solid, on every
+                keystroke — which is what a caret does, and what tells the
+                reader the mark is theirs rather than an ornament. */}
             <span
+              key={query}
               className="cig-search-sigil"
               data-miss={miss ? '' : undefined}
-              data-typed={query ? '' : undefined}
+              data-blink={focused && !miss ? '' : undefined}
               style={{ width: `${CIG_SEARCH.sigilW}px`, height: `${CIG_SEARCH.sigilH}px` }}
             />
           </span>
@@ -251,6 +284,8 @@ export function CigSearch({
               aria-label="Search the cigarettes by name, brand or tag"
               value={query}
               tabIndex={open ? undefined : -1}
+              onFocus={() => setFocused(true)}
+              onBlur={() => setFocused(false)}
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === 'Escape') {

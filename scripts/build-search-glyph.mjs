@@ -38,6 +38,16 @@ const OUT = 'lib/searchGlyph.ts';
 const TRACE = 1200;
 /** How much black comes off every edge before tracing, in trace px. */
 const OPEN = Number(process.env.GLYPH_OPEN ?? 12);
+/**
+ * HOW MUCH OF THE HANDLE IS KEPT, as a reach from the lens's centre in lens
+ * radii. The owner: "make it so the magnifying glass has a shorter handle so
+ * it can be more evenly situated relative to the outline". As drawn the tail
+ * runs to 2.6 radii, which makes the mark a third wider than tall with the
+ * lens pushed up into one corner of its box; cut at 1.75 the mark is nearly
+ * square and the lens sits close to the middle. The cut is an arc about the
+ * lens's centre, so the handle ends square to its own direction.
+ */
+const HANDLE = Number(process.env.GLYPH_HANDLE ?? 1.75);
 /** Douglas-Peucker tolerance, in trace px. */
 const EPS = 1.6;
 /** The mark's long side as drawn, in the button's px: the plus's own 16. */
@@ -86,6 +96,20 @@ function erode(m, r) {
   const out = new Uint8Array(W * H);
   for (let i = 0; i < W * H; i++) out[i] = d[i] > r ? 1 : 0;
   return out;
+}
+// the lens is the disc that touches the picture's left and top edges: its
+// centre is level with the middle of the ink on the left edge and under the
+// middle of the ink on the top edge, and its radius is the distance to either
+{
+  const edge = (pick) => { let a = 1e9, b = -1; for (let t = 0; t < (pick === 'x' ? W0 : H0); t++) { const on = pick === 'x' ? grey[2 * W0 + t] < 128 : grey[t * W0 + 2] < 128; if (on) { a = Math.min(a, t); b = Math.max(b, t); } } return (a + b) / 2; };
+  const cx = edge('x'), cy = edge('y');
+  const R = (cx + cy) / 2;
+  if (!(R > W0 * 0.2 && R < W0 * 0.45)) fail(`the lens was not found where it should be (centre ${cx},${cy})`);
+  let cut = 0;
+  for (let y = 0; y < H0; y++) for (let x = 0; x < W0; x++) {
+    if (Math.hypot(x - cx, y - cy) > R * HANDLE && ink[(y + PAD) * W + x + PAD]) { ink[(y + PAD) * W + x + PAD] = 0; cut++; }
+  }
+  console.log(`  the lens: centre ${cx.toFixed(0)},${cy.toFixed(0)} radius ${R.toFixed(0)}; handle kept to ${HANDLE} radii (${cut} px of tail cut)`);
 }
 const before = ink.reduce((a, b) => a + b, 0);
 ink = erode(ink, OPEN);

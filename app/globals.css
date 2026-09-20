@@ -1617,6 +1617,14 @@ ul, ol { list-style: none; }
 .cig-search-toggle svg {
   display: block;
 }
+/* IT FADES OUT WHEN THE BAR ARRIVES (the owner's 2026-09-20 ask), over the
+   same time the bar's first piece takes to come in, so the one reads as
+   becoming the other. It is `inert` in the markup meanwhile. */
+.cig-search[data-open] .cig-search-toggle {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--cig-fade-ms) var(--cig-ease-in);
+}
 /* A FINGER GETS A BIGGER TARGET THAN THE BOX. At the row's 0.7 floor both
    toggles are 21px on a phone, under every touch guideline; an invisible
    margin round each, while shut, makes them 38 without moving a drawn pixel.
@@ -1633,11 +1641,16 @@ ul, ol { list-style: none; }
 /* The bar: one gap past the button, and the rest of the frame's width. It
    takes no pointer itself — only the field does — so the row under its empty
    parts can still be dragged. */
+/* THE BAR IS THE WHOLE ROW, edge to edge of the red frame, which is what the
+   menu's design width is scaled to. The glass is drawn over its left end
+   while it is shut and fades out as it opens, so the two never fight for the
+   same pixels. It takes no pointer itself — only the field does — so the row
+   under its empty parts can still be dragged. */
 .cig-search-bar {
   position: absolute;
-  left: calc(var(--cig-btn-h) + var(--cig-btn-gap));
+  left: 0;
   top: 0;
-  width: calc(var(--cig-menu-w) - var(--cig-btn-h) - var(--cig-btn-gap));
+  width: var(--cig-menu-w);
   height: var(--cig-btn-h);
   pointer-events: none;
 }
@@ -1691,8 +1704,38 @@ ul, ol { list-style: none; }
   mask: url('/sigil.webp') center / 100% 100% no-repeat;
   transition: background-color 150ms ease, opacity 160ms ease;
 }
-.cig-search-sigil[data-typed] {
-  opacity: 0;
+/* THE ☁ IS THE CARET — the owner's "when the user clicks on the text editor
+   have the sigil start blinking instead of outright disappearing. have it
+   mark where the next text will appear". It stands at the end of the typed
+   run (the component measures it with the field's own font) and blinks while
+   the field has the caret. `steps(1)` so it is a caret's hard on-off rather
+   than a pulse, and it is keyed on the query in the markup so every keystroke
+   restarts it solid, as a real caret does. The slot's own transition is what
+   slides it along the line. */
+.cig-search-caret {
+  transition:
+    opacity var(--cig-shut-ms) var(--cig-ease-out),
+    transform var(--cig-shut-ms) var(--cig-ease-out),
+    left 90ms linear;
+}
+.cig-search-sigil[data-blink] {
+  animation: cig-search-blink 1060ms steps(1, end) infinite;
+}
+@keyframes cig-search-blink {
+  0%,
+  50% {
+    opacity: 1;
+  }
+  50.01%,
+  100% {
+    opacity: 0;
+  }
+}
+/* A reader who has asked for less motion gets a mark that stays put. */
+@media (prefers-reduced-motion: reduce) {
+  .cig-search-sigil[data-blink] {
+    animation: none;
+  }
 }
 .cig-search-sigil[data-miss] {
   background: #ff0000;
@@ -1712,7 +1755,8 @@ ul, ol { list-style: none; }
   background: transparent;
   outline: none;
   color: #010101;
-  caret-color: #010101;
+  /* no second caret: the ☁ marks where the next letter goes */
+  caret-color: transparent;
   font-family: var(--font-typed);
   font-weight: 700;
   font-synthesis: none;

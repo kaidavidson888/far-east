@@ -112,7 +112,16 @@ export function searchPacks(ids: readonly string[], query: string): string[] {
  * FRACTION OF THE LINE'S LENGTH, measured off that sprite, so it all scales as
  * one: the row is "the same row, bigger" at any width.
  */
-const FIELD_W = CIG_CONTROLS.width * 3 + CIG_CONTROLS.gap * 2 + 15 - CIG_CONTROLS.height - CIG_CONTROLS.gap;
+/**
+ * THE BAR IS THE WHOLE ROW, EDGE TO EDGE OF THE RED FRAME (the owner's
+ * 2026-09-20 ask: "when the text editor is created the magnifying button fades
+ * out and the bar takes up the entire row from edge to edge of the red
+ * outline"). So it is `MENU_DESIGN_W` — the same width the tag menu is scaled
+ * to, which IS the frame — rather than that less the button and a gap. The
+ * button is drawn over its left end while the bar is shut, and fades as the
+ * bar arrives.
+ */
+const FIELD_W = CIG_CONTROLS.width * 3 + CIG_CONTROLS.gap * 2 + 15;
 /** The sprite is the whole 430px box and the line is 0.800 of it. */
 const BOX = FIELD_W / 0.8;
 /**
@@ -145,7 +154,12 @@ export const CIG_SEARCH = {
   textX: +(FIELD_W * 0.0204).toFixed(2),
   /** the least the type may shrink to, to fit a long query on the line */
   typeMin: 12,
+  /** the gap the ☁ keeps from the last letter, as a fraction of the type */
+  caretGap: 0.18,
 } as const;
+
+/** How long one blink of the ☁ takes, while the field has the caret. */
+export const SEARCH_BLINK_MS = 1060;
 
 /** How long the ☁ holds red when nothing was found, and how long it takes to go back. */
 export const SEARCH_MISS_MS = 500;

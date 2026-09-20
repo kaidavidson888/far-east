@@ -850,6 +850,19 @@ no hits have the sigil flash red and delete whatever is written").
   1.83) for openings 0 / 9 / 12 / 14 / 16: 12 is where the lens first reads as
   a RING at 21px and the owner's triskele is still whole at 55. Sized by the
   plus's rule — its long side is the plus's 16.
+  **AND THE HANDLE IS CUT SHORT** (`HANDLE`, 1.75 lens radii — the owner's
+  2026-09-20 "make it so the magnifying glass has a shorter handle so it can be
+  more evenly situated relative to the outline"). As drawn the tail reaches 2.6
+  radii, which left the mark a third wider than tall with the lens shoved into
+  one corner. The cut is an ARC ABOUT THE LENS'S OWN CENTRE, which the build
+  finds rather than being told: the lens is the disc touching the picture's
+  left and top edges, so its centre is the middle of the ink on each of those
+  edges and its radius the distance to them, and the build stops if that comes
+  out anywhere unexpected. So the handle ends square to its own direction. At
+  1.75 the mark is 1.23 wide for its height and ITS INK'S CENTRE OF MASS IS THE
+  BOX'S CENTRE to within a tenth of a unit, so it needs no nudging — checked
+  against centring it by its mass and by its lens, which look the same and
+  worse respectively.
 - **WHERE IT STANDS** is worked out in `layoutMenu` with everything else, from
   the row AT REST: its centre is halfway between the right edge of the pack
   left of the framed one (one `CIG_GAP` before the framed pack begins) and the
@@ -866,6 +879,17 @@ no hits have the sigil flash red and delete whatever is written").
   plus's shut place. Open, it slides onto the frame's left edge at its own
   height and the bar runs to the frame's right (`MENU_DESIGN_W`, so the same
   `MENU_MIN_ZOOM` overflow on a narrow frame as the tag menu has).
+- **THE BAR IS THE WHOLE ROW AND THE GLASS FADES OUT OF ITS WAY** (the owner's
+  2026-09-20 "when the text editor is created the magnifying button fades out
+  and the bar takes up the entire row from edge to edge of the red outline").
+  So the bar is `MENU_DESIGN_W` — the width the menu is scaled to, which IS the
+  frame — starting at 0 rather than one gap past the button, and the glass is
+  drawn over its left end while it is shut and fades as it arrives. **The glass
+  is `inert` while the bar is out**: a button nobody can see is not one anybody
+  should be able to press or tab to. That leaves three ways back — Escape, a
+  hand on the row, and **Enter on an empty bar**, which is why that last one
+  exists. Measured in a real window: bar 846..1074 against a frame of
+  845..1073, and the bar follows the frame after a search re-lays the row.
 - **THE BAR IS A ROW OF THE LOGIN BOX, LARGER, AND ITS DASHES ARE THE LOGIN
   BOX'S OWN.** That box's marks are not CSS: they are one hand-drawn sprite,
   `public/splash/blackbox.webp`, shown through windows. The same windows are
@@ -875,8 +899,22 @@ no hits have the sigil flash red and delete whatever is written").
   size is a FRACTION OF THE LINE'S LENGTH measured off that sprite (☁ 0.151,
   type 0.113, text start 0.0204), so it is "the same row, bigger" at any width.
   The ☁ is `/sigil.webp` as a MASK over a coloured block, so that going red is
-  one colour changing; it steps aside once something is typed, as the login
-  box's does. A long query is set smaller on the same baseline.
+  one colour changing. A long query is set smaller on the same baseline.
+- **THE ☁ IS THE CARET** (the owner's 2026-09-20 "when the user clicks on the
+  text editor have the sigil start blinking instead of outright disappearing.
+  have it mark where the next text will appear"). It used to step aside the
+  moment anything was typed, as the login box's does. Now it stands at the end
+  of the typed run — measured on a canvas with the field's own font at the size
+  it is actually set, clamped to the line's end for a query long enough to
+  scroll — and blinks while the field has the caret, on `steps(1)` so it is a
+  caret's hard on-off rather than a pulse. **The browser's own caret is turned
+  off** (`caret-color: transparent`): there is no sense in two marks saying the
+  same thing. The mark is keyed on the query in the markup, so every keystroke
+  restarts the blink solid, which is what a real caret does. A reader who has
+  asked for less motion gets a mark that stays put. Measured in a real window
+  (the Browser pane reports its tab hidden, so it delivers no focus events and
+  cannot see any of this): the blink runs, sampled opacity 1,1,1,1,1,0,0,0,0,0,
+  1,1 over 1.2s, and the mark rides the text at 859 → 927 → 1056.
 - **IT ARRIVES LEFT TO RIGHT ON THE COMPOSITOR**, the tag menu's own way —
   opacity and a 10px drift, nearest first on the same stagger. That is why the
   dashed line is shown in EIGHT windows rather than one: one would fade in all
@@ -913,8 +951,9 @@ no hits have the sigil flash red and delete whatever is written").
   that changes nothing. Instead the ☁ goes `#FF0000` at once (the artwork's
   red, not `--negative`), holds 500ms and fades over 150 — the login box's own
   rejection, aimed at the sigil — and what was typed is deleted. Verified in
-  the page: "zzzz" → field empty, ☁ rgb(255,0,0), back to rgb(1,1,1); "esse
-  menthol" → the row spins and holds exactly the 8 packs the data says.
+  the page: "zzzz" → field empty, ☁ rgb(255,0,0) at once and rgb(1,1,1) again
+  within the second, the caret back at the line's start; "esse menthol" → the
+  row spins and holds exactly the 8 packs the data says.
 - **WHAT AN ADVERSARIAL PASS FOUND, all fixed**: "goldenleaf" and "golden leaf"
   each found only the packs sharing that spelling (the data has two brand
   buttons) — a brand now answers to every spelling in its group, 7 packs either
