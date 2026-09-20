@@ -127,14 +127,32 @@ const GAP = (() => {
  * the order is the same so the reason does not have to be rediscovered.
  */
 const lineTrace = (LINE * TRACE) / MARK;
+/**
+ * THE SQUARE IS PADDED WITH PAPER BEFORE THE RING IS TAKEN, and it has to be.
+ *
+ * A character is cropped to its own ink, so its outermost strokes LIE ON the
+ * square's edges — and a distance transform only sees the buffer it is given,
+ * so with no pad it reads "off the top" as more ink rather than as paper. The
+ * top of the top stroke was then nowhere near any paper, fell outside the
+ * ring, and was drawn with no line along it: the owner saw exactly that, "at
+ * the top of both characters and at the very bottom there seems to be some
+ * sort of clipping". Measured before the pad: 119 and 329 px of 遠's edges
+ * and 138 and 138 of 東's carried silhouette but no outline.
+ *
+ * The shared tracer pads for this reason (`inkMask(src, { pad })`); this
+ * build makes its own raster and so has to do it itself. It is the same trap
+ * the mountain's `keep` field fell into — "THE FRAME'S OWN EDGE COUNTS AS THE
+ * OUTSIDE" in scripts/build-grow-menu.mjs.
+ */
+const PAD = Math.ceil(lineTrace) + 2;
 const cut = (c, i) => {
-  const S = TRACE;
-  const box = new Uint8Array(S * S);
+  const S = TRACE, B = S + 2 * PAD;
+  const box = new Uint8Array(B * B);
   for (let y = 0; y < S; y++) {
     const sy = c.y0 + Math.min(c.h - 1, Math.floor((y / S) * c.h));
     for (let x = 0; x < S; x++) {
       const sx = c.x0 + Math.min(c.w - 1, Math.floor((x / S) * c.w));
-      if (ink(sx, sy)) box[y * S + x] = 1;
+      if (ink(sx, sy)) box[(y + PAD) * B + x + PAD] = 1;
     }
   }
   /*
@@ -144,15 +162,39 @@ const cut = (c, i) => {
    * COMPLEMENT — the distance to the nearest paper — the way trace-mark's own
    * `erode` learned to do it.
    */
-  const paper = new Uint8Array(S * S);
-  for (let j = 0; j < S * S; j++) paper[j] = box[j] ? 0 : 1;
-  const dist = distanceTo(paper, S, S);
-  const m = { ink: new Uint8Array(S * S), W: S, H: S };
+  const paper = new Uint8Array(B * B);
+  for (let j = 0; j < B * B; j++) paper[j] = box[j] ? 0 : 1;
+  const dist = distanceTo(paper, B, B);
+  const m = { ink: new Uint8Array(B * B), W: B, H: B };
   let kept = 0, all = 0;
-  for (let j = 0; j < S * S; j++) {
+  for (let j = 0; j < B * B; j++) {
     all += box[j];
     m.ink[j] = box[j] && dist[j] <= lineTrace ? 1 : 0;
     kept += m.ink[j];
+  }
+  /*
+   * AND THE EDGES ARE ASKED DIRECTLY, because this is the failure that got
+   * through a check of the path against the ring: it proved the drawing
+   * faithful to a ring that was itself short. Every pixel of the silhouette
+   * lying on the square's own border must carry outline — it is the outermost
+   * ink there is, so it is boundary by definition.
+   */
+  {
+    let onEdge = 0, lit = 0;
+    for (let k = 0; k < S; k++) {
+      for (const j of [
+        (PAD + 0) * B + PAD + k,
+        (PAD + S - 1) * B + PAD + k,
+        (PAD + k) * B + PAD,
+        (PAD + k) * B + PAD + S - 1,
+      ]) {
+        if (!box[j]) continue;
+        onEdge++;
+        if (m.ink[j]) lit++;
+      }
+    }
+    if (lit < onEdge) fail(`character ${i + 1}: ${onEdge - lit} of the ${onEdge} px on the square's own edges carry no outline — the ring is short there`);
+    console.log(`    ${onEdge} px of it lie on the square's edges, all of them outlined`);
   }
   console.log(`  character ${i + 1}: stretched x${(c.w / c.h).toFixed(3)} into its square; the ${LINE}px line keeps ${((100 * kept) / all).toFixed(1)}% of its ink`);
   if (kept / all > 0.9) fail(`character ${i + 1}'s outline keeps almost all of its ink: the line is too thick for these strokes`);
@@ -160,7 +202,7 @@ const cut = (c, i) => {
   if (!loops.length) fail(`character ${i + 1} traced to nothing`);
   const out = toPath(loops);
   console.log(`    ${loops.length} loops, ${out.points} points, ${out.d.length} bytes, ${out.vw} x ${out.vh} units`);
-  return { ...out, loops: loops.length, ring: m.ink, S };
+  return { ...out, loops: loops.length, ring: m.ink, S: B };
 };
 const marks = [];
 for (let i = 0; i < chars.length; i++) marks.push(cut(chars[i], i));
@@ -183,9 +225,18 @@ for (let i = 0; i < chars.length; i++) marks.push(cut(chars[i], i));
  */
 for (let i = 0; i < marks.length; i++) {
   const m = marks[i], S = m.S;
+  /*
+   * DRAWN BACK INTO THE PADDED FRAME. The path's own box is the ring's, which
+   * sits PAD inside this buffer, so the viewBox is widened by that much in
+   * the path's own units — render it at 0,0 and the whole mark is stretched
+   * over the pad and every comparison below is nonsense (it read 41% painted
+   * the first time, which is what the pad had shifted, not what was lost).
+   */
+  const px = PAD * (m.vw / (S - 2 * PAD)), py = PAD * (m.vh / (S - 2 * PAD));
   const shot = await sharp(
     Buffer.from(
-      `<svg xmlns="http://www.w3.org/2000/svg" width="${S}" height="${S}" viewBox="0 0 ${m.vw} ${m.vh}">` +
+      `<svg xmlns="http://www.w3.org/2000/svg" width="${S}" height="${S}" ` +
+        `viewBox="${-px} ${-py} ${m.vw + 2 * px} ${m.vh + 2 * py}">` +
         `<path d="${m.d}" fill="#000000" fill-rule="evenodd"/></svg>`,
     ),
   )

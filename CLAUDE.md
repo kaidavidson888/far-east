@@ -1339,13 +1339,30 @@ between"). `components/CornerSeal.tsx`, `lib/sealGlyph.ts`,
     all round, and 42 x 42 on screen at the row's own zoom. Judged at 48, 66
     and 120px a box against line widths of 0.7, 1.2 and 1.8: 1.2 is where the
     hollows first read at 48 and still look like a line at 120.
-- **AND NOT ONE LINE MISSING — THE BUILD PROVES IT** (the owner's "make sure
-  there is no missing lines in the characters"). Three things could quietly
-  drop a stroke between the ring and the path: `MIN_AREA` throwing away a
-  small loop, `simplify` collapsing a thin one, and the even-odd fill turning
-  a loop inside out. None of them announces itself — the mark just loses a
-  stroke — so the build **draws its own path back** at the size it traced and
-  asks the pixels.
+- **THE SQUARE IS PADDED WITH PAPER BEFORE THE RING IS TAKEN**, and the
+  owner found out what happens when it is not: "at the top of both characters
+  and at the very bottom there seems to be some sort of clipping". A
+  character is cropped to its own ink, so its outermost strokes LIE ON the
+  square's edges — and a distance transform only sees the buffer it is given,
+  so with no pad it reads "off the top" as more ink rather than as paper. The
+  top of the top stroke was then nowhere near any paper, fell outside the
+  ring, and was drawn with no line along it. **Measured before the fix: 119
+  and 329 px of 遠's edges and 138 and 138 of 東's carried silhouette but no
+  outline.** The shared tracer pads for exactly this reason
+  (`inkMask(src, { pad })`); this build makes its own raster and so has to do
+  it itself, and **it is the same trap the mountain's `keep` field fell into**
+  — "THE FRAME'S OWN EDGE COUNTS AS THE OUTSIDE" in build-grow-menu.mjs. Two
+  scripts have now made it; a third will.
+  - **So the build asks the edges directly**: every pixel of the silhouette
+    lying on the square's own border must carry outline, because it is the
+    outermost ink there is and so is boundary by definition. It reads 597 px
+    for 遠 and 413 for 東, all of them outlined.
+- **AND NOT ONE LINE MISSING ANYWHERE ELSE — THE BUILD PROVES THAT TOO** (the
+  same ask). Three more things could quietly drop a stroke between the ring
+  and the path: `MIN_AREA` throwing away a small loop, `simplify` collapsing
+  a thin one, and the even-odd fill turning a loop inside out. None of them
+  announces itself — the mark just loses a stroke — so the build **draws its
+  own path back** at the size it traced and asks the pixels.
   - **Two measures, because either alone can be fooled.** A whole stroke
     inside a big loop is a per cent or two of that loop's pixels, so COVERAGE
     barely moves; and a ring that is complete but shifted would pass a purely
@@ -1361,6 +1378,17 @@ between"). `components/CornerSeal.tsx`, `lib/sealGlyph.ts`,
     the build with `MIN_AREA` at 40000, which throws away every small loop,
     stops with "character 1 has a piece of outline only 0.0% painted: a stroke
     is being lost". A check that cannot fire is worth nothing.
+  - **BUT IT COULD NOT HAVE CAUGHT THE CLIPPING**, and that is the lesson
+    worth keeping: it compares the PATH against the RING, so it proves the
+    drawing faithful to the ring — and the ring was itself short at the
+    edges. A check is only as good as the thing it checks against. The edge
+    test above compares the ring against the CHARACTER, which is the other
+    half of the question.
+  - **The proof needs the pad too.** The path's own box is the ring's, which
+    sits `PAD` inside the buffer, so the viewBox it is drawn back through is
+    widened by that much in the path's own units. Rendered at 0,0 the mark is
+    stretched over the pad and every comparison is nonsense — it read 41%
+    painted the first time, which was the pad's shift, not a lost stroke.
   - **And nothing is lost at the SIZE IT IS DRAWN either**: rendered at 42px
     (the mark on a 1x screen), 58 and 84, the palest piece of either character
     still reaches 206 of 255 — none is faint, none invisible.
