@@ -1617,6 +1617,19 @@ ul, ol { list-style: none; }
 .cig-search-toggle svg {
   display: block;
 }
+/* A FINGER GETS A BIGGER TARGET THAN THE BOX. At the row's 0.7 floor both
+   toggles are 21px on a phone, under every touch guideline; an invisible
+   margin round each, while shut, makes them 38 without moving a drawn pixel.
+   Only while shut — open, the bar and the menu's own controls stand beside
+   them and the margin would lie over those. */
+@media (pointer: coarse) {
+  .cig-search:not([data-open]) .cig-search-toggle::before,
+  .cig-menu:not([data-open]) .cig-tags-toggle::before {
+    content: '';
+    position: absolute;
+    inset: -12px;
+  }
+}
 /* The bar: one gap past the button, and the rest of the frame's width. It
    takes no pointer itself — only the field does — so the row under its empty
    parts can still be dragged. */

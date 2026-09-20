@@ -89,6 +89,11 @@ export function CigSearch({
   const [miss, setMiss] = useState(false);
   const [size, setSize] = useState<number>(CIG_SEARCH.type);
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const toggleRef = useRef<HTMLButtonElement | null>(null);
+  /** What was last searched for and found: the glass shuts the bar on that, rather than searching it again. */
+  const lastHit = useRef<string | null>(null);
+  /** A search asked for while the row was spinning; it runs when the row lands. */
+  const pending = useRef(false);
   const missTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   useEffect(() => () => clearTimeout(missTimer.current), []);
 
@@ -98,13 +103,26 @@ export function CigSearch({
     const el = inputRef.current;
     if (!el) return;
     if (open) el.focus({ preventScroll: true });
-    else el.blur();
+    // Shutting hands the focus to the glass rather than dropping it on the
+    // page: from BODY a keyboard reader's next Tab starts the page again.
+    else if (document.activeElement === el) toggleRef.current?.focus({ preventScroll: true });
   }, [open]);
 
   const run = useCallback(() => {
     const q = query.trim();
-    if (!q || locked) return;
-    if (onSearch(q)) return;
+    if (!q) return;
+    // The spin is unskippable, so a search asked for during one is HELD and
+    // run when the row lands — it used to be dropped without a sign.
+    if (locked) {
+      pending.current = true;
+      return;
+    }
+    pending.current = false;
+    if (onSearch(q)) {
+      lastHit.current = q;
+      return;
+    }
+    lastHit.current = null;
     // nothing found: the ☁ red, and what was typed gone
     setQuery('');
     setMiss(true);
@@ -112,6 +130,10 @@ export function CigSearch({
     missTimer.current = setTimeout(() => setMiss(false), SEARCH_MISS_MS);
     inputRef.current?.focus({ preventScroll: true });
   }, [locked, onSearch, query]);
+
+  useEffect(() => {
+    if (!locked && pending.current) run();
+  }, [locked, run]);
 
   /**
    * A LONG QUERY IS SET SMALLER, ON THE SAME BASELINE. The login box's type is
@@ -131,8 +153,16 @@ export function CigSearch({
     if (!ctx) return;
     ctx.font = `700 ${CIG_SEARCH.type}px ${getComputedStyle(el).fontFamily}`;
     const w = ctx.measureText(query).width;
-    setSize(w <= avail ? CIG_SEARCH.type : Math.max(CIG_SEARCH.typeMin, +((CIG_SEARCH.type * avail) / w).toFixed(2)));
-  }, [avail, query]);
+    // THE FLOOR IS IN SCREEN PX, and the bar is zoomed: 12 design px is 8.4 on
+    // a phone, under the 9 this site knows will not render solid. And iOS zooms
+    // the whole page on focusing a field set under 16px and does not zoom back,
+    // so on a touch screen the floor is 16; past it a long query scrolls in the
+    // field, which a text input does by itself.
+    const s = place?.s ?? 1;
+    const coarse = window.matchMedia('(pointer: coarse)').matches;
+    const floor = Math.min(CIG_SEARCH.type, Math.max(CIG_SEARCH.typeMin, (coarse ? 16 : 9) / s));
+    setSize(w <= avail ? CIG_SEARCH.type : Math.max(floor, +((CIG_SEARCH.type * avail) / w).toFixed(2)));
+  }, [avail, query, place?.s]);
 
   const g = SEARCH_GLYPH;
   return (
@@ -156,14 +186,23 @@ export function CigSearch({
         }}
       >
         <button
+          ref={toggleRef}
           type="button"
           className="cig-search-toggle"
           aria-expanded={open}
-          aria-label={open ? (query.trim() ? 'Search' : 'Close the search') : 'Search the cigarettes'}
+          aria-label={open ? (query.trim() && query.trim() !== lastHit.current ? 'Search' : 'Close the search') : 'Search the cigarettes'}
           onClick={() => {
+            // open with the text it has already found: the glass shuts the bar.
+            // Otherwise the only way to close after a hit was to delete the query.
             if (!open) onOpenChange(true);
-            else if (query.trim()) run();
+            else if (query.trim() && query.trim() !== lastHit.current) run();
             else onOpenChange(false);
+          }}
+          onKeyDown={(e) => {
+            if (open && e.key === 'Escape') {
+              e.preventDefault();
+              onOpenChange(false);
+            }
           }}
         >
           <svg viewBox={g.viewBox} width={g.width} height={g.height} aria-hidden="true" focusable="false">

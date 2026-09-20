@@ -47,12 +47,28 @@ const words = (s: string): string[] =>
 const LABEL = new Map(CIG_TAG_BUTTONS.map((b) => [`${b.group}:${b.value}`, b.label]));
 const said = (group: string, value: string | number) => LABEL.get(`${group}:${value}`) ?? String(value);
 
+/**
+ * A BRAND ANSWERS TO EVERY WAY IT IS SPELT. The data has "Golden Leaf" on five
+ * packs and "GoldenLeaf" on two — two brand buttons, the owner's own file
+ * names — so a reader typing either spelling was shown only the packs that
+ * happened to share it. Brands are grouped by the same squash lib/cigPages.ts
+ * uses to make those name-twins meet, and a pack carries all its group's
+ * spellings.
+ */
+const squash = (v: string) => v.toLowerCase().replace(/[^a-z0-9]/g, '');
+const SPELLINGS = new Map<string, string[]>();
+for (const b of CIG_TAG_BUTTONS) {
+  if (b.group !== 'brand') continue;
+  const k = squash(b.label);
+  SPELLINGS.set(k, [...(SPELLINGS.get(k) ?? []), b.label, k]);
+}
+
 function indexOf(id: string, name: string): string[] {
   const bag = [name];
   const t = tagsFor(id);
   if (t) {
     bag.push(
-      said('brand', t.brand),
+      ...(SPELLINGS.get(squash(said('brand', t.brand))) ?? [said('brand', t.brand)]),
       said('menthol', t.menthol),
       said('harshness', t.harshness),
       said('price', t.price),
@@ -105,7 +121,13 @@ const BOX = FIELD_W / 0.8;
  * sprite px of wander against the email row's 4.9 and the password's 8.2 —
  * and a line twice as long shows its wander twice as plainly.
  */
-const ROW = { x0: 0.1, x1: 0.9, tickX1: 0.1116, y0: 0.8, lineY0: 0.887, lineY1: 0.908 };
+/*
+ * The line's window starts at 0.8915, NOT the splash's 0.887: those two sprite
+ * rows hold the foot of the "g" in "create account/login", which the splash
+ * wants (it draws that label) and which showed here as a smudge over the
+ * dashes 72% of the way along. Row 383 is empty the whole length of the line.
+ */
+const ROW = { x0: 0.1, x1: 0.9, tickX1: 0.1116, y0: 0.8, lineY0: 0.8915, lineY1: 0.908 };
 
 export const CIG_SEARCH = {
   fieldW: FIELD_W,
