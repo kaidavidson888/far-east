@@ -10,8 +10,9 @@ import type { LoginStep } from '@/lib/loginBox';
 import {
   LOGIN_ATTEMPT_MINUTES, LOGIN_BLOCK_COOKIE, LOGIN_BLOCK_MINUTES, LOGIN_COOKIE, LOGIN_MAX_FAILS,
   LOGIN_MAX_SENDS,
-  advanceAttempt, blockLogin, blockedUntil, countFail, countSend, dropAttempt, emailKey,
-  newLoginToken, phoneKey, phoneRegistered, readAttempt, startAttempt, sweepLoginState, tokKey,
+  advanceAttempt, blockLogin, blockedUntil, contactLoad, countSend, dropAttempt, emailKey,
+  newLoginToken, phoneKey, phoneRegistered, readAttempt, releaseTry, reserveTry, startAttempt,
+  sweepLoginState, tokKey,
   type LoginAttempt,
 } from '@/lib/loginState';
 
@@ -61,8 +62,33 @@ const SAY = {
   blocked: 'Too many tries.',
 } as const;
 
-const offline = (m: string | undefined) => !!m && /provider is disabled|logins are disabled|_provider_disabled|signups not allowed/i.test(m);
-const mailerSpent = (m: string | undefined) => !!m && /over_email_send_rate_limit|email rate limit|over_sms_send_rate_limit|sms rate limit/i.test(m);
+/*
+ * WHOSE FAULT WAS IT? Only a mistake the reader made may spend one of their
+ * three tries. A provider switched off, a mailer out of credit, Supabase's own
+ * rate limit or a network fault are none of their doing, and counting those
+ * meant a reader could be shut out of the site for half an hour by an outage
+ * — three presses of a button that was never going to work.
+ *
+ * It reads `code` first and the message only as a fallback, because the
+ * message is prose and changes between GoTrue releases where the code does not.
+ */
+type AuthErr = { message?: string; code?: string; status?: number };
+
+const offline = (e: AuthErr | null | undefined) => {
+  if (!e) return false;
+  const c = e.code ?? '';
+  return /_provider_disabled|signup_disabled/.test(c)
+    || /provider is disabled|logins are disabled|signups not allowed/i.test(e.message ?? '');
+};
+const mailerSpent = (e: AuthErr | null | undefined) => {
+  if (!e) return false;
+  const c = e.code ?? '';
+  return /over_(email|sms)_send_rate_limit|over_request_rate_limit/.test(c)
+    || /rate limit/i.test(e.message ?? '');
+};
+/** Ours or the provider's, never the reader's: says so and spends no try. */
+const notTheirFault = (e: AuthErr | null | undefined) =>
+  offline(e) || mailerSpent(e) || (e?.status !== undefined && e.status >= 500);
 
 /* -------------------------------------------------------------- the handle */
 
@@ -94,8 +120,23 @@ async function attemptNow(): Promise<LoginAttempt> {
  * export async functions: a const exported from one silently strips every
  * export the module has, which is why lib/authPolicy.ts exists too.)
  */
+/*
+ * ONLY A CONTACT THE ATTEMPT HAS PROVED IS BLOCKED.
+ *
+ * Blocking whatever was typed lets a stranger shut any number out of the site
+ * for half an hour, and text it three times on the way — type a victim's
+ * number, fail the code three times, and the number is locked with nothing
+ * proved about it. A contact is only blocked once the attempt has passed its
+ * code (`phoneOk` / `emailOk`), which still covers the case the lockout is
+ * really for: brute force at the PASSWORD step, which cannot be reached
+ * without proving the phone. Guessing a code without owning the number blocks
+ * the browser and nothing else.
+ */
 async function block(a: LoginAttempt, why: string): Promise<LoginStepResult> {
-  await blockLogin([tokKey(a.token), phoneKey(a.phone), emailKey(a.email)], why);
+  await blockLogin(
+    [tokKey(a.token), a.phoneOk ? phoneKey(a.phone) : null, a.emailOk ? emailKey(a.email) : null],
+    why,
+  );
   const jar = await cookies();
   jar.set(LOGIN_BLOCK_COOKIE, String(Date.now() + LOGIN_BLOCK_MINUTES * 60_000), {
     httpOnly: true,
@@ -112,9 +153,16 @@ async function block(a: LoginAttempt, why: string): Promise<LoginStepResult> {
  * A failed section. The third one blocks — the owner's "on the third failure
  * of the same section kick the user out of all login processes" — and the two
  * before it send a fresh code where a code is what the section wants.
+ *
+ * THE TRY WAS ALREADY TAKEN, before Supabase was called (`reserveTry`), so
+ * `n` is handed in. Counting it here instead left the whole round trip open:
+ * six requests fired together all read the count at zero, all got a guess
+ * checked, and the third failure only landed once every one of them had been
+ * tried.
  */
-async function failed(a: LoginAttempt, say: string, resend?: () => Promise<void>): Promise<LoginStepResult> {
-  const n = await countFail(a.token);
+async function failed(
+  a: LoginAttempt, n: number, say: string, resend?: () => Promise<void>,
+): Promise<LoginStepResult> {
   if (n >= LOGIN_MAX_FAILS) return block(a, `three failures at ${a.stage}`);
   if (resend && a.sends < LOGIN_MAX_SENDS) {
     await resend();
@@ -131,15 +179,34 @@ export async function loginStepAction(
   next: string,
 ): Promise<LoginStepResult> {
   await sweepLoginState();
-  const a = await attemptNow();
   const back = safeNext(next, '/landing');
 
-  // already shut out, however they got here
-  if (await blockedUntil([tokKey(a.token), phoneKey(a.phone), emailKey(a.email)])) {
+  /*
+   * THE BROWSER'S OWN BLOCK IS READ BEFORE ANYTHING IS MINTED. attemptNow()
+   * starts a fresh attempt with a fresh token when the cookie names an
+   * expired row — so asking after it had already thrown away the very token
+   * the block was written against, and the `tok:` key never turned anyone
+   * away. Read it off the cookie first and return without minting.
+   */
+  const had = (await cookies()).get(LOGIN_COOKIE)?.value;
+  if (await blockedUntil([tokKey(had)])) {
+    return { ok: false, blocked: true, error: SAY.blocked };
+  }
+  const a = await attemptNow();
+  if (await blockedUntil([phoneKey(a.phone), emailKey(a.email)])) {
     return { ok: false, blocked: true, error: SAY.blocked };
   }
   // the box's idea of where it is, checked against the server's
   if (a.stage !== step) return { ok: true, next: a.stage === 'done' ? 'done' : a.stage };
+
+  /*
+   * ONE OF THE THREE TRIES IS TAKEN NOW, not after Supabase answers, and it is
+   * given back if the section is passed. Without this, requests fired together
+   * all read the count at zero and every one of them got a guess in.
+   */
+  const tries = await reserveTry(a.token, step);
+  // nothing left to reserve: the tries are spent, and nothing is guessed
+  if (tries >= LOGIN_MAX_FAILS) return block(a, `three failures at ${step}`);
 
   const supabase = await createClient();
   const v = value.trim();
@@ -148,13 +215,36 @@ export async function loginStepAction(
     /* ------------------------------------------------------------- PHONE # */
     case 'phone': {
       const phone = normalisePhone(v);
-      if (!phone) return failed(a, SAY.phone);
+      if (!phone) return failed(a, tries, SAY.phone);
+      /*
+       * THE NUMBER'S OWN BLOCK IS CHECKED BEFORE A TEXT IS SENT. It could not
+       * be checked at the top, because until this step there is no number to
+       * check — and asking afterwards means a locked-out number is texted
+       * again on every attempt.
+       */
+      if (await blockedUntil([phoneKey(phone)])) {
+        return { ok: false, blocked: true, error: SAY.blocked };
+      }
+      /*
+       * AND THE NUMBER'S OWN TALLY, not just this browser's. The counters hang
+       * off a cookie, so dropping it started a fresh attempt with three fresh
+       * tries and the block never landed. Summed across every unexpired
+       * attempt that named this number, a new cookie inherits what the number
+       * has already spent.
+       */
+      const load = await contactLoad(phone, null);
+      if (load.fails >= LOGIN_MAX_FAILS) {
+        return block({ ...a, phone, phoneOk: true }, 'the number has spent its tries');
+      }
+      if (load.sends > LOGIN_MAX_SENDS) return { ok: false, error: SAY.spent };
       const returning = await phoneRegistered(phone);
       const { error } = await supabase.auth.signInWithOtp({ phone });
       if (error) {
-        if (offline(error.message)) return { ok: false, error: SAY.provider };
-        if (mailerSpent(error.message)) return { ok: false, error: SAY.spent };
-        return failed(a, SAY.phone);
+        if (notTheirFault(error)) {
+          await releaseTry(a.token);
+          return { ok: false, error: mailerSpent(error) ? SAY.spent : SAY.provider };
+        }
+        return failed(a, tries, SAY.phone);
       }
       await advanceAttempt(a.token, { phone, returning, stage: 'phoneCode' });
       await countSend(a.token);
@@ -167,10 +257,15 @@ export async function loginStepAction(
       const phone = a.phone;
       const { error } = await supabase.auth.verifyOtp({ phone, token: v, type: 'sms' });
       if (error) {
-        return failed(a, SAY.code, async () => {
+        if (notTheirFault(error)) {
+          await releaseTry(a.token);
+          return { ok: false, error: mailerSpent(error) ? SAY.spent : SAY.provider };
+        }
+        return failed(a, tries, SAY.code, async () => {
           await supabase.auth.signInWithOtp({ phone });
         });
       }
+      await releaseTry(a.token);
       /*
        * THE NUMBER IS THEIRS. What happens to the session that verifying just
        * created is the difference between the two paths:
@@ -196,7 +291,10 @@ export async function loginStepAction(
     /* --------------------------------------------------------------- EMAIL */
     case 'email': {
       const email = v.toLowerCase();
-      if (!EMAIL_RE.test(email)) return failed(a, SAY.email);
+      if (!EMAIL_RE.test(email)) return failed(a, tries, SAY.email);
+      if (await blockedUntil([emailKey(email)])) {
+        return { ok: false, blocked: true, error: SAY.blocked };
+      }
       /*
        * The reader is signed in as the phone-only account this flow just made,
        * so the address is added to it rather than signed in with. updateUser
@@ -206,10 +304,13 @@ export async function loginStepAction(
        */
       const { error } = await supabase.auth.updateUser({ email });
       if (error) {
-        if (mailerSpent(error.message)) return { ok: false, error: SAY.spent };
-        if (offline(error.message)) return { ok: false, error: SAY.provider };
-        return failed(a, SAY.email);
+        if (notTheirFault(error)) {
+          await releaseTry(a.token);
+          return { ok: false, error: mailerSpent(error) ? SAY.spent : SAY.provider };
+        }
+        return failed(a, tries, SAY.email);
       }
+      await releaseTry(a.token);
       await advanceAttempt(a.token, { email, stage: 'emailCode' });
       await countSend(a.token);
       return { ok: true, next: 'emailCode' };
@@ -221,10 +322,15 @@ export async function loginStepAction(
       const email = a.email;
       const { error } = await supabase.auth.verifyOtp({ email, token: v, type: 'email_change' });
       if (error) {
-        return failed(a, SAY.code, async () => {
+        if (notTheirFault(error)) {
+          await releaseTry(a.token);
+          return { ok: false, error: mailerSpent(error) ? SAY.spent : SAY.provider };
+        }
+        return failed(a, tries, SAY.code, async () => {
           await supabase.auth.updateUser({ email });
         });
       }
+      await releaseTry(a.token);
       await advanceAttempt(a.token, { emailOk: true, stage: 'password' });
       return { ok: true, next: 'password' };
     }
@@ -241,8 +347,11 @@ export async function loginStepAction(
          */
         const { error } = await supabase.auth.signInWithPassword({ phone: a.phone, password: value });
         if (error) {
-          if (offline(error.message)) return { ok: false, error: SAY.provider };
-          return failed(a, SAY.password);
+          if (notTheirFault(error)) {
+            await releaseTry(a.token);
+            return { ok: false, error: SAY.provider };
+          }
+          return failed(a, tries, SAY.password);
         }
         await logAuthEvent(a.phone, 'login');
       } else {
@@ -252,7 +361,13 @@ export async function loginStepAction(
          * the password is written onto the account the phone section made.
          */
         const { error } = await supabase.auth.updateUser({ password: value });
-        if (error) return failed(a, SAY.password);
+        if (error) {
+          if (notTheirFault(error)) {
+            await releaseTry(a.token);
+            return { ok: false, error: SAY.provider };
+          }
+          return failed(a, tries, SAY.password);
+        }
         await logAuthEvent(a.email ?? a.phone, 'signup');
       }
       await dropAttempt(a.token);

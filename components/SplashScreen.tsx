@@ -187,10 +187,14 @@ export function SplashScreen({ next = '', notice = null }: {
        * larger of the two only before p = 0.28, which is before this starts.
        * So the ink is drawn at exactly that coverage.
        *
-       * The white goes down first and at the patch's OWN alpha, because it is
-       * what erases the baked square; the pattern then comes back over it at
-       * the field's strength. Two passes, because one cannot both cover
-       * something and be half transparent at the same time.
+       * TWO PASSES, AND THE PATTERN'S IS NOT SCALED BY THE ERASE. The white
+       * goes down at `fillA`, because that is what dissolves the baked square;
+       * the pattern then comes back at the FIELD's strength, full stop. Drawn
+       * at `fillA * rise` instead, the patch was lighter than its surroundings
+       * for the whole of the crossfade — the square's white interior showing
+       * through the gap — which is exactly the panel the owner could see. At
+       * every point of the ramp the ink is now at the same coverage as the
+       * frame beside it, and only the square underneath is fading.
        */
       const px0 = r.x + SPLASH_FILL.x0 * r.w;
       const py0 = fy + SPLASH_FILL.y0 * r.h;
@@ -201,7 +205,7 @@ export function SplashScreen({ next = '', notice = null }: {
       ctx.globalAlpha = fillA;
       ctx.fillStyle = '#fcfcfc';
       ctx.fillRect(px0, py0, pw, ph);
-      ctx.globalAlpha = fillA * (inForm ? 1 : rise);
+      ctx.globalAlpha = inForm ? 1 : rise;
       ctx.drawImage(fill, 0, 0, fill.naturalWidth, fill.naturalHeight, px0, py0, pw, ph);
       ctx.restore();
     }

@@ -79,6 +79,14 @@ no CSS framework (tokens in `app/globals.css`). Deploys to Vercel.
   (`scripts/assets/search-glass.jpg`) into `lib/searchGlyph.ts`, the row's search
   mark. `GLYPH_OPEN=<px> GLYPH_PREVIEW=1` draws the button at 21/30/60px for
   looking. See "THE MAGNIFYING GLASS SEARCHES THE ROW".
+- `npm run build:splash` — the splash's 101 frames, `edge`/`settle`/`blackbox`/
+  `phone-label.webp`, **and `boxfill.webp`** — the cloud pattern with the source's
+  login square mirrored over, which is what patches that square out now that the
+  box is a long rectangle. About 50 seconds, and **reproducible: the 101 frames
+  came back byte-identical** when `boxfill` was added. It also publishes where the
+  patch goes back down (`SPLASH_BOXFILL` in the generated `lib/splashEdgeProfile.ts`)
+  as the crop's own whole pixels over the frame — half a pixel of slip there is a
+  seam across the middle of the design. See "THE LOGIN BOX IS ONE LONG ROW".
 - `npm run build:tile` — bakes the animated 發 out of the owner's tile GIF (`scripts/assets/fa-tile.gif`) into
   `public/tile/fa-char-strip-{1x,2x}.webp` (all 72 frames stacked; the page steps them) and
   `lib/tile-geometry.json`. Takes a few seconds, keeps the character and drops the tile's
@@ -1891,8 +1899,17 @@ at both ends because it travels through a query string and an OAuth handshake.
 Somebody already signed in who lands on `/?next=…` goes straight through.
 `/login` still exists, still works, and is still what the header links to.
 
-**EMAIL AND PASSWORD, WITH GOOGLE USED ONCE.** Both rows are typed into, as the
-box is drawn. `splashAuthAction` decides in this order:
+**SINCE 2026-09-20 THE BOX ON THE SPLASH IS ONE LONG ROW AND THE FLOW IS PHONE
+FIRST — see "THE LOGIN BOX IS ONE LONG ROW" below, which supersedes what this
+section says about the splash's own box.** What follows still describes
+`splashAuthAction`, which is still in `app/actions.ts` and which **nothing on
+the splash calls any more**: it is the email-and-password-with-Google-once flow,
+kept until the owner says the phone flow is the one that stays. It is a public
+endpoint while it is there, but it can do nothing `/login` cannot. `/login` and
+`/register` are untouched and still work the old way, Google button included.
+
+**EMAIL AND PASSWORD, WITH GOOGLE USED ONCE** (the flow before 2026-09-20).
+`splashAuthAction` decides in this order:
 
 1. The address must look like one and the password must be long enough
    (`MIN_PASSWORD`, 8). Either failing flashes THAT row red and empties it,
@@ -1942,7 +1959,196 @@ is the hold, so reduced motion no longer skips it; only the dev-only
 `?splashform` flag does. A press before the frames have loaded is remembered
 and starts the run when they arrive — but only if the finger is still down.
 
-**The top row is the EMAIL row again.** It was EMAIL, the owner supplied PHONE #
+## THE LOGIN BOX IS ONE LONG ROW
+The owner's 2026-09-20 rebuild, in their words: "instead of a box with 3 rows I
+want to change the login box to a rectangle red outline the height of the
+character logo on the landing page with the length of 3 of the current outline
+boxes on the login page. in that rectangle outline I want there to be only the
+perpedicular left dashed lines with the same margins it currently has with text
+that will alternate and a sigil which left edge should line up with where the
+next instance of typed text will be. As the user types each letter should create
+a piece of the dashed lines underneath the newly typed letter that is the same
+length as the letter's width."
+
+`lib/loginBox.ts` (every number, and which measurement it came from),
+`lib/loginInk.ts` (the word), `lib/loginEmerge.ts` (the rectangle arriving),
+`components/splash/SplashLoginRow.tsx` (the row), `SplashLogin.tsx` (the
+sequence), `app/loginActions.ts` + `lib/loginState.ts` (the server).
+
+- **430 x 87 REAL PX, AND WHY BOTH ARE REAL.** The height is the landing page's
+  遠東 logo (`lib/landing-geometry.json`, 40 x 87), which is a real-CSS-px mark
+  under the margin rule. The width is three of the old box — and the old box
+  scaled with the frame (0.336 of it), so "three of them" only names a number
+  once a viewport is named. The reference is **1920x947**, which is already this
+  repo's desktop reference (`/dev/desktop`): there the frame is 426.15 and the
+  box 143.186, so three is 429.56 → 430. Held fixed rather than as 3x
+  whatever-the-box-is-now, because that is the site's own rule and the only
+  reading under which the rectangle keeps one proportion. A window too narrow
+  takes what there is less 12px a side (`loginBoxRect`).
+  **`coverRect` in `lib/splashFrames.ts` is a CONTAIN fit despite its name**
+  (`Math.min`), which is why the frame is only 426px wide on a 1920 screen and
+  `edge.webp` tiles the rest.
+- **THE ROW IS ONE ROW OF THE OLD BOX**, scaled off `SPLASH_GEOM.parts.email`:
+  the left margin is the old 0.100 held as the absolute 14.32px it was, not as a
+  tenth of a box three times as wide.
+- **EVERYTHING INSIDE IS PLACED FROM THE RECTANGLE'S OUTER CORNER, VIA
+  `.login-row-stage`.** An absolutely placed child of a bordered box is
+  positioned from its PADDING edge, so without the stage (`inset: -5px`) every
+  mark sat 5px in and 5px down: measured, the rule landed at 19.31 for its 14.32
+  and the black outline stood a clear 5px inside the red instead of on its inner
+  edge. **It is the shelf's `inside()` trap a second time.**
+- **THE VERTICAL DASHED RULE RUNS THE ROW'S HEIGHT, WITH ONE MARGIN TO THE BLACK
+  OUTLINE ON ALL THREE SIDES** (the owner's "extend the vertical dashed line so
+  the top and bottom margins match the left margins", then "make sure the top
+  and bottom … both have the same margins with the black outline"). Measured on
+  the page: **7.31 / 7.33 / 7.31**. It is EXTENDED, not stretched — the drawn
+  tile (`blackbox.webp`, sprite rows 63..93 of a 63..94 window, ink edge to edge
+  so a dash meets a dash at every join) is repeated, because a dashed line made
+  longer gains dashes rather than longer dashes. The span wants 5.66 tiles and a
+  partial one is cut mid-dash, so **six are used, each squeezed 5.6% along its
+  own length** (`ruleSqueeze`) — the same anisotropic squeeze the search bar
+  already gives this sprite.
+- **ONE TYPE SIZE FOR EVERY WORD, CENTRED** (the owner's "revert the phone # text
+  to the original size just center it on the vertical axis and use that same
+  text size for each new text element"). 13.20px: PHONE #'s ink matched to the
+  drawn label band (10.31px over the H's 703 + the P's 78), which is the
+  shelf's and the cigarette pages' own way of setting type against a drawing.
+  **What is centred is the FACE's band, not any one word's** — the I's 781 over
+  the P's 78 — so the baseline does not move between a prompt with a descender
+  and one without, and a prompt can become an answer in the same place without
+  the line jumping. `fitRow` still shrinks a run too long for the line, but at
+  this size that means forty typed characters; no prompt comes near it.
+  (For an hour the type was the rule's full height — "make the size of the typed
+  characters the same height as the altered vertical dashed line" — and
+  VERIFICATION CODE then had to be half the size of PHONE #. The revert is the
+  owner's.)
+- **EVERY PROMPT STANDS AT 50% AND GOES TO NOTHING AS THE READER ARRIVES** — the
+  old box's own idle weight for a label (`SPLASH_FORM.idle.label`). Focus or a
+  typed character takes it out (`data-out` on the ink canvas).
+- **THE ☁ IS THE TYPE'S HEIGHT, ON THE TYPE'S AXIS, AND IS THE SUBMIT BUTTON.**
+  Its height is the row's ink band (11.34) and its width the mark's own 126x60.
+  It stands where the next letter will go; while the prompt is still showing,
+  the prompt is standing in that very place, so the mark waits one space past
+  it (where the old row drew it) and slides back to the first letter's place on
+  focus. **It is the word that gives way, never the mark.** It is a masked
+  block, the search bar's construction, so going red is one colour changing.
+  `.login-row-sigil-hit` is in all three pressable lists and has a focus ring.
+- **THE DASHED LINE IS MADE BY THE TYPING.** One piece per letter, cut to that
+  letter's INK (`actualBoundingBoxLeft/Right`), not its advance — pieces cut to
+  the advance meet and draw one continuous rule; the gaps ARE the side bearings.
+  What is inherited from the drawing is the line's weight (sprite rows 96..100 →
+  1.665px) and its 0.76px gap under the type. A password measures its bullets.
+- **THE WORD IS WRITTEN BY TENDRILS OUT OF THE BLACK OUTLINE, GENERATED IN THE
+  BROWSER** ("have the ink of the Phone # text grow back into a second rectangle
+  outline on the inner edge of the red one this one in black. Use the tendril
+  animation to regrow the black outline into the new text for the row").
+  **`scripts/lib/ink-growth.mjs` is pure JS but for one `Buffer` in
+  `Ink.rgba()`**, so `lib/loginInk.ts` imports it directly (`allowJs` is on;
+  TypeScript reads `id = null` as the type `null`, hence one named cast). Not
+  baked, for two reasons: these words are TYPE, so they can be rastered where
+  they are shown, and five networks at the mountain's density would be
+  megabytes on the first page of the site. The channels are stroked with the
+  canvas's own round-capped lines rather than through `Ink`'s coverage buffer —
+  the same picture at this size, 0.1ms a frame against 80.
+  - **Two phases, the dots menu's**: 0..0.74 the tendrils write the word,
+    0.74..1 they withdraw into the outline and the word stays. A new prompt is
+    the old one's run backwards at 2x, then the new one's forwards. Measured:
+    ink rises to 8910 px at the apex and rests at 7354, the word alone.
+  - **THE FRONT KEEPS GOING AFTER THE TRUNK HAS STOPPED** (`maxT`). A pixel's
+    arrival is its arc along the writer PLUS how far off it sits PLUS noise, so
+    the furthest is always past the channel's end; paced by the trunk alone, the
+    first cut showed a horizontal BAND of each letter and nothing else.
+  - **Nothing is written until the box is `live`.** The row is mounted for the
+    whole four seconds so the rectangle can come up with everything else; a run
+    started at mount is over before the reader can see the box.
+  - It waits on `document.fonts.ready` and throws its cache away, because a
+    canvas asked for a face it has not got draws the fallback and keeps it.
+- **THE RECTANGLE COMES OUT OF THE SEAL, IT DOES NOT FADE IN** ("have the black
+  of the original seal logo flow into the black outline in the login box as well
+  as the red into the outline as well. in general incorperate the rectangle's
+  emergence more organically into the animation"). **THE SOURCE ALREADY DOES
+  THIS FOR ITS SQUARE, and measuring it is what this is built on**: the seal's
+  own black is 6002 px at f20, 115 at f29 and exactly 0 at f30, and at f30 all
+  2532 black pixels left inside that square lie within 6px of its border. The
+  logo's black flows into a black box outline; that outline then fades (447 at
+  f50) while a red one rises with the cloud field. So the rectangle IS that box,
+  carried on — `EMERGE` in `lib/loginEmerge.ts`, as fractions of the run:
+  - **0.28–0.34 the handover**: `boxfill.webp` erases the baked square and an
+    identical one is drawn in its place, so nothing is seen to happen.
+  - **0.34–0.52 the travel**: the paper and its black edge move to the
+    rectangle's footprint, the edge thinning from the square's measured 4px to
+    the row's 2, with the seal's filigree running ahead of each side.
+  - **0.52–0.88 the red**: the outer rule fills outward from the middle of each
+    side, which is where the seal's red still is at that point.
+  - **It is drawn LAST in `paint()`, above the vignette**, because the row is a
+    DOM layer over the canvas and the wash does not reach it; under the wash the
+    handover would be a change of contrast. The row's own border and paper wait
+    on `[data-emerged]` (paint() writes it, as it writes the ink layer's
+    opacity) and take over in one frame — **3 pixels of 48,150 differ across it,
+    the worst by 28 of 765**. Both sides are the same flat rectangle on whole
+    pixels, which is why this handover is safe where raster-for-vector ones here
+    have not been.
+  - **A GENERATED NETWORK HAS TO BE DRAWN ON ONE CLOCK.** Drawing every channel
+    to the same FRACTION of its own length puts a child's stub 200px ahead of a
+    trunk that has gone 20, because a child is placed at its arc along its
+    parent; it came out as two dashed lines running off both sides of the box.
+    Normalise `t0`/`dur` and read each front off them.
+  - **Every run goes the way its edge is going.** The two ends travel SIDEWAYS,
+    so their ink runs horizontally out in front of them; rotated to run down the
+    sides it shot 143px out of an 87px box.
+- **THE PATCH IS LAID DOWN AT THE FIELD'S OWN STRENGTH** ("make the square that
+  you are filling with the background pattern the same opacity as the pattern
+  around it"). `boxfill.webp` is cut from the LAST frame, where the cloud field
+  is at full, so drawn as it was it put a panel of finished pattern into a field
+  still coming up. The frames' own ramp is `0.12 + 0.88 * p^0.7`
+  (`build-splash-frames.mjs`; in the middle of the picture `sealFade` is the
+  larger term only before p = 0.28, which is before the patch starts), so the
+  ink goes down at exactly that — over a white pass at the patch's own alpha,
+  which is what does the erasing. **That expression is now in two places**
+  (the bake and `paint()`); change one and change the other.
+  **edge.webp could not be the patch**: it is the same picture at 900 wide with
+  sharpen 0.4, and scaled back it carries a visibly different line weight (mean
+  |diff| 32 of 255 against f100 outside the box altogether).
+- **THE FLOW**: PHONE # → VERIFICATION CODE → (EMAIL → VERIFICATION CODE, only
+  for a number nobody has an account on) → PASSWORD. `loginStepAction`:
+  - **The server decides which section is live.** The step the box sends is a
+    hint and is checked against the attempt's own row; a mismatch answers with
+    the real one. A server action is a public endpoint, and a box that could
+    name its own step could name `password` first.
+  - **Nothing secret is stored.** Supabase Auth bcrypts the password and issues
+    and checks the codes; `login_attempts` records where a reader has got to,
+    how many codes went out and how many tries failed. A code in an application
+    table is a password in an application table with a shorter life.
+  - **A RETURNING reader is signed straight back out after their code**, and
+    gets in only on `signInWithPassword({ phone, password })` — leaving the
+    session standing while the box asks for a password would make the password
+    a formality. **A NEW reader keeps the session**, because the address and
+    the password are written onto the account with `updateUser`; an abandoned
+    attempt leaves a phone-only account, which migration 0004's name fallback
+    already handles. The address is verified with `verifyOtp({ type:
+    'email_change' })`.
+  - "If the account is new accept any submission": **there is deliberately no
+    length rule on a new password.**
+  - A failure flashes the rectangle `#FF0000` for 500ms and empties it; a code
+    section also sends a fresh code, up to three.
+- **THREE FAILURES OF ONE SECTION SHUT THE SITE FOR HALF AN HOUR**, and **the
+  database stops the login while a cookie stops the browsing — two jobs.**
+  `login_blocks` is keyed on the attempt's token AND on the phone number or
+  address the codes were going to, so clearing cookies buys a fresh browser and
+  the same locked-out number. `fe_blocked` (httpOnly, holds the epoch ms the
+  block lifts) is what `app/layout.tsx` reads to draw the all-red TRY AGAIN IN
+  30 MINUTES page over everything, with no database round trip on a reader who
+  is not blocked. **Not keyed on IP**: a carrier NAT puts a town behind one
+  address. **Not middleware**, because this project has none (Known gaps).
+  **The cost: every route is dynamic now** — the root layout reads cookies. The
+  artwork pages are the only ones that actually changes.
+  The handle is a random 256-bit token in an httpOnly cookie (`fe_login`); it IS
+  the secret, so nothing is signed and no new app secret was invented.
+- **`LOGIN_BLOCK_COOKIE` lives in `lib/loginState.ts`, not in the action file**:
+  a `'use server'` module may only export async functions (the gotcha below).
+
+**The top row WAS the EMAIL row again** (before the rebuild above; kept because
+the assets it describes are all still in the tree). It was EMAIL, the owner supplied PHONE #
 artwork to replace it (a6c4c0c), and it takes an email once more — so the baked
 EMAIL word in `blackbox.webp` is drawn again as an ordinary sprite window, and
 `parts.email.cloudDx` is back to 0 because the ☁ no longer has to clear a wider
@@ -2335,6 +2541,20 @@ the brand assets and review text in this repo are visible to anyone.
    rule. Until then `bigShares()` catches Postgres `42703` ONLY and reads 0, so the landing
    page does not 500 over a number in the corner; every other error still throws. Delete
    that catch once the column is live.
+0b. **MIGRATION `0007_login_flow.sql` IS WRITTEN AND NOT YET APPLIED, AND THE
+   PHONE FLOW CANNOT RUN UNTIL THREE THINGS ARE SWITCHED ON IN THE SUPABASE
+   DASHBOARD.** `npm run verify:db` passes with it (46/46; the table count it
+   checks is 10 now). The author applies it once, in the SQL Editor. Then, under
+   Authentication → Providers: **Phone ON with Twilio's Account SID, Auth Token
+   and Message Service SID** (those go in the dashboard and NOWHERE in this
+   repo, which is public); **Email ON with custom SMTP** — the shared mailer is
+   capped at a couple an hour and answers `over_email_send_rate_limit` past
+   that, which for a verification code is a reader who never gets one; and the
+   **"Change Email Address" template must carry `{{ .Token }}`**, or the email
+   section sends a link where the box asks for six digits. Until then the box
+   draws and animates and every submission says sign-in is switched off.
+   **None of the OTP calls has been exercised against a live project** — the
+   logic is reviewed, the network is not.
 1. **Deploy is not yet green.** See HANDOFF.md → Deployment. The middleware was removed to get
    past `MIDDLEWARE_INVOCATION_FAILED`; that commit (`f6b03ff`) still needs pushing.
 2. **No session refresh on plain page loads** (middleware removed). Readers who only browse are

@@ -4,7 +4,7 @@ import {
   useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState,
 } from 'react';
 import {
-  LOGIN_BOX, LOGIN_LABEL, LOGIN_ROW, LOGIN_TYPE, OLD_BOX_W,
+  LOGIN_BOX, LOGIN_LABEL, LOGIN_ROW, LOGIN_TYPE, LOGIN_TYPED, OLD_BOX_W,
   fitRow, loginBoxRect, type LoginStep,
 } from '@/lib/loginBox';
 import INK from '@/scripts/assets/far-east-ink.json';
@@ -220,7 +220,7 @@ export function SplashLoginRow({
    * prompt left. The masked password measures its bullets rather than its
    * letters, because the bullets are what is on the line.
    */
-  const typed = fitRow(shownValue || ' ', INK);
+  const typed = fitRow(shownValue || ' ', INK, LOGIN_TYPED);
   const typedSize = typed.size;
 
   /**
@@ -309,7 +309,9 @@ export function SplashLoginRow({
    * the same height". Both are the row's common ink band, so the mark and the
    * line it marks are one thing however long the word is.
    */
-  const sigilH = LOGIN_TYPE.band;
+  // the mark is the band of the line it marks — the rule's height while the
+  // line can hold it, and down with the type when it cannot
+  const sigilH = wordOut ? typed.h : LOGIN_ROW.sigilH;
   const sigilW = sigilH * LOGIN_ROW.sigilAspect;
   const SPACE = (320 / 1000) * ink.size;
   const caretX = Math.min(
@@ -411,7 +413,7 @@ export function SplashLoginRow({
             // the size, measured in Chrome — the figure the shelf places all
             // its type by.
             left: textLeft,
-            top: LOGIN_TYPE.baseline - typedSize * BASELINE,
+            top: LOGIN_TYPED.baseline - typedSize * BASELINE,
             width: LOGIN_ROW.lineX1 - textLeft,
             height: typedSize,
             fontSize: typedSize,
@@ -444,7 +446,7 @@ export function SplashLoginRow({
           className="login-row-sigil-hit"
           style={{
             left: caretX,
-            top: LOGIN_TYPE.top,
+            top: LOGIN_BOX.h / 2 - sigilH / 2,
             width: sigilW,
             height: sigilH,
           }}

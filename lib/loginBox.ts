@@ -111,9 +111,18 @@ export const LOGIN_ROW = {
   ruleTiles: RULE_TILES,
   /** how much the drawn tile is squeezed along its length to make them fit */
   ruleSqueeze: RULE_TILE / RULE_DRAWN,
-  /** where the word and what is typed both begin: the rule's ink end + the
-   *  0.0023 of box that every row leaves after it. */
-  textX: px(E.textX0),
+  /**
+   * Where the word and what is typed both begin.
+   *
+   * THE GAP AFTER THE RULE IS THE GAP THE RULE KEEPS FROM THE BLACK OUTLINE
+   * (the owner's "make sure the margin between the user typed text and the
+   * vertical dashed line is the same as between the vertical dashed line and
+   * the black outline rectangle"). One margin, 7.32, four times over: the
+   * outline to the rule on three sides, and the rule to the type. The old
+   * box's own 0.0023-of-a-box gap (0.33px) was drawn for a row a third as
+   * tall and left the type touching the rule at this size.
+   */
+  textX: px(E.x0) + px(E.ruleX1 - E.x0) + RULE_MARGIN,
   /** the dashed line under the typing stops here, the same margin as the left. */
   lineX1: Math.round(3 * OLD_BOX_W) - px(E.x0),
   /**
@@ -130,21 +139,21 @@ export const LOGIN_ROW = {
    * what makes a row of them read as a dashed line at all — pieces cut to each
    * letter's ADVANCE would meet and draw one continuous rule.
    *
-   * It sits under the TYPE rather than at the rule's foot, because the type is
-   * back at its own size and centred (LOGIN_TYPE) — the drawing's own gap
-   * between a label's band and its dashes is 0.76px, and that is what is kept.
+   * It sits under WHAT IS TYPED, which is the rule's height, so it rides the
+   * foot of that band — the drawing's own gap between a label's band and its
+   * dashes is 0.76px, and that is what is kept.
    */
-  dashY: LOGIN_BOX.h / 2 + BAND / 2 + (96 / 430 - E.dY0) * OLD_BOX_W,
+  dashY: LOGIN_BOX.h / 2 + RULE_H / 2 + (96 / 430 - E.dY0) * OLD_BOX_W,
   dashStroke: (5 / 430) * OLD_BOX_W,
   /**
-   * THE ☁ IS THE HEIGHT OF THE TYPE AND STANDS ON ITS AXIS (the owner's
-   * 2026-09-20 "have the sigil be centered on the same vertical axis as the
-   * text and make it the same height"). So its height is the row's own ink
-   * band and its width follows the mark's drawn 126 x 60 — it comes out at
-   * 23.8 x 11.3, which is within a pixel and a half of the 20.76 the old row
-   * drew it at, the difference being that it is now stated as a relationship
-   * rather than as a number.
+   * THE ☁ IS AS TALL AS THE VERTICAL DASHED LINE, ON THE TYPE'S OWN AXIS (the
+   * owner's "have the sigil be centered on the same vertical axis as the
+   * text", then "make the sigil height the same size as the vertical dashed
+   * line"). Its width follows the mark's drawn 126 x 60, so it comes out
+   * 122.6 x 58.4 — which is a quarter of the line, and is why what is typed
+   * is fitted WITHOUT reserving room for it: see LOGIN_TYPED.
    */
+  sigilH: RULE_H,
   sigilAspect: 126 / 60,
 } as const;
 
@@ -186,6 +195,41 @@ export const LOGIN_TYPE = {
   lineW: Math.round(3 * OLD_BOX_W) - 2 * px(E.x0) - (px(E.textX0) - px(E.x0))
     - BAND * (126 / 60) - 0.32 * TYPE_EM,
   /** under this it stops reading, whatever the room (the site's own floor) */
+  min: 9,
+} as const;
+
+/**
+ * WHAT THE READER TYPES IS AS TALL AS THE VERTICAL DASHED LINE (the owner's
+ * "make all user typed text the same height as the dashed line as well"), on
+ * the same axis as the prompt it replaces.
+ *
+ * So the row carries TWO sizes, and deliberately: the prompt is the old box's
+ * own 13.20 (LOGIN_TYPE, the owner's revert), and the answer is the rule's
+ * full height. They share the box's middle line, so the small grey word gives
+ * way to a large black one in the same place — which is the picture, the
+ * prompt being a whisper and the answer being the thing.
+ *
+ * THE ☁ IS FITTED WITH IT, AND SHRINKS WITH IT. At the rule's height the mark
+ * is 122.6px wide — near a third of the line — so a ten-digit number and a
+ * full-size mark cannot both stand on it: left to clamp, the mark came down on
+ * top of the last three digits, which is what the first cut of this did.
+ *
+ * So the line is solved for BOTH at once — `size x (advance + a space + the
+ * mark) <= the line` — and the mark is the type's own band, as it has been
+ * since the owner put it on the text's axis. A six-digit code comes out at
+ * 55 of the rule's 58; a long address comes down further, as any line of type
+ * does. Both are as tall as the rule wherever the line can hold them, and
+ * neither ever lands on the other.
+ */
+const MARK_EM = (126 / 60) * ((MAX_ASC + MAX_DESC) / 1000);
+export const LOGIN_TYPED = {
+  em: RULE_H / ((MAX_ASC + MAX_DESC) / 1000),
+  band: RULE_H,
+  top: LOGIN_BOX.h / 2 - RULE_H / 2,
+  baseline: LOGIN_BOX.h / 2 - RULE_H / 2 + (MAX_ASC / 1000) * (RULE_H / ((MAX_ASC + MAX_DESC) / 1000)),
+  lineW: Math.round(3 * OLD_BOX_W) - px(E.x0) - (px(E.x0) + px(E.ruleX1 - E.x0) + RULE_MARGIN),
+  /** the mark's width, as a multiple of the size — counted against the line */
+  mark: MARK_EM + 0.32,
   min: 9,
 } as const;
 
@@ -233,14 +277,17 @@ export const LOGIN_LABEL: Record<LoginStep, string> = {
 export function fitRow(
   text: string,
   ink: { asc: Record<string, number>; desc: Record<string, number>; adv: Record<string, number>; em: number },
+  /** LOGIN_TYPE for a prompt, LOGIN_TYPED for what the reader types. */
+  spec: { em: number; baseline: number; lineW: number; min: number; mark?: number } = LOGIN_TYPE,
 ) {
   let w = 0;
   for (const c of text) w += ink.adv[c] ?? 700;
-  const advEm = w / ink.em;
-  const room = LOGIN_TYPE.lineW;
-  const size = advEm * LOGIN_TYPE.em > room
-    ? Math.max(LOGIN_TYPE.min, room / Math.max(1e-6, advEm))
-    : LOGIN_TYPE.em;
+  // the ☁ stands at the end of the line and is a multiple of the size, so it
+  // is solved for with the run rather than clamped on top of it afterwards
+  const advEm = w / ink.em + (spec.mark ?? 0);
+  const size = advEm * spec.em > spec.lineW
+    ? Math.max(spec.min, spec.lineW / Math.max(1e-6, advEm))
+    : spec.em;
   let a = 0;
   let d = 0;
   for (const c of text) {
@@ -249,11 +296,13 @@ export function fitRow(
   }
   return {
     size,
-    w: advEm * size,
+    // the run's OWN width: `advEm` above carries the mark's room as well, which
+    // is for solving the size and is not part of the text
+    w: (w / ink.em) * size,
     ascent: (a / ink.em) * size,
     drop: (d / ink.em) * size,
     /** its ink's own top, on the row's fixed baseline */
-    top: LOGIN_TYPE.baseline - (a / ink.em) * size,
+    top: spec.baseline - (a / ink.em) * size,
     h: ((a + d) / ink.em) * size,
   };
 }

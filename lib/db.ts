@@ -358,6 +358,35 @@ export async function accountState(email: string): Promise<AccountState> {
   return { exists: Boolean(row), googleLinked: Boolean(row?.google) };
 }
 
+/**
+ * IS THIS ACCOUNT FINISHED?
+ *
+ * The phone flow signs a NEW reader in as soon as their code checks out,
+ * because the address and the password are then written onto that account
+ * with updateUser and there is no service-role key here to do it any other
+ * way. So between the code and the password there is a real session in the
+ * browser for an account that has no password on it — and a reader who
+ * simply navigated away at that point would be signed in for good.
+ *
+ * currentUser() asks this before it answers, so the half-made state cannot
+ * reach any page. It reads whether a password EXISTS and never the value,
+ * the same rule accountState() is written under.
+ *
+ * An account with NO phone was never made by this flow — every email and
+ * Google reader is one — so it passes untouched.
+ */
+export async function accountFinished(userId: string): Promise<boolean> {
+  const sql = db();
+  const [row] = await sql<{ ok: boolean }[]>`
+    SELECT (
+      u.phone IS NULL OR u.phone = ''
+      OR coalesce(u.encrypted_password, '') <> ''
+    ) AS ok
+    FROM auth.users u WHERE u.id = ${userId} LIMIT 1
+  `;
+  return Boolean(row?.ok);
+}
+
 /* ---------- The pack shelf ----------
  * The bookmark on a cigarette's own page, which is a different shelf from the
  * one above. `favorites` keys on a catalogue row and the catalogue is still

@@ -221,19 +221,96 @@ export async function sweepLoginState(): Promise<void> {
 }
 
 /**
- * Does an account already exist for this phone number?
+ * Does a FINISHED account exist for this phone number?
  *
  * The phone's counterpart to `accountState`, and the same note applies: it
  * reads `auth.` directly, which the app can because it connects as the owner,
- * and it reads nothing about the password. It is what decides whether the box
- * asks for an email at all — the owner's "if their phone # is already
- * registered with an account skip the following text and go straight to
- * Password".
+ * and it reads nothing about the password — only whether there is one. It is
+ * what decides whether the box asks for an email at all, the owner's "if their
+ * phone # is already registered with an account skip the following text and go
+ * straight to Password".
+ *
+ * TWO THINGS IT HAS TO GET RIGHT, and the first draft got both wrong.
+ *
+ * THE PLUS. GoTrue trims the leading + before it stores a number, so
+ * `auth.users.phone` holds `15555550100` where `normalisePhone` hands us
+ * `+15555550100`. Compared as given, the row is never found, EVERY reader
+ * looks new — and a new reader keeps the session `verifyOtp` mints and is then
+ * allowed to set a password. Anyone holding the SIM could have taken over an
+ * account with no password at all. Both forms are matched.
+ *
+ * A ROW IS NOT AN ACCOUNT. `signInWithOtp` inserts an `auth.users` row for an
+ * unknown number BEFORE any code is proved, and an attempt abandoned between
+ * the code and the password leaves that row behind with no password on it.
+ * Treating it as registered sends its real owner to a PASSWORD step for a
+ * password nobody ever set — three failures and a half-hour block, for ever,
+ * and a stranger could do it to any number by typing it once. So registered
+ * means a row that has a password on it; anything less goes down the new-reader
+ * path, where `updateUser` finishes the very same row.
  */
 export async function phoneRegistered(phone: string): Promise<boolean> {
   const sql = db();
+  const bare = phone.replace(/^\+/, '');
   const [row] = await sql<{ one: number }[]>`
-    SELECT 1 AS one FROM auth.users WHERE phone = ${phone} LIMIT 1
+    SELECT 1 AS one FROM auth.users
+    WHERE phone IN (${bare}, ${phone})
+      AND coalesce(encrypted_password, '') <> ''
+    LIMIT 1
   `;
   return Boolean(row);
+}
+
+/**
+ * TAKE ONE OF THE THREE TRIES BEFORE SPENDING IT, not after.
+ *
+ * Counting a failure once Supabase has answered leaves the whole round trip
+ * open: six requests fired together all read `fails` at 0, all get their guess
+ * checked, and the third failure only lands after every one of them has been
+ * tried. One UPDATE reserves the try and reports the count, so the (n+1)th
+ * request finds nothing to reserve and is refused without a guess.
+ *
+ * It is scoped to the stage as well as the token, so a reservation cannot be
+ * spent against a section the attempt has already moved on from.
+ */
+export async function reserveTry(token: string, stage: LoginStep): Promise<number> {
+  const sql = db();
+  const [row] = await sql<{ fails: number }[]>`
+    UPDATE public.login_attempts SET fails = fails + 1
+    WHERE token = ${token} AND stage = ${stage}
+      AND fails < ${LOGIN_MAX_FAILS} AND expires_at > now()
+    RETURNING fails
+  `;
+  return row ? Number(row.fails) : LOGIN_MAX_FAILS;
+}
+
+/** Give a reserved try back, when the section was passed after all. */
+export async function releaseTry(token: string): Promise<void> {
+  const sql = db();
+  await sql`
+    UPDATE public.login_attempts SET fails = greatest(fails - 1, 0)
+    WHERE token = ${token} AND expires_at > now()
+  `;
+}
+
+/**
+ * WHAT THIS CONTACT HAS SPENT ACROSS EVERY ATTEMPT, not just this browser's.
+ *
+ * The counters hang off the attempt's row, and the attempt's row hangs off a
+ * cookie — so dropping the cookie between guesses starts a fresh attempt with
+ * fresh counters, and the three tries never run out. The contact is the thing
+ * actually being defended, so its failures and its sent codes are summed over
+ * every unexpired attempt that named it. It uses the phone index the migration
+ * already declares.
+ */
+export async function contactLoad(phone: string | null, email: string | null) {
+  if (!phone && !email) return { fails: 0, sends: 0 };
+  const sql = db();
+  const [row] = await sql<{ fails: number; sends: number }[]>`
+    SELECT coalesce(sum(fails), 0)::int AS fails, coalesce(sum(sends), 0)::int AS sends
+    FROM public.login_attempts
+    WHERE expires_at > now()
+      AND ((${phone}::text IS NOT NULL AND phone = ${phone})
+        OR (${email}::text IS NOT NULL AND lower(email) = lower(${email})))
+  `;
+  return { fails: Number(row?.fails ?? 0), sends: Number(row?.sends ?? 0) };
 }

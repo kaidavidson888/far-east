@@ -1059,6 +1059,10 @@ ul, ol { list-style: none; }
   mask: url('/sigil.webp') center / 100% 100% no-repeat;
   transition: background-color 150ms ease;
 }
+/* The mark is the submit button, so a keyboard has to be able to see where it
+   is: the splash's own ring, in the artwork's red, clear of the mark. */
+.login-row-sigil-hit:focus-visible { outline: 2px solid #ff0000; outline-offset: 3px; }
+.login-row-sigil-hit:disabled { cursor: inherit; }
 .login-row-sigil[data-miss] { background: #ff0000; transition: none; }
 .login-row-sigil[data-blink] { animation: cig-search-blink 1060ms steps(1, end) infinite; }
 @media (prefers-reduced-motion: reduce) {
@@ -3076,6 +3080,7 @@ input[type='reset'],
 .rating-scale button,
 .splash-hit,
 .splash-field-submit,
+.login-row-sigil-hit,
 .artpage-hit,
 .artpage-decor,
 .cigpage-bookmark-hit,
@@ -3171,6 +3176,7 @@ input[type='radio'],
 .rating-scale button,
 .splash-hit,
 .splash-field-submit,
+.login-row-sigil-hit,
 .artpage-hit,
 .cigpage-bookmark-hit,
 .cigpage-plus-hit,
@@ -3236,6 +3242,7 @@ input[type='radio']:active,
 .rating-scale button:active,
 .splash-hit:active,
 .splash-field-submit:active,
+.login-row-sigil-hit:active,
 .artpage-hit:active,
 .cigpage-bookmark-hit:active,
 .cigpage-plus-hit:active,

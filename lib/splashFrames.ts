@@ -1,9 +1,18 @@
 // The splash plays a faithful copy of scripts/assets/login-source.gif, baked to
 // scrubbable WebP stills by `npm run build:splash` (recoloured, sharpened, with
 // the red seal fading as it drains and the red clouds rising to full opacity).
-// The frames keep the original login box's red outline; its black parts (labels,
-// ☁, dashes) are drawn crisp on top from blackbox.webp once the form is up.
 // Nothing decodes a GIF at runtime.
+//
+// THE LOGIN BOX IS NOT THE ONE THESE FRAMES DRAW ANY MORE. The source ends on a
+// 215px square with three rows in it; since 2026-09-20 the box is one long row
+// in a 430 x 87 rectangle (lib/loginBox.ts), drawn by the page. So the baked
+// square is patched out of the pattern as the run goes on (`boxfill.webp`,
+// below) and the rectangle comes out of the seal's own drain in its place
+// (lib/loginEmerge.ts). What is still used from the old box: blackbox.webp, for
+// the dashed vertical rule that opens the row, and SPLASH_GEOM.parts.email,
+// which is where every one of the new row's numbers is scaled from. The
+// component that drew the three rows, components/splash/SplashLoginFields.tsx,
+// is in git before 981eb2d.
 // `edge.webp` — the final red pattern with the box reflected over — tiles beside
 // the frame to continue the design to the screen edges.
 // `settle.webp` — the last frame with every black part at 0; drawn straight over
@@ -39,10 +48,12 @@ function splashEdge(): Uint8Array {
 }
 
 /**
- * Where the form sits inside the red outline box, and how heavy each part reads
- * when nothing is focused. Shared: SplashLoginFields positions its DOM windows
- * with these, and paint() draws the fading-in canvas copy with the same numbers,
- * so the two are the same pixels at the same weight and the handover is silent.
+ * How heavy each part of the old three-row box read when nothing was focused,
+ * and the span of the run its overlay faded up across. The login row still
+ * rides `fadeFrom`..`fadeTo` (paint() writes the ink layer's opacity from
+ * them) and its prompt stands at `idle.label`, 0.5, which is the owner's
+ * "start every instance of text in the box at 50%". `ox`/`oy` placed the old
+ * sprite windows and nothing reads them now.
  */
 export const SPLASH_FORM = {
   // Horizontal placement is not a tuned number any more: it is whatever centres

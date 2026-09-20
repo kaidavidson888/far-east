@@ -29,6 +29,10 @@ try {
       id uuid primary key default gen_random_uuid(),
       email text,
       phone text,
+      -- present because phoneRegistered and accountFinished read whether a
+      -- password EXISTS (never its value) to tell a finished account from the
+      -- row signInWithOtp leaves behind before any code is proved
+      encrypted_password text,
       raw_user_meta_data jsonb not null default '{}'::jsonb
     );
   `);
@@ -318,12 +322,17 @@ try {
   // Invoke the local tsc through the running node binary so this works the same
   // on Windows (where `npx` is a .cmd and execFileSync cannot spawn it directly).
   execFileSync(process.execPath, ['node_modules/typescript/bin/tsc',
-    'lib/db.ts', '--outDir', '.verify/build', '--module', 'es2022',
+    'lib/db.ts', 'lib/loginState.ts', '--outDir', '.verify/build', '--module', 'es2022',
     '--target', 'es2022', '--moduleResolution', 'bundler', '--resolveJsonModule', '--skipLibCheck'],
     { stdio: 'pipe' });
   writeFileSync('.verify/build/package.json', '{"type":"module"}\n');
-  writeFileSync('.verify/build/db.js',
-    readFileSync('.verify/build/db.js', 'utf8').replace(/^import 'server-only';$/m, ''));
+  for (const m of ['db', 'loginState']) {
+    writeFileSync(`.verify/build/${m}.js`,
+      readFileSync(`.verify/build/${m}.js`, 'utf8')
+        .replace(/^import 'server-only';$/m, '')
+        // tsc emits bare relative specifiers; node's own loader wants the file
+        .replace(/from '\.\/db'/g, "from './db.js'"));
+  }
 
   process.env.DATABASE_URL = URL_;
   const lib = await import('../.verify/build/db.js?t=' + Date.now());
@@ -400,6 +409,51 @@ try {
 
   check('bigShares reads the count back', (await lib.bigShares(owner)) === 2,
     String(await lib.bigShares(owner)));
+
+  /*
+   * WHO COUNTS AS REGISTERED, which is the question that decides whether the
+   * login box asks a reader for a password they never set. Two ways to get it
+   * wrong, and the first draft had both:
+   *
+   *   THE PLUS. GoTrue trims the leading + before storing, so auth.users.phone
+   *   holds '1555…' where the app normalises to '+1555…'. Compared as given,
+   *   no row is ever found and EVERY reader looks new — which on this flow
+   *   means an SMS code alone lets them set a password on an existing account.
+   *
+   *   A ROW IS NOT AN ACCOUNT. signInWithOtp inserts a row before any code is
+   *   proved, and an attempt abandoned before the password leaves it there
+   *   with none. Called registered, its real owner is sent to a PASSWORD step
+   *   for ever and locked out after three tries.
+   */
+  console.log('\n— the login flow —');
+  const state = await import('../.verify/build/loginState.js?t=' + Date.now());
+  const withPhone = async (phone, password) => {
+    const id = randomUUID();
+    await sql`
+      INSERT INTO auth.users (id, phone, encrypted_password)
+      VALUES (${id}, ${phone}, ${password})
+    `;
+    return id;
+  };
+
+  const doneId = await withPhone('15555550100', '$2a$10$abcdefghijklmnopqrstuv');
+  check('phoneRegistered finds a finished account through the missing +',
+    (await state.phoneRegistered('+15555550100')) === true);
+
+  await withPhone('15555550199', null);
+  check('a phone row with no password is NOT registered',
+    (await state.phoneRegistered('+15555550199')) === false);
+
+  check('phoneRegistered says no to a number nobody has',
+    (await state.phoneRegistered('+15555550777')) === false);
+
+  const halfId = await withPhone('15555550198', null);
+  check('accountFinished: a phone account with a password is finished',
+    (await lib.accountFinished(doneId)) === true);
+  check('accountFinished: one without is not, so it cannot browse signed in',
+    (await lib.accountFinished(halfId)) === false);
+  check('accountFinished: an email account has no phone and passes',
+    (await lib.accountFinished(owner)) === true);
 
   console.log(`\n${checks - failures}/${checks} checks passed`);
 } catch (e) {

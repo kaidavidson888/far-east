@@ -1,5 +1,5 @@
 import 'server-only';
-import { profileById } from './db';
+import { accountFinished, profileById } from './db';
 import { createClient } from './supabase/server';
 
 export type User = { id: string; email: string; display_name: string };
@@ -17,6 +17,18 @@ export async function currentUser(): Promise<User | null> {
   const supabase = await createClient();
   const { data, error } = await supabase.auth.getUser();
   if (error || !data.user) return null;
+
+  /*
+   * A HALF-MADE ACCOUNT IS NOT SIGNED IN. The splash's phone flow signs a new
+   * reader in on their SMS code, because the address and the password are
+   * then written onto that account and there is no service-role key here to
+   * do it another way — so between the code and the password a real session
+   * exists for an account with no password on it, and navigating away would
+   * leave the reader signed in for good. Asking here rather than signing them
+   * out keeps the flow able to finish the account, and covers every page at
+   * once because this is the one gate they all read.
+   */
+  if (!(await accountFinished(data.user.id))) return null;
 
   const profile = await profileById(data.user.id);
   return {
