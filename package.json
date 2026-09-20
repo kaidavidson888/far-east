@@ -29,6 +29,7 @@
     "build:cigtags": "node scripts/build-cigtags.mjs",
     "audit:cigs": "node scripts/audit-cigs.mjs",
     "build:growmenu": "node scripts/build-grow-menu.mjs",
+    "build:searchglyph": "node scripts/build-search-glyph.mjs",
     "build:tile": "node scripts/build-tile.mjs"
   },
   "dependencies": {

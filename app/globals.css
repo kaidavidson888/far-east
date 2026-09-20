@@ -1501,7 +1501,9 @@ ul, ol { list-style: none; }
 .cig-controls .cig-tag,
 .cig-menu .cig-tags-toggle,
 .cig-menu .cig-confirm,
-.cig-menu .cig-tags {
+.cig-menu .cig-tags,
+.cig-search .cig-search-toggle,
+.cig-search .cig-search-input {
   pointer-events: auto;
 }
 
@@ -1553,6 +1555,158 @@ ul, ol { list-style: none; }
   --cig-line2: calc(var(--cig-btn-h) + var(--cig-btn-gap));
   --cig-tags-right: var(--cig-menu-w);
 }
+/* ------------------------------------------------------- the search -----
+   THE MAGNIFYING GLASS AND ITS BAR — the owner's 2026-09-19 ask: their spiral
+   glass in a box the plus's size, halfway between the pack left of the framed
+   one and the plus, and halfway between the red frame's foot and the plus's
+   top; pressing it puts the tag menu away and opens "a text editor with the
+   dashed lines and sigil of the text editor in the login box", fitting
+   "between the edges of the red outline appearing from left to right from the
+   magnifying button like the menu from the + button".
+
+   IT IS THE MENU'S CONSTRUCTION AGAIN, for the same reason: an outer box
+   placed in screen px whose `left` is what slides, and an inner one carrying
+   the zoom, so everything inside is laid out in the design's own px from its
+   corner and type is set at the size it is seen at. `layoutMenu` in
+   CigScroller says where; the scale is the plus's, one number for both. */
+.cig-controls > .cig-search {
+  position: absolute;
+  left: 0;
+  top: 0;
+  pointer-events: none;
+  /* placed only once measured, so it never flashes in the corner */
+  visibility: hidden;
+}
+.cig-controls > .cig-search[data-placed] {
+  visibility: visible;
+}
+.cig-search[data-slides] {
+  transition:
+    left var(--cig-grow-ms) var(--cig-ease-in),
+    top var(--cig-grow-ms) var(--cig-ease-in);
+}
+.cig-search-scale {
+  position: relative;
+  display: block;
+  margin: 0;
+  zoom: var(--cig-menu-zoom, 1);
+  width: var(--cig-menu-w);
+  height: var(--cig-btn-h);
+}
+/* THE BUTTON IS THE PLUS'S SIBLING: the same box and rule (the shared block
+   above), the same clear ground with the mark in the button's ink, inverting
+   under the pointer over the same 120ms — which the mark follows because it
+   is drawn inline and filled with currentColor (lib/searchGlyph.ts). */
+.cig-search-toggle {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: var(--cig-btn-h);
+  height: var(--cig-btn-h);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  color: #010101;
+  transition: background-color 120ms ease-out, color 120ms ease-out;
+}
+.cig-search-toggle:hover {
+  background: #010101;
+  color: #ffffff;
+}
+.cig-search-toggle svg {
+  display: block;
+}
+/* The bar: one gap past the button, and the rest of the frame's width. It
+   takes no pointer itself — only the field does — so the row under its empty
+   parts can still be dragged. */
+.cig-search-bar {
+  position: absolute;
+  left: calc(var(--cig-btn-h) + var(--cig-btn-gap));
+  top: 0;
+  width: calc(var(--cig-menu-w) - var(--cig-btn-h) - var(--cig-btn-gap));
+  height: var(--cig-btn-h);
+  pointer-events: none;
+}
+/* IT ARRIVES LEFT TO RIGHT, THE TAG MENU'S OWN WAY: opacity and translation
+   only, on the compositor, each piece fading in and drifting its last 10px
+   out from the button, nearest first on the same stagger. That is why the
+   dashed line is shown in pieces — one window would fade in all at once, and
+   the owner asked for left to right; a clip or a growing width would be a
+   repaint every frame, which this block has already been rewritten once to
+   get away from. Shut, the bar is `inert` in the markup. */
+.cig-search-slot {
+  position: absolute;
+  display: block;
+  opacity: 0;
+  transform: translateX(-10px);
+  transition:
+    opacity var(--cig-shut-ms) var(--cig-ease-out),
+    transform var(--cig-shut-ms) var(--cig-ease-out);
+}
+.cig-search-bar[data-open] .cig-search-slot {
+  opacity: 1;
+  transform: none;
+  transition:
+    opacity var(--cig-fade-ms) var(--cig-ease-in) calc(var(--i, 0) * var(--cig-stagger)),
+    transform var(--cig-grow-ms) var(--cig-ease-in) calc(var(--i, 0) * var(--cig-stagger));
+}
+/* THE LOGIN BOX'S OWN LADDER: its dashed line stands at half strength until
+   the field is being typed in, and comes up to full. On the wrapper, so it
+   multiplies with each piece's arrival rather than fighting it. */
+.cig-search-marks {
+  position: absolute;
+  inset: 0;
+  opacity: 0.5;
+  transition: opacity 160ms ease;
+}
+.cig-search-bar:focus-within .cig-search-marks {
+  opacity: 1;
+}
+/* THE ☁ IS A MASKED BLOCK, NOT AN IMAGE, so that going red is one colour
+   changing: /sigil.webp is the cloud's ink on alpha (it is the age gate's, so
+   it is already loaded on every page), and the block behind it is whatever
+   colour the moment calls for. It steps aside once something is typed, as the
+   login box's does — and nothing found deletes what was typed, which is what
+   brings it back to be seen going red.
+   THE RED IS THE ARTWORK'S #FF0000 and it is not `--negative`, which is warm
+   grey and never an error colour; it arrives at once and fades back. */
+.cig-search-sigil {
+  display: block;
+  background: #010101;
+  -webkit-mask: url('/sigil.webp') center / 100% 100% no-repeat;
+  mask: url('/sigil.webp') center / 100% 100% no-repeat;
+  transition: background-color 150ms ease, opacity 160ms ease;
+}
+.cig-search-sigil[data-typed] {
+  opacity: 0;
+}
+.cig-search-sigil[data-miss] {
+  background: #ff0000;
+  transition: opacity 160ms ease;
+}
+/* The field: the login box's, with a caret. (The splash hides its caret
+   because its box is a picture; this is a field a reader is asked to type
+   into.) Its size and its top come in inline — a long query is set smaller on
+   the same baseline. */
+.cig-search-input {
+  position: absolute;
+  left: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  outline: none;
+  color: #010101;
+  caret-color: #010101;
+  font-family: var(--font-typed);
+  font-weight: 700;
+  font-synthesis: none;
+  line-height: 1;
+  cursor: text;
+}
+
 /* A shut menu takes no presses. Its buttons are still laid out, merely at
    zero opacity, and an invisible button that can still be clicked is a trap
    — the clip that used to hide them stopped the pointer as a side effect,
@@ -1564,6 +1718,7 @@ ul, ol { list-style: none; }
 }
 .cig-reset,
 .cig-tags-toggle,
+.cig-search-toggle,
 .cig-confirm,
 .cig-tag {
   margin: 0;
@@ -1597,6 +1752,7 @@ ul, ol { list-style: none; }
 }
 .cig-reset:focus-visible,
 .cig-tags-toggle:focus-visible,
+.cig-search-toggle:focus-visible,
 .cig-confirm:focus-visible,
 .cig-tag:focus-visible {
   outline: 2px solid #010101;
@@ -2534,6 +2690,7 @@ input[type='reset'],
 .cig-slot-picked,
 .cig-reset,
 .cig-tags-toggle,
+.cig-search-toggle,
 .cig-tag,
 .cig-confirm,
 .logo-menu,
@@ -2623,6 +2780,7 @@ input[type='radio'],
 .cig-slot-picked,
 .cig-reset,
 .cig-tags-toggle,
+.cig-search-toggle,
 .cig-confirm,
 .cig-tag,
 .logo-menu-logo,
@@ -2684,6 +2842,7 @@ input[type='radio']:active,
 .cig-slot-picked:active,
 .cig-reset:active,
 .cig-tags-toggle:active,
+.cig-search-toggle:active,
 .cig-confirm:active,
 .cig-tag:active,
 .logo-menu-logo:active,

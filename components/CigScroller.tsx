@@ -31,6 +31,8 @@ import {
 } from '@/lib/cigRow';
 import { LANDING_ROW_CLEAR } from '@/lib/landing';
 import { CIG_HEADING_SIZE, CIG_TAG_MENU, TAG_HEADING, fitLabel, matchingPacks } from '@/lib/cigTags';
+import { searchPacks } from '@/lib/cigSearch';
+import { CigSearch } from '@/components/CigSearch';
 import { CIG_TOGGLE_GLYPH } from '@/lib/cigToggleGlyph';
 
 /**
@@ -155,6 +157,9 @@ type MenuLayout = {
   openLeft: number;
   /** how tall the tag grid may be, in the menu's own (design) px */
   room: number;
+  /** the search button, shut: see `layoutMenu` for where the owner put it */
+  searchLeft: number;
+  searchTop: number;
 };
 
 export function CigScroller({
@@ -209,6 +214,17 @@ export function CigScroller({
   /** The tag menu: whether the plus has been opened, and what is picked in it. */
   const [tagsOpen, setTagsOpen] = useState(false);
   const [picked, setPicked] = useState<ReadonlySet<string>>(() => new Set());
+  /**
+   * The search bar. It and the tag menu are never open together — each one's
+   * button puts the other away (the owner's "closes all other open menus
+   * around it") — and everything that puts the tag menu away because the
+   * reader has started to scroll puts this away too, through `closeMenus`.
+   */
+  const [searchOpen, setSearchOpen] = useState(false);
+  const closeMenus = useCallback(() => {
+    setTagsOpen(false);
+    setSearchOpen(false);
+  }, []);
   /**
    * WHERE THE MENU STANDS, AND HOW BIG IT IS DRAWN — worked out from the red
    * frame, at rest. See `layoutMenu` below. Null until the first measure, and
@@ -491,12 +507,29 @@ export function CigScroller({
     const plus = CIG_CONTROLS.height * s;
     const top = Math.round(frameFoot + (Hc - frameFoot - plus) / 2);
     const gridTop = top + (CIG_CONTROLS.height + CIG_CONTROLS.gap) * s;
+    const shutLeft = Math.round(Wc / 2 - plus / 2);
+    /*
+     * THE SEARCH BUTTON, the plus's size, where the owner put it: "equidistant
+     * between the left pack to the one in the center's right edge and the left
+     * edge of the + box on the horizontal axis. on the vertical axis …
+     * equidistant between the top of the + box and the red outline's bottom
+     * edge". Both from the same model of the row AT REST as everything else
+     * here — the pack left of the framed one ends one gap before the framed
+     * pack begins — so it is worked out when the row stops, never read off a
+     * moving row. (Read live through one wheel throw its left edge would swing
+     * 860 → 304 → 794 → 739 → 858 in two seconds; that is the failure
+     * `cigTagsRight` once had.) It does hop a few px when the row settles on a
+     * pack of another width, as the menu beside it does, and slides there.
+     */
+    const prevRight = Wc / 2 - (list[i].w / 2 + CIG_GAP) * z;
     const next: MenuLayout = {
       s,
       top,
-      shutLeft: Math.round(Wc / 2 - plus / 2),
+      shutLeft,
       openLeft: Math.round(Wc / 2 - frameW / 2),
       room: Math.max(CIG_CONTROLS.height, Math.floor((Hc - CIG_CONTROLS.edge - gridTop) / s)),
+      searchLeft: Math.round((prevRight + shutLeft) / 2 - plus / 2),
+      searchTop: Math.round((frameFoot + top) / 2 - plus / 2),
     };
     // The logo menu is drawn at the same scale as the plus (the owner's
     // 2026-09-19 ask), and it is a sibling of this component's controls, so
@@ -510,7 +543,9 @@ export function CigScroller({
       was.top === next.top &&
       was.shutLeft === next.shutLeft &&
       was.openLeft === next.openLeft &&
-      was.room === next.room
+      was.room === next.room &&
+      was.searchLeft === next.searchLeft &&
+      was.searchTop === next.searchTop
         ? was
         : next,
     );
@@ -718,7 +753,7 @@ export function CigScroller({
       // or confirm — does not close it; reset in particular leaves it open
       // by the owner's earlier rule. Already shut, it costs nothing: React
       // drops a state set to the value it already has.
-      setTagsOpen(false);
+      closeMenus();
       offsetRef.current += dx;
       run();
     },
@@ -756,7 +791,7 @@ export function CigScroller({
       velRef.current = 0;
       seekRef.current = offsetRef.current + (at + packsRef.current[i].w / 2 - m.w / 2);
       // fetching a pack scrolls the row to it, so the menu goes away — see `nudge`
-      setTagsOpen(false);
+      closeMenus();
       run();
     },
     [compute, run],
@@ -1016,7 +1051,7 @@ export function CigScroller({
       if (!d) return;
       e.preventDefault();
       // a hand on the row puts the menu away — see `nudge`
-      setTagsOpen(false);
+      closeMenus();
       // screen px in, row px out: the row is zoomed (see cigZoom)
       const by = (d / zoomRef.current) * WHEEL;
       offsetRef.current += by;
@@ -1110,7 +1145,7 @@ export function CigScroller({
       // guarded: throws InvalidPointerId if the pointer has already gone
       try { e.currentTarget.setPointerCapture?.(e.pointerId); } catch { /* no pointer */ }
       // the press has become a scroll, so the menu goes away — see `nudge`
-      setTagsOpen(false);
+      closeMenus();
     }
   };
   /** End a drag from wherever the release was heard — the row, or the window. */
@@ -1337,6 +1372,33 @@ export function CigScroller({
           } as React.CSSProperties
         }
       >
+      {/* THE SEARCH — a sibling of the menu, not a child of it: the menu's box
+          slides when the plus is pressed, and this stands by the plus's SHUT
+          place. Open, it slides onto the red frame's left edge at its own
+          height, as the plus does, and its bar runs to the frame's right. */}
+      <CigSearch
+        open={searchOpen}
+        locked={locked}
+        slides={menuSlides}
+        place={menu ? { left: searchOpen ? menu.openLeft : menu.searchLeft, top: menu.searchTop, s: menu.s } : null}
+        onOpenChange={(open) => {
+          // "closes all other open menus around it": the tag menu, which is the
+          // one that stands beside it. (The mountain's menu in the corner is
+          // the owner's to close, by its own button — their earlier rule.)
+          if (open) setTagsOpen(false);
+          setSearchOpen(open);
+        }}
+        onSearch={(query) => {
+          // NOTHING FOUND IS DECIDED HERE, BEFORE THE WHEEL IS THROWN. Handed an
+          // empty list, `startSpin` spins a whole lap and `swapTo` then leaves
+          // the row alone — two seconds of motion that changes nothing. The bar
+          // reddens its ☁ and empties itself instead.
+          const hits = searchPacks(allIds, query);
+          if (!hits.length) return false;
+          startSpin(hits);
+          return true;
+        }}
+      />
       <div
         className="cig-menu"
         data-open={tagsOpen ? '' : undefined}
@@ -1362,7 +1424,11 @@ export function CigScroller({
           className="cig-tags-toggle"
           aria-expanded={tagsOpen}
           aria-label={tagsOpen ? 'Hide the tag filters' : 'Filter by tag'}
-          onClick={() => setTagsOpen((open) => !open)}
+          onClick={() => {
+            // opening this one puts the search away, and the other way round
+            setSearchOpen(false);
+            setTagsOpen((open) => !open);
+          }}
         >
           {(() => {
             const glyph = tagsOpen ? CIG_TOGGLE_GLYPH.minus : CIG_TOGGLE_GLYPH.plus;
