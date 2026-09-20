@@ -160,9 +160,81 @@ const cut = (c, i) => {
   if (!loops.length) fail(`character ${i + 1} traced to nothing`);
   const out = toPath(loops);
   console.log(`    ${loops.length} loops, ${out.points} points, ${out.d.length} bytes, ${out.vw} x ${out.vh} units`);
-  return { ...out, loops: loops.length };
+  return { ...out, loops: loops.length, ring: m.ink, S };
 };
-const marks = chars.map(cut);
+const marks = [];
+for (let i = 0; i < chars.length; i++) marks.push(cut(chars[i], i));
+
+// ---- and NOT ONE LINE MISSING ------------------------------------------------
+/**
+ * NO STROKE MAY BE LOST BETWEEN THE RING AND THE PATH (the owner's "make sure
+ * there is no missing lines in the characters"). Three things could drop one:
+ * `MIN_AREA` throwing away a small loop, `simplify` collapsing a thin one, and
+ * the even-odd fill turning a loop inside out. None of them announces itself —
+ * the mark just quietly loses a stroke — so the build draws its own path back
+ * at the size it traced and asks the pixels.
+ *
+ * TWO MEASURES, because either alone can be fooled. A whole stroke inside a
+ * big loop is a per cent or two of that loop's pixels, so COVERAGE would
+ * barely move; and a ring that is complete but shifted would pass a local
+ * test. So: every connected piece of the ring must be at least 90% painted,
+ * AND no pixel of the ring may sit further from painted ink than the line's
+ * own width. A missing stroke fails the second by hundreds of px.
+ */
+for (let i = 0; i < marks.length; i++) {
+  const m = marks[i], S = m.S;
+  const shot = await sharp(
+    Buffer.from(
+      `<svg xmlns="http://www.w3.org/2000/svg" width="${S}" height="${S}" viewBox="0 0 ${m.vw} ${m.vh}">` +
+        `<path d="${m.d}" fill="#000000" fill-rule="evenodd"/></svg>`,
+    ),
+  )
+    .flatten({ background: '#ffffff' })
+    .greyscale()
+    .raw()
+    .toBuffer();
+  const unpainted = new Uint8Array(S * S);
+  for (let j = 0; j < S * S; j++) unpainted[j] = shot[j] < 128 ? 0 : 1;
+  const toInk = distanceTo(unpainted, S, S);
+  let far = 0, farAt = null;
+  for (let j = 0; j < S * S; j++) {
+    if (m.ring[j] && toInk[j] > far) { far = toInk[j]; farAt = [j % S, (j / S) | 0]; }
+  }
+  // the pieces of the ring, 8-connected, and how much of each was painted
+  const seen = new Uint8Array(S * S);
+  let pieces = 0, worst = 1;
+  const stack = [];
+  for (let start = 0; start < S * S; start++) {
+    if (!m.ring[start] || seen[start]) continue;
+    pieces++;
+    let all = 0, hit = 0;
+    stack.push(start);
+    seen[start] = 1;
+    while (stack.length) {
+      const j = stack.pop();
+      all++;
+      if (!unpainted[j]) hit++;
+      const x = j % S, y = (j / S) | 0;
+      for (let dy = -1; dy <= 1; dy++) {
+        for (let dx = -1; dx <= 1; dx++) {
+          const nx = x + dx, ny = y + dy;
+          if (nx < 0 || ny < 0 || nx >= S || ny >= S) continue;
+          const k = ny * S + nx;
+          if (m.ring[k] && !seen[k]) { seen[k] = 1; stack.push(k); }
+        }
+      }
+    }
+    if (hit / all < worst) worst = hit / all;
+  }
+  console.log(
+    `  character ${i + 1} drawn back: ${pieces} pieces, the poorest ${(100 * worst).toFixed(1)}% painted,` +
+      ` the furthest any of it sits from ink ${far.toFixed(1)}px of the line's ${lineTrace.toFixed(1)}`,
+  );
+  if (worst < 0.9) fail(`character ${i + 1} has a piece of outline only ${(100 * worst).toFixed(1)}% painted: a stroke is being lost`);
+  if (far > lineTrace) {
+    fail(`character ${i + 1} has ring ${far.toFixed(1)}px from the nearest painted ink at ${JSON.stringify(farAt)}, past the line's own ${lineTrace.toFixed(1)}: a stroke is missing`);
+  }
+}
 
 writeFileSync(
   OUT,

@@ -1339,6 +1339,31 @@ between"). `components/CornerSeal.tsx`, `lib/sealGlyph.ts`,
     all round, and 42 x 42 on screen at the row's own zoom. Judged at 48, 66
     and 120px a box against line widths of 0.7, 1.2 and 1.8: 1.2 is where the
     hollows first read at 48 and still look like a line at 120.
+- **AND NOT ONE LINE MISSING — THE BUILD PROVES IT** (the owner's "make sure
+  there is no missing lines in the characters"). Three things could quietly
+  drop a stroke between the ring and the path: `MIN_AREA` throwing away a
+  small loop, `simplify` collapsing a thin one, and the even-odd fill turning
+  a loop inside out. None of them announces itself — the mark just loses a
+  stroke — so the build **draws its own path back** at the size it traced and
+  asks the pixels.
+  - **Two measures, because either alone can be fooled.** A whole stroke
+    inside a big loop is a per cent or two of that loop's pixels, so COVERAGE
+    barely moves; and a ring that is complete but shifted would pass a purely
+    local test. So: every connected piece of the ring must be at least 90%
+    painted, AND no pixel of the ring may sit further from painted ink than
+    the line's own width.
+  - **It reads 5 and 6 pieces, the poorest 98.9% and 99.6% painted, the
+    furthest any ring sits from ink 23.9 and 21.4px against the line's 33.1**
+    — and those two worst points are a corner tip the tracing rounds, looked
+    at magnified with the ring and the drawing overlaid in two colours: no
+    part of the ring is unpainted anywhere.
+  - **The guard was made to fail on purpose** before it was trusted: a copy of
+    the build with `MIN_AREA` at 40000, which throws away every small loop,
+    stops with "character 1 has a piece of outline only 0.0% painted: a stroke
+    is being lost". A check that cannot fire is worth nothing.
+  - **And nothing is lost at the SIZE IT IS DRAWN either**: rendered at 42px
+    (the mark on a 1x screen), 58 and 84, the palest piece of either character
+    still reaches 206 of 255 — none is faint, none invisible.
 - **It goes to the shelf** (the owner chose, asked). A plain `<Link>`, not a
   button: it navigates, so a keyboard and a middle click should both get what
   they expect. The site's OTHER seal — `SealButton`, the animated one on the
