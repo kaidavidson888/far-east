@@ -33,6 +33,7 @@ import { LANDING_ROW_CLEAR } from '@/lib/landing';
 import { CIG_HEADING_SIZE, CIG_TAG_MENU, TAG_HEADING, fitLabel, matchingPacks } from '@/lib/cigTags';
 import { searchPacks } from '@/lib/cigSearch';
 import { CigSearch } from '@/components/CigSearch';
+import { CigDots, DOTS_REACH } from '@/components/CigDots';
 import { CIG_TOGGLE_GLYPH } from '@/lib/cigToggleGlyph';
 
 /**
@@ -174,6 +175,8 @@ type MenuLayout = {
   /** the search button, shut: see `layoutMenu` for where the owner put it */
   searchLeft: number;
   searchTop: number;
+  /** the dots button: the search's mirror image, the other side of the plus */
+  dotsLeft: number;
   /** the frame's own left edge, UNROUNDED: the search bar opens onto it */
   frameLeft: number;
   /** what the bar is zoomed by inside the menu's scale, to be the frame's width */
@@ -239,6 +242,16 @@ export function CigScroller({
    * reader has started to scroll puts this away too, through `closeMenus`.
    */
   const [searchOpen, setSearchOpen] = useState(false);
+  /**
+   * The dots menu — SAVED, OFFERS and RECOMMENDED, which used to hang under
+   * the mountain. It takes part in the same mutual exclusion as the other
+   * two: opening any one of the three puts the other two away. It is NOT in
+   * `closeMenus`, and that is the owner's instruction, not an oversight —
+   * "only have the animation and the word buttons retract when another menu
+   * near it is opened or when the 3 dots button is pressed again". A hand on
+   * the row leaves it standing.
+   */
+  const [dotsOpen, setDotsOpen] = useState(false);
   const closeMenus = useCallback(() => {
     setTagsOpen(false);
     setSearchOpen(false);
@@ -564,6 +577,16 @@ export function CigScroller({
      * pack of another width, as the menu beside it does, and slides there.
      */
     const prevRight = Wc / 2 - (list[i].w / 2 + CIG_GAP) * z;
+    /*
+     * THE DOTS ARE THE GLASS MIRRORED — the owner's "another button within a
+     * box outline mirrored from the magnifying glass button … they will share
+     * the same properties and parameters". So: the same box, the same line,
+     * and the same rule for where it stands, reflected in the plus — halfway
+     * between the plus's right edge and the left edge of the pack to the
+     * right of the framed one, where the glass is halfway between the pack to
+     * the left and the plus's left edge.
+     */
+    const nextLeft = Wc / 2 + (list[i].w / 2 + CIG_GAP) * z;
     const next: MenuLayout = {
       s,
       top,
@@ -572,6 +595,24 @@ export function CigScroller({
       room: Math.max(CIG_CONTROLS.height, Math.floor((Hc - CIG_CONTROLS.edge - gridTop) / s)),
       searchLeft: Math.round((prevRight + shutLeft) / 2 - plus / 2),
       searchTop: Math.round((frameFoot + top) / 2 - plus / 2),
+      /*
+       * …AND HELD ON THE PAGE. Its words reach 213 design px to the right of
+       * the button, which on the owner's desktop is 150 and leaves 700px to
+       * spare, but on the narrowest phone with the widest pack in the frame
+       * comes to within a few pixels of the edge. Where the mirror would put
+       * the last letters off the screen the button stops there instead — but
+       * never back onto the plus: below about 370px there is no arrangement
+       * that fits, and the end of RECOMMENDED is clipped rather than the two
+       * buttons being stacked on one another. A judgement, not the owner's
+       * instruction — the same call as MENU_MIN_ZOOM above.
+       */
+      dotsLeft: Math.max(
+        Math.round(shutLeft + plus + CIG_CONTROLS.gap * s),
+        Math.min(
+          Math.round((shutLeft + plus + nextLeft) / 2 - plus / 2),
+          Math.round(Wc - CIG_CONTROLS.edge - DOTS_REACH * s),
+        ),
+      ),
       /*
        * THE SEARCH BAR IS THE FRAME'S WIDTH EXACTLY, and neither of those two
        * numbers is the menu's. `openLeft` is rounded, which left the bar up to
@@ -599,6 +640,7 @@ export function CigScroller({
       was.room === next.room &&
       was.searchLeft === next.searchLeft &&
       was.searchTop === next.searchTop &&
+      was.dotsLeft === next.dotsLeft &&
       was.frameLeft === next.frameLeft &&
       was.barFit === next.barFit
         ? was
@@ -1437,10 +1479,14 @@ export function CigScroller({
         slides={menuSlides}
         place={menu ? { left: searchOpen ? menu.frameLeft : menu.searchLeft, top: menu.searchTop, s: menu.s, fit: menu.barFit } : null}
         onOpenChange={(open) => {
-          // "closes all other open menus around it": the tag menu, which is the
-          // one that stands beside it. (The mountain's menu in the corner is
-          // the owner's to close, by its own button — their earlier rule.)
-          if (open) setTagsOpen(false);
+          // "closes all other open menus around it": the tag menu and the dots,
+          // which are the two that stand beside it. (The mountain's menu in the
+          // corner is the owner's to close, by its own button — their earlier
+          // rule.)
+          if (open) {
+            setTagsOpen(false);
+            setDotsOpen(false);
+          }
           setSearchOpen(open);
         }}
         onSearch={(query) => {
@@ -1452,6 +1498,23 @@ export function CigScroller({
           if (!hits.length) return false;
           startSpin(hits);
           return true;
+        }}
+      />
+      {/* THE DOTS — the glass's mirror image the other side of the plus, and
+          the three words that used to hang under the mountain. It stays where
+          it stands: the words grow out of its outline rather than the button
+          sliding anywhere, so it takes the menu's scale and its own left and
+          nothing else. */}
+      <CigDots
+        open={dotsOpen}
+        slides={menuSlides}
+        place={menu ? { left: menu.dotsLeft, top: menu.searchTop, s: menu.s } : null}
+        onOpenChange={(open) => {
+          if (open) {
+            setTagsOpen(false);
+            setSearchOpen(false);
+          }
+          setDotsOpen(open);
         }}
       />
       <div
@@ -1480,8 +1543,9 @@ export function CigScroller({
           aria-expanded={tagsOpen}
           aria-label={tagsOpen ? 'Hide the tag filters' : 'Filter by tag'}
           onClick={() => {
-            // opening this one puts the search away, and the other way round
+            // opening this one puts the other two away, and the other way round
             setSearchOpen(false);
+            setDotsOpen(false);
             setTagsOpen((open) => !open);
           }}
         >

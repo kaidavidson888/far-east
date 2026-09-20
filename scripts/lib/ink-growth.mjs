@@ -50,8 +50,19 @@ const dist = (a, b) => Math.hypot(b.x - a.x, b.y - a.y);
 
 /** A Catmull-Rom spline through the given points, sampled every `step`. */
 export function spline(way, step = 0.5) {
-  if (way.length < 2) return way.slice();
-  const pts = [way[0]];
+  if (way.length < 2) return way.map((p) => ({ x: p.x, y: p.y }));
+  /*
+   * A COPY, NOT THE CALLER'S OWN POINT. `linkTips` splines between two tips,
+   * handing in the tip objects themselves, so returning way[0] made the link's
+   * first point the SAME OBJECT as the last point of the channel it joins.
+   * Nothing minds until a bake moves the network — both bakes translate every
+   * point of every channel once the canvas is known — and a shared point is
+   * then moved twice, dragging one end of a link right across the picture. In
+   * the dots menu that came out as four long strokes running down to the
+   * canvas edge and being cut off square there. `translate` below de-duplicates
+   * as well; between them the class of bug is gone.
+   */
+  const pts = [{ x: way[0].x, y: way[0].y }];
   const P = [way[0], ...way, way[way.length - 1]];
   for (let i = 1; i + 2 < P.length; i++) {
     const [p0, p1, p2, p3] = [P[i - 1], P[i], P[i + 1], P[i + 2]];
@@ -144,6 +155,25 @@ function clipTo(pts, inside) {
   let n = 1;
   while (n < pts.length && inside(pts[n].x, pts[n].y)) n++;
   return n === pts.length ? pts : pts.slice(0, n);
+}
+/**
+ * Move a whole network, once per point.
+ *
+ * A bake lays its channels out around the origin and only knows where the
+ * canvas's corner is once it has measured them, so it shifts the lot at the
+ * end. Points can be shared between channels (see `spline`), and moving a
+ * shared point twice tears the picture, so this remembers what it has moved.
+ */
+export function translate(streams, dx, dy) {
+  const done = new Set();
+  for (const c of streams) {
+    for (const p of c.pts) {
+      if (done.has(p)) continue;
+      done.add(p);
+      p.x += dx;
+      p.y += dy;
+    }
+  }
 }
 const plen = (pts) => {
   let s = 0;

@@ -52,7 +52,7 @@ no CSS framework (tokens in `app/globals.css`). Deploys to Vercel.
   `public/menu` + `lib/menu-geometry.json` and `public/growmenu` +
   `lib/growmenu-geometry.json`. The bar menu is baked from the owner's
   `monkey-bar.gif`. **The grow menu's animation is GENERATED** (`scripts/lib/
-  ink-growth.mjs`); `monkey-grow.gif` is opened only for its six words and the
+  ink-growth.mjs`); `monkey-grow.gif` is opened only for its words and the
   scale they are laid out on. It takes about a minute, MEASURES everything it
   can and stops rather than guessing, and `GROW_DEBUG=1 node
   scripts/build-grow-menu.mjs` draws the finished network on its own instead
@@ -60,6 +60,16 @@ no CSS framework (tokens in `app/globals.css`). Deploys to Vercel.
   `scripts/assets/mountain.svg` and writes the page's still of it
   (`public/growmenu/badge.webp`), so a change to the mountain means running
   this. See "The logo menu" below.
+- `npm run build:dotsglyph` / `npm run build:dotsmenu` — the row's DOTS button
+  and the menu that grows out of it. The glyph traces the owner's three spirals
+  (`scripts/assets/dots.jpg`) into `lib/dotsGlyph.ts`, **lying down**, because the
+  page stands them up with a quarter turn it drops on press; `GLYPH_OPEN=<px>
+  GLYPH_PREVIEW=1` draws the button both ways round at 21/30/60px. The menu bake
+  is the grow menu's machinery pointed at the other three words — SAVED, OFFERS,
+  RECOMMENDED, cut from `monkey-grow.gif` and written by generated ink — and
+  writes `public/dotsmenu/frames` + `lib/dotsmenu-geometry.json` in a few
+  seconds. `DOTS_DEBUG=1` draws the finished network instead of the frames and
+  `DOTS_PROBE=1` dumps the buffer the canvas is measured in. See "THE DOTS" below.
 - `npm run build:searchglyph` — traces the owner's spiral glass
   (`scripts/assets/search-glass.jpg`) into `lib/searchGlyph.ts`, the row's search
   mark. `GLYPH_OPEN=<px> GLYPH_PREVIEW=1` draws the button at 21/30/60px for
@@ -185,11 +195,14 @@ artwork to fit a frame — that scales the margins with it, which is the thing b
     fourth box, because there the logo is the menu's switch rather than a link. Its logo ink
     lands at 46,28.
   - **grow** — `npm run build:growmenu`, `lib/growmenu-geometry.json`,
-    `public/growmenu/`. A mountain button, and ink that grows out of it carrying six words —
-    about us, privacy policy, terms of service across the top and MY SAVED, OFFERS,
-    RECOMMENDED stacked under it. **The LANDING PAGE uses it, and the three labels that
-    used to be printed on that page are now three of those six words** (see the landing
-    section below). **Only the words are the owner's drawing now**: they are cut from
+    `public/growmenu/`. A mountain button, and ink that grows out of it carrying three
+    words — about us, privacy policy, terms of service, in a row. **The LANDING PAGE uses
+    it.** It carried six until 2026-09-20: MY SAVED, OFFERS and RECOMMENDED — the three
+    labels that used to be printed on that page — hung under the button as a stack, and
+    the owner then moved them to a button of their own ("I want you to remove these
+    buttons from the mountain button's animation"). They are the DOTS menu now, below;
+    this bake is three words and 58px tall where it was six and 149.
+    **Only the words are the owner's drawing**: they are cut from
     `scripts/assets/monkey-grow.gif`'s last frame and everything that moves is generated —
     see the next entry. **And it does not close** (`LATCH`).
 - **SINCE 2026-09-19 THE LANDING MENU GROWS OUT OF A MOUNTAIN BUTTON, AND THE ANIMATION IS
@@ -351,7 +364,7 @@ artwork to fit a frame — that scales the margins with it, which is the thing b
     - **and the one thing that takes it back from there is a press on the button**, which
       runs the whole thing backwards at 2x — the branches retract, the ink comes home and
       the mark fills, being the same frames the other way.
-    So the landing page's resting state after a completed run is the six words standing
+    So the landing page's resting state after a completed run is the three words standing
     and the mountain drained, until the reader presses the mountain again. Verified in the
     page: forward → (leave) reverse → idle; forward → (leave, then hover) forward; open →
     (leave, hover, page press, word press) still open; open → (button press) reverse. **The BAR menu is not latched**: on the
@@ -374,7 +387,7 @@ artwork to fit a frame — that scales the margins with it, which is the thing b
     — a frame shows what has grown so far, which is not the same thing — and it is what
     caught the ticks, the stubs and the fishbone in the first three attempts.
   - **What the build checks, and what it measured on the way in:** 113 channels and 3306px
-    of run; the six words all cut with 0 px of the last frame falling outside their boxes;
+    of run; the words all cut with 0 px of the last frame falling outside their boxes;
     frame 0 the mark alone; the last frame the words and the mark with 0 px of growth left
     over. Verified in the page: the button on 10,10 at the row's scale and a tenth bigger
     than the plus (1.1004), the mark drained while the menu is open (409 against 1604 at
@@ -1001,6 +1014,104 @@ no hits have the sigil flash red and delete whatever is written").
   callout, the white cloud, the held cloud) as well as the shared control rule
   and its focus ring — `.cig-search-toggle` is in all five. Its computed cursor
   was checked: the white cloud.
+
+**THE DOTS OPEN SAVED, OFFERS AND RECOMMENDED** (the owner's 2026-09-20 ask,
+with their three spirals attached: "create another button within a box outline
+mirrored from the magnifying glass button using this attached image. they will
+share the same properties and parameters but on press the dots will turn 90
+degrees so they are horizontal then grow into the saved, offers and recommended
+buttons currently attached to the mountain button's animation. I want you to
+remove these buttons from the mountain button's animation, shorten my saved to
+just saved and make sure the letters have the same margins as the letters in
+offers and recommended. use the same branching animation but have them grow
+from the outline around the dots freezing when the words are fully revealed the
+branches are at their apex. the words should be aligned on the left like they
+currently are but rescaled to be the width of two rows in the tag menu that
+gets opened by the + button. keep the same margins otherwise. only have the
+animation and the word buttons retract when another menu near it is opened or
+when the 3 dots button is pressed again").
+`components/CigDots.tsx`, `scripts/build-dots-menu.mjs`, `lib/dotsGlyph.ts`,
+`lib/dotsmenu-geometry.json`, `public/dotsmenu/`.
+- **IT IS THE GLASS MIRRORED, AND THAT IS THE WHOLE PLACEMENT RULE.** The glass
+  stands halfway between the pack left of the framed one and the plus's left
+  edge; this stands halfway between the plus's RIGHT edge and the pack to the
+  right, on the same line, in the same 30-design-px box at the same scale
+  (`dotsLeft` in `layoutMenu`). Worked from the model of the row AT REST like
+  everything else there. Measured at 1920: both centres on their midpoints to
+  within half a pixel, all three buttons 22x22, all on top 709 but the plus.
+  - **It is held on the page, and that clamp is a judgement.** The words reach
+    213 design px right of the button — 150px at the owner's desktop scale,
+    with 700 to spare — but on a phone with a wide pack in the frame the mirror
+    would put the end of RECOMMENDED off the screen, so the button stops at the
+    row's own 12px edge instead. It never goes back onto the plus: below about
+    370px nothing fits, and the last letters are clipped rather than the two
+    buttons stacked. Same call as `MENU_MIN_ZOOM`.
+- **THE MARK IS STORED LYING DOWN** (`npm run build:dotsglyph`). The owner drew
+  a column and asked for it to TURN on press, so the path is written with its
+  dots in a row — the tailed one on the left — and the button carries
+  `rotate(-90deg)` at rest, which it drops when pressed, over the same time the
+  first branches take to leave the box. The state that is HELD is the
+  untransformed one, which is why it is stored that way round. Traced by the
+  shared `scripts/lib/trace-mark.mjs` and opened up by 7px first, for the
+  reason the glass is: the spirals' cuts are a third of a pixel at this size.
+  **Its long side is 22, not the plus's 16** — it is a column of three, and at
+  16 each dot is 4.8px across and reads as a smudge; at 22 (2px clear inside
+  the rule) they read as three, upright and turned. The BOX is the glass's to
+  the pixel, which is what "the same properties and parameters" is about.
+- **THE MENU IS THE GROW MENU'S MACHINERY POINTED AT THE OTHER THREE WORDS.**
+  Same generated ink (`scripts/lib/ink-growth.mjs`), same `useFrameScrub`, same
+  hover dim. A stem leaves the button's right side and runs down the left of
+  the words; a feeder goes right along each one and writes it as it passes.
+  100 frames, 907KB, canvas 243x130 design px with the button at 0,51 inside
+  it.
+  - **THE THREE ARE SET AT ONE SIZE, matched on the X-HEIGHT.** The gif drew MY
+    SAVED a third taller than the other two, which read as a heading over them
+    while it still said "MY SAVED"; cut down to one word it is just a different
+    size of type. So each is scaled to the x-height OFFERS and RECOMMENDED
+    share (x0.708 / x1.022 / x0.979) and then all three together to the block's
+    width — the owner's "make sure the letters have the same margins as the
+    letters in offers and recommended".
+  - **SAVED is cut out of MY SAVED at the widest gap inside the word**, which
+    is the space the owner drew rather than a guess, and what is kept starts at
+    the S. The build stops if it cannot find one.
+  - **The block is 186 design px wide** — two tag buttons and the gap between
+    them, which is what a heading in that grid spans ("rescaled to be the width
+    of two rows in the tag menu"). Every word's LEFT EDGE is the block's, and
+    the vertical gaps are the drawn ones at the block's scale ("keep the same
+    margins otherwise").
+  - **IT FREEZES AT THE APEX.** There is no recede in the frames: the last one
+    is the three words written and every branch at full reach. Coming back is
+    the same frames in reverse at the scrub's 2x — one bake, both directions.
+  - **The canvas is MEASURED OFF THE DRAWN NETWORK, not worked out from the
+    polylines.** Estimated from the points and their taper it came out five
+    pixels short at the foot and the last frame had four strokes sliced off
+    square along the bottom edge. The network is drawn once into a padded
+    buffer, the ink box read back, and the last frame then has to have NOTHING
+    on its border or the build fails. A flat cut is the one thing that says
+    "picture" rather than "ink".
+- **ONLY TWO THINGS CLOSE IT** — pressing the dots again, or another menu
+  opening beside it — which is the owner's list and is why it is NOT in
+  `closeMenus`. A hand on the row leaves it standing, where the tag menu and
+  the search both go away. Verified: a wheel throw leaves it open; the plus and
+  the glass each close it and it runs all the way back to 0 ink.
+- **The dim is CUT OUT of the frame** (`decorate`), not painted over it:
+  `destination-out` at 0.5 takes half the coverage off the word's rect, so the
+  ink comes out at half strength and the paper around it stays transparent —
+  which it must, because this canvas lies over the moving row and a white
+  scrim would put an opaque box on the packs. Measured in the page: 204.6 mean
+  alpha at rest, 105.2 hovered, 55 held, 204.6 again on leave.
+  - **WHICH WORD AND WHETHER IT IS HELD ARE TWO PIECES OF STATE.** Chrome
+    focuses a button on pointerdown, so `onFocus` fires immediately after the
+    press; while the two were one object, focusing put `held` back to false in
+    the same breath as the press set it and the word never reached its quarter
+    strength.
+- **SAVED carries `data-part="saved"`**, the attribute it had under the
+  mountain, so `CigScroller`'s capture-phase listener spins the row for it with
+  no change at all; OFFERS and RECOMMENDED are drawn, hoverable and go nowhere,
+  and are NOT `disabled` (a disabled control takes no pointer events). A shut
+  menu's words are `inert`. Verified signed out: pressing SAVED starts the spin
+  and then the action sends the reader to the splash with `next=/landing`,
+  which is the shelf's own rule and not this menu's business.
 
 **THE PLUS BESIDE RESET OPENS A TAG FILTER FOR THE ROW** (the owner's
 2026-09-14 ask; since 2026-09-19 the plus stands first on the row's edge and
@@ -2060,6 +2171,16 @@ the brand assets and review text in this repo are visible to anyone.
   And its scripted pointers have ids the browser never issued, so
   `setPointerCapture` throws for them — stub it on `Element.prototype` for a
   test, and read the guard above.
+- **A GENERATED NETWORK'S POINTS CAN BE SHARED BETWEEN CHANNELS, AND BOTH
+  BAKES MOVE EVERY POINT ONCE THEY KNOW WHERE THE CANVAS IS.** `linkTips`
+  splines between two tips and hands in the tip objects themselves, so the
+  link's first point WAS the same object as the end of the channel it joins;
+  translating the network then moved it twice and dragged one end of the link
+  across the picture. In the dots menu that came out as four long strokes
+  running to the canvas edge and being cut off square there, and it was in the
+  mountain menu too. Fixed twice over: `spline` copies its first point, and
+  `translate` in `scripts/lib/ink-growth.mjs` de-duplicates — use it rather
+  than writing the loop again.
 - **A `'use server'` module may only export async functions.** Exporting a plain
   `const` from `app/actions.ts` does not fail the build and does not fail
   `tsc --noEmit` — it silently strips EVERY export from the module, and the first

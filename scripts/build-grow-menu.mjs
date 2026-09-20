@@ -57,9 +57,10 @@
  */
 import { readFileSync, writeFileSync, mkdirSync, rmSync } from 'node:fs';
 import sharp from 'sharp';
+import { openMenuGif } from './lib/menu-gif.mjs';
 import { badgeMark, markAspect, distanceTo } from './lib/badge-mark.mjs';
 import {
-  mulberry32, spline, curl, channel, atArc, frontArc, widthAt, sprout, linkTips, Ink, smoothstep, easeInOut, easeIn, vn2,
+  mulberry32, spline, curl, channel, atArc, frontArc, widthAt, sprout, linkTips, translate, Ink, smoothstep, easeInOut, easeIn, vn2,
 } from './lib/ink-growth.mjs';
 
 const SRC = 'scripts/assets/monkey-grow.gif';
@@ -103,13 +104,17 @@ const BADGE_RULE = 2;
 const MARK_SIDE_AIR = 1;
 
 /** What the six words are, in reading order: the top row, then the stack. */
+/*
+ * THREE, NOT SIX. MY SAVED, OFFERS and RECOMMENDED were under this button
+ * until the owner's 2026-09-20 ask moved them onto the dots button beside the
+ * row's plus; they are `DOTS_ITEMS` in scripts/build-dots-menu.mjs now. The
+ * gif still draws all six and the front end still finds all six — the build
+ * would stop if it did not — but only these three are laid out here.
+ */
 const ITEMS = [
   { id: 'about', label: 'About us', href: '/about' },
   { id: 'privacy', label: 'Privacy policy', href: '/privacy' },
   { id: 'terms', label: 'Terms of service', href: '/terms' },
-  { id: 'saved', label: 'My Saved', part: 'saved' },
-  { id: 'offers', label: 'Offers', inert: true },
-  { id: 'recommended', label: 'Recommended', inert: true },
 ];
 
 /** The words are set at the reset button's size, on the button's middle line. */
@@ -128,218 +133,16 @@ const fail = (msg) => {
   throw new Error(`build-grow-menu: ${msg}`);
 };
 
-// ---- the source ------------------------------------------------------------
-const buf = readFileSync(SRC);
-const meta = await sharp(buf, { animated: true, limitInputPixels: false }).metadata();
-const W = meta.width;
-const H = meta.pageHeight;
-const N = meta.pages;
-const delays = (meta.delay ?? []).filter((d) => d < 500); // the last frame is held
-const frameMs = delays.length ? Math.round(delays.reduce((a, b) => a + b, 0) / delays.length) : 40;
-const logoPart = JSON.parse(readFileSync(LANDING, 'utf8')).parts.logo;
-console.log(`${SRC}: ${W}x${H}, ${N} frames, ~${frameMs}ms each`);
-
-/** One page of the gif as flat RGB over white, at full size. */
-async function gifPage(i) {
-  const { data } = await sharp(buf, { page: i, limitInputPixels: false })
-    .flatten({ background: '#ffffff' })
-    .removeAlpha()
-    .raw()
-    .toBuffer({ resolveWithObject: true });
-  return data;
-}
-const low = (data, x, y) => {
-  const o = (y * W + x) * 3;
-  const r = data[o], g = data[o + 1], b = data[o + 2];
-  return r < g ? (r < b ? r : b) : g < b ? g : b;
-};
-/** Ink box of a gif page, optionally only where `keep(x, y)` in gif px. */
-function inkBox(data, keep = () => true) {
-  let x0 = 1e9, y0 = 1e9, x1 = -1, y1 = -1, n = 0;
-  for (let y = 0; y < H; y++) {
-    for (let x = 0; x < W; x++) {
-      const o = (y * W + x) * 3;
-      if (isPaper(data[o], data[o + 1], data[o + 2]) || !keep(x, y)) continue;
-      n++;
-      if (x < x0) x0 = x;
-      if (x > x1) x1 = x;
-      if (y < y0) y0 = y;
-      if (y > y1) y1 = y;
-    }
-  }
-  return n ? { x: x0, y: y0, w: x1 - x0 + 1, h: y1 - y0 + 1, n } : null;
-}
-
-// ---- the old page's coordinates: the gif's logo on the logo part ----------
-const frame0 = await gifPage(0);
-const logoInk = inkBox(frame0);
-const kx = logoPart.w / logoInk.w;
-const ky = logoPart.h / logoInk.h;
-if (Math.abs(kx - ky) / kx > 0.01) fail(`the logo's two axes disagree: ${kx.toFixed(4)} and ${ky.toFixed(4)}`);
-const K = (kx + ky) / 2;
-const pageX = (gx) => (gx - logoInk.x) * K + logoPart.x;
-const pageY = (gy) => (gy - logoInk.y) * K + logoPart.y;
-const gifX = (px) => (px - logoPart.x) / K + logoInk.x;
-const gifY = (py) => (py - logoPart.y) / K + logoInk.y;
-console.log(`  scale ${K.toFixed(5)} (the gif is ${(1 / K).toFixed(2)}x the page)`);
-
-// ---- the drawn box: what the words are measured against ---------------------
-// The gif drew a box round its logo before anything grew. The words are laid
-// out from it, and everything inside it is the old mark and is never copied.
-let box = null;
-let START = -1;
-{
-  let prev = null;
-  const biggerThanLogo = (b) =>
-    b.x < logoInk.x - 4 && b.y < logoInk.y - 4 && b.x + b.w > logoInk.x + logoInk.w + 4 && b.y + b.h > logoInk.y + logoInk.h + 4;
-  for (let i = 1; i < N; i++) {
-    const data = await gifPage(i);
-    const b = inkBox(data);
-    if (!b) continue;
-    if (!box) {
-      if (prev && biggerThanLogo(b) && b.x === prev.x && b.y === prev.y && b.w === prev.w && b.h === prev.h) box = b;
-      prev = b;
-      continue;
-    }
-    // the box's ink box is exact, so anything past it by a single gif px is growth
-    const pad = 1;
-    const out = inkBox(data, (x, y) => x < box.x - pad || x >= box.x + box.w + pad || y < box.y - pad || y >= box.y + box.h + pad);
-    if (out) {
-      START = i - 1;
-      break;
-    }
-  }
-}
-if (!box || START < 0) fail('could not find the drawn box and the first thing to grow out of it');
-const BOX = { x0: pageX(box.x), y0: pageY(box.y), x1: pageX(box.x + box.w), y1: pageY(box.y + box.h) };
-console.log(
-  `  the drawn box: page ${BOX.x0.toFixed(1)}..${BOX.x1.toFixed(1)} x ${BOX.y0.toFixed(1)}..${BOX.y1.toFixed(1)}; ` +
-    `the gif's own run is frames ${START}..${N - 1}`,
-);
-
-// ---- the six words, off the last frame, at the page's scale ---------------
-const last = await gifPage(N - 1);
-/** Blobs in page px: letters join, phrases stay apart — at 1 page px per cell. */
-function pageBlobs(data) {
-  const pw = Math.ceil(pageX(W)) + 1;
-  const ph = Math.ceil(pageY(H)) + 1;
-  const m = new Uint8Array(pw * ph);
-  for (let y = 0; y < H; y++) {
-    for (let x = 0; x < W; x++) {
-      const o = (y * W + x) * 3;
-      if (isPaper(data[o], data[o + 1], data[o + 2])) continue;
-      const X = Math.floor(pageX(x));
-      const Y = Math.floor(pageY(y));
-      if (X >= 0 && Y >= 0 && X < pw && Y < ph) m[Y * pw + X] += m[Y * pw + X] < 255 ? 1 : 0;
-    }
-  }
-  const R = Math.round(DILATE_PAGE);
-  const d = new Uint8Array(pw * ph);
-  for (let y = 0; y < ph; y++) for (let x = 0; x < pw; x++) {
-    if (!m[y * pw + x]) continue;
-    for (let dy = -R; dy <= R; dy++) for (let dx = -R; dx <= R; dx++) {
-      const yy = y + dy, xx = x + dx;
-      if (yy >= 0 && yy < ph && xx >= 0 && xx < pw) d[yy * pw + xx] = 1;
-    }
-  }
-  const seen = new Uint8Array(pw * ph);
-  const out = [];
-  for (let s = 0; s < pw * ph; s++) {
-    if (!d[s] || seen[s]) continue;
-    const stack = [s];
-    seen[s] = 1;
-    let x0 = 1e9, y0 = 1e9, x1 = -1, y1 = -1, ink = 0;
-    while (stack.length) {
-      const p = stack.pop();
-      const x = p % pw, y = (p / pw) | 0;
-      if (m[p]) {
-        ink += m[p];
-        if (x < x0) x0 = x;
-        if (x > x1) x1 = x;
-        if (y < y0) y0 = y;
-        if (y > y1) y1 = y;
-      }
-      for (const q of [p - 1, p + 1, p - pw, p + pw]) {
-        if (q < 0 || q >= pw * ph || seen[q] || !d[q]) continue;
-        if ((q === p - 1 && x === 0) || (q === p + 1 && x === pw - 1)) continue;
-        seen[q] = 1;
-        stack.push(q);
-      }
-    }
-    if (ink >= MIN_INK) out.push({ x0, y0, x1: x1 + 1, y1: y1 + 1 });
-  }
-  return out;
-}
-const blobs = pageBlobs(last);
-const inBox = (b) => b.x0 >= BOX.x0 - 1 && b.x1 <= BOX.x1 + 1 && b.y0 >= BOX.y0 - 1 && b.y1 <= BOX.y1 + 1;
-const words = blobs.filter((b) => !inBox(b));
-const topWords = words.filter((b) => b.y1 <= BOX.y1).sort((a, b) => a.x0 - b.x0);
-const stackWords = words.filter((b) => b.y0 >= BOX.y1).sort((a, b) => a.y0 - b.y0);
-if (topWords.length !== 3 || stackWords.length !== 3) {
-  fail(`expected 3 words on the top row and 3 in the stack, found ${topWords.length} and ${stackWords.length}`);
-}
-
-// ---- each top word's lines, measured at the gif's own resolution ----------
-/** Glyph ink of the last frame inside a page rect, as a gif-px mask. */
-function glyphMask(pb) {
-  const gx0 = Math.floor(gifX(pb.x0 - 1)), gy0 = Math.floor(gifY(pb.y0 - 1));
-  const gx1 = Math.ceil(gifX(pb.x1 + 1)), gy1 = Math.ceil(gifY(pb.y1 + 1));
-  const w = gx1 - gx0, h = gy1 - gy0;
-  const m = new Uint8Array(w * h);
-  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) m[y * w + x] = low(last, gx0 + x, gy0 + y) < 128 ? 1 : 0;
-  return { m, w, h, gx0, gy0 };
-}
-/** Connected components of a mask (4-connected). */
-function components({ m, w, h }) {
-  const lab = new Int32Array(w * h).fill(-1);
-  const comps = [];
-  for (let s = 0; s < w * h; s++) {
-    if (!m[s] || lab[s] >= 0) continue;
-    const id = comps.length;
-    const c = { id, x0: 1e9, y0: 1e9, x1: -1, y1: -1, px: [] };
-    const stack = [s];
-    lab[s] = id;
-    while (stack.length) {
-      const p = stack.pop();
-      const x = p % w, y = (p / w) | 0;
-      c.px.push(p);
-      if (x < c.x0) c.x0 = x;
-      if (x > c.x1) c.x1 = x;
-      if (y < c.y0) c.y0 = y;
-      if (y > c.y1) c.y1 = y;
-      if (x > 0 && m[p - 1] && lab[p - 1] < 0) { lab[p - 1] = id; stack.push(p - 1); }
-      if (x < w - 1 && m[p + 1] && lab[p + 1] < 0) { lab[p + 1] = id; stack.push(p + 1); }
-      if (y > 0 && m[p - w] && lab[p - w] < 0) { lab[p - w] = id; stack.push(p - w); }
-      if (y < h - 1 && m[p + w] && lab[p + w] < 0) { lab[p + w] = id; stack.push(p + w); }
-    }
-    comps.push(c);
-  }
-  return comps;
-}
-/** The x-height band of each line: [top, baseline) in mask rows. */
-function lineBands({ m, w, h }, count) {
-  const rows = new Array(h).fill(0);
-  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) rows[y] += m[y * w + x];
-  let cuts = [0, h];
-  if (count === 2) {
-    let at = -1, least = Infinity;
-    for (let y = Math.floor(h * 0.25); y < Math.ceil(h * 0.75); y++) {
-      const v = rows[y - 1] + 2 * rows[y] + rows[y + 1];
-      if (v < least) { least = v; at = y; }
-    }
-    cuts = [0, at, h];
-  }
-  const bands = [];
-  for (let i = 0; i + 1 < cuts.length; i++) {
-    const a = cuts[i], b = cuts[i + 1];
-    const max = Math.max(...rows.slice(a, b));
-    let first = -1, lastRow = -1;
-    for (let y = a; y < b; y++) if (rows[y] >= max * 0.5) { if (first < 0) first = y; lastRow = y; }
-    if (first < 0 || lastRow - first < 3) fail(`a line of letters could not be found in rows ${a}..${b}`);
-    bands.push([first, lastRow + 1]);
-  }
-  return bands;
-}
+// ---- the source, read once and shared with the dots menu -------------------
+/*
+ * Every measurement off the owner's gif — the scale its logo sets, the box it
+ * drew, the six words on its last frame, and how to rasterise one of them —
+ * is scripts/lib/menu-gif.mjs, because TWO menus are built from that one
+ * drawing now: this one, and the dots button's (npm run build:dotsmenu),
+ * which took the three words that used to hang under this button.
+ */
+const gif = await openMenuGif('build-grow-menu', { ss: SS });
+const { W, H, N, frameMs, K, START, BOX, last, pageX, pageY, gifX, gifY, topWords, glyphMask, components, lineBands, renderPiece } = gif;
 
 const measured = topWords.map((pb, wi) => {
   const G = glyphMask(pb);
@@ -479,51 +282,7 @@ const ROW_GAP = inkLeftOf(2) - inkRightOf(1);
   console.log(`  the row's gaps: ${was.map((v) => v.toFixed(1)).join(' / ')} -> all ${ROW_GAP.toFixed(1)}px`);
 }
 
-// ---- the stack: the same size, moved up under the button -------------------
-const STACK_DX = BADGE.x - stackWords[0].x0;
-const STACK_DY = BADGE.y + BADGE.size - BOX.y1;
-const stackPiece = {
-  name: 'stack',
-  x0: 0,
-  x1: Math.max(...stackWords.map((b) => b.x1)) + 1,
-  y0: BOX.y1,
-  y1: Math.max(...stackWords.map((b) => b.y1)) + 1,
-  sx: 1, sy: 1, dx: STACK_DX, dy: STACK_DY,
-};
-
 // ---- the words, drawn once, from the last frame ----------------------------
-/**
- * One piece of the LAST frame, as RGB at the new size, and where it goes.
- * Nothing else of the gif is used: by then its own growth has receded and the
- * frame is the six words and the drawn box, and the box is never inside a
- * piece.
- */
-async function renderPiece(p, y0, y1, own) {
-  const gx0 = Math.max(0, Math.round(gifX(p.x0))), gx1 = Math.min(W, Math.ceil(gifX(p.x1)));
-  const gy0 = Math.max(0, Math.round(gifY(y0))), gy1 = Math.min(H, Math.ceil(gifY(y1)));
-  const w = gx1 - gx0, h = gy1 - gy0;
-  if (w <= 0 || h <= 0) return null;
-  const rgb = Buffer.alloc(w * h * 3, 255);
-  for (let y = 0; y < h; y++) {
-    for (let x = 0; x < w; x++) {
-      if (own && !own(gx0 + x, gy0 + y)) continue;
-      const s = ((gy0 + y) * W + gx0 + x) * 3;
-      if (isPaper(last[s], last[s + 1], last[s + 2])) continue;
-      const d = (y * w + x) * 3;
-      rgb[d] = last[s]; rgb[d + 1] = last[s + 1]; rgb[d + 2] = last[s + 2];
-    }
-  }
-  const oldX0 = pageX(gx0), oldY0 = pageY(gy0);
-  const dx = p.dx === undefined ? p.newX0 + (oldX0 - p.x0) * p.sx : oldX0 + p.dx;
-  const dy = p.dy === undefined ? p.newRefY + (oldY0 - p.refY) * p.sy : oldY0 + p.dy;
-  const dw = Math.max(1, Math.round(w * K * p.sx * SS));
-  const dh = Math.max(1, Math.round(h * K * p.sy * SS));
-  const out = await sharp(rgb, { raw: { width: w, height: h, channels: 3 } })
-    .resize({ width: dw, height: dh, fit: 'fill', kernel: 'lanczos3' })
-    .raw()
-    .toBuffer();
-  return { rgb: out, w: dw, h: dh, left: Math.round(dx * SS), top: Math.round(dy * SS) };
-}
 /** Which line of a two-line word a gif pixel belongs to. */
 function lineOwner(m, gx, gy) {
   const x = gx - m.G.gx0, y = gy - m.G.gy0;
@@ -540,10 +299,6 @@ for (const p of pieces) {
   const l = await renderPiece(p, TOP_Y0, TOP_Y1, own);
   if (l) drawn.push(l);
 }
-{
-  const s = await renderPiece(stackPiece, stackPiece.y0, stackPiece.y1, null);
-  if (s) drawn.push(s);
-}
 
 // ---- where everything stands, and how big the canvas has to be -------------
 
@@ -555,9 +310,12 @@ const topBoxes = wordPieces.map((parts) => {
   }
   return { x: r2(x0), y: r2(y0), w: r2(x1 - x0), h: r2(y1 - y0) };
 });
-const stackBoxes = stackWords.map((b) => ({ x: r2(b.x0 + STACK_DX), y: r2(b.y0 + STACK_DY), w: r2(b.x1 - b.x0), h: r2(b.y1 - b.y0) }));
-/** The six words where they stand, in the button's own coordinates. */
-const LAID = [...topBoxes, ...stackBoxes];
+/**
+ * The words where they stand, in the button's own coordinates. THREE now, not
+ * six: the owner's 2026-09-20 ask moved MY SAVED, OFFERS and RECOMMENDED out
+ * of this animation and onto the dots button beside the row's plus.
+ */
+const LAID = topBoxes;
 
 // ---- the network -----------------------------------------------------------
 /**
@@ -566,7 +324,6 @@ const LAID = [...topBoxes, ...stackBoxes];
  * stack out of the foot.
  */
 const EXIT_TOP = { x: BADGE.size, y: ROW_MIDDLE };
-const EXIT_DOWN = { x: BADGE.x + BADGE.size / 2, y: BADGE.y + BADGE.size };
 /** How the channels sprout. Lengths and gaps are page px. */
 const GROWTH = {
   step: 0.5,
@@ -590,7 +347,6 @@ const GROWTH = {
  * lower only out past the stack's right-hand end, where there is nothing
  * under it; each feeder keeps to its own word's gap.
  */
-const STACK_RIGHT = 140;
 /**
  * HOW FAR ABOVE THE BUTTON THE GROWTH MAY REACH, and it is NOT the page's
  * margin. The canvas is placed `SHIFT` above the button in the MENU's px, so
@@ -601,9 +357,12 @@ const STACK_RIGHT = 140;
  * zoom of 2, which is past anything the row produces.
  */
 const TOP_ROOM = 5;
+/*
+ * The band reached down to 54 while the stack hung under this button and had
+ * to be cleared; with the stack gone (2026-09-20) the room under the top row
+ * is the growth's to use, down to the foot of the canvas.
+ */
 const topBand = (x, y) => y > -TOP_ROOM + 1 && y < 54 && x > BADGE.x + 2;
-const feedBand = (b) => (x, y) => y > b.y - 15 && y < b.y + b.h + 4 && x > BADGE.x - 1;
-const stemBand = (x, y) => y > BADGE.y + BADGE.size - 2 && x > -1 && x < STACK_RIGHT;
 const rng = mulberry32(SEED);
 /** A channel's waypoints, wobbled a little so nothing is mechanical. */
 const wob = (a) => a * (rng() * 2 - 1);
@@ -659,53 +418,6 @@ streams.push(topUnder);
 
 
 /**
- * The stack's stem, down the left. It crosses the words' left edges rather
- * than passing clear of them — the words start on the button's own left edge,
- * so there is no margin to run down, and the gif drew it the same way.
- */
-const downWay = [{ x: EXIT_DOWN.x, y: EXIT_DOWN.y }, { x: EXIT_DOWN.x - 4, y: EXIT_DOWN.y + 8 }];
-const feederAt = [];
-for (let i = 3; i < 6; i++) {
-  const b = LAID[i];
-  const y = b.y - 3;
-  downWay.push({ x: 5 + wob(2.5), y });
-  feederAt.push({ i, y, at: downWay.length - 1 });
-  downWay.push({ x: 7 + wob(2), y: b.y + b.h * 0.55 });
-}
-downWay.push({ x: 6, y: LAID[5].y + LAID[5].h + 7 });
-const downMain = channel({ pts: spline(downWay, GROWTH.step), w0: 1.7, w1: 0.7, t0: 0.03, speed: 1, id: 'down' });
-downMain.dur = 0.58;
-downMain.speed = downMain.len / downMain.dur;
-streams.push(downMain);
-
-/**
- * A feeder for each stacked word: along its top, left to right, writing it.
- * It WEAVES — a straight one reads as a rule underlining the word above it,
- * which is what the first bake drew.
- */
-const feeders = [];
-for (const { i, y } of feederAt) {
-  const b = LAID[i];
-  // where the stem is at that height, so the feeder leaves it rather than the air
-  let sArc = 0;
-  for (let s = 0; s < downMain.len; s += 0.5) {
-    if (atArc(downMain, s).y >= y) { sArc = s; break; }
-  }
-  const from = atArc(downMain, sArc);
-  const way = [{ x: from.x, y: from.y }];
-  for (let j = 1; j <= 4; j++) {
-    const t = j / 4;
-    way.push({ x: b.x + b.w * (t * 0.95), y: y - 2 + Math.sin(j * 1.7 + i) * 1.8 + wob(0.7) });
-  }
-  way.push({ x: b.x + b.w + 6, y: y - 3 + wob(1) });
-  const c = channel({ pts: spline(way, GROWTH.step), w0: 1.05, w1: 0.45, t0: downMain.t0 + (sArc / downMain.len) * downMain.dur, speed: 1, id: `feed${i}` });
-  c.dur = 0.3;
-  c.speed = c.len / c.dur;
-  streams.push(c);
-  feeders[i] = c;
-}
-
-/**
  * ...and everything that comes off them, each inside its own band.
  *
  * THE WORDS ARE NOT A WALL. They were, and the row grew a fringe on one side
@@ -717,10 +429,6 @@ for (const { i, y } of feederAt) {
  */
 sprout(topMain, { ...GROWTH, bias: 0.72, inside: topBand }, rng, streams);
 sprout(topUnder, { ...GROWTH, gap0: 24, gap1: 10, bias: 0.62, inside: topBand }, rng, streams);
-sprout(downMain, { ...GROWTH, gap0: 15, gap1: 9, lens: [14, 9, 6], bias: 0.5, inside: stemBand }, rng, streams);
-for (let i = 3; i < 6; i++) {
-  sprout(feeders[i], { ...GROWTH, gap0: 16, gap1: 7, lens: [13, 8, 5], twig: 0.55, bias: 0.3, inside: feedBand(LAID[i]) }, rng, streams);
-}
 streams.push(...linkTips(streams, { near: 11, chance: 0.6, maxLinks: 10, align: 0.8, step: GROWTH.step, speed: GROWTH.speed }, rng));
 const lastEnd = Math.max(...streams.map((c) => c.t0 + c.dur));
 if (lastEnd > 1) for (const c of streams) { c.t0 /= lastEnd; c.dur /= lastEnd; }
@@ -743,7 +451,7 @@ const SHIFT = Math.min(TOP_ROOM, Math.max(0, Math.ceil(-gy0) + 1));
 if (-gy0 > TOP_ROOM) console.log(`  note: the growth reaches ${(-gy0).toFixed(1)}px above the button and TOP_ROOM is ${TOP_ROOM}; the top is clipped`);
 // from here on everything is in the CANVAS's coordinates: the channels were
 // laid out from the button's corner, and the canvas starts above it
-for (const c of streams) for (const p of c.pts) p.y += SHIFT;
+translate(streams, 0, SHIFT);
 const VIEW_W = Math.ceil(Math.max(gx1, ...LAID.map((b) => b.x + b.w)) + SLACK);
 const VIEW_H = Math.ceil(Math.max(gy1, ...LAID.map((b) => b.y + b.h)) + SHIFT + SLACK);
 const RW = VIEW_W * SS;
@@ -816,7 +524,7 @@ const WORD = BOXES.map((b) => {
   for (let Y = 0; Y < RH; Y++) for (let X = 0; X < RW; X++) {
     if (wordsField[Y * RW + X] > 0.25 && !inAny(X, Y)) stray++;
   }
-  if (stray > 40) fail(`${stray} device px of the last frame fall outside the six words' boxes`);
+  if (stray > 40) fail(`${stray} device px of the last frame fall outside the words' boxes`);
   console.log(`  the words: ${WORD.map((w, i) => `${BOXES[i].id} ${Math.round(w.ink)}`).join(', ')} (${stray} px stray)`);
 }
 
@@ -1058,8 +766,8 @@ const E_KILL = 2.8; // device px taken off a half-width by the end
 const E_RAMP = 0.22; // over this much of the recede
 
 /** The writing front of each word: the channel that passes it, and how far. */
-const WRITER = BOXES.map((b, i) => (i < 3 ? topMain : feeders[i]));
-const revealed = new Array(6).fill(-1e9);
+const WRITER = BOXES.map(() => topMain);
+const revealed = new Array(BOXES.length).fill(-1e9);
 /** How much of the writer's run a letter takes to come up, in page px of arc. */
 const WRITE_SOAK = 7;
 
@@ -1071,7 +779,7 @@ const WRITE_SOAK = 7;
  * is passing it, with a ragged wet edge rather than a ruled one. The noise is
  * spatial, never of time, so the edge cannot shimmer as it crosses.
  */
-for (let i = 0; i < 6; i++) {
+for (let i = 0; i < BOXES.length; i++) {
   const c = WRITER[i];
   const w = WORD[i];
   const step = 4; // every 4th polyline vertex: they are half a page px apart
@@ -1147,7 +855,7 @@ for (let f = 0; f < FRAMES; f++) {
   }
 
   // the words, written up to wherever the front that writes them has reached
-  for (let i = 0; i < 6; i++) {
+  for (let i = 0; i < BOXES.length; i++) {
     // PAST THE END OF THE RUN THE FRONT KEEPS GOING, at the same pace: a
     // pixel's turn is its distance ALONG the channel plus its distance OFF it,
     // so the last letters are reached after the front itself has stopped.
@@ -1198,7 +906,7 @@ for (let f = 0; f < FRAMES; f++) {
     writeFileSync('public/growmenu/badge.webp', await sharp(still, { raw: { width: MW, height: MH, channels: 4 } }).webp({ lossless: true, effort: 6 }).toBuffer());
   }
   if (f === FRAMES - 1) {
-    // the open state must be the six words and the mark, and nothing else
+    // the open state must be the words and the mark, and nothing else
     let loose = 0;
     const inWord = (X, Y) => WORD.some((w) => X >= w.x0 && X < w.x0 + w.w && Y >= w.y0 && Y < w.y0 + w.h);
     const inMarkBox = (X, Y) => X >= MX - SS && X < MX + MW + SS && Y >= MY - SS && Y < MY + MH + SS;

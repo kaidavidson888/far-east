@@ -1503,7 +1503,9 @@ ul, ol { list-style: none; }
 .cig-menu .cig-confirm,
 .cig-menu .cig-tags,
 .cig-search .cig-search-toggle,
-.cig-search .cig-search-input {
+.cig-search .cig-search-input,
+.cig-dots .cig-dots-toggle,
+.cig-dots .cig-dots-box {
   pointer-events: auto;
 }
 
@@ -1773,6 +1775,121 @@ ul, ol { list-style: none; }
   cursor: text;
 }
 
+/* --------------------------------------------------- the dots menu -----
+   THE THREE SPIRALS AND THE THREE WORDS — the owner's 2026-09-20 ask:
+   "another button within a box outline mirrored from the magnifying glass
+   button … they will share the same properties and parameters but on press
+   the dots will turn 90 degrees so they are horizontal then grow into the
+   saved, offers and recommended buttons currently attached to the mountain
+   button's animation".
+
+   So it is built exactly as the search is — an outer box placed in screen px
+   by `layoutMenu`, an inner one carrying the plus's own zoom — and the box,
+   the rule and the inversion come from the block the plus and the glass
+   share. What is drawn out of it is a canvas: 100 baked frames of ink
+   branching out of this outline and writing the three words, scrubbed by
+   `useFrameScrub` and FROZEN at the apex, which is the last frame. */
+.cig-controls > .cig-dots {
+  position: absolute;
+  left: 0;
+  top: 0;
+  pointer-events: none;
+  /* placed only once measured, so it never flashes in the corner */
+  visibility: hidden;
+}
+.cig-controls > .cig-dots[data-placed] {
+  visibility: visible;
+}
+/* It does not slide open — the words grow out of the outline where it
+   stands — but it does follow the frame when the row settles on a pack of
+   another width, as its twin does. */
+.cig-dots[data-slides] {
+  transition:
+    left var(--cig-grow-ms) var(--cig-ease-in),
+    top var(--cig-grow-ms) var(--cig-ease-in);
+}
+.cig-dots-scale {
+  position: relative;
+  display: block;
+  zoom: var(--cig-menu-zoom, 1);
+  width: var(--cig-btn-h);
+  height: var(--cig-btn-h);
+}
+/* The canvas is wider and taller than the button and hangs off it on three
+   sides; it is placed from the button's corner by the geometry's own
+   `logoHit`, which is where the bake put the button inside the frame. */
+.cig-dots-canvas {
+  position: absolute;
+  pointer-events: none;
+}
+.cig-dots-toggle {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: var(--cig-btn-h);
+  height: var(--cig-btn-h);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  color: #010101;
+  transition: background-color 120ms ease-out, color 120ms ease-out;
+}
+.cig-dots-toggle:hover {
+  background: #010101;
+  color: #ffffff;
+}
+/* THE MARK TURNS ON PRESS. It is stored lying down (lib/dotsGlyph.ts), so
+   rest is the quarter turn and open is the drawing as stored — the state
+   that is HELD is the untransformed one. It turns over the same time the
+   first branches take to leave the box, so the two read as one movement. */
+.cig-dots-mark {
+  display: block;
+  transform: rotate(-90deg);
+  transition: transform var(--cig-grow-ms) var(--cig-ease-in);
+}
+.cig-dots[data-open] .cig-dots-mark {
+  transform: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .cig-dots-mark {
+    transition: none;
+  }
+}
+.cig-dots-mark svg {
+  display: block;
+}
+/* A FINGER GETS A BIGGER TARGET THAN THE BOX, as the other two toggles do —
+   and for the same reason, and only while shut. */
+@media (pointer: coarse) {
+  .cig-dots:not([data-open]) .cig-dots-toggle::before {
+    content: '';
+    position: absolute;
+    inset: -12px;
+  }
+}
+/* THE WORDS ARE THE CANVAS'S OWN DRAWING OF THEM; these are the controls
+   over the top, with nothing in them. Their dim is cut out of the frame by
+   the component (`decorate`), not painted here: this canvas lies over the
+   moving row, so a white scrim would put an opaque box on the packs. */
+.cig-dots-words {
+  position: absolute;
+  inset: 0;
+}
+.cig-dots-box {
+  position: absolute;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.cig-dots-box:focus-visible {
+  outline: 2px solid #010101;
+  outline-offset: 3px;
+}
+
 /* A shut menu takes no presses. Its buttons are still laid out, merely at
    zero opacity, and an invisible button that can still be clicked is a trap
    — the clip that used to hide them stopped the pointer as a side effect,
@@ -1785,6 +1902,7 @@ ul, ol { list-style: none; }
 .cig-reset,
 .cig-tags-toggle,
 .cig-search-toggle,
+.cig-dots-toggle,
 .cig-confirm,
 .cig-tag {
   margin: 0;
@@ -1819,6 +1937,7 @@ ul, ol { list-style: none; }
 .cig-reset:focus-visible,
 .cig-tags-toggle:focus-visible,
 .cig-search-toggle:focus-visible,
+.cig-dots-toggle:focus-visible,
 .cig-confirm:focus-visible,
 .cig-tag:focus-visible {
   outline: 2px solid #010101;
@@ -2757,6 +2876,8 @@ input[type='reset'],
 .cig-reset,
 .cig-tags-toggle,
 .cig-search-toggle,
+.cig-dots-toggle,
+.cig-dots-box,
 .cig-tag,
 .cig-confirm,
 .logo-menu,
@@ -2847,6 +2968,8 @@ input[type='radio'],
 .cig-reset,
 .cig-tags-toggle,
 .cig-search-toggle,
+.cig-dots-toggle,
+.cig-dots-box,
 .cig-confirm,
 .cig-tag,
 .logo-menu-logo,
@@ -2909,6 +3032,8 @@ input[type='radio']:active,
 .cig-reset:active,
 .cig-tags-toggle:active,
 .cig-search-toggle:active,
+.cig-dots-toggle:active,
+.cig-dots-box:active,
 .cig-confirm:active,
 .cig-tag:active,
 .logo-menu-logo:active,

@@ -3,7 +3,7 @@
   "dir": "/growmenu/frames",
   "frame": {
     "w": 505,
-    "h": 149,
+    "h": 58,
     "scale": 2
   },
   "frames": 142,
@@ -57,33 +57,6 @@
       "y": 14,
       "w": 114,
       "h": 16
-    },
-    {
-      "id": "saved",
-      "label": "My Saved",
-      "part": "saved",
-      "x": 0,
-      "y": 66,
-      "w": 131,
-      "h": 17
-    },
-    {
-      "id": "offers",
-      "label": "Offers",
-      "inert": true,
-      "x": 0,
-      "y": 98,
-      "w": 61,
-      "h": 12
-    },
-    {
-      "id": "recommended",
-      "label": "Recommended",
-      "inert": true,
-      "x": 0,
-      "y": 121,
-      "w": 131,
-      "h": 13
     }
   ],
   "stops": {
@@ -93,10 +66,7 @@
       "boxes": [
         "about",
         "privacy",
-        "terms",
-        "saved",
-        "offers",
-        "recommended"
+        "terms"
       ]
     }
   }
