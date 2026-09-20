@@ -1482,10 +1482,12 @@ ul, ol { list-style: none; }
      the menu gathers back in rather than dawdling. */
   --cig-ease-in: cubic-bezier(0.25, 0.46, 0.45, 0.94);
   --cig-ease-out: cubic-bezier(0.55, 0.06, 0.68, 0.19);
-  --cig-grow-ms: 380ms;
-  --cig-fade-ms: 300ms;
-  /* --cig-shut-ms is set inline from CIG_MENU_SHUT_MS, because the component
-     has to hold the menu painted for exactly that long while it leaves */
+  /* --cig-grow-ms, --cig-fade-ms and --cig-shut-ms are all set inline, from
+     CIG_MENU_GROW_MS / FADE / SHUT in lib/cigRow.ts, because the component
+     has to know them too: it holds a menu painted for the length of its
+     fade, and it holds the NEXT menu back for the length of the last one's
+     slide (the owner's "make sure the previously opened menu or button has
+     fully disappeared before the new menu or button appears"). */
   --cig-stagger: 26ms;
   /* where a closed button sits: back towards the plus, up and to the left */
   --cig-from: translate(-10px, -12px);

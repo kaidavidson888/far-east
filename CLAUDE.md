@@ -1232,7 +1232,9 @@ pressed again".
   opening beside it — which is the owner's list and is why it is NOT in
   `closeMenus`. A hand on the row leaves it standing, where the tag menu and
   the search both go away. Verified: a wheel throw leaves it open; the plus and
-  the glass each close it and it runs all the way back to 0 ink.
+  the glass each close it and it runs all the way back to 0 ink — and
+  **the menu that closed it does not appear until it has**, which is "ONE
+  MENU AT A TIME" below; this menu's 2.6s exit is why that rule exists.
 - **The dim is CUT OUT of the frame** (`decorate`), not painted over it:
   `destination-out` at 0.5 takes half the coverage off the word's rect, so the
   ink comes out at half strength and the paper around it stays transparent —
@@ -1251,6 +1253,49 @@ pressed again".
   menu's words are `inert`. Verified signed out: pressing SAVED starts the spin
   and then the action sends the reader to the splash with `next=/landing`,
   which is the shelf's own rule and not this menu's business.
+
+**ONE MENU AT A TIME, AND THE NEXT WAITS FOR THE LAST TO GO** (the owner's
+2026-09-20 "make sure the previously opened menu or button has fully
+disappeared before the new menu or button appears"). The row has three menus
+— the tag grid off the plus, the search bar off the glass, the words off the
+dots — and they were three booleans, with each button setting the other two
+false in the same breath. That CROSSED them: the dots' words take the whole
+run backwards to leave, about 2.6 seconds, and the tag menu was arriving over
+the top of them the whole way.
+- **`openMenu` in `CigScroller` is now one piece of state** — `'tags' |
+  'search' | 'dots' | null` — and `tagsOpen`, `searchOpen` and `dotsOpen` are
+  read off it, so two of them cannot be true however the code is called.
+- **`request(next)` is the only way in.** With nothing out it opens at once.
+  With something out it closes that, remembers what was asked for, and opens
+  it when the first has finished leaving. `MENU_EXIT_MS` is how long each
+  takes: the tag menu and the search bar both slide their box back over
+  `CIG_MENU_GROW_MS` (380) while their pieces fade over `CIG_MENU_SHUT_MS`
+  (200), so the slide is what they cost; the dots are `DOTS_CLOSE_MS`, their
+  124 frames at the scrub's 2x, 2604.
+- **Asked back while it is still leaving, a menu turns around at once** rather
+  than waiting to finish going: the scrub and the transitions all reverse
+  from wherever they have reached, so it reads as one movement, and a reader
+  pressing the same button twice means it.
+- **A second request while something is leaving replaces the queued one and
+  does NOT restart the wait** — the one that is leaving has been leaving all
+  this time. Pressing the plus and then the glass opens the search; pressing
+  the plus twice opens the tag menu once.
+- **A hand on the row takes the queue back too.** `closeMenus` drops a queued
+  tag menu or search as well as an open one, because a reader who pressed the
+  plus and then started scrolling has changed their mind. (It still leaves
+  the dots alone, open or queued, which is the owner's earlier rule.)
+- **The timings are one copy each.** `--cig-grow-ms` and `--cig-fade-ms` used
+  to live in `globals.css` and are now set inline from `lib/cigRow.ts`
+  alongside `--cig-shut-ms`, because the component has to know exactly how
+  long a menu takes to leave. A number in both places would drift and the
+  drift would show as an overlap.
+- Verified in the page, sampling the dots' ink and the other two menus'
+  opacity together every 200ms: pressing the plus or the glass with the words
+  out gives **zero frames in which two menus are drawn at once** — the ink
+  runs 19256 → 27 → 0 and only then does the other menu start to arrive — and
+  the same for the quick pair (the tag menu's buttons reach 0 before the
+  bar's first piece appears). Asked back mid-close, the dots return to their
+  resting frame; the queue cases above were each checked too.
 
 **THE PLUS BESIDE RESET OPENS A TAG FILTER FOR THE ROW** (the owner's
 2026-09-14 ask; since 2026-09-19 the plus stands first on the row's edge and

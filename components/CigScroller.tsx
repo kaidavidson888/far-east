@@ -26,6 +26,8 @@ import {
   cigLayout,
   cigZoom,
   CIG_CONTROLS,
+  CIG_MENU_FADE_MS,
+  CIG_MENU_GROW_MS,
   CIG_MENU_SHUT_MS,
   type CigPack,
 } from '@/lib/cigRow';
@@ -33,7 +35,7 @@ import { LANDING_ROW_CLEAR } from '@/lib/landing';
 import { CIG_HEADING_SIZE, CIG_TAG_MENU, TAG_HEADING, fitLabel, matchingPacks } from '@/lib/cigTags';
 import { searchLineW, searchPacks } from '@/lib/cigSearch';
 import { CigSearch } from '@/components/CigSearch';
-import { CigDots, DOTS_REACH, DOTS_RISE } from '@/components/CigDots';
+import { CigDots, DOTS_CLOSE_MS, DOTS_REACH, DOTS_RISE } from '@/components/CigDots';
 import { CIG_TOGGLE_GLYPH } from '@/lib/cigToggleGlyph';
 
 /**
@@ -160,6 +162,24 @@ const BAR_MIN_FIT = 0.68;
  * same call as the shelf's ROW_SCALE_FLOOR.
  */
 const MENU_MIN_ZOOM = 0.7;
+
+/** Which of the row's three menus is out; one at a time, and never two. */
+type OpenMenu = 'tags' | 'search' | 'dots' | null;
+/**
+ * HOW LONG EACH ONE TAKES TO LEAVE once it has been told to, which is what
+ * the next one has to wait for (the owner's "make sure the previously opened
+ * menu or button has fully disappeared before the new menu or button
+ * appears"). The tag menu and the search bar both slide their box back and
+ * fade their pieces out, and the slide is the longer of the two; the dots'
+ * words are a scrub of the whole run backwards at the shared 2x, which is an
+ * order of magnitude more. Every figure here comes from the one place it is
+ * also drawn from — no second copy to drift.
+ */
+const MENU_EXIT_MS: Record<Exclude<OpenMenu, null>, number> = {
+  tags: CIG_MENU_GROW_MS,
+  search: CIG_MENU_GROW_MS,
+  dots: DOTS_CLOSE_MS,
+};
 /**
  * The air kept between the dots' drawing and the two things it sits between,
  * the red frame's foot and the plus's line. Its floor is MENU_MIN_ZOOM — the
@@ -244,29 +264,83 @@ export function CigScroller({
   /** How much bigger the row is drawn than it is laid out — see cigZoom. */
   const [zoom, setZoom] = useState(1);
   const zoomRef = useRef(1);
-  /** The tag menu: whether the plus has been opened, and what is picked in it. */
-  const [tagsOpen, setTagsOpen] = useState(false);
   const [picked, setPicked] = useState<ReadonlySet<string>>(() => new Set());
   /**
-   * The search bar. It and the tag menu are never open together — each one's
-   * button puts the other away (the owner's "closes all other open menus
-   * around it") — and everything that puts the tag menu away because the
-   * reader has started to scroll puts this away too, through `closeMenus`.
+   * WHICH OF THE ROW'S THREE MENUS IS OUT — the tag grid off the plus, the
+   * search bar off the glass, the words off the dots — and ONE AT A TIME.
+   *
+   * They used to be three booleans, and opening one set the other two false
+   * in the same breath: the owner's "closes all other open menus around it".
+   * That crossed them over. The dots' words take the whole run backwards to
+   * leave, about 2.6s, and the tag menu would be arriving over the top of
+   * them the whole way. The owner's 2026-09-20 ask is "make sure the
+   * previously opened menu or button has fully disappeared before the new
+   * menu or button appears", so a request for a second menu now CLOSES the
+   * first and waits for it — `request` below.
    */
-  const [searchOpen, setSearchOpen] = useState(false);
+  const [openMenu, setOpenMenu] = useState<OpenMenu>(null);
+  const tagsOpen = openMenu === 'tags';
+  const searchOpen = openMenu === 'search';
+  const dotsOpen = openMenu === 'dots';
+  /** What is still on its way out, and what is to follow it. */
+  const leavingRef = useRef<OpenMenu>(null);
+  const nextRef = useRef<OpenMenu>(null);
+  const waitRef = useRef(0);
+  useEffect(() => () => window.clearTimeout(waitRef.current), []);
+
+  const request = useCallback(
+    (next: OpenMenu) => {
+      // Asked back while it is still leaving: turn it around at once rather
+      // than waiting for it to finish going. The scrub and the transitions
+      // all reverse from wherever they have got to, so this reads as one
+      // movement — and a reader who presses the same button twice means it.
+      if (next !== null && next === leavingRef.current) {
+        window.clearTimeout(waitRef.current);
+        leavingRef.current = null;
+        nextRef.current = null;
+        setOpenMenu(next);
+        return;
+      }
+      // Something is already on its way out: whatever is asked for now goes
+      // after it, replacing anything queued. The wait is NOT restarted — the
+      // one that is leaving has been leaving all this time.
+      if (leavingRef.current) {
+        nextRef.current = next;
+        return;
+      }
+      if (openMenu === next) return;
+      if (openMenu === null) {
+        setOpenMenu(next);
+        return;
+      }
+      // close what is out, and hold the next until it has gone. The timer is
+      // set HERE and not inside the state updater: React may run an updater
+      // twice, and it is not the place for a side effect.
+      leavingRef.current = openMenu;
+      nextRef.current = next;
+      setOpenMenu(null);
+      window.clearTimeout(waitRef.current);
+      waitRef.current = window.setTimeout(() => {
+        leavingRef.current = null;
+        const queued = nextRef.current;
+        nextRef.current = null;
+        if (queued) setOpenMenu(queued);
+      }, MENU_EXIT_MS[openMenu]);
+    },
+    [openMenu],
+  );
+
   /**
-   * The dots menu — SAVED, OFFERS and RECOMMENDED, which used to hang under
-   * the mountain. It takes part in the same mutual exclusion as the other
-   * two: opening any one of the three puts the other two away. It is NOT in
-   * `closeMenus`, and that is the owner's instruction, not an oversight —
+   * A hand on the row puts the tag menu and the search away. NOT the dots:
    * "only have the animation and the word buttons retract when another menu
-   * near it is opened or when the 3 dots button is pressed again". A hand on
-   * the row leaves it standing.
+   * near it is opened or when the 3 dots button is pressed again" — the
+   * owner's instruction, not an oversight.
    */
-  const [dotsOpen, setDotsOpen] = useState(false);
   const closeMenus = useCallback(() => {
-    setTagsOpen(false);
-    setSearchOpen(false);
+    // and it takes back a queued one too: a reader who pressed the plus and
+    // then put a hand on the row has changed their mind about the plus
+    if (nextRef.current === 'tags' || nextRef.current === 'search') nextRef.current = null;
+    setOpenMenu((was) => (was === 'tags' || was === 'search' ? null : was));
   }, []);
   /**
    * WHERE THE MENU STANDS, AND HOW BIG IT IS DRAWN — worked out from the red
@@ -1511,6 +1585,8 @@ export function CigScroller({
             '--cig-btn-h': `${CIG_CONTROLS.height}px`,
             '--cig-btn-gap': `${CIG_CONTROLS.gap}px`,
             '--cig-shut-ms': `${CIG_MENU_SHUT_MS}ms`,
+            '--cig-grow-ms': `${CIG_MENU_GROW_MS}ms`,
+            '--cig-fade-ms': `${CIG_MENU_FADE_MS}ms`,
             '--cig-menu-w': `${MENU_DESIGN_W}px`,
           } as React.CSSProperties
         }
@@ -1534,17 +1610,11 @@ export function CigScroller({
               }
             : null
         }
-        onOpenChange={(open) => {
-          // "closes all other open menus around it": the tag menu and the dots,
-          // which are the two that stand beside it. (The mountain's menu in the
-          // corner is the owner's to close, by its own button — their earlier
-          // rule.)
-          if (open) {
-            setTagsOpen(false);
-            setDotsOpen(false);
-          }
-          setSearchOpen(open);
-        }}
+        // "closes all other open menus around it": whichever of the other two
+        // is out goes first, and this waits for it. (The mountain's menu in
+        // the corner is the owner's to close, by its own button — their
+        // earlier rule.)
+        onOpenChange={(open) => request(open ? 'search' : null)}
         onSearch={(query) => {
           // NOTHING FOUND IS DECIDED HERE, BEFORE THE WHEEL IS THROWN. Handed an
           // empty list, `startSpin` spins a whole lap and `swapTo` then leaves
@@ -1565,13 +1635,7 @@ export function CigScroller({
         open={dotsOpen}
         slides={menuSlides}
         place={menu ? { left: menu.dotsLeft, top: menu.searchTop, s: menu.s, draw: menu.dotsDraw } : null}
-        onOpenChange={(open) => {
-          if (open) {
-            setTagsOpen(false);
-            setSearchOpen(false);
-          }
-          setDotsOpen(open);
-        }}
+        onOpenChange={(open) => request(open ? 'dots' : null)}
       />
       <div
         className="cig-menu"
@@ -1599,10 +1663,9 @@ export function CigScroller({
           aria-expanded={tagsOpen}
           aria-label={tagsOpen ? 'Hide the tag filters' : 'Filter by tag'}
           onClick={() => {
-            // opening this one puts the other two away, and the other way round
-            setSearchOpen(false);
-            setDotsOpen(false);
-            setTagsOpen((open) => !open);
+            // opening this one puts the other two away, and the other way round —
+            // and waits for whichever it is to have gone
+            request(tagsOpen ? null : 'tags');
           }}
         >
           {(() => {

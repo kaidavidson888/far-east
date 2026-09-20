@@ -80,6 +80,15 @@ export const DOTS_WORDS = HIT.x - Math.min(...BOXES.map((b) => b.x));
  */
 export const DOTS_RISE = Math.max(HIT.y + HIT.h / 2, VIEW.h - HIT.y - HIT.h / 2);
 
+/**
+ * How long it takes to go away: the whole run backwards at the scrub's own
+ * 2x. The row waits this out before it opens anything else — the owner's
+ * "make sure the previously opened menu or button has fully disappeared
+ * before the new menu or button appears" — and this menu is the reason that
+ * ask exists, being ten times the length of the other two's exits.
+ */
+export const DOTS_CLOSE_MS = Math.ceil((FRAMES * geometry.frameMs) / 2);
+
 const src = (i: number) => `${geometry.dir}/f${String(i).padStart(3, '0')}.webp`;
 
 /** Half strength under the pointer, a quarter while it is held — the grow menu's own. */

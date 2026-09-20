@@ -368,3 +368,15 @@ export const CIG_CONTROLS = { edge: 12, width: 88, height: 30, gap: 10 };
  * as `--cig-shut-ms` off `.cig-controls`, so there is one number.
  */
 export const CIG_MENU_SHUT_MS = 200;
+/**
+ * How long a menu's box takes to slide between its shut place and its open
+ * one, and how long a thing fades for. Here for the same reason as the line
+ * above: the component has to know when a menu has finished LEAVING, because
+ * the next one is held until it has (the owner's "make sure the previously
+ * opened menu or button has fully disappeared before the new menu or button
+ * appears"). The slide is the longer of the two, so it is what a menu's exit
+ * costs. Both are handed to the stylesheet as `--cig-grow-ms` and
+ * `--cig-fade-ms` off `.cig-controls`, so there is one number for each.
+ */
+export const CIG_MENU_GROW_MS = 380;
+export const CIG_MENU_FADE_MS = 300;
