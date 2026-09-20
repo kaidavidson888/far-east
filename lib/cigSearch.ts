@@ -146,9 +146,17 @@ export const CIG_SEARCH = {
   row: ROW,
   /** how many pieces the line is shown in, so it can arrive left to right */
   segments: 8,
+  /**
+   * A TENTH OFF THE HEIGHT OF THE LINE AND THE ☁ (the owner's 2026-09-20 ask).
+   * The line has only its height to give and is scaled in Y alone, so its
+   * dashes come out a tenth thinner. The ☁ is scaled BOTH WAYS by the same
+   * tenth: its height is what was asked for and it is 10% less tall, but a
+   * mark squashed on one axis is a redrawn mark, and this is the owner's.
+   */
+  squash: 0.9,
   /** the ☁: 0.151 of the line wide, its own 126x60 shape, standing on the line */
-  sigilW: +(FIELD_W * 0.151).toFixed(2),
-  sigilH: +((FIELD_W * 0.151 * 60) / 126).toFixed(2),
+  sigilW: +(FIELD_W * 0.151 * 0.9).toFixed(2),
+  sigilH: +((FIELD_W * 0.151 * 60 * 0.9) / 126).toFixed(2),
   /** typed text: 0.113 of the line, starting 0.0204 of it in from the tick */
   type: +(FIELD_W * 0.113).toFixed(2),
   textX: +(FIELD_W * 0.0204).toFixed(2),

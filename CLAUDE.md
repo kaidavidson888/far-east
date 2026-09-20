@@ -888,8 +888,24 @@ no hits have the sigil flash red and delete whatever is written").
   is `inert` while the bar is out**: a button nobody can see is not one anybody
   should be able to press or tab to. That leaves three ways back — Escape, a
   hand on the row, and **Enter on an empty bar**, which is why that last one
-  exists. Measured in a real window: bar 846..1074 against a frame of
-  845..1073, and the bar follows the frame after a search re-lays the row.
+  exists. The bar follows the frame after a search re-lays the row.
+  - **AND IT IS THE FRAME'S WIDTH TO THE PIXEL, measured off the frame AS
+    DRAWN** (the owner's "the dashed line is a little wider than the edges of
+    the red outline"). Two things had it over: `openLeft` is rounded, and the
+    model's idea of the frame's edge is up to a px from the drawn one, because
+    the slot under it rounds its own left in row px. So `fitBar` reads the
+    `.cig-frame` rect — the one element that does NOT move with the row, being
+    always centred — and uses it where it agrees with the model to within a
+    few px, the model where it does not, which is only ever mid-motion.
+  - **A second zoom takes up the rest** (`--cig-bar-fit`), because where the
+    menu's own zoom has hit MENU_MIN_ZOOM the menu is deliberately wider than
+    the frame and the bar went with it. It floors at `BAR_MIN_FIT` 0.68, under
+    which the field's type would fall below 16px and iOS would zoom the whole
+    page on focus and not zoom back; there the bar stops shrinking and runs
+    past the frame, as the tag menu does. Measured: dead on the frame's edges
+    at 1920 (fit 1) and 1280 (0.694); 33px past at 961 and 76px on a phone.
+    The bar is anchored `bottom: 0` so that zoom shrinks it upward and its
+    line stays on the row's own foot.
 - **THE BAR IS A ROW OF THE LOGIN BOX, LARGER, AND ITS DASHES ARE THE LOGIN
   BOX'S OWN.** That box's marks are not CSS: they are one hand-drawn sprite,
   `public/splash/blackbox.webp`, shown through windows. The same windows are
@@ -900,6 +916,12 @@ no hits have the sigil flash red and delete whatever is written").
   type 0.113, text start 0.0204), so it is "the same row, bigger" at any width.
   The ☁ is `/sigil.webp` as a MASK over a coloured block, so that going red is
   one colour changing. A long query is set smaller on the same baseline.
+  **A TENTH OFF THE HEIGHT OF BOTH** (the owner's 2026-09-20 ask): the line is
+  scaled in Y alone — a drawn line has only its height to give, so its dashes
+  come out a tenth thinner while their length and spacing are untouched — and
+  the ☁ is scaled BOTH WAYS by that tenth. Its height is 10% less, which is
+  what was asked; scaling one axis of a mark redraws it, and this one is the
+  owner's.
 - **THE ☁ IS THE CARET** (the owner's 2026-09-20 "when the user clicks on the
   text editor have the sigil start blinking instead of outright disappearing.
   have it mark where the next text will appear"). It used to step aside the

@@ -1649,10 +1649,19 @@ ul, ol { list-style: none; }
 .cig-search-bar {
   position: absolute;
   left: 0;
-  top: 0;
+  /* ANCHORED TO THE BUTTON'S FOOT, not its top: the bar carries a zoom of its
+     own (below) and would otherwise shrink upward off the line the row's
+     controls stand on. */
+  bottom: 0;
   width: var(--cig-menu-w);
   height: var(--cig-btn-h);
   pointer-events: none;
+  /* THE BAR IS THE FRAME'S WIDTH EXACTLY. The menu's zoom stops at
+     MENU_MIN_ZOOM, so on a narrow frame the menu — and with it this bar — is
+     deliberately wider than the frame; the dashes then ran past the red edge,
+     which the owner saw. This second zoom takes the difference back out, and
+     is 1 wherever the menu already fits. */
+  zoom: var(--cig-bar-fit, 1);
 }
 /* IT ARRIVES LEFT TO RIGHT, THE TAG MENU'S OWN WAY: opacity and translation
    only, on the compositor, each piece fading in and drifting its last 10px

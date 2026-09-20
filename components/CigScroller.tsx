@@ -135,6 +135,20 @@ type Shown = { key: string; i: number; x: number };
  */
 const MENU_DESIGN_W = CIG_CONTROLS.width * 3 + CIG_CONTROLS.gap * 2 + 15;
 /**
+ * THE SMALLEST THE SEARCH BAR IS DRAWN AGAINST THE MENU, so that it fits
+ * between the red frame's edges without becoming unreadable.
+ *
+ * The bar is the frame's width (the owner's 2026-09-20 "the dashed line is a
+ * little wider than the edges of the red outline"), which on a window where
+ * the menu's own zoom has hit MENU_MIN_ZOOM means drawing it smaller than the
+ * menu. Below 0.68 of it the field's type falls under 16px, which is where
+ * iOS zooms the whole page on focus and does not zoom back — so there the bar
+ * stops shrinking and runs past the frame instead, exactly as the tag menu
+ * does and for the same reason. Measured: 1 at 1920, 0.694 at 1280, and the
+ * floor from about 1000px down.
+ */
+const BAR_MIN_FIT = 0.68;
+/**
  * The smallest the menu is ever drawn. At the owner's 1920x947 desktop the
  * frame gives 0.73 to 0.82 for nine packs in ten (measured: 0.7286 on a
  * 50-wide pack, 0.817 on a wider one), and only the narrowest few packs reach
@@ -160,6 +174,10 @@ type MenuLayout = {
   /** the search button, shut: see `layoutMenu` for where the owner put it */
   searchLeft: number;
   searchTop: number;
+  /** the frame's own left edge, UNROUNDED: the search bar opens onto it */
+  frameLeft: number;
+  /** what the bar is zoomed by inside the menu's scale, to be the frame's width */
+  barFit: number;
 };
 
 export function CigScroller({
@@ -492,6 +510,30 @@ export function CigScroller({
    *   - the tag grid below it runs down to the page's foot, less the
    *     controls' own 12px edge, and scrolls inside that.
    */
+  /**
+   * WHERE THE SEARCH BAR OPENS, AND HOW WIDE — off the red frame AS DRAWN.
+   *
+   * Everything else here works from the model of the row at rest, and for
+   * good reason: read live, a moving row throws the menu about. The frame is
+   * the exception worth making. It is the one thing that does not move with
+   * the row — it is always centred — and the model's idea of its edge is up to
+   * a pixel from the drawn one, because the slot under it rounds its own left
+   * in row px. A pixel is what the owner saw the dashes hanging over. So the
+   * drawn rect is used where it agrees with the model to within a few px, and
+   * the model where it does not, which is only ever mid-motion.
+   */
+  const fitBar = useCallback((el: HTMLElement, modelLeft: number, modelW: number, s: number) => {
+    const drawn = el.parentElement?.querySelector('.cig-frame')?.getBoundingClientRect();
+    const box = el.getBoundingClientRect();
+    const ok = !!drawn && Math.abs(drawn.left - box.left - modelLeft) < 4 && Math.abs(drawn.width - modelW) < 4;
+    const left = ok ? drawn!.left - box.left : modelLeft;
+    const w = ok ? drawn!.width : modelW;
+    return {
+      frameLeft: +left.toFixed(2),
+      barFit: +Math.max(BAR_MIN_FIT, Math.min(1, w / (MENU_DESIGN_W * s))).toFixed(4),
+    };
+  }, []);
+
   const layoutMenu = useCallback(() => {
     const el = controlsRef.current;
     if (!el) return;
@@ -530,6 +572,17 @@ export function CigScroller({
       room: Math.max(CIG_CONTROLS.height, Math.floor((Hc - CIG_CONTROLS.edge - gridTop) / s)),
       searchLeft: Math.round((prevRight + shutLeft) / 2 - plus / 2),
       searchTop: Math.round((frameFoot + top) / 2 - plus / 2),
+      /*
+       * THE SEARCH BAR IS THE FRAME'S WIDTH EXACTLY, and neither of those two
+       * numbers is the menu's. `openLeft` is rounded, which left the bar up to
+       * a pixel past the frame's edge; and where `s` has hit MENU_MIN_ZOOM the
+       * menu is deliberately WIDER than the frame, which put the dashes several
+       * px past it (the owner saw both: "the dashed line is a little wider than
+       * the edges of the red outline"). So the bar takes the frame's own
+       * unrounded edge, and a zoom of its own inside the menu's — 1 wherever
+       * the menu already fits, less where it is clamped.
+       */
+      ...fitBar(el, Wc / 2 - frameW / 2, frameW, s),
     };
     // The logo menu is drawn at the same scale as the plus (the owner's
     // 2026-09-19 ask), and it is a sibling of this component's controls, so
@@ -545,11 +598,13 @@ export function CigScroller({
       was.openLeft === next.openLeft &&
       was.room === next.room &&
       was.searchLeft === next.searchLeft &&
-      was.searchTop === next.searchTop
+      was.searchTop === next.searchTop &&
+      was.frameLeft === next.frameLeft &&
+      was.barFit === next.barFit
         ? was
         : next,
     );
-  }, []);
+  }, [fitBar]);
 
   /**
    * Put a different set of packs on the row, mid-spin.
@@ -1380,7 +1435,7 @@ export function CigScroller({
         open={searchOpen}
         locked={locked}
         slides={menuSlides}
-        place={menu ? { left: searchOpen ? menu.openLeft : menu.searchLeft, top: menu.searchTop, s: menu.s } : null}
+        place={menu ? { left: searchOpen ? menu.frameLeft : menu.searchLeft, top: menu.searchTop, s: menu.s, fit: menu.barFit } : null}
         onOpenChange={(open) => {
           // "closes all other open menus around it": the tag menu, which is the
           // one that stands beside it. (The mountain's menu in the corner is

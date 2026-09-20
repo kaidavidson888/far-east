@@ -7,10 +7,10 @@ import { SEARCH_GLYPH } from '@/lib/searchGlyph';
 
 const ROW = CIG_SEARCH.row;
 /** The dashed line's own height, and what the bar has above it. */
-const LINE_H = Math.round((ROW.lineY1 - ROW.lineY0) * CIG_SEARCH.box);
+const LINE_H = Math.round((ROW.lineY1 - ROW.lineY0) * CIG_SEARCH.box * CIG_SEARCH.squash);
 const BAND_H = CIG_CONTROLS.height - LINE_H;
 /** The tick is taller than the bar has room for; it is shown from the line up. */
-const TICK_Y0 = ROW.lineY0 - BAND_H / CIG_SEARCH.box;
+const TICK_Y0 = ROW.lineY0 - BAND_H / (CIG_SEARCH.box * CIG_SEARCH.squash);
 const TICK_W = (ROW.tickX1 - ROW.x0) * CIG_SEARCH.box;
 /** Where typing starts: past the tick, by the login box's own fraction of the line. */
 const TEXT_LEFT = +(TICK_W + CIG_SEARCH.textX).toFixed(2);
@@ -22,17 +22,27 @@ const BASELINE = BAND_H - Math.max(1, CIG_SEARCH.type * 0.06);
  * shown at (left, top) in the bar. The sprite is drawn `box` px across, so
  * that its dashed line comes out exactly the field's width.
  */
+/**
+ * A window onto the login box's sprite: the rect [x0,y0]-[x1,y1] of the box,
+ * shown at (left, top) in the bar. The sprite is drawn `box` px across, so
+ * that its dashed line comes out exactly the field's width — and `SQUASH`
+ * shorter, which is the owner's "make the height of the dashed lines and
+ * sigil 10% less tall": a drawn line has only its height to give, so the
+ * sprite is scaled to a tenth less in Y and the dashes come out a tenth
+ * thinner. Their length and their spacing are untouched.
+ */
 function win(x0: number, y0: number, x1: number, y1: number, left: number, top: number): React.CSSProperties {
   const B = CIG_SEARCH.box;
+  const BY = B * CIG_SEARCH.squash;
   return {
     left: `${+left.toFixed(2)}px`,
     top: `${+top.toFixed(2)}px`,
     width: `${+((x1 - x0) * B).toFixed(2)}px`,
-    height: `${+((y1 - y0) * B).toFixed(2)}px`,
+    height: `${+((y1 - y0) * BY).toFixed(2)}px`,
     backgroundImage: `url(${CIG_SEARCH.sprite})`,
     backgroundRepeat: 'no-repeat',
-    backgroundSize: `${+B.toFixed(2)}px ${+B.toFixed(2)}px`,
-    backgroundPosition: `${+(-x0 * B).toFixed(2)}px ${+(-y0 * B).toFixed(2)}px`,
+    backgroundSize: `${+B.toFixed(2)}px ${+BY.toFixed(2)}px`,
+    backgroundPosition: `${+(-x0 * B).toFixed(2)}px ${+(-y0 * BY).toFixed(2)}px`,
   };
 }
 
@@ -71,7 +81,7 @@ function win(x0: number, y0: number, x1: number, y1: number, left: number, top: 
  * and what was typed is deleted — the login box's own rejection, aimed at the
  * sigil rather than the whole box.
  */
-export type SearchPlace = { left: number; top: number; s: number };
+export type SearchPlace = { left: number; top: number; s: number; fit: number };
 
 export function CigSearch({
   open,
@@ -194,7 +204,7 @@ export function CigSearch({
       data-slides={slides ? '' : undefined}
       style={
         place
-          ? ({ left: `${place.left}px`, top: `${place.top}px`, '--cig-menu-zoom': place.s } as React.CSSProperties)
+          ? ({ left: `${place.left}px`, top: `${place.top}px`, '--cig-menu-zoom': place.s, '--cig-bar-fit': place.fit } as React.CSSProperties)
           : undefined
       }
     >
