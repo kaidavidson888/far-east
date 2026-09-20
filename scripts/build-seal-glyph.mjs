@@ -110,29 +110,46 @@ const GAP = (() => {
 })();
 
 // ---- side by side, at the trace's own scale ---------------------------------
-/** Each character is drawn into the strip at the same scale, on one baseline. */
-const tall = Math.max(...chars.map((c) => c.h));
+/**
+ * THE PAIR IS STRETCHED INTO A SQUARE — the owner's "stretch the characters so
+ * they are a square together". Two square characters side by side make a box
+ * twice as wide as it is tall, which left the seal's own square mostly air;
+ * a two-character seal is cut the other way round, each character taking half
+ * the field and the full height of it. So the strip is square and each
+ * character is drawn to its FULL height, which is a vertical stretch of about
+ * 2.2 — and both to the SAME height rather than each keeping its own, because
+ * they share one field.
+ *
+ * IT IS STRETCHED BEFORE THE RING IS TAKEN, not after. Scaling the finished
+ * outline would scale its line with it and the mark would carry a 2.2x
+ * heavier line across the top of every stroke than down its side; stretching
+ * the silhouette first and eroding it after gives one line all the way round.
+ * What the stretch does show is the STROKES: a horizontal one is 2.2x deeper
+ * than it was drawn and a vertical one is untouched, so the hollows are
+ * generous one way and tight the other. That is what stretching type does,
+ * and it is what a cut seal does on purpose.
+ */
 const wide = chars[0].w + chars[1].w + GAP * ((chars[0].w + chars[1].w) / 2);
 const K = TRACE / wide;
-const SW = Math.round(wide * K), SH = Math.round(tall * K);
+const SW = Math.round(wide * K), SH = SW;
 const strip = new Uint8Array(SW * SH);
 {
   let at = 0;
   for (const c of chars) {
     const dx = Math.round(at * K);
-    const dy = Math.round(((tall - c.h) / 2) * K);
-    const cw = Math.round(c.w * K), ch = Math.round(c.h * K);
+    const cw = Math.round(c.w * K), ch = SH;
     for (let y = 0; y < ch; y++) {
       const sy = c.y0 + Math.min(c.h - 1, Math.floor((y / ch) * c.h));
       for (let x = 0; x < cw; x++) {
         const sx = c.x0 + Math.min(c.w - 1, Math.floor((x / cw) * c.w));
         if (!ink(sx, sy)) continue;
-        const X = dx + x, Y = dy + y;
+        const X = dx + x, Y = y;
         if (X >= 0 && Y >= 0 && X < SW && Y < SH) strip[Y * SW + X] = 1;
       }
     }
     at += c.w + GAP * ((chars[0].w + chars[1].w) / 2);
   }
+  console.log(`  stretched into a square: ${SW}x${SH}, each character x${(SH / ((chars[0].h + chars[1].h) / 2) / K).toFixed(2)} taller than it was drawn`);
 }
 
 // ---- the ring ----------------------------------------------------------------

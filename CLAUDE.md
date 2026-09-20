@@ -1287,6 +1287,13 @@ outline"). `components/CornerSeal.tsx`, `lib/sealGlyph.ts`,
   bands of ink, not at a threshold — a character's own strokes leave gaps too
   (26px inside 遠), and a threshold set between those two numbers would work
   today and break on the next drawing.
+- **THE PAIR IS STRETCHED INTO THE SQUARE** (the owner's "stretch the
+  characters so they are a square together"). Two square characters side by
+  side make a box twice as wide as it is tall, which left the seal's own
+  square mostly air; a two-character seal is cut the other way round, each
+  character taking half the field and the FULL height of it. So each is drawn
+  to the strip's full height — a vertical stretch of 2.30 — and both to the
+  SAME height rather than each keeping its own, because they share one field.
 - **"JUST A BLACK OUTLINE" IS A RING**: the silhouette less the silhouette
   eroded by the line's width, traced by the shared `scripts/lib/trace-mark.mjs`
   as one even-odd path, so it fills with `currentColor` and inverts with its
@@ -1294,7 +1301,20 @@ outline"). `components/CornerSeal.tsx`, `lib/sealGlyph.ts`,
   mark is DRAWN at (1.2 of 58) and converted into the trace's scale, because
   it is a line on the page rather than a fraction of a character. The build
   stops if the ring keeps more than 90% of the ink — at that point the line is
-  thicker than the strokes and the "outline" is just the character again.
+  thicker than the strokes and the "outline" is just the character again (2.4
+  trips it; 1.8 is legal and heavy; 1.2 keeps 53%).
+  - **THE STRETCH COMES FIRST, THE RING SECOND.** Scaling a finished outline
+    would scale its line with it, and the mark would carry a 2.3x heavier line
+    across the top of every stroke than down its side. Stretched first and
+    eroded after, there is one line all the way round. What the stretch does
+    show is the STROKES — a horizontal one is 2.3x deeper than it was drawn
+    and a vertical one untouched, so the hollows are generous one way and
+    tight the other, which is what stretching type does and what a cut seal
+    does on purpose.
+  - **And it is what made the outline legible at this size.** Unstretched, a
+    1.2px line kept 82% of the ink and the mark read as a fuzzy solid; the
+    stretch takes that to 53%, and at 48 screen px the hollows are plainly
+    there.
 - **IT IS THE MOUNTAIN BUTTON'S MIRROR.** Twice `logoHit.w` out of the grow
   menu's geometry (66 design px against 33), the same `badge.rule`, drawn at
   the same `--logo-menu-zoom` the row publishes on the stage so the two keep
@@ -1305,13 +1325,10 @@ outline"). `components/CornerSeal.tsx`, `lib/sealGlyph.ts`,
   - **The rule stays 2px.** Doubling the box does not double its line: every
     box on these pages carries the same 2px, and the seal in the owner's
     artwork draws its own frame at about 4% of its width, which at 66 is 2.6.
-  - **At 48 screen px the outline is legible but not delicate** — the pair is
-    58 x 26 design px, so each character is about 19px on a 1x screen and its
-    strokes about two, which a 1.2px line most of the way fills. It is a
-    vector, so a dense screen draws it properly; on a 1x screen it reads as a
-    heavy outline. Judged against 0.7px (grey mush at this size) and against
-    the solid characters. Making it read as finely as the artwork does would
-    take a bigger button, which is the owner's call.
+  - **The mark is 58 x 58 design px in the 62 the rule leaves**, 2px of air
+    all round, and 42 x 42 on screen at the row's own zoom. Judged at 48, 66
+    and 120px against line widths of 0.7, 1.2 and 1.8: 1.2 is where the
+    hollows first read at 48 and still look like a line at 120.
 - **It goes to the shelf** (the owner chose, asked). A plain `<Link>`, not a
   button: it navigates, so a keyboard and a middle click should both get what
   they expect. The site's OTHER seal — `SealButton`, the animated one on the
