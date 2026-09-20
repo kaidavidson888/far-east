@@ -81,7 +81,16 @@ const SEED = 20260919;
  */
 const PLUS = 30;
 const MARGIN = 10;
-const BADGE = { x: 0, y: 0, size: PLUS };
+/**
+ * THE BUTTON IS A TENTH BIGGER THAN THE PLUS (the owner's 2026-09-19 "make the
+ * button 10% bigger"). It was the plus's own size — their earlier ask, "the
+ * same scale as the + button" — and it still takes the row's scale, so the two
+ * stay in step with one another at whatever size the row is drawn; this is a
+ * tenth on top of that. The RULE does not scale with it: it is 2px here and
+ * 2px round the tipi, which is what "the same thickness as the outline box"
+ * means, and a 2.2px rule would land on a fraction and go soft.
+ */
+const BADGE = { x: 0, y: 0, size: Math.round(PLUS * 1.1) };
 const BADGE_RULE = 2;
 /**
  * THE MARK SITS ON THE FOOT OF THE BOX AND KEEPS A PIXEL CLEAR AT EACH SIDE.
@@ -895,6 +904,61 @@ const PHI = (() => {
   return phi;
 })();
 
+/**
+ * THE SKY FILLS FIRST, AND EMPTIES FIRST — the owner's 2026-09-19 "make it so
+ * the sky fills before it spreads out of the outline".
+ *
+ * The mark is a picture with a sky in it: the paper the mountain does not
+ * cover, inside the mark's own frame. Before anything leaves the button that
+ * sky FILLS with ink, as a level rising round the mountain, and only when it
+ * is full does the first channel leave the box. The ink then flows out, and
+ * what it takes first is what arrived last — the level falls back down the sky
+ * and carries on into the mountain, which drains to its traces.
+ *
+ * ONE FIELD SAYS ALL OF THAT: `LEVEL[i]` is the mark on a single dial that
+ * runs 0 at the deepest ink to 2 at the top of the sky. A pixel carries ink
+ * while the dial stands at or above it, so the whole animation is the dial
+ * moving — 1 to 2 as the sky fills, 2 to 0 as it empties and the mountain
+ * drains, and never back up until the frames themselves are run backwards.
+ *   0..1   the mountain, 1 - PHI: nearest the two spouts empties first
+ *   1..2   the sky, by height: the top of it fills last and empties first
+ */
+/** The dial's top: a hair over the topmost sky pixel, so the sky fills solid. */
+const SKY_TOP = 2.08;
+/**
+ * AND THE SKY STOPS SHORT OF THE MOUNTAIN, by the width of the line the drain
+ * leaves behind. Both are black, so a full sky over a full mountain is one
+ * black rectangle and the drawing is gone for as long as it lasts; holding the
+ * ink a line's width off the silhouette keeps the mountain there, in the same
+ * keyline the drain ends on. (Left to the antialiasing the edge came out a
+ * half-covered grey seam, which looked like this by accident — this is the
+ * same picture, measured.)
+ */
+const SKY_GAP = CONTOUR + 0.6;
+const SKY_CLEAR = (() => {
+  const solid = new Uint8Array(MW * MH);
+  for (let i = 0; i < MW * MH; i++) solid[i] = mark.body[i] > 0.5 ? 1 : 0;
+  return distanceTo(solid, MW, MH); // 0 on the mountain, growing out into the sky
+})();
+const LEVEL = (() => {
+  const lv = new Float32Array(MW * MH);
+  const sky = (i) => mark.body[i] < 0.5;
+  let ySky = 0;
+  for (let y = 0; y < MH; y++) for (let x = 0; x < MW; x++) if (sky(y * MW + x)) ySky = Math.max(ySky, y);
+  if (!ySky) fail('the mark has no sky to fill');
+  for (let y = 0; y < MH; y++) {
+    for (let x = 0; x < MW; x++) {
+      const i = y * MW + x;
+      // Kept clear of the dial's own ends by the soft edge: at rest (1) every
+      // pixel of the mountain must be SOLID and every pixel of the sky empty,
+      // and at 0 the mountain must be gone rather than half there.
+      lv[i] = sky(i) ? 1.05 + 0.95 * (1 - y / ySky) : 0.08 + 0.82 * (1 - PHI[i]);
+    }
+  }
+  console.log(`  the sky: ${Math.round((100 * lv.filter((v) => v > 1).length) / (MW * MH))}% of the mark's frame, filling to y=0 from y=${ySky}`);
+  return lv;
+})();
+
 // ---- baking -----------------------------------------------------------------
 rmSync(FRAMES_DIR, { recursive: true, force: true });
 mkdirSync(FRAMES_DIR, { recursive: true });
@@ -907,9 +971,15 @@ mkdirSync(FRAMES_DIR, { recursive: true });
  * grow menu runs at 0.8, their "20% slower").
  */
 const FRAMES = N - START;
-/** How much of it is growth; over the rest the ink leaves and the words stay. */
+/**
+ * WHAT HAPPENS WHEN. The sky fills over the first stretch and NOTHING leaves
+ * the button while it does (the owner's "make it so the sky fills before it
+ * spreads out of the outline"); the growth has the middle; over the last
+ * fifth the ink thins away and the words are left standing.
+ */
+const FILL = 0.12;
 const GROW = 0.8;
-/** The drain's soft edge, in units of PHI. */
+/** The dial's soft edge — half a level line, in dial units. */
 const DRAIN_SOFT = 0.08;
 
 /**
@@ -997,11 +1067,17 @@ const ink = new Ink(RW, RH, SS);
 let total = 0;
 for (let f = 0; f < FRAMES; f++) {
   const u = FRAMES === 1 ? 1 : f / (FRAMES - 1);
-  const grown = Math.min(1, easeInOut(Math.min(1, u / GROW)));
+  // nothing grows until the sky is full
+  const grown = u <= FILL ? 0 : easeInOut(Math.min(1, (u - FILL) / (GROW - FILL)));
   const back = u <= GROW ? 0 : easeIn((u - GROW) / (1 - GROW));
-  // the mark holds what the network has not taken, and takes it back as the
-  // network gives it up
-  const clock = grown * (1 - back);
+  /**
+   * THE DIAL. 1 -> SKY_TOP as the sky fills, SKY_TOP -> 0 as the ink leaves,
+   * and it STAYS AT 0 for the whole recede: the mountain is drained for as
+   * long as the menu is open, and fills again only when the frames themselves
+   * are run backwards — the owner's "the mountain remains drained at the end
+   * until the animation is fully reversed … until the menu is closed".
+   */
+  const level = u <= FILL ? 1 + (SKY_TOP - 1) * easeInOut(Math.min(1, u / FILL)) : SKY_TOP * (1 - grown);
   const erode = (arrival) => (back <= 0 ? 0 : E_KILL * smoothstep(0, E_RAMP, back - (1 - arrival) * (1 - E_RAMP)));
   ink.clear();
 
@@ -1016,14 +1092,21 @@ for (let f = 0; f < FRAMES; f++) {
     }
   }
 
-  // the mark, draining
+  // the mark: the sky filling, then everything draining away
   for (let y = 0; y < MH; y++) {
     for (let x = 0; x < MW; x++) {
       const i = y * MW + x;
-      const a = mark.ink[i];
+      const isSky = LEVEL[i] > 1;
+      // the sky is paper and has no coverage of its own, so it inks to
+      // whatever the silhouette leaves — the two sum to a solid frame with no
+      // seam along the mountain's edge
+      const a = isSky ? (1 - mark.body[i]) * smoothstep(SKY_GAP, SKY_GAP + 1, SKY_CLEAR[i]) : mark.ink[i];
       if (a <= 0) continue;
-      const gone = smoothstep(clock - DRAIN_SOFT, clock, PHI[i]); // 0 where drained
-      const v = a * Math.max(gone, keep[i]);
+      // ink is there while the dial stands at or above this pixel; the traces
+      // (the outline, the veins, the tipi) are what the mountain keeps whatever
+      // the dial says
+      const on = smoothstep(LEVEL[i] - DRAIN_SOFT, LEVEL[i] + DRAIN_SOFT, level);
+      const v = a * Math.max(on, isSky ? 0 : keep[i]);
       if (v <= 0) continue;
       const X = MX + x, Y = MY + y;
       if (X < 0 || Y < 0 || X >= RW || Y >= RH) continue;

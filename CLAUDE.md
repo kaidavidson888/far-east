@@ -216,10 +216,19 @@ artwork to fit a frame — that scales the margins with it, which is the thing b
     not out of the path data**: the mountain is not a shape in the file at all, it is the
     paper the sky does not cover. The white rule stands OUTSIDE the tipi and is clipped to
     the silhouette, so where the tipi's own edge IS the summit nothing is drawn and nothing
-    spills into the sky. Drawn 24 x 21.28 inside the 26px the rule leaves: **standing on
+    spills into the sky. Drawn 27 x 23.94 inside the 29px the rule leaves: **standing on
     the inner foot with a pixel of air at each side**, because the picture is full-bleed
     and drawn any larger it merges with three sides of the box and the button stops reading
     as a box.
+  - **THE BUTTON IS A TENTH BIGGER THAN THE PLUS** (the owner's "please make the button
+    10% bigger", after their earlier "the same scale as the + button"): 33px against the
+    plus's 30, and it still takes the row's scale, so the tenth holds at any size — measured
+    live at 23.81px against the plus's 21.64, a ratio of 1.1004. **The 2px rule did not
+    scale with it** (2.2 would land on a fraction and go soft), and it is the same 2px round
+    the tipi, which is what "the same thickness as the outline box" means. The mark inside
+    therefore grew by an eighth rather than a tenth, since the rule and the pixel of air are
+    fixed. THE WORDS MOVED DOWN 1.5PX WITH IT: they hang from the button's middle line,
+    which is where the owner's earlier ask put them, so a taller button lowers them.
   - **THE MARK IS DRAWN BY THE CANVAS, NOT THE PAGE, BECAUSE IT DRAINS.** At rest the
     canvas is invisible, so the page shows `public/growmenu/badge.webp` — **a still the
     bake cuts out of the animation's own frame 0**, the same pixels, which is what makes
@@ -272,8 +281,29 @@ artwork to fit a frame — that scales the margins with it, which is the thing b
     ink holds longest and the silhouette keeps its own outline as it empties; and a `keep`
     field protects the contour, the tipi with its white rule, and **two veins grown by the
     same generator, rooted at the same two spouts, with a curl on each** — order from the
-    physics, residue in the branches' own grammar. The mark fills again as the network gives
-    its ink up, so the open state is the button as it always looks.
+    physics, residue in the branches' own grammar.
+  - **THE SKY FILLS BEFORE ANYTHING LEAVES THE BOX, AND THE MARK STAYS DRAINED UNTIL THE
+    MENU IS CLOSED** (the owner's asks: "make it so the sky fills before it spreads out of
+    the outline"; "the mountain remains drained at the end until the animation is fully
+    reversed … until the menu is closed"). Both are ONE FIELD and one number:
+    `LEVEL[i]` puts every pixel of the mark on a dial — 0.08..0.90 for the mountain
+    (1 - its distance from the spouts) and 1.05..2.0 for the sky, by height — and a pixel
+    carries ink while the dial stands at or above it. The dial runs **1 to 2.08 over the
+    first 12% of the run** (the sky fills as a level rising round the mountain; nothing
+    grows, measured: the first ink outside the box is frame 19, the sky is full at 17),
+    **2.08 to 0 over the growth** (the level falls back down the sky and carries on into the
+    mountain), **and then stays at 0**. So the mark is drained for as long as the menu is
+    open, and it fills again only when LogoMenu scrubs the frames BACKWARDS to close —
+    which is exactly what the owner meant by reversed. Measured across the run: the mark's
+    ink rises 1604 → 2484, falls to 439 by frame 96 and holds there to the last frame.
+    The dial's ends are kept clear of the soft edge (0.08..0.90, not 0..1) so that the
+    resting frame is SOLID and the drained one is empty rather than half-grey.
+  - **THE SKY STOPS A LINE SHORT OF THE MOUNTAIN.** Both are black, so a full sky over a
+    full mountain would be one black rectangle with the drawing gone; the sky's ink is held
+    off the silhouette by the width of the line the drain leaves behind, so the mountain
+    stays there as a white keyline — the same keyline the drain ends on. (Left to the
+    antialiasing the edge came out a half-covered grey seam that looked like this by
+    accident; this is the same picture, measured.)
   - **THE CANVAS STARTS ABOVE THE BUTTON.** The growth reaches over the top row, so the
     canvas is given that room (`SHIFT`, measured off the finished network, capped at the
     margin) and the button sits at 0,`SHIFT` inside it. **`place` is therefore where the
@@ -285,12 +315,14 @@ artwork to fit a frame — that scales the margins with it, which is the thing b
     its own, one colour per kind of child, and stops. It is the only way to judge the shape
     — a frame shows what has grown so far, which is not the same thing — and it is what
     caught the ticks, the stubs and the fishbone in the first three attempts.
-  - **What the build checks, and what it measured on the way in:** 114 channels and 3363px
+  - **What the build checks, and what it measured on the way in:** 113 channels and 3306px
     of run; the six words all cut with 0 px of the last frame falling outside their boxes;
     frame 0 the mark alone; the last frame the words and the mark with 0 px of growth left
-    over. Verified in the page: the button at 10,10 at the row's scale, the words written
-    in reading order, and the hover dim still exact (88 mean alpha at rest, 44 hovered, 22
-    held, 88 again on leave).
+    over. Verified in the page: the button on 10,10 at the row's scale and a tenth bigger
+    than the plus (1.1004), the mark drained while the menu is open (409 against 1604 at
+    rest) and the page's own copy of it hidden meanwhile, the words written in reading
+    order, and the hover dim exact (88 mean alpha at rest, 44 hovered, 22 held, 88 again on
+    leave).
 - **How a word answers the pointer is the geometry's `hover`.** `invert` is the bar's: the
   box fills and the label reverses out, which cannot be painted over the frame (the label
   would go with it), so the bake writes a second image per box. `dim` is the grow menu's:
@@ -314,7 +346,7 @@ artwork to fit a frame — that scales the margins with it, which is the thing b
   the row with no change at all. OFFERS and RECOMMENDED are `inert`: drawn, hoverable and
   going nowhere, as they were on the page. **Not `disabled`** — a disabled control takes no
   pointer events in Chrome, so it would stop answering the pointer as well.
-- **The grow menu weighs 2.5MB** (142 frames, 914x312 device px), against the bar's
+- **The grow menu weighs 2.3MB** (142 frames, 926x328 device px), against the bar's
   953KB. It was 2.2MB while it was still the gif re-composited, 2.9MB when it grew out of
   the logo at the drawing's own size, and 3.5MB before the logo came out of those frames —
   that mark was being stored 197 times over. It loads on `requestIdleCallback`, after the
