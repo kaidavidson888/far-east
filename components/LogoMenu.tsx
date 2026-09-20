@@ -520,8 +520,32 @@ export function LogoMenu({ menu = 'bar', stop = 'base' }: { menu?: MenuName; sto
         aria-hidden="true"
       />
 
-      {/* the trigger — the characters, or the I button where the geometry
-          has one: hover to open, press to skip ahead or to close */}
+      {/* THE MARK AT REST, IN THE CANVAS'S OWN COORDINATES — a sibling of the
+          canvas, not a child of the button. Inside the button it was placed
+          from the PADDING edge, and Chrome snaps a zoomed border to whole
+          local px (1.43 drawn as 1.0 at the row's 0.7), so the still sat about
+          half a pixel off where the canvas draws the same mark and the two
+          jogged as one took over from the other. Measured after the move:
+          0,0 at every zoom. */}
+      {badge ? (
+        /* eslint-disable-next-line @next/next/no-img-element */
+        <img
+          className="logo-menu-badge-mark"
+          src={badge.mark.src}
+          alt=""
+          aria-hidden="true"
+          draggable={false}
+          style={{
+            left: px(badge.mark.x),
+            top: px(badge.mark.y),
+            width: px(badge.mark.w),
+            height: px(badge.mark.h),
+          }}
+        />
+      ) : null}
+
+      {/* the trigger — the 遠東 characters, or the mountain button where the
+          geometry has one: hover to open, press to skip ahead or to close */}
       <button
         type="button"
         className={geometry.badge ? 'logo-menu-logo logo-menu-badge' : 'logo-menu-logo'}
@@ -556,24 +580,6 @@ export function LogoMenu({ menu = 'bar', stop = 'base' }: { menu?: MenuName; sto
           onLogoPress();
         }}
       >
-        {badge ? (
-          /* eslint-disable-next-line @next/next/no-img-element */
-          <img
-            className="logo-menu-badge-mark"
-            src={badge.mark.src}
-            alt=""
-            aria-hidden="true"
-            draggable={false}
-            style={{
-              // the bake's coordinates are the canvas's; the button's own
-              // corner is where this sits inside
-              left: px(badge.mark.x - logoHit.x - badge.rule),
-              top: px(badge.mark.y - logoHit.y - badge.rule),
-              width: px(badge.mark.w),
-              height: px(badge.mark.h),
-            }}
-          />
-        ) : null}
       </button>
 
       {shown.map((box) =>

@@ -242,6 +242,12 @@ artwork to fit a frame — that scales the margins with it, which is the thing b
     the 遠東 logo was reported for: "it changed opacity when you hovered it".) Frame 0 is
     asserted to hold ink inside the mark's box and nowhere else, and the badge image is
     hidden by CSS for any phase but `idle`.
+    **It is a sibling of the canvas, not a child of the button.** Inside the button it was
+    placed from the PADDING edge, and Chrome snaps a zoomed border to whole local px (1.43
+    drawn as 1.0 at the row's 0.7), so the still sat about half a pixel off where the
+    canvas draws the same mark and the two jogged as one took over from the other — 0.45px
+    at zoom 0.7, 0.74px at 1.356, measured. In the canvas's own coordinates they agree to
+    0.01px at every zoom.
   - **THE GROWTH IS GENERATED** — `scripts/lib/ink-growth.mjs`, seeded, so a rebuild is
     byte-identical. A CHANNEL is a polyline with a tapering width, a start time and a
     speed, drawn up to wherever its front has reached; four things come off one, and the

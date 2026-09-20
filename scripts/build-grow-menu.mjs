@@ -443,6 +443,42 @@ for (let wi = 0; wi < 3; wi++) {
   }
 }
 
+const r2 = (v) => +(Math.round(v * 2) / 2).toFixed(1);
+const mapX = (p, x) => p.newX0 + (x - p.x0) * p.sx;
+const mapY = (p, y) => p.newRefY + (y - p.refY) * p.sy;
+
+/**
+ * EVERY GAP ON THE ROW IS THE LAST ONE, AND THEY ARE MEASURED BETWEEN THE
+ * LETTERS (the owner's 2026-09-19 "make the margins between text buttons and
+ * the mountain button the same as the last one between the TOS and privacy
+ * policy and adjust the animation accordingly").
+ *
+ * The three gaps a reader saw were 26.5, 41 and 56: the run from the button
+ * was never doubled (it is not a gap BETWEEN text buttons), and the other two
+ * are the gif's own gaps doubled, which differ because it drew its words
+ * different distances apart. The last is now all three.
+ *
+ * IT HAS TO BE MEASURED BETWEEN THE INK, not between the pieces. A two-line
+ * word's piece is as wide as the block the gif drew, and its second line is
+ * re-laid after the first, so the piece runs on well past the last letter:
+ * equalising the pieces' gaps left the visible ones at 37.5, 37 and 56 — the
+ * same three gaps, barely moved. So each word is placed by where its FIRST
+ * letter has to land, and the next gap is taken from where its LAST one ends.
+ */
+const inkLeftOf = (wi) => Math.min(...wordPieces[wi].map(({ p, L }) => mapX(p, L.x0)));
+const inkRightOf = (wi) => Math.max(...wordPieces[wi].map(({ p, L }) => mapX(p, L.x1)));
+const ROW_GAP = inkLeftOf(2) - inkRightOf(1);
+{
+  const was = [0, 1, 2].map((wi) => (wi ? inkLeftOf(wi) - inkRightOf(wi - 1) : inkLeftOf(0) - (BADGE.x + BADGE.size)));
+  let want = BADGE.x + BADGE.size + ROW_GAP;
+  for (let wi = 0; wi < 3; wi++) {
+    const shift = want - inkLeftOf(wi);
+    for (const { p } of wordPieces[wi]) p.newX0 += shift;
+    want = inkRightOf(wi) + ROW_GAP;
+  }
+  console.log(`  the row's gaps: ${was.map((v) => v.toFixed(1)).join(' / ')} -> all ${ROW_GAP.toFixed(1)}px`);
+}
+
 // ---- the stack: the same size, moved up under the button -------------------
 const STACK_DX = BADGE.x - stackWords[0].x0;
 const STACK_DY = BADGE.y + BADGE.size - BOX.y1;
@@ -510,9 +546,7 @@ for (const p of pieces) {
 }
 
 // ---- where everything stands, and how big the canvas has to be -------------
-const r2 = (v) => +(Math.round(v * 2) / 2).toFixed(1);
-const mapX = (p, x) => p.newX0 + (x - p.x0) * p.sx;
-const mapY = (p, y) => p.newRefY + (y - p.refY) * p.sy;
+
 const topBoxes = wordPieces.map((parts) => {
   let x0 = 1e9, y0 = 1e9, x1 = -1, y1 = -1;
   for (const { p, L } of parts) {
@@ -557,7 +591,17 @@ const GROWTH = {
  * under it; each feeder keeps to its own word's gap.
  */
 const STACK_RIGHT = 140;
-const topBand = (x, y) => y > -MARGIN + 1 && y < 54 && x > BADGE.x + 2;
+/**
+ * HOW FAR ABOVE THE BUTTON THE GROWTH MAY REACH, and it is NOT the page's
+ * margin. The canvas is placed `SHIFT` above the button in the MENU's px, so
+ * on the page that is SHIFT x the row's zoom — and the zoom passes 1 on a wide
+ * screen (measured: 3 of 247 packs at 1920, 200 of 247 at 2560, up to 1.83).
+ * At the margin's own 10 the top of the growth was being cut off by the page's
+ * edge there — 55 device px of ink at 1.83. Five keeps it on the page up to a
+ * zoom of 2, which is past anything the row produces.
+ */
+const TOP_ROOM = 5;
+const topBand = (x, y) => y > -TOP_ROOM + 1 && y < 54 && x > BADGE.x + 2;
 const feedBand = (b) => (x, y) => y > b.y - 15 && y < b.y + b.h + 4 && x > BADGE.x - 1;
 const stemBand = (x, y) => y > BADGE.y + BADGE.size - 2 && x > -1 && x < STACK_RIGHT;
 const rng = mulberry32(SEED);
@@ -695,8 +739,8 @@ for (const c of streams) for (const p of c.pts) {
  * same amount — the button still lands on the page's 10,10. It may not ask for
  * more than the margin itself: above that is off the page.
  */
-const SHIFT = Math.min(MARGIN, Math.max(0, Math.ceil(-gy0) + 1));
-if (-gy0 > MARGIN) console.log(`  note: the growth reaches ${(-gy0).toFixed(1)}px above the button and the page's margin is ${MARGIN}; the top is clipped`);
+const SHIFT = Math.min(TOP_ROOM, Math.max(0, Math.ceil(-gy0) + 1));
+if (-gy0 > TOP_ROOM) console.log(`  note: the growth reaches ${(-gy0).toFixed(1)}px above the button and TOP_ROOM is ${TOP_ROOM}; the top is clipped`);
 // from here on everything is in the CANVAS's coordinates: the channels were
 // laid out from the button's corner, and the canvas starts above it
 for (const c of streams) for (const p of c.pts) p.y += SHIFT;
