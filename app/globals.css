@@ -2742,10 +2742,19 @@ ul, ol { list-style: none; }
    which keeps it one consistent size instead of growing on hover. Anchored
    to the same corner and margins the artwork puts it in. */
 /* ------------------------------------------------------------- the shelf --
-   The owner's shelf design, drawn rather than pictured: boxes, rules, the
-   site's own cloud, the packs from the row, and the type in the owner's
-   face. Every number is set inline from lib/shelfPage.ts, which reads the
-   measured geometry; this block only says what each thing is made of. */
+   THE OWNER'S 2026-09-20 REDRAW: the logo top left, what the shelf is worth
+   top right in red, every saved pack as a card in a grid — five to a row on a
+   desktop, three on a phone — and a red outline at the foot holding the five
+   clouds that open when it is pressed.
+
+   IT IS LAID OUT HERE RATHER THAN MEASURED IN JAVASCRIPT. The shelf that
+   stood here before drew one pack to a line and had to solve for the line's
+   width, because the line had to end on the $ sign and its width depended on
+   the widest pack the reader had saved. A grid of equal tracks needs none of
+   that: the column count is a media query and the rest is `fr`, so the page
+   arrives laid out instead of re-laying itself once the client has measured.
+   The numbers come from lib/shelfGrid.ts, which says where each one was
+   measured and where it was evened up. */
 .shelf {
   position: fixed;
   inset: 0;
@@ -2754,179 +2763,163 @@ ul, ol { list-style: none; }
   overflow: auto;
   /* white ground, so it says so — see the note on .artpage */
   color-scheme: light;
-}
-/* THE DOCUMENT MUST NOT SCROLL UNDER A FIXED PAGE. The root layout's header
-   and footer are still in the flow beneath the artwork pages, and the footer
-   is a thousand pixels tall, so the html grew its own scrollbar behind the
-   page's — two bars stacked on the right, 30px of dead space, and a right
-   margin that read wider than the left on any desktop. Nothing under a fixed
-   page can be seen or reached, so there is nothing for the document to scroll
-   to: the page scrolls itself. Scoped to the pages that are fixed, so the
-   ordinary pages keep their own scrolling. */
-html:has(> body > .shelf),
-html:has(> body > main > .shelf),
-html:has(.artpage),
-html:has(.cigpage) {
-  overflow: hidden;
-}
-.shelf-stage {
-  position: relative;
-  width: 100%;
-  min-height: 100%;
-}
-/* The logo: a link home, sized by the stage to the top pack's width about its
-   own centre (real width and height, so the vector rasterises sharp). */
-.shelf-logo {
-  position: absolute;
-  z-index: 4;
-  display: block;
-}
-.shelf-logo img {
-  display: block;
-  width: 100%;
-  height: 100%;
-  max-width: none;
-}
-.shelf-logo:focus-visible {
-  outline: 2px solid #010101;
-  outline-offset: 3px;
-}
-/* The price's box: the site's 3px rule round the $240, sized and placed by
-   the stage to the logo's own band — see shelfFit. */
-.shelf-price-box {
-  position: absolute;
-  display: block;
-  border: 0 solid #010101;
-  box-sizing: border-box;
-}
-/* The quantity's unit letter. A p is set smaller and lifted by the template
-   so its descender stays inside the box's rule — see shelfPage.ts. */
-.shelf-unit {
-  position: relative;
-}
-/* Bold, by a stroke laid on the glyphs (the face has one weight) — the width
-   is set inline from the template, as a share of the size. */
-.shelf-price {
-  position: absolute;
+  padding: 0 var(--shelf-margin) var(--shelf-margin);
   font-family: var(--font-typed);
-  font-weight: 400;
+  font-synthesis: none;
+}
+.shelf-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--shelf-gutter);
+}
+.shelf-logo { display: block; line-height: 0; }
+.shelf-logo img { display: block; max-width: none; }
+.shelf-logo:focus-visible { outline: 2px solid #ff0000; outline-offset: 4px; }
+/* the shelf's worth, in the artwork's own red. NOT --negative: that token is
+   warm grey and is never an error colour, per the spec — and this is not an
+   error, it is the number the page is about. */
+.shelf-worth {
+  margin: 0;
+  color: #ff0000;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.01em;
+  /* the face has one weight, so bold is a stroke — the age gate's trick */
+  -webkit-text-stroke: 0.03em #ff0000;
+}
+/* the site's red rule, margin to margin */
+.shelf-divider {
+  margin-top: var(--shelf-gutter);
+  height: 5px;
+  background: #ff0000;
+}
+.shelf-empty {
+  margin: var(--shelf-gutter) 0 0;
+  font-family: var(--font-display);
+  color: var(--negative);
+}
+
+/* THE GRID. `--cols` is the only thing that changes between a phone and a
+   desktop; everything else is one gutter and one track. */
+.shelf-grid {
+  --cols: 5;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  /* minmax(0, 1fr), NOT 1fr. A bare 1fr is min-content aware, so a track
+     holding a wide pack takes more than one holding a narrow one — measured
+     on a phone the three came out 84.9, 87.8 and 89.3 rather than equal.
+     The owner asked for the geometry to be even, and this is what makes it. */
+  grid-template-columns: repeat(var(--cols), minmax(0, 1fr));
+  gap: var(--shelf-gutter);
+  align-items: start;
+}
+@media (max-width: 640px) {
+  .shelf-grid { --cols: 3; }
+}
+
+/* A CARD IS THE PACK'S OWN WIDTH, CENTRED IN ITS TRACK. The boxes over it are
+   exactly as wide as the pack, which is what the drawing does — so the card
+   is sized by the pack and the track's spare width is air on either side. */
+.shelf-card {
+  /* THE CARD IS THE PACK’S OWN WIDTH, CENTRED IN ITS TRACK. The drawing
+     makes the two boxes exactly as wide as the pack under them, so the pack
+     is what sets the width and the track’s spare is air either side.
+     Stretched to the track instead, a 346px track on a desktop gave a 346px
+     pair of boxes over a 141px pack. */
+  width: fit-content;
+  max-width: 100%;
+  margin-inline: auto;
+  display: flex;
+  flex-direction: column;
+}
+.shelf-card-boxes {
+  display: flex;
+  align-self: stretch;
+  /* the pair is the pack's width: the pack sets the card's width and these
+     stretch across it */
+}
+.shelf-card-amount { position: relative; display: flex; }
+.shelf-card-amount-hit,
+.shelf-card-mark {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  padding: 0;
+  background: transparent;
+  border-style: solid;
+  border-color: #ff0000;
+  color: #ff0000;
+  font-family: var(--font-typed);
+  font-weight: 700;
   font-synthesis: none;
   line-height: 1;
-  color: #010101;
-  white-space: nowrap;
-  paint-order: stroke fill;
 }
-.shelf-divider {
-  position: absolute;
+.shelf-card-amount-hit { width: 100%; font-size: 12px; }
+.shelf-card-drop { display: flex; flex: 0 0 auto; }
+.shelf-card-mark { height: 100%; aspect-ratio: 19 / 18; }
+.shelf-card-mark svg { display: block; height: 62%; width: auto; }
+.shelf-card-amount-hit:hover,
+.shelf-card-mark:hover,
+.shelf-card-amount-hit:focus-visible,
+.shelf-card-mark:focus-visible {
+  background: #ff0000;
+  color: #ffffff;
+  outline: none;
+}
+
+/* THE PACK, WITH THE HALF-BLACK RULE THE DRAWING FRAMES IT WITH. It is drawn
+   as an inset shadow rather than a border so the rule sits INSIDE the pack's
+   own box, which is where the drawing puts it (a 5px stroke on a rect inset
+   2.5 from the image) — a border would grow the card instead. */
+.shelf-card-pack {
   display: block;
+  position: relative;
+  line-height: 0;
+  max-width: 100%;
 }
-/* The rows, as one block. Its zoom and its offsets are set inline from the
-   measured width — see ShelfStage and the note in ShelfPage. It has no size of
-   its own; the rows inside are placed absolutely and give it none. */
-.shelf-rows {
-  position: absolute;
-}
-/* Each row finds its column and its line from its own index (`--i`, set
-   inline) and the grid the stage describes (`--cols`, `--col-pitch`,
-   `--row-pitch`): entries fill left to right, then the next line. mod() and
-   round() have exactly the support of the round() the cigarette page already
-   leans on; the plain one-column pair declared first is what anything older
-   falls back to. */
-.shelf-row {
-  position: absolute;
-  left: 0;
-  top: calc(var(--i) * var(--row-pitch));
-  left: calc(mod(var(--i), var(--cols)) * var(--col-pitch));
-  top: calc(round(down, var(--i) / var(--cols)) * var(--row-pitch));
-}
-/* The bookmark's box is a form, so the whole box is the press. The mark is
-   red (it is on the shelf); under the pointer it goes black, the way the
-   cigarette page's goes red — the colour it is about to become. */
-.shelf-box-form {
-  margin: 0;
-  padding: 0;
-}
-.shelf-bookmark-hit {
-  position: absolute;
-  inset: 0;
-  margin: 0;
-  padding: 0;
-  border: 0;
-  border-radius: 0;
-  background: none;
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-}
-.shelf-bookmark-hit:hover .shelf-bookmark,
-.shelf-bookmark-hit:focus-visible .shelf-bookmark {
-  fill: #010101;
-}
-.shelf-bookmark-hit:focus-visible {
-  outline: 2px solid #010101;
-  outline-offset: 2px;
-}
-/* The rule round the pack, closed onto it the way the cigarette pages draw
-   theirs: the image sits two pixels in and the rule's inner three cover it. */
-.shelf-pack {
-  position: absolute;
-  overflow: hidden;
-}
-.shelf-pack img {
-  position: absolute;
+.shelf-card-pack img {
   display: block;
+  /* EVERY PACK THE SAME HEIGHT, whatever its width — which is what the
+     drawing does, and what makes a row of them read as a shelf. It grows
+     with the page between the drawing’s own 137 and the ceiling
+     lib/shelfGrid.ts sets, so it is one rule rather than a measurement. */
+  height: clamp(137px, 14vw, 220px);
+  width: auto;
+  max-width: none;
 }
-.shelf-pack::after {
+.shelf-card-pack::after {
   content: '';
   position: absolute;
-  inset: 0;
-  border: var(--rule) solid #ff0000;
+  inset: var(--pack-rule-inset);
+  border: var(--pack-rule) solid rgb(0 0 0 / var(--pack-rule-alpha));
   pointer-events: none;
 }
-.shelf-box {
-  position: absolute;
-  display: block;
-  border: 0 solid #010101;
+.shelf-card-pack:focus-visible { outline: 2px solid #ff0000; outline-offset: 3px; }
+
+/* THE OUTLINE AT THE FOOT, and the clouds that open inside it. */
+.shelf-foot {
   box-sizing: border-box;
-  background: #ffffff;
+  border-style: solid;
+  border-color: #ff0000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
-.shelf-plus-bar {
-  position: absolute;
+.shelf-clouds {
   display: block;
-  background: #010101;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  line-height: 0;
+  color: #ff0000;
 }
-.shelf-bookmark {
-  position: absolute;
-  display: block;
-  fill: #ff0000;
-}
-.shelf-panel {
-  position: absolute;
-  background: #010101;
-  color: #ffffff;
-}
-.shelf-type {
-  position: absolute;
-  font-family: var(--font-typed);
-  font-weight: 400;
-  font-synthesis: none;
-  line-height: 1;
-  white-space: nowrap;
-  color: inherit;
-}
-.shelf-box .shelf-type {
-  color: #010101;
-}
-.shelf-cloud {
-  position: absolute;
-  display: block;
-  /* The row has no width of its own (it is a set of absolutely placed marks),
-     and the reset's img { max-width: 100% } of nothing is nothing — the clouds
-     collapsed to 0 wide. Their size is set explicitly; the cap does not apply. */
-  max-width: none;
-}
-.shelf-pack img {
-  max-width: none;
-}
+.shelf-clouds svg { display: block; }
+.shelf-clouds:focus-visible { outline: 2px solid #ff0000; outline-offset: 6px; }
 
 /* ------------------------------------- the sigil, the outline, the number --
    One box on the plus's line (see `.cig-marks`): the two marks at the places
@@ -3103,8 +3096,9 @@ input[type='reset'],
 .seal-button,
 .seal-button-hit,
 .shelf-logo,
-.shelf-bookmark-hit,
-.shelf-box-form {
+.shelf-card-mark,
+.shelf-card-amount-hit,
+.shelf-clouds {
   -webkit-touch-callout: none;
   user-select: none;
   -webkit-user-select: none;
@@ -3118,8 +3112,7 @@ button img,
 .artpage-decor img,
 .cig-slot img,
 .shelf-logo img,
-.shelf-pack img,
-.shelf-cloud,
+.shelf-card-pack img,
 canvas {
   -webkit-touch-callout: none;
   -webkit-user-drag: none;
@@ -3193,7 +3186,9 @@ input[type='radio'],
 .cig-tag,
 .logo-menu-logo,
 .logo-menu-box,
-.shelf-bookmark-hit,
+.shelf-card-mark,
+.shelf-card-amount-hit,
+.shelf-clouds,
 .seal-button-hit {
   cursor: url('/sigil-cursor-press.png') 0 14, pointer;
   cursor: image-set(url('/sigil-cursor-press.png') 1x, url('/sigil-cursor-press@2x.png') 2x) 0 14, pointer;
@@ -3259,7 +3254,9 @@ input[type='radio']:active,
 .cig-tag:active,
 .logo-menu-logo:active,
 .logo-menu-box:active,
-.shelf-bookmark-hit:active,
+.shelf-card-mark:active,
+.shelf-card-amount-hit:active,
+.shelf-clouds:active,
 .seal-button-hit:active {
   cursor: url('/sigil-cursor.png') 0 14, pointer;
   cursor: image-set(url('/sigil-cursor.png') 1x, url('/sigil-cursor@2x.png') 2x) 0 14, pointer;

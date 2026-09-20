@@ -2,212 +2,148 @@ import Link from 'next/link';
 import { removePackAction } from '@/app/actions';
 import { BOOKMARK } from '@/lib/cigPages';
 import { HOME } from '@/lib/innerPage';
-import { DIVIDER, PRICE_BOX, SHELF_HEADER, SHELF_LOGO, SHELF_ROW, shelfLayout, shelfQuantityFrame, type ShelfEntry } from '@/lib/shelfPage';
-import { CigQuantity } from './CigQuantity';
-import { ShelfStage } from './ShelfStage';
+import {
+  CARD_BOX, GRID_FOOT, GRID_GUTTER, GRID_HEADER, GRID_LOGO, GRID_MARGIN,
+  PACK_RULE, PACK_RULE_ALPHA, PACK_RULE_INSET, cardBoxes,
+} from '@/lib/shelfGrid';
+import type { ShelfEntry } from '@/lib/shelfGrid';
+import { ShelfClouds } from './ShelfClouds';
+import { ShelfCardQuantity } from './ShelfCardQuantity';
 
 /**
- * The reader's shelf, drawn from the owner's design — see lib/shelfPage.ts
- * for the template and the rules it holds.
+ * THE SHELF, REDRAWN AS A GRID (the owner's 2026-09-20 redraw, from a mobile
+ * comp): the 遠東 logo top left, what the shelf is worth top right in red, and
+ * then every saved pack as a card — no more than five to a row on a desktop
+ * and three on a phone — over a red outline at the foot holding the five
+ * clouds, which open when it is hovered or pressed.
  *
- * Nothing here is a picture of the design. The boxes are boxes, the rules
- * are rules, the clouds are the site's own cloud, the packs are the same
- * cleaned marks the landing row uses, and the type is the owner's face —
- * which is what the owner asked for, and what makes it sharp at any size.
+ * WHAT WENT, AND WHY. The old shelf drew one pack to a line with its boxes,
+ * panel and clouds beside it, and a fixed-point solver sized the line so it
+ * ended exactly on the $ sign. None of that survives a grid: the tracks are
+ * equal by construction and there is nothing to solve. lib/shelfGrid.ts holds
+ * the numbers, each one saying which measurement of the drawing it came from
+ * and where it was evened up — the owner's note being that the drawing "may
+ * be subject to human error".
  *
- * THE CONTROLS WORK, as they do on a cigarette's page. The plus opens the
- * same quantity wheels, in the row's own box, and saves to the same place.
- * The bookmark is the other half of the cigarette page's: there it only ever
- * adds ("red permanently"), so here it takes the pack off the shelf — which
- * the page has always said was the shelf's job.
+ * IT IS LAID OUT IN CSS, NOT MEASURED IN JAVASCRIPT. The old page had to
+ * measure, because the row's width depended on the widest pack on the shelf
+ * and the zoom depended on the row's width. A grid of equal tracks is a grid
+ * of equal tracks at any size, so the column count is a media query and the
+ * rest is `fr` — which also means the page arrives laid out rather than
+ * re-laying itself once the client has measured.
  *
- * INSIDE A RULED BOX, CHILDREN SIT INSIDE THE RULE. An absolutely placed
- * child of a bordered box is positioned from the padding edge, not the
- * border's outer edge, so a mark measured from the box's outer corner has
- * the rule's width taken off its offset — or it lands the rule's width too
- * far in, which is what the owner saw on the plus and the bookmark.
+ * TWO BOXES OVER EACH PACK, as drawn: a wide one carrying the amount and a
+ * narrow one carrying the bookmark, together exactly the pack's width. The
+ * amount is the quantity CONTROL — pressing it opens the same wheels the
+ * cigarette page's plus does — because the drawing has no plus on it and
+ * dropping the ability to change a quantity would be a loss the redraw never
+ * asked for. The bookmark is the other half of the cigarette page's: there it
+ * only ever adds, so here it takes the pack off the shelf.
  *
- * THE LOGO GOES HOME, AND IS NOT THE MENU HERE. The owner asked for it sized
- * to the top pack's width, and the logo menu's first frame IS the 40x87 logo,
- * baked — it cannot sit on a mark of any other size without every frame being
- * redrawn. So on this page the logo is what it is on every page but the
- * landing page: a link to /landing.
- *
- * The comment panel is drawn as the design draws it and does nothing yet:
- * the pack shelf has nowhere to keep a note, and inventing that is a bigger
- * change than a page. See Known gaps.
+ * THE LOGO GOES HOME. Every page but the landing page and the splash sends it
+ * to /landing.
  */
-const px = (n: number) => `${n}px`;
-type B = { left: number; top: number; width: number; height: number };
-const box = (b: B): React.CSSProperties => ({
-  left: px(b.left),
-  top: px(b.top),
-  width: px(b.width),
-  height: px(b.height),
-});
-/** A mark inside a ruled box, offset from the inside of the rule. */
-const inside = (mark: B, host: B & { stroke: number }): B => ({
-  left: mark.left - host.left - host.stroke,
-  top: mark.top - host.top - host.stroke,
-  width: mark.width,
-  height: mark.height,
-});
-const type = (t: { left: number; top: number; size: number }): React.CSSProperties => ({
-  left: px(t.left),
-  top: px(t.top),
-  fontSize: px(t.size),
-});
 
-export function ShelfPage({ entries }: { entries: ShelfEntry[] }) {
-  const { rows, rowsTop, rowHeight, pitch, count, bottom, topPackWidth, dx, rowWidth, bodyWidth } = shelfLayout(entries);
-  const R = SHELF_ROW;
-  /** The boxes, panel and clouds, moved right to clear the widest pack — see shelfLayout. */
-  const sh = <T extends { left: number }>(b: T): T => ({ ...b, left: b.left + dx });
-  const quantityFrame = shelfQuantityFrame(dx);
-
+export function ShelfPage({ entries, worth }: { entries: ShelfEntry[]; worth?: string }) {
   return (
-    <div className="shelf">
-      <ShelfStage rowsTop={rowsTop} rowHeight={rowHeight} pitch={pitch} count={count} bottom={bottom} topPackWidth={topPackWidth} rowWidth={rowWidth} bodyWidth={bodyWidth}>
-        {/* the logo, as wide as the top pack, about its own centre — the stage sizes it */}
-        <Link
-          href={HOME}
-          className="shelf-logo"
-          aria-label="遠東 — home"
-          style={{ left: 'var(--logo-left)', top: 'var(--logo-top)', width: 'var(--logo-w)', height: 'var(--logo-h)' }}
-        >
-          <img src={SHELF_LOGO.src} alt="" width={SHELF_LOGO.w} height={SHELF_LOGO.h} draggable={false} />
+    <div
+      className="shelf"
+      style={{
+        '--shelf-margin': `${GRID_MARGIN}px`,
+        '--shelf-gutter': `${GRID_GUTTER}px`,
+      } as React.CSSProperties}
+    >
+      <header className="shelf-head" style={{ paddingTop: GRID_HEADER.top }}>
+        <Link href={HOME} className="shelf-logo" aria-label="Far East, back to the landing page">
+          <img
+            src="/landing/parts/logo.svg"
+            alt=""
+            width={GRID_LOGO.w}
+            height={GRID_LOGO.h}
+            draggable={false}
+          />
         </Link>
+        {/* the shelf's worth, in the owner's face, in the artwork's own red */}
+        <p className="shelf-worth" style={{ fontSize: GRID_HEADER.priceH }}>{worth ?? ''}</p>
+      </header>
 
-        {/* the price's box — the logo's band, its top on the logo's and its right
-            edge where the red line ends — and the $240 inside it, bold, its ink
-            held the box's clearance off the rule on every side; the stage sizes
-            and places both (shelfFit, PRICE_BOX) */}
-        <span
-          className="shelf-price-box"
-          style={{
-            left: 'var(--price-box-left)',
-            top: 'var(--price-box-top)',
-            width: 'var(--price-box-w)',
-            height: 'var(--price-box-h)',
-            borderWidth: px(PRICE_BOX.rule),
-          }}
-          aria-hidden="true"
-        />
-        <div
-          className="shelf-price"
-          style={{
-            left: 'var(--price-left)',
-            top: 'var(--price-top)',
-            fontSize: 'var(--price-size)',
-            WebkitTextStroke: `calc(var(--price-size) * ${SHELF_HEADER.price.strokeEm}) currentColor`,
-          }}
-        >
-          {SHELF_HEADER.price.text}
-        </div>
+      <div className="shelf-divider" role="presentation" />
 
-        {/* the red rule dividing the header from the shelf, margin to margin */}
-        <span
-          className="shelf-divider"
-          style={{ left: px(DIVIDER.left), top: `calc(var(--shelf-top) + ${px(DIVIDER.top)})`, width: `calc(var(--aligned-right) - ${px(DIVIDER.left)})`, height: px(DIVIDER.height), background: DIVIDER.colour }}
-          aria-hidden="true"
-        />
-
-        {/*
-          The rows, zoomed as one block and placed so the row's left edge (x=0,
-          where every pack's rule starts) lands on `--rows-left` — the logo's
-          right edge — and its right edge (the clouds) on the caption box's
-          left. `zoom` multiplies the block's own offsets too, so both are
-          divided out. The stage works both numbers out; see shelfFit.
-
-          Everything top-anchored on this page — the logo, the header box, the
-          price, the divider, this block — adds `--shelf-top`, the one amount
-          the stage brings the page down by so the logo's top margin is its
-          left margin. See shelfTopShift.
-        */}
-        <div
-          className="shelf-rows"
-          style={
-            {
-              top: `calc((${px(rowsTop)} + var(--shelf-top)) / var(--row-scale))`,
-              left: 'calc(var(--rows-left) / var(--row-scale))',
-              zoom: 'var(--row-scale)',
-            } as React.CSSProperties
-          }
-        >
-          {rows.map((row) => (
-            <div key={row.key} className="shelf-row" style={{ '--i': row.index, height: px(R.height) } as React.CSSProperties}>
-              {/* the pack, in the same rule the cigarette pages draw round theirs */}
-              <div className="shelf-pack" style={{ ...box(row.frame), '--rule': px(R.rule) } as React.CSSProperties}>
-                <img
-                  src={`/cigs/${encodeURIComponent(row.pack.id)}.svg`}
-                  alt={row.pack.name}
-                  width={row.image.width}
-                  height={row.image.height}
-                  style={{ left: px(row.image.left - row.frame.left), top: px(row.image.top) }}
-                  draggable={false}
-                />
-              </div>
-
-              {/* the plus box is the artwork's; the hit and the menu are CigQuantity's */}
-              <span className="shelf-box" style={{ ...box(sh(R.plusBox)), borderWidth: px(R.plusBox.stroke) }} aria-hidden="true">
-                <span className="shelf-plus-bar" style={box(inside(R.plusH, R.plusBox))} />
-                <span className="shelf-plus-bar" style={box(inside(R.plusV, R.plusBox))} />
-              </span>
-
-              {/* the bookmark: pressed here, it takes the pack off the shelf */}
-              <form action={removePackAction} className="shelf-box shelf-box-form" style={{ ...box(sh(R.bookmarkBox)), borderWidth: px(R.bookmarkBox.stroke) }}>
-                <input type="hidden" name="pack" value={row.pack.id} />
-                <button type="submit" className="shelf-bookmark-hit" aria-label={`Take ${row.pack.name} off your shelf`}>
-                  <svg
-                    className="shelf-bookmark"
-                    viewBox={`0 0 ${BOOKMARK.mark.width} ${BOOKMARK.mark.height}`}
-                    preserveAspectRatio="none"
-                    style={box(inside(R.bookmark, R.bookmarkBox))}
-                    aria-hidden="true"
-                  >
-                    <path d={BOOKMARK.d} />
-                  </svg>
-                </button>
-              </form>
-
-              <span className="shelf-box" style={{ ...box(sh(R.qtyBox)), borderWidth: px(R.qtyBox.stroke) }}>
-                {row.quantity ? (
-                  <span
-                    className="shelf-type"
-                    style={type(R.qty)}
-                    aria-label={`${row.quantity.slice(0, -1)} ${row.quantity.endsWith('c') ? 'cartons' : 'packs'}`}
-                  >
-                    {row.quantity.slice(0, -1)}
-                    {/* a p is set smaller and lifted so its descender stays inside the rule — see shelfPage.ts */}
-                    <span
-                      className="shelf-unit"
-                      style={row.quantity.endsWith('p') ? { fontSize: px(R.qty.p.size), top: px(-R.qty.p.lift) } : undefined}
+      {entries.length === 0 ? (
+        <p className="shelf-empty">
+          Nothing on the shelf yet. The bookmark on a cigarette&rsquo;s page puts it here.
+        </p>
+      ) : (
+        <ul className="shelf-grid" style={{ marginTop: GRID_HEADER.drop }}>
+          {entries.map(({ pack, amount, unit }) => {
+            const boxes = cardBoxes(1000);
+            const share = boxes.amount / 1000;
+            return (
+              <li className="shelf-card" key={pack.id}>
+                <div className="shelf-card-boxes" style={{ height: CARD_BOX.height, gap: CARD_BOX.gap }}>
+                  <ShelfCardQuantity
+                    id={pack.id}
+                    name={pack.name}
+                    amount={amount}
+                    unit={unit}
+                    grow={share}
+                    height={CARD_BOX.height}
+                    rule={CARD_BOX.rule}
+                  />
+                  <form action={removePackAction} className="shelf-card-drop">
+                    <input type="hidden" name="id" value={pack.id} />
+                    <button
+                      type="submit"
+                      className="shelf-card-mark"
+                      style={{ borderWidth: CARD_BOX.rule }}
+                      aria-label={`Take ${pack.name} off the shelf`}
                     >
-                      {row.quantity.slice(-1)}
-                    </span>
-                  </span>
-                ) : null}
-              </span>
+                      <svg
+                        /* the mark's own box out of the vector, so the path is
+                           drawn at the coordinates it was measured at */
+                        viewBox={`${BOOKMARK.mark.left} ${BOOKMARK.mark.top} ${BOOKMARK.mark.width} ${BOOKMARK.mark.height}`}
+                        width={BOOKMARK.mark.width}
+                        height={BOOKMARK.mark.height}
+                        aria-hidden="true"
+                        focusable="false"
+                        preserveAspectRatio="xMidYMid meet"
+                      >
+                        <path d={BOOKMARK.d} fill="currentColor" />
+                      </svg>
+                    </button>
+                  </form>
+                </div>
 
-              <div className="shelf-panel" style={box(sh(R.panel))} aria-hidden="true">
-                <span className="shelf-type" style={type({ ...R.line1, left: R.line1.left - R.panel.left, top: R.line1.top - R.panel.top })}>
-                  {R.line1.text}
-                </span>
-                <span className="shelf-type" style={type({ ...R.line2, left: R.line2.left - R.panel.left, top: R.line2.top - R.panel.top })}>
-                  {R.line2.text}
-                </span>
-              </div>
+                <Link
+                  href={`/packs/${pack.id}`}
+                  className="shelf-card-pack"
+                  style={{
+                    marginTop: CARD_BOX.drop,
+                    '--pack-rule': `${PACK_RULE}px`,
+                    '--pack-rule-inset': `${PACK_RULE_INSET}px`,
+                    '--pack-rule-alpha': PACK_RULE_ALPHA,
+                  } as React.CSSProperties}
+                >
+                  <img src={`/cigs/${pack.id}.svg`} alt={pack.name} draggable={false} />
+                  <span className="sr-only">{pack.name}</span>
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+      )}
 
-              {R.clouds.map((c, i) => (
-                <img key={i} className="shelf-cloud" src="/sigil.webp" alt="" style={box(sh(c))} width={c.width} height={c.height} draggable={false} />
-              ))}
-
-              {/* the plus's hit area and the quantity menu, in the row's own box */}
-              <CigQuantity id={row.pack.id} name={row.pack.name} amount={row.amount} unit={row.unit} frame={quantityFrame} />
-            </div>
-          ))}
-        </div>
-      </ShelfStage>
+      {/* THE OUTLINE AT THE FOOT, and the clouds that open inside it */}
+      <div
+        className="shelf-foot"
+        style={{
+          marginTop: GRID_FOOT.drop,
+          borderWidth: GRID_FOOT.rule,
+          padding: GRID_FOOT.pad,
+        }}
+      >
+        <ShelfClouds size={GRID_FOOT.clouds} label="Open the clouds" />
+      </div>
     </div>
   );
 }

@@ -33,7 +33,8 @@
     "build:dotsglyph": "node scripts/build-dots-glyph.mjs",
     "build:dotsmenu": "node scripts/build-dots-menu.mjs",
     "build:tile": "node scripts/build-tile.mjs",
-    "build:sealglyph": "node scripts/build-seal-glyph.mjs"
+    "build:sealglyph": "node scripts/build-seal-glyph.mjs",
+    "build:shelfclouds": "node scripts/build-shelf-clouds.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.5",

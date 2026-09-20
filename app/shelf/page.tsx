@@ -5,7 +5,7 @@ import { savedPacks } from '@/lib/db';
 import { CIG_PACKS } from '@/lib/cigRow';
 import { signInGate } from '@/lib/siteUrl';
 import { ShelfPage } from '@/components/ShelfPage';
-import type { ShelfEntry } from '@/lib/shelfPage';
+import type { ShelfEntry } from '@/lib/shelfGrid';
 
 export const metadata: Metadata = {
   // the root layout appends " · Far East"
