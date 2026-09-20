@@ -138,14 +138,18 @@ const PLAY_RATE: Record<string, number> = { bar: 1, grow: 0.8 };
  * on the mountain button everything retracts and the animation plays in
  * reverse".
  *
- * So a latched menu's last frame IS its resting state, and the ONE thing that
- * takes it back is a press on the button itself: leaving mid-run no longer
- * turns it around, pressing the page does nothing, pressing a word that goes
- * nowhere does nothing. On the landing page that means the six words stand and
- * the mountain in the button stays drained until the reader presses the
- * mountain again, and then the whole thing runs backwards — the branches
- * retract, the ink comes home and the mark fills, which is the same frames
- * played the other way.
+ * So a latched menu's last frame IS its resting state ONCE THE RUN HAS
+ * FINISHED: pressing the page does nothing, pressing a word that goes nowhere
+ * does nothing, and the only thing that takes it back is a press on the button
+ * itself, which runs the whole thing backwards — the branches retract, the ink
+ * comes home and the mark fills, being the same frames played the other way.
+ *
+ * A RUN THAT HAS NOT FINISHED IS A DIFFERENT MATTER. Taking the pointer off
+ * the button mid-unfold turns it straight around, and it retracts from
+ * wherever it had got to until it is back at rest — or until the pointer comes
+ * back, which turns it around again from that point (the owner's ask, and what
+ * `goForward` from `reverse` has always done). The latch is about the END of
+ * the animation, not about the middle of it.
  *
  * The BAR menu is not latched: on the cigarette pages anything pressed
  * elsewhere closes it, because it sits over the page's own logo and that is
@@ -393,9 +397,8 @@ export function LogoMenu({ menu = 'bar', stop = 'base' }: { menu?: MenuName; sto
   }, [paint, setPhase]);
 
   /**
-   * Pressing the logo. Mid-unfold it skips to the end; once open it starts
-   * retracting, unless this menu is latched, where open is where it stays;
-   * mid-retraction it turns around.
+   * Pressing the trigger. Mid-unfold it skips to the end; once open it starts
+   * retracting; mid-retraction it turns around.
    */
   const onLogoPress = useCallback(() => {
     const now = phaseRef.current;
@@ -562,9 +565,14 @@ export function LogoMenu({ menu = 'bar', stop = 'base' }: { menu?: MenuName; sto
           if (e.pointerType === 'mouse') void goForward();
         }}
         onPointerLeave={(e) => {
-          // Leaving mid-unfold turns it straight around — unless the menu is
-          // latched, where the run finishes whatever the pointer does.
-          if (!latched && e.pointerType === 'mouse' && phaseRef.current === 'forward') goReverse();
+          // LEAVING MID-UNFOLD TURNS IT STRAIGHT AROUND, latched or not: the
+          // owner's "if a user hovers over the mountain button but removes
+          // their cursor without clicking before the animation is finished,
+          // reverse the animation from the current point until it is
+          // completely reset or the user hovers over the button again".
+          // Only mid-run — the test is `forward`, so once the animation has
+          // finished, leaving does nothing and the last frame stands.
+          if (e.pointerType === 'mouse' && phaseRef.current === 'forward') goReverse();
         }}
         onPointerDown={(e) => {
           e.preventDefault();

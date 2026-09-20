@@ -330,14 +330,27 @@ artwork to fit a frame — that scales the margins with it, which is the thing b
     animation plays regardless of user input", and then "on click on the mountain button
     everything retracts and the animation plays in reverse". `LATCH` in `LogoMenu` is the
     table, beside `PLAY_RATE` and for the same reason: it is a judgement about one menu,
-    not a property of the drawing. For a latched menu, leaving mid-run no longer turns it
-    around, pressing the page does nothing, and pressing a word that goes nowhere does
-    nothing; a press MID-RUN still skips to the end, because that lands on the same last
-    frame the run was going to anyway. **The one thing that takes it back is a press on the
-    button**, which runs the whole thing backwards at 2x — the branches retract, the ink
-    comes home and the mark fills, being the same frames the other way. So the landing
-    page's resting state after a run is the six words standing and the mountain drained,
-    until the reader presses the mountain again. **The BAR menu is not latched**: on the
+    not a property of the drawing. **THE LATCH IS ABOUT THE END OF THE ANIMATION, NOT THE
+    MIDDLE OF IT**, and the full state machine is:
+    - hovering the button runs it forward;
+    - **taking the pointer off it MID-RUN turns it straight around** (the owner's "if a
+      user hovers over the mountain button but removes their cursor without clicking
+      before the animation is finished, reverse the animation from the current point until
+      it is completely reset or the user hovers over the button again"), and it retracts
+      from wherever it had got to until it is back at rest — or until the pointer comes
+      back, which turns it around again from that point;
+    - a press MID-RUN skips to the end, because that lands on the same last frame the run
+      was going to anyway;
+    - **once the run has FINISHED, the last frame is the resting state**: leaving does
+      nothing, pressing the page does nothing, pressing a word that goes nowhere does
+      nothing;
+    - **and the one thing that takes it back from there is a press on the button**, which
+      runs the whole thing backwards at 2x — the branches retract, the ink comes home and
+      the mark fills, being the same frames the other way.
+    So the landing page's resting state after a completed run is the six words standing
+    and the mountain drained, until the reader presses the mountain again. Verified in the
+    page: forward → (leave) reverse → idle; forward → (leave, then hover) forward; open →
+    (leave, hover, page press, word press) still open; open → (button press) reverse. **The BAR menu is not latched**: on the
     cigarette pages anything pressed elsewhere closes it, because it sits over the page's
     own logo and that is how a reader gets the page back.
     - **Worth knowing about the close, since it is a REVERSE SCRUB of the same frames**: it
