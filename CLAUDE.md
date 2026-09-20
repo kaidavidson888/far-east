@@ -48,13 +48,15 @@ no CSS framework (tokens in `app/globals.css`). Deploys to Vercel.
 - `npm run audit:cigtext` — estimates every line of type on the built cigarette
   pages against the box it sits in and lists the tight ones, worst first, with
   the width it had in the original digits beside it. Run it after a font change.
-- `npm run build:menu` / `npm run build:growmenu` — bake the two logo menus out of
-  their GIFs (`monkey-bar.gif` for the cigarette pages, `monkey-grow.gif` for the
-  landing page) into `public/menu` + `lib/menu-geometry.json` and `public/growmenu` +
-  `lib/growmenu-geometry.json`. The grow bake (now the I button's menu, re-composited
-  from the gif's pieces) takes under a minute and MEASURES
-  everything it can — the scale off the first frame, the six words off the last — and
-  stops rather than guessing. See "The logo menu" below.
+- `npm run build:menu` / `npm run build:growmenu` — bake the two logo menus into
+  `public/menu` + `lib/menu-geometry.json` and `public/growmenu` +
+  `lib/growmenu-geometry.json`. The bar menu is baked from the owner's
+  `monkey-bar.gif`. **The grow menu's animation is GENERATED** (`scripts/lib/
+  ink-growth.mjs`); `monkey-grow.gif` is opened only for its six words and the
+  scale they are laid out on. It takes about a minute, MEASURES everything it
+  can and stops rather than guessing, and `GROW_DEBUG=1 node
+  scripts/build-grow-menu.mjs` draws the finished network on its own instead
+  of the frames. See "The logo menu" below.
 - `npm run build:tile` — bakes the animated 發 out of the owner's tile GIF (`scripts/assets/fa-tile.gif`) into
   `public/tile/fa-char-strip-{1x,2x}.webp` (all 72 frames stacked; the page steps them) and
   `lib/tile-geometry.json`. Takes a few seconds, keeps the character and drops the tile's
@@ -159,11 +161,13 @@ artwork to fit a frame — that scales the margins with it, which is the thing b
 - Routes: `/` is the landing artwork behind the sign-in splash; `/landing` is the same page
   with no splash. `/about`, `/privacy`, `/terms` are the inner pages.
 - **The logo menu** (`components/LogoMenu.tsx`) is on the landing routes and the
-  cigarette pages — its ground is white, so it cannot go on the red inner pages. Hovering
-  遠東 unfolds it; pressing mid-run skips to the end; pressing the logo again or anything
-  else runs it back at 2x. Frames are baked from a GIF because a GIF cannot be seeked,
-  paused or reversed. The canvas draws over the page's own logo rather than replacing it —
-  frame 0 IS that logo, and the bake measures the alignment rather than assuming it.
+  cigarette pages. Hovering the trigger unfolds it; pressing mid-run skips to the end;
+  pressing it again or anything else runs it back at 2x. Frames are baked out and scrubbed
+  on a canvas, because the animation has to be seeked, paused and run backwards and
+  neither a GIF nor a CSS animation can be. **The cigarette pages' bar menu is baked from
+  a GIF, and its frame 0 IS the page's own 遠東 logo**, measured to land on it rather than
+  assumed. The landing page's grow menu is generated, and its frame 0 is the mountain
+  button's mark.
 - **THERE ARE TWO MENUS AND ONE COMPONENT.** They are the same machine — same scrub, same
   phases, same rules about pressing — and differ only in what was drawn and what the words
   do, so each is described entirely by its geometry JSON and neither has its own copy of
@@ -180,108 +184,113 @@ artwork to fit a frame — that scales the margins with it, which is the thing b
     the logo — which recede again over the last thirty frames and leave the words standing.
     **The LANDING PAGE uses it, and the three labels that used to be printed on that page
     are now three of those six words** (see the landing section below).
-- **SINCE 2026-09-19 THE LANDING MENU GROWS OUT OF AN I BUTTON, NOT THE LOGO, AND ITS TOP
-  ROW IS RE-LAID** (the owner's ask: replace the character logo "and all instances of it in
-  the animation" with "an outline box with a capital I from the webfont bolded inside",
-  black, 20% larger than the plus, 10px off the page's top and left; "privacy policy" and
-  "terms of service" each on one line and the same size as "about us", all three as tall
-  as the I button; the gaps between them doubled; "adjust the animation accordingly").
-  - **The I button is drawn by `LogoMenu`, from `badge` in the geometry** — a 30px box with
-    a 2px black rule and an I in the owner's face, at the page's 10,10. The landing spec no
-    longer places the 遠東 part (it is still cut; one line puts it back). The cigarette
-    pages' bar menu has no `badge` and still sits invisibly over their logo.
-  - **IT IS DRAWN AT THE ROW'S OWN SCALE** (the owner's second ask: "scale all elements
-    related to the I button including the button itself to be the same scale as the +
-    button"). The plus is scaled to the red frame, so `CigScroller` publishes that scale on
-    the stage as `--logo-menu-zoom` and `.logo-menu` takes it; the menu is laid out from the
-    BUTTON'S corner and placed at the page's margin, and the stylesheet divides that
-    placement by the zoom, because `zoom` multiplies an element's own offsets too (the
-    shelf's rows again). Measured: the I button and the plus both 21.84px, the button's
-    corner still on 10,10.
-  - **THE I IS NOT GIVEN THE HOUSE'S SYNTHETIC BOLD, and it nearly fills its box** — the
-    owner's "make sure the circle and dot in the I are clearly visible". This face draws its
-    I as a ring with a hole above a stem, with a gap between: the hole is ~0.07 of the cap
-    and the gap ~0.05, so at this size they are about a pixel, and the 0.03em stroke used
-    for bold everywhere else closes both. The face is drawn at weight 700 anyway. The cap is
-    23 of the 26 the rule leaves (the plus puts its own mark at 16), which is the tallest
-    that keeps a pixel clear top and bottom. **Even so, at the plus's scale the hole reads
-    as about one pixel** — it is legible, not bold; a bigger button is the only way to make
-    more of it.
-  - **The letter is placed by its INK, in the PAGE's pixels** (`inkAt` in `LogoMenu`):
-    measured on a canvas with its own font, centred in the box and rounded, because whether
-    a one-pixel hole lands on a pixel or across two decides whether it is seen. It is
-    measured in page px rather than the menu's own, since the menu is scaled; and the
-    re-measure hangs off a **MutationObserver on the stage's style**, not a ResizeObserver —
-    a CSS zoom on an ancestor does not change an element's own layout size, so a size
-    observer never fires.
-  - **The bake RE-COMPOSITES the gif from its own pieces**, at full source resolution, rather
-    than baking it as one picture — read the header of `scripts/build-grow-menu.mjs`. The
-    first 57 frames, which only draw the box round the logo, are dropped (the run is frames
-    57..196, 142 frames; the first vine leaves the box after 57, and frame 0 is checked
-    empty). The drawn box and the logo are never copied. Each top word is scaled so its
-    x-height matches "about us" at 36px tall (the gif drew "terms of service" 10% smaller;
-    measured x-heights 8.68 / 8.55 / 7.71 → x2.621 / x2.658 / x2.948); the two-line words are
-    split into their lines **glyph by glyph** (a descender of one line and an ascender of
-    the next share rows) and set one word-space apart. **THE WORDS ARE SET AT THE RESET
-    BUTTON'S SIZE** (the owner's last word on it: "make the text of the text buttons the
-    same size as the reset button") — 15px in the owner's face, matched on the X-HEIGHT,
-    which is the one measure a drawing and a typeface share, and at the same scale now that
-    the menu takes the row's zoom. They sit centred on the button's middle: at this size a
-    baseline shared with a button three times their height would hang them off its bottom.
-    (They were the button's full height for an afternoon, which is where `X_STAR` and the
-    per-word scales come from.) The stack's three words keep the sizes the gif drew. **Each gap between words is STRETCHED to twice its width, not cut open** — no
-    column of any gap is empty in every frame, so a cut tears swirls — and **warped** so its
-    left edge follows the word before and its right edge the word after. The stack (MY
-    SAVED, OFFERS, RECOMMENDED) keeps its size and moves up under the button, its words'
-    left on the button's left.
-  - **Known roughness, while it grows only** — the open state is clean: the swirls rise ~35px
-    above the words at this size and the words start 10px from the top, so the upper swirls
-    run off the page's top edge; and a few swirl fragments that belonged to a two-line
-    word's second line are left behind under the first. The top row is ~1200px wide, so it
-    runs off a phone. The gif's paper carries faint off-white bands, which are now treated
-    as paper (they un-multiplied to alphas of 8-10 across the whole canvas).
-  - **sharp's `composite` returns FOUR channels** even onto a 3-channel base; the bake reads
-    `info.channels` and strips the alpha. Read as RGB it scrambles every frame into bands.
-- **The grow bake as it was before the I button** — the notes below still describe how the
-  gif's own geometry is measured (the scale off the logo, the alignment), which the new bake
-  reuses to find its pieces; the logo stencil and the single-picture crop are gone with the
-  logo:
-  - **Scale.** The bar was drawn at the page's own size; this is drawn at **4.15x** it
-    (1840x1136 against a 390-wide page). The scale is the gif's first frame — which is the
-    logo and nothing else — over the logo part's own box, and **the two axes have to agree
-    or the source is not what we think it is**: 40/166 and 87/361 are both 0.2410, and the
-    build stops if they ever differ by more than a per cent.
-  - **Alignment.** Each frame is resized and then **extracted at a whole device pixel**
-    chosen to put the gif's logo ink on the page's logo box; the residual is printed and
-    asserted under a quarter pixel. It comes to 0.148 x 0.075 CSS px, and the canvas's
-    frame-0 ink measures 45,28 on the page's own 45,28 — where the bar's rule was half a
-    pixel.
-  - **THE LOGO IS TAKEN OUT OF EVERY FRAME** (the owner's ask: "make the resting thickness
-    of the character logo match the thickness when the animation starts"). The page draws
-    its own 遠東 as a vector at `z-index: 4` and it stays up the whole time the menu is out,
-    so anything the canvas drew there was a SECOND copy of the same mark underneath the
-    first — and they do not coincide: the canvas's is a raster of a drawing made at 4.15x
-    and brought back down, its ink running about a pixel wider on every side than the
-    vector's box (44..86.5 against 45..85). The vector covered the middle and the rest
-    showed as a soft edge all round, so **the logo thickened the instant the menu started
-    moving**. The bake now blanks it: frame 0 is the logo and nothing else, which makes it
-    exactly the right stencil, and the page's logo box goes in the stencil too so the rule
-    is exact rather than nearly (resizing each frame separately leaves the odd pixel a
-    level off white, which un-multiplies to an alpha of 1). **It checks before it blanks** —
-    inside the stencil every frame must match frame 0 within a couple of levels, or
-    something was drawn over the logo and blanking would take that with it; the worst
-    disagreement across all 197 frames is 3 levels. The drawn rule round the logo stops at
-    y=27.5, half a pixel clear of the box, so none of the animation is lost. Verified in
-    the page: the canvas holds **zero ink** in the logo's box at every phase — idle, mid-run
-    and open — while the rest of it paints normally. Frame 0 is now entirely blank, which is
-    right: at rest the canvas has nothing to say. **The bar menu is not like this** — its
-    raster copy is 2px NARROWER than the vector, so it hides under it and shows no edge.
-  - **The six words are found, not typed in.** The final frame's ink is grouped into blobs
-    (dilated by 4.5 PAGE px, which reaches across the line break inside "privacy policy" and
-    not across the gap to "terms of service"), the blob holding the logo is set aside, and
-    the rest are sorted into reading order. **Not exactly six and the build stops** rather
-    than shipping a menu with a word nobody can press. Only what each word DOES is a table
-    (`ITEMS`), because that is the one thing pixels cannot say.
+- **SINCE 2026-09-19 THE LANDING MENU GROWS OUT OF A MOUNTAIN BUTTON, AND THE ANIMATION IS
+  GENERATED RATHER THAN THE GIF'S.** Three asks in a row got here. First: replace the
+  character logo "and all instances of it in the animation" with "an outline box with a
+  capital I from the webfont bolded inside", black, 10px off the page's top and left; the
+  three top words each on one line at one size; the gaps between them doubled. Then: "scale
+  all elements related to the I button including the button itself to be the same scale as
+  the + button", and "make the text of the text buttons the same size as the reset button".
+  Then, with the owner's mountain vector attached: "instead of an I make it the image ive
+  attached with the same dimensions make the mountain black and the tipi black with a white
+  outline the same thickness as the outline box. as the animation that reveals the text
+  buttons plays use the animation that you made for the seal logo button where the black
+  leaves traces in the white as if it is draining as the text is written. make sure the
+  animation grows into the text like branches or flowing water that is interconnected but
+  sprouts more connected paths as it flows outward."
+  - **WHAT IS STILL THE GIF'S: THE SIX WORDS, AND ONLY THEM.** `monkey-grow.gif` is opened
+    twice now — page 0 for the scale solve, the last page for the words — and its own
+    animation is never drawn. The words are cut from that last frame (by then its vines
+    have receded and it is the words and the drawn box), scaled, and laid out exactly as
+    before: each top word so that its X-HEIGHT is the reset button's 15px in the owner's
+    face (a drawing has no type size to copy; measured 8.68 / 8.55 / 7.71 → x0.946 / x0.959
+    / x1.064), the two-line words split glyph by glyph and set on one line a word-space
+    apart, the gaps between words doubled, the stack moved up under the button. Everything
+    that layout rests on is still measured every build and the build still stops if the gif
+    is not what it expects.
+  - **THE BUTTON'S MARK IS THE OWNER'S MOUNTAIN** (`scripts/assets/mountain.svg`, cut by
+    `scripts/lib/badge-mark.mjs`). The vector is a picture — red sky, white mountain, black
+    tipi — and the mark is made by dropping the sky, making the mountain the ink, and
+    putting a white rule of the box's own weight (2px) round the tipi, which is otherwise
+    the same black as the mountain it sits on. **The three regions are read off a RENDER,
+    not out of the path data**: the mountain is not a shape in the file at all, it is the
+    paper the sky does not cover. The white rule stands OUTSIDE the tipi and is clipped to
+    the silhouette, so where the tipi's own edge IS the summit nothing is drawn and nothing
+    spills into the sky. Drawn 24 x 21.28 inside the 26px the rule leaves: **standing on
+    the inner foot with a pixel of air at each side**, because the picture is full-bleed
+    and drawn any larger it merges with three sides of the box and the button stops reading
+    as a box.
+  - **THE MARK IS DRAWN BY THE CANVAS, NOT THE PAGE, BECAUSE IT DRAINS.** At rest the
+    canvas is invisible, so the page shows `public/growmenu/badge.webp` — **a still the
+    bake cuts out of the animation's own frame 0**, the same pixels, which is what makes
+    the handover invisible. (A vector here against a raster there is exactly the mismatch
+    the 遠東 logo was reported for: "it changed opacity when you hovered it".) Frame 0 is
+    asserted to hold ink inside the mark's box and nowhere else, and the badge image is
+    hidden by CSS for any phase but `idle`.
+  - **THE GROWTH IS GENERATED** — `scripts/lib/ink-growth.mjs`, seeded, so a rebuild is
+    byte-identical. A CHANNEL is a polyline with a tapering width, a start time and a
+    speed, drawn up to wherever its front has reached; four things come off one, and the
+    four together are the owner's sentence:
+      * a **bypass** leaves the channel and REJOINS it further along, bowing out — a
+        braided stream's island. This is the interconnection: a tree can only split.
+      * a **branch** leaves at a shallow angle, bends back toward the run so it travels
+        alongside its parent, and sprouts in its turn.
+      * a **fork**, past the run's halfway, doubles a branch — "sprouts more connected
+        paths as it flows outward", said again.
+      * a **twig** is short and ends in a **curl**, an Archimedean spiral whose radius runs
+        out: the seal's cloud filigree, which is what the drawing this menu came from is
+        made of.
+    Children are spawned at gaps that SHORTEN with distance along the run (21 → 8 page px
+    on the top row), so the network thickens outward rather than thinning, and `linkTips`
+    joins tips that ended up near one another AND POINTING THE SAME WAY — without that test
+    a link is a straight tick drawn across the channel, which is the opposite of a join.
+  - **THE WORDS ARE NOT A WALL; THEIR GLYPHS THIN THE STROKE OVER THEM.** The row's words
+    fill the middle of that band from end to end, and the first bake kept the growth out of
+    their boxes — which left the row with a fringe on one side and every downward child cut
+    to a tick. Now a channel may cross a word: the word plate, blurred by a page px, is a
+    `gmask` on `Ink.stroke`, and the drawn half-width is `hw * (1 - 0.92 * glyph)`, so a
+    stroke thins to nothing over a letter and threads between them. It is the single line
+    that makes the growth WRITE the words rather than score them through. The top trunk
+    then weaves — over one word, under the next, crossing in the gaps where there is
+    nothing to cross — which is what gives it both strips to sprout into.
+  - **EACH WORD IS WRITTEN BY THE CHANNEL THAT PASSES IT**, not by a wipe. Every pixel of a
+    word has an arrival distance `T` = how far along the writer the nearest point on it is,
+    plus 0.9 of how far off the channel it sits, plus two octaves of SPATIAL noise; it comes
+    up when the front has passed that distance, over 7px of soak. So a letter grows out of
+    the stroke going past it with a ragged wet edge, and because the noise is of place and
+    never of time the edge cannot shimmer. The front keeps advancing at the same pace after
+    its channel has stopped, or the last letters of a word are never reached.
+  - **THE INK LEAVES BY THINNING, NOT BY BEING CUT BACK.** Over the last fifth every point
+    loses width, latest arrival first (`erode` on `Ink.stroke`), so a stroke goes hairline
+    and then goes — the seal's "black leaves traces in the white", in the same arithmetic
+    the mark drains by. Retracting the fronts instead reads as a film run backwards.
+  - **THE MARK DRAINS BY THE SAME CLOCK, AND WHAT IS LEFT IS TRACES.** Ink is taken out of
+    the mountain in order of its distance THROUGH THE INK from the two points the network
+    leaves by — the box's right edge on the row's middle line, and the foot — so it empties
+    from the spouts inward. Two things make what is left read as veins rather than as a
+    bite: the step cost carries a **capillary term** (`1 - 0.45*exp(-depth/2.2px)`), so thin
+    ink holds longest and the silhouette keeps its own outline as it empties; and a `keep`
+    field protects the contour, the tipi with its white rule, and **two veins grown by the
+    same generator, rooted at the same two spouts, with a curl on each** — order from the
+    physics, residue in the branches' own grammar. The mark fills again as the network gives
+    its ink up, so the open state is the button as it always looks.
+  - **THE CANVAS STARTS ABOVE THE BUTTON.** The growth reaches over the top row, so the
+    canvas is given that room (`SHIFT`, measured off the finished network, capped at the
+    margin) and the button sits at 0,`SHIFT` inside it. **`place` is therefore where the
+    BUTTON goes, not the canvas's corner**: the offset is in menu px and shrinks with the
+    zoom while the page's 10px margin must not, so the stylesheet divides the margin by the
+    zoom and takes the offset off after (`--logo-menu-ox/oy`). Measured in the page at zoom
+    0.7: the button on 10,10 exactly.
+  - **`GROW_DEBUG=1 node scripts/build-grow-menu.mjs`** draws the whole finished network on
+    its own, one colour per kind of child, and stops. It is the only way to judge the shape
+    — a frame shows what has grown so far, which is not the same thing — and it is what
+    caught the ticks, the stubs and the fishbone in the first three attempts.
+  - **What the build checks, and what it measured on the way in:** 114 channels and 3363px
+    of run; the six words all cut with 0 px of the last frame falling outside their boxes;
+    frame 0 the mark alone; the last frame the words and the mark with 0 px of growth left
+    over. Verified in the page: the button at 10,10 at the row's scale, the words written
+    in reading order, and the hover dim still exact (88 mean alpha at rest, 44 hovered, 22
+    held, 88 again on leave).
 - **How a word answers the pointer is the geometry's `hover`.** `invert` is the bar's: the
   box fills and the label reverses out, which cannot be painted over the frame (the label
   would go with it), so the bake writes a second image per box. `dim` is the grow menu's:
@@ -305,18 +314,22 @@ artwork to fit a frame — that scales the margins with it, which is the thing b
   the row with no change at all. OFFERS and RECOMMENDED are `inert`: drawn, hoverable and
   going nowhere, as they were on the page. **Not `disabled`** — a disabled control takes no
   pointer events in Chrome, so it would stop answering the pointer as well.
-- **The grow menu weighs 2.2MB** since the I button (142 frames, 900x215),
-  against the bar's 953KB; it was 2.9MB when it grew out of the
-  logo at the drawing's own size (197 frames, 744x468), and 3.5MB before the logo came out
-  of those frames — that mark was being stored 197 times over. It loads on `requestIdleCallback`, after the page's own artwork. That is what the
-  frames genuinely cost: every ink pixel in it is pure black, and storing the alpha channel
-  alone comes to the same bytes, so WebP is already exploiting it — **and lossy WebP is not
-  an option, because sharp silently keeps lossless for an image with an alpha channel** (q10
-  and lossless came back byte-identical). The lever, if it is ever needed, is `SS` in the
-  bake: 1 instead of 2 quarters the pixels and costs sharpness on a dense screen.
-- **The frames carry no white.** The gif paints its background white and 90% of a finished
-  frame was opaque white, which cut across whatever the canvas sat on — on the cigarette pages,
-  the red rule round the info. The bake un-multiplies every frame out of white on the way out:
+- **The grow menu weighs 2.5MB** (142 frames, 914x312 device px), against the bar's
+  953KB. It was 2.2MB while it was still the gif re-composited, 2.9MB when it grew out of
+  the logo at the drawing's own size, and 3.5MB before the logo came out of those frames —
+  that mark was being stored 197 times over. It loads on `requestIdleCallback`, after the
+  page's own artwork. That is what the frames genuinely cost: every ink pixel is pure
+  black, and storing the alpha channel alone comes to the same bytes, so WebP is already
+  exploiting it — **and lossy WebP is not an option, because sharp silently keeps lossless
+  for an image with an alpha channel** (q10 and lossless came back byte-identical). The
+  lever, if it is ever needed, is `SS` in the bake: 1 instead of 2 quarters the pixels and
+  costs sharpness on a dense screen.
+- **The frames carry no white.** The GROW menu's are generated straight into alpha, so
+  there is nothing to undo; what follows is the BAR menu's bake (and was the grow menu's
+  while it came from its gif). The gif paints its background white and 90% of a finished
+  frame was opaque white, which cut across whatever the canvas sat on — on the cigarette
+  pages, the red rule round the info. The bake un-multiplies every frame out of white on
+  the way out:
   ink over white is `p = C*a + 255*(1-a)`, so `a = 1 - min(r,g,b)/255` and
   `C = (p - 255*(1-a))/a` recovers the colour and the coverage exactly, for any ink colour.
   **Not a colour key** — those leave a light halo on every antialiased edge, and this leaves
@@ -942,10 +955,10 @@ cannot drift.
 
 **OFFERS, My Saved and RECOMMENDED ARE NO LONGER ON THE PAGE — they moved into
 the logo menu** (the owner's 2026-09-16 ask, with the new drawing). The landing
-page at rest is now the I button (which replaced the 遠東 logo there on
-2026-09-19 — see "The logo menu") and the row with its plus, and everything
-you can press beyond those is reached by hovering the I. Three notes on what
-that took:
+page at rest is now the mountain button (which replaced the 遠東 logo there on
+2026-09-19, by way of an I for a day — see "The logo menu") and the row with
+its plus, and everything you can press beyond those is reached by hovering
+that button. Three notes on what that took:
 - **The parts are still cut and their geometry is still read.** Only the three
   `anchored(...)` lines came out of `LANDING_SPEC.parts`, exactly as TEST YOUR
   LUCK did — so putting the column back on the page is three lines.

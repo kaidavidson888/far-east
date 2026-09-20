@@ -78,12 +78,18 @@ type MenuGeometry = {
   logoHit: { x: number; y: number; w: number; h: number };
   /**
    * A trigger the page can SEE, drawn by this component rather than being an
-   * invisible hit over a logo the page draws. The landing page's I button
-   * (the owner's 2026-09-19 ask): a black box `rule` px wide round a bold
-   * `letter` in the owner's face, set at `font` px and nudged down `dy` px so
-   * its ink rather than its em box is centred. See `npm run build:growmenu`.
+   * invisible hit over a logo the page draws. The landing page's mountain
+   * button (the owner's 2026-09-19 ask): a black box `rule` px wide round the
+   * owner's mountain mark.
+   *
+   * THE MARK IS A STILL CUT OUT OF THE ANIMATION'S OWN FIRST FRAME, because
+   * the animation DRAINS it — the canvas has to own the mark while the menu
+   * is out, and at rest the canvas draws nothing, so the page needs its own
+   * copy. Being the same pixels, the handover is invisible; a vector here and
+   * a raster there is exactly the mismatch the 遠東 logo was reported for
+   * ("it changed opacity when you hovered it"). See `npm run build:growmenu`.
    */
-  badge?: { letter: string; rule: number; cap: number; font: number };
+  badge?: { rule: number; mark: { src: string; x: number; y: number; w: number; h: number } };
   /**
    * Where the menu's own corner goes on the page. The grow menu is laid out
    * from the I button's corner and placed at the page's 10px margin, so that
@@ -140,24 +146,6 @@ export function LogoMenu({ menu = 'bar', stop = 'base' }: { menu?: MenuName; sto
   const shown = boxes.filter((b) => inPlay.includes(b.id));
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  /**
-   * WHERE THE I SITS IN ITS BOX, WORKED OUT FROM ITS OWN INK.
-   *
-   * The owner: "make sure the circle and dot in the I are clearly visible".
-   * This face draws its I as a ring with a hole above a stem, and at the
-   * plus's size the hole is about two pixels and the gap under the ring
-   * about one — so whether they read at all comes down to whether they land
-   * ON pixels or across them. Centring the letter's em box leaves its ink on
-   * a fraction and both of them turn to grey mush.
-   *
-   * So the ink is measured in the page, on a canvas with the letter's own
-   * computed font once the face has loaded (the shelf's price does the
-   * same), and the letter is placed by where its ink has to land: centred in
-   * the box, rounded to whole pixels. Until then the flex centring in the
-   * stylesheet holds it, which is right to within half a pixel.
-   */
-  const letterRef = useRef<HTMLSpanElement | null>(null);
-  const [inkAt, setInkAt] = useState<{ left: number; top: number } | null>(null);
   const framesRef = useRef<HTMLImageElement[] | null>(null);
   const pressedRef = useRef<Record<string, HTMLImageElement>>({});
   const posRef = useRef(0);
@@ -401,66 +389,17 @@ export function LogoMenu({ menu = 'bar', stop = 'base' }: { menu?: MenuName; sto
   }, [goForward, goReverse, paint, setPhase, FRAMES]);
 
   /**
-   * The I, placed by its ink rather than by its em box — see `inkAt`.
+   * The mark in the button. It is a still of the animation's first frame, so
+   * the page's copy and the canvas's are the same pixels; the canvas takes
+   * over the moment the menu runs, because from there the mark DRAINS.
    *
-   * Measured in the PAGE's pixels, not the menu's own: this menu is drawn at
-   * the row's scale, so a whole pixel inside it is not a whole pixel on the
-   * page, and it is the page's that the hole has to land on. The button is
-   * watched for a change of size, which is how a change of that scale
-   * arrives.
+   * There is nothing to measure or place: the bake says where it goes in the
+   * menu's own coordinates and the zoom takes it with everything else. (The I
+   * that stood here before had to be measured in the page's pixels every time
+   * the row's scale changed, so that the hole in its ring landed on a whole
+   * one; a picture has no such problem.)
    */
   const badge = geometry.badge;
-  useEffect(() => {
-    const el = letterRef.current;
-    const btn = el?.parentElement;
-    if (!badge || !el || !btn) return;
-    let live = true;
-    const place = () => {
-      if (!live) return;
-      const cs = getComputedStyle(el);
-      const ctx = document.createElement('canvas').getContext('2d');
-      const box = btn.getBoundingClientRect();
-      if (!ctx || !box.width) return;
-      // The scale comes from the button's own drawn size: `getComputedStyle`
-      // reports the font size BEFORE a CSS zoom while a rect is after it, so
-      // the two cannot be mixed. Everything below is in the page's px.
-      const z = box.width / logoHit.w;
-      const size = badge.font * z;
-      ctx.font = `${size}px ${cs.fontFamily}`;
-      const m = ctx.measureText(badge.letter);
-      if (!m.actualBoundingBoxAscent) return;
-      const rule = badge.rule * z;
-      const inkW = m.actualBoundingBoxRight + m.actualBoundingBoxLeft;
-      const inkH = m.actualBoundingBoxAscent + m.actualBoundingBoxDescent;
-      // where the ink has to land: centred in the box, on the page's own pixels
-      const wantLeft = Math.round(box.left + rule + (box.width - 2 * rule - inkW) / 2);
-      const wantTop = Math.round(box.top + rule + (box.height - 2 * rule - inkH) / 2);
-      // the pen sits `left` inside the ink, and a line-height:1 box puts the
-      // baseline 0.825 of the size down (measured in Chrome for the shelf)
-      const penX = wantLeft + m.actualBoundingBoxLeft;
-      const spanTop = wantTop + m.actualBoundingBoxAscent - 0.825 * size;
-      const next = {
-        left: +((penX - (box.left + rule)) / z).toFixed(2),
-        top: +((spanTop - (box.top + rule)) / z).toFixed(2),
-      };
-      setInkAt((was) => (was && was.left === next.left && was.top === next.top ? was : next));
-    };
-    place();
-    // WATCHING THE SCALE, NOT THE BOX. A CSS zoom on an ancestor does not
-    // change this element's own layout size, so a ResizeObserver on it never
-    // fires; what changes is the custom property the row writes on the stage
-    // (see `layoutMenu` in CigScroller), which is an attribute change.
-    const stage = btn.closest('[data-menu-root]')?.parentElement ?? null;
-    const mo = stage ? new MutationObserver(place) : null;
-    mo?.observe(stage as Element, { attributes: true, attributeFilter: ['style'] });
-    window.addEventListener('resize', place);
-    if (document.fonts && !document.fonts.check(`${badge.font}px "Far East"`)) void document.fonts.ready.then(place);
-    return () => {
-      live = false;
-      mo?.disconnect();
-      window.removeEventListener('resize', place);
-    };
-  }, [badge, logoHit.w]);
 
   /**
    * Pressing anywhere else. An open menu retracts; one already retracting
@@ -532,6 +471,12 @@ export function LogoMenu({ menu = 'bar', stop = 'base' }: { menu?: MenuName; sto
           ? ({
               '--logo-menu-x': px(geometry.place.left),
               '--logo-menu-y': px(geometry.place.top),
+              // where the button sits INSIDE the canvas: the growth reaches
+              // above and left of it, so the canvas starts there. In menu px,
+              // so it scales with the zoom — which is why the stylesheet
+              // subtracts it after dividing the margin rather than before.
+              '--logo-menu-ox': px(logoHit.x),
+              '--logo-menu-oy': px(logoHit.y),
             } as React.CSSProperties)
           : null),
       }}
@@ -581,18 +526,23 @@ export function LogoMenu({ menu = 'bar', stop = 'base' }: { menu?: MenuName; sto
           onLogoPress();
         }}
       >
-        {geometry.badge ? (
-          <span
-            ref={letterRef}
-            className="logo-menu-badge-letter"
+        {badge ? (
+          /* eslint-disable-next-line @next/next/no-img-element */
+          <img
+            className="logo-menu-badge-mark"
+            src={badge.mark.src}
+            alt=""
             aria-hidden="true"
+            draggable={false}
             style={{
-              fontSize: px(geometry.badge.font),
-              ...(inkAt ? { position: 'absolute', left: px(inkAt.left), top: px(inkAt.top) } : null),
+              // the bake's coordinates are the canvas's; the button's own
+              // corner is where this sits inside
+              left: px(badge.mark.x - logoHit.x - badge.rule),
+              top: px(badge.mark.y - logoHit.y - badge.rule),
+              width: px(badge.mark.w),
+              height: px(badge.mark.h),
             }}
-          >
-            {geometry.badge.letter}
-          </span>
+          />
         ) : null}
       </button>
 

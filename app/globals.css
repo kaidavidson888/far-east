@@ -2037,8 +2037,14 @@ ul, ol { list-style: none; }
   position: absolute;
   /* divided by the zoom below, because `zoom` multiplies an element's own
      offsets as well as its contents — the shelf's rows do the same */
-  left: calc(var(--logo-menu-x, 0px) / var(--logo-menu-zoom, 1));
-  top: calc(var(--logo-menu-y, 0px) / var(--logo-menu-zoom, 1));
+  /* THE MARGIN IS THE BUTTON'S, NOT THE CANVAS'S. --x/--y are where the
+     button has to land on the page; --ox/--oy are where it sits inside the
+     canvas, which is in the menu's own px and so scales with the zoom. The
+     margin is divided by the zoom (because `zoom` multiplies an element's own
+     offsets) and the offset is taken off after, in the same px the canvas is
+     laid out in. */
+  left: calc(var(--logo-menu-x, 0px) / var(--logo-menu-zoom, 1) - var(--logo-menu-ox, 0px));
+  top: calc(var(--logo-menu-y, 0px) / var(--logo-menu-zoom, 1) - var(--logo-menu-oy, 0px));
   /* THE LANDING MENU IS DRAWN AT THE ROW'S OWN SCALE — the owner's "the same
      scale as the + button" (2026-09-19). `CigScroller` puts the scale it
      gives the plus on the stage as `--logo-menu-zoom`, and the menu is laid
@@ -2123,17 +2129,18 @@ ul, ol { list-style: none; }
   outline: 2px solid #010101;
   outline-offset: 2px;
 }
-/* THE I BUTTON — the landing page's menu grows out of it (the owner's
-   2026-09-19 ask: "an outline box with a capital I from the webfont bolded
-   inside … the box and letter black … 20% larger than the + button … 10px
-   margins between the top and left of the page and itself"). The menu's
-   geometry says so with `badge` (lib/growmenu-geometry.json, written by
-   `npm run build:growmenu`), and LogoMenu draws the trigger as this instead
-   of an invisible hit over a logo: 36px, the plus's 30 plus 20%, a black
-   rule, and an I in the owner's face made bold the house's way — a stroke on
-   the outline, the face having one weight and `font-synthesis` being off.
-   The size and the ink offset come in inline from the badge. It sits above
-   the menu's canvas, which draws nothing where it is. */
+/* THE MOUNTAIN BUTTON — the landing page's menu grows out of it (the owner's
+   2026-09-19 asks: an outline box at the plus button's size, 10px off the
+   page's top and left, and in it "the image ive attached … the mountain black
+   and the tipi black with a white outline the same thickness as the outline
+   box"). The menu's geometry says so with `badge`
+   (lib/growmenu-geometry.json, written by `npm run build:growmenu`), and
+   LogoMenu draws the trigger as this instead of an invisible hit over a logo:
+   30px square, a black rule, and the mark inside it as a picture.
+
+   (It was a bold I from the owner's face for a day, which had to be placed by
+   measuring its ink in the page so the hole in its ring landed on a whole
+   pixel. Nothing of that survives — a picture is placed by the bake.) */
 .logo-menu-logo.logo-menu-badge {
   box-sizing: border-box;
   border-style: solid;
@@ -2145,22 +2152,30 @@ ul, ol { list-style: none; }
   justify-content: center;
   z-index: 1;
 }
-/* NO SYNTHETIC BOLD ON THE I. Everywhere else on this site bold is a 0.03em
-   stroke on the outline, the face having one weight — but this face draws
-   its I as a ring with a hole above a stem, and at the plus's size that hole
-   is under two pixels: a stroke that grows the ink from both sides closes it
-   and fills the gap under the ring (the owner: "make sure the circle and dot
-   in the I are clearly visible"). The face is drawn at weight 700 anyway, so
-   the letter is bold as it stands. */
-.logo-menu-badge-letter {
+/* THE MARK AT REST, AND THE HANDOVER TO THE CANVAS.
+
+   The animation DRAINS this mark, so the canvas has to own it while the menu
+   is out — and the canvas draws nothing at rest, so the page keeps its own
+   copy here. The two are the same pixels: the bake cuts this file out of the
+   animation's own first frame (`public/growmenu/badge.webp`), which is what
+   makes the swap invisible. A vector here against a raster there is exactly
+   the mismatch the 遠東 logo was reported for.
+
+   It steps aside the moment anything is running, or the full mark would sit
+   over the draining one. */
+.logo-menu-badge-mark {
+  position: absolute;
   display: block;
-  font-family: var(--font-typed);
-  font-weight: 400;
-  font-synthesis: none;
-  line-height: 1;
   pointer-events: none;
   user-select: none;
   -webkit-user-select: none;
+  /* an absolutely placed child of a bordered box is offset from the padding
+     edge, so the bake's coordinates have the rule taken off them in the
+     component — and a stray max-width would collapse it (the shelf's clouds) */
+  max-width: none;
+}
+.logo-menu:not([data-phase='idle']) .logo-menu-badge-mark {
+  opacity: 0;
 }
 
 /* ----------------------------------------------------------- seal button --
