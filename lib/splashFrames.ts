@@ -13,6 +13,7 @@
 
 import {
   SPLASH_EDGE_BANDS, SPLASH_EDGE_B64, SPLASH_ASSET_V, SPLASH_PHONE_LABEL_ASPECT,
+  SPLASH_BOXFILL,
 } from './splashEdgeProfile';
 
 export const SPLASH_FRAME_MS = 40;
@@ -190,6 +191,7 @@ let frames: HTMLImageElement[] | null = null;
 let edge: HTMLImageElement | null = null;
 let settle: HTMLImageElement | null = null;
 let blackbox: HTMLImageElement | null = null;
+let boxfill: HTMLImageElement | null = null;
 let emailLabel: HTMLImageElement | null = null;
 
 export function splashFrames(): HTMLImageElement[] {
@@ -202,6 +204,33 @@ export function splashFrames(): HTMLImageElement[] {
     });
   }
   return frames;
+}
+
+/**
+ * THE PATTERN WITH NO LOGIN BOX IN IT, cut to the box's own neighbourhood.
+ *
+ * The source animation draws a 215px SQUARE and the login box is a 430 x 87
+ * rectangle now (lib/loginBox.ts), so the square has to go: its white paper and
+ * its red outline both stand outside the new rectangle, top and bottom, and
+ * would read as a notch cut out of the cloud field. This is the same mirror
+ * fill edge.webp is made with, cut at the frames' own width and sharpen so that
+ * laying it over a frame is the same pixels at the same weight.
+ *
+ * It is laid down from SPLASH_FILL_FROM, which is after the 遠東 seal has
+ * finished draining through that very rectangle (it still has ink at f28 and
+ * none at f30) — patch it any earlier and the patch covers the seal.
+ */
+export const SPLASH_FILL = SPLASH_BOXFILL;
+export const SPLASH_FILL_FROM = 0.3;
+export const SPLASH_FILL_TO = 0.42;
+
+export function boxfillImage(): HTMLImageElement {
+  if (!boxfill) {
+    boxfill = new Image();
+    boxfill.decoding = 'async';
+    boxfill.src = splashAsset('boxfill.webp');
+  }
+  return boxfill;
 }
 
 /** The final red pattern, box reflected over — tiled into the screen margins. */
@@ -250,6 +279,7 @@ export function preloadSplashFrames(): Promise<void> {
   void edgeImage().decode().catch(() => {});
   void settleImage().decode().catch(() => {});
   void blackboxImage().decode().catch(() => {});
+  void boxfillImage().decode().catch(() => {});
   void emailLabelImage().decode().catch(() => {});
   return imgs[0].decode().catch(() => {});
 }

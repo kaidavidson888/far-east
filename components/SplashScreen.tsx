@@ -1,12 +1,16 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { SplashLoginFields } from './splash/SplashLoginFields';
+import { SplashLogin } from './splash/SplashLogin';
 import {
   splashFrames,
   edgeImage,
   settleImage,
+  boxfillImage,
   SPLASH_FORM,
+  SPLASH_FILL,
+  SPLASH_FILL_FROM,
+  SPLASH_FILL_TO,
   preloadSplashFrames,
   frameAt,
   coverRect,
@@ -41,9 +45,10 @@ const viewport = () => ({
  * tiling the box-free copy, revealed per band from the baked per-frame edge
  * profile so the margins branch outward like water. A radial veil keeps the
  * centre faint and the edges bold, easing in as it grows. On latch the baked
- * black is held for one more frame while SplashLoginFields paints the same
- * content back over it — pixel-exact, from blackbox.webp — and settle.webp then
- * drops the baked copy, so the handover to the working form is invisible.
+ * black is held for one more frame while the login row paints — and the
+ * square the source drew is patched out of the pattern as the run goes on
+ * (boxfill.webp), because the login box is a long rectangle now and draws
+ * itself: see components/splash/SplashLogin.tsx and lib/loginBox.ts.
  */
 export function SplashScreen({ next = '', notice = null }: {
   /** Where the reader was when they were stopped, for the form to send them back to. */
@@ -64,6 +69,7 @@ export function SplashScreen({ next = '', notice = null }: {
   const framesRef = useRef<HTMLImageElement[]>([]);
   const edgeRef = useRef<HTMLImageElement | null>(null);
   const settleRef = useRef<HTMLImageElement | null>(null);
+  const fillRef = useRef<HTMLImageElement | null>(null);
   const inkLayerRef = useRef<HTMLDivElement | null>(null);
   const offRef = useRef<HTMLCanvasElement | null>(null);
   const fieldOnRef = useRef(false); // a splash text field is focused
@@ -134,6 +140,31 @@ export function SplashScreen({ next = '', notice = null }: {
     const settle = settleRef.current;
     if (inForm && settleOnRef.current && settle?.complete && settle.naturalWidth) {
       ctx.drawImage(settle, 0, 0, settle.naturalWidth, settle.naturalHeight, r.x, fy, r.w, r.h);
+    }
+
+    /*
+     * THE SQUARE THE SOURCE DRAWS IS PATCHED OUT. The login box is a long
+     * rectangle now (lib/loginBox.ts) and it is drawn by the DOM, so the
+     * baked square — white paper and a red outline, both standing well outside
+     * the new shape — would read as a notch cut out of the cloud field. The
+     * patch is the same pattern with the box mirrored over, at the frames' own
+     * scale and sharpen, so the join cannot show.
+     *
+     * It comes in over SPLASH_FILL_FROM..TO, which starts after the 遠東 seal
+     * has finished draining through that very rectangle: the seal still has ink
+     * at f28 and none at f30, so patching from the start would cover it.
+     */
+    const fill = fillRef.current;
+    const fillA = inForm ? 1 : smooth(rampUp(p, SPLASH_FILL_FROM, SPLASH_FILL_TO));
+    if (fillA > 0.004 && fill?.complete && fill.naturalWidth) {
+      ctx.save();
+      ctx.globalAlpha = fillA;
+      ctx.drawImage(
+        fill, 0, 0, fill.naturalWidth, fill.naturalHeight,
+        r.x + SPLASH_FILL.x0 * r.w, fy + SPLASH_FILL.y0 * r.h,
+        (SPLASH_FILL.x1 - SPLASH_FILL.x0) * r.w, (SPLASH_FILL.y1 - SPLASH_FILL.y0) * r.h,
+      );
+      ctx.restore();
     }
 
     // Continue the red design out to the screen edges. edge.webp is the box-free
@@ -340,6 +371,7 @@ export function SplashScreen({ next = '', notice = null }: {
     framesRef.current = splashFrames();
     edgeRef.current = edgeImage();
     settleRef.current = settleImage();
+    fillRef.current = boxfillImage();
     measure();
 
     // dev-only: ?splashms=2800 paints one point of the animation and holds;
@@ -467,8 +499,8 @@ export function SplashScreen({ next = '', notice = null }: {
             if (el && !el.style.opacity) el.style.opacity = '0';
           }}
         >
-          <SplashLoginFields
-            box={box}
+          <SplashLogin
+            centre={{ x: box.x + box.w / 2, y: box.y + box.h / 2 }}
             next={next}
             notice={notice}
             live={phase === 'form'}

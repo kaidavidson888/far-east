@@ -50,7 +50,7 @@ try {
     SELECT table_name FROM information_schema.tables
     WHERE table_schema = 'public' ORDER BY table_name
   `;
-  check('all 8 tables created', tables.length === 8, JSON.stringify(tables.map((t) => t.table_name)));
+  check('all 10 tables created', tables.length === 10, JSON.stringify(tables.map((t) => t.table_name)));
 
   const rls = await sql`
     SELECT relname, relrowsecurity FROM pg_class

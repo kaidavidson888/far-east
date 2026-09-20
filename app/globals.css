@@ -936,6 +936,138 @@ ul, ol { list-style: none; }
 .splash-field-input:focus { outline: none; }
 .splash-field-submit { border: 0; background: transparent; cursor: pointer; padding: 0; line-height: 1; }
 .splash-field-submit:hover, .splash-field-submit:focus-visible { text-decoration: underline; outline: none; }
+/* ------------------------------------------------------ shut out for 30 --
+   Three failures of one section of the login box and the site closes for half
+   an hour (the owner's 2026-09-20 rule). Entirely red, one line, nothing else
+   — the root layout draws this in place of whatever was asked for, so there
+   is nothing on it to navigate with. app/blocked/page.tsx. */
+.blocked-page {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 24px;
+  /* the artwork's own red, as the splash's rejection is. NOT --negative:
+     that token is warm grey and is never an error colour, per the spec. */
+  background: #ff0000;
+}
+.blocked-page-say {
+  margin: 0;
+  color: #fcfcfc;
+  font-family: var(--font-typed);
+  font-weight: 700;
+  font-synthesis: none;
+  /* the face has one weight, so bold is a stroke — the shelf's price and the
+     age gate's do the same */
+  -webkit-text-stroke: 0.03em #fcfcfc;
+  letter-spacing: 0.02em;
+  line-height: 1.15;
+  text-align: center;
+  font-size: clamp(28px, 7vw, 86px);
+}
+
+/* ------------------------------------------------------- the login row --
+   THE LOGIN BOX IS ONE LONG ROW NOW (the owner's 2026-09-20 ask). A red
+   rectangle the height of the landing page's logo and three of the old box
+   long, with a black outline on its inner edge, and one row of the old box
+   inside it. Every number is in lib/loginBox.ts; this only says how they
+   behave. components/splash/SplashLoginRow.tsx draws it. */
+.login-row {
+  position: fixed;
+  z-index: 3;
+  box-sizing: border-box;
+  border-style: solid;
+  /* the artwork's own red, as the cigarette page's frame is. NOT --negative:
+     that token is warm grey and is never an error colour, per the spec. */
+  border-color: #ff0000;
+  background: #fcfcfc; /* the flat white the WebP frames are baked on */
+}
+.login-row-inner {
+  position: absolute;
+  box-sizing: border-box;
+  border-style: solid;
+  border-color: #010101;
+  pointer-events: none;
+}
+/* THE WORD STANDS AT HALF STRENGTH AND GOES WHEN THE READER ARRIVES — the
+   owner's 2026-09-20 "start the every instance of text in the box at 50%
+   opacity with the text fading out completely as the user interacts with the
+   login box". Half is the old box's own idle weight for a label
+   (SPLASH_FORM.idle.label), so the prompt reads exactly as it always did; what
+   is new is that it goes to nothing rather than to a tenth, because here the
+   prompt and the answer share one line and one baseline. */
+.login-row-ink {
+  position: absolute;
+  pointer-events: none;
+  opacity: 0.5;
+  transition: opacity 160ms ease;
+}
+.login-row-ink[data-out] { opacity: 0; }
+.login-row-rule,
+.login-row-rule > span,
+.login-row-dashes,
+.login-row-dashes > span {
+  position: absolute;
+  pointer-events: none;
+}
+/* The rule is EXTENDED rather than stretched: the drawn tile is repeated down
+   the new length and the overflow clipped, so the dashes keep the length and
+   the wander they were drawn with. */
+.login-row-rule { overflow: hidden; }
+.login-row-rule > span {
+  left: 0;
+  background-repeat: no-repeat;
+}
+.login-row-dashes > span {
+  top: 0;
+  background: #010101;
+}
+.login-row-form { position: static; }
+.login-row-input { position: absolute; }
+.login-row-sigil-hit {
+  position: absolute;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  line-height: 0;
+}
+/* The ☁ is a masked block rather than an image so that going red on a
+   rejection is one colour changing — the search bar's own construction. */
+.login-row-sigil {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: #010101;
+  -webkit-mask: url('/sigil.webp') center / 100% 100% no-repeat;
+  mask: url('/sigil.webp') center / 100% 100% no-repeat;
+  transition: background-color 150ms ease;
+}
+.login-row-sigil[data-miss] { background: #ff0000; transition: none; }
+.login-row-sigil[data-blink] { animation: cig-search-blink 1060ms steps(1, end) infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .login-row-sigil[data-blink] { animation: none; }
+}
+/* Owner's call, and the same deliberate exception the old box carried: a
+   rejected row floods with the splash's own red, right out to the outline's
+   footprint so no paper shows at the edge. */
+.login-row-flash {
+  position: absolute;
+  inset: calc(-1 * var(--login-rule, 5px));
+  background: #ff0000;
+  opacity: 0;
+  transition: opacity 150ms ease;
+  pointer-events: none;
+}
+.login-row-flash[data-on] { opacity: 1; transition: none; }
+.login-row-say {
+  position: absolute;
+  left: 0;
+  top: calc(100% + 10px);
+  width: 100%;
+}
+
 .splash-fields-error {
   margin: 0;
   font-family: var(--font-display); font-size: clamp(10px, 1.5vw, 13px);
