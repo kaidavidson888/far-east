@@ -138,6 +138,37 @@ const BOX = FIELD_W / 0.8;
  */
 const ROW = { x0: 0.1, x1: 0.9, tickX1: 0.1116, y0: 0.8, lineY0: 0.8915, lineY1: 0.908 };
 
+/**
+ * THE LINE STOPS ONE ☁ SHORT OF THE DOTS BUTTON (the owner's 2026-09-20 ask:
+ * "make the dashed line for the magnifying glass text editor stop one sigil
+ * length from the 3 dots button"). The bar runs from the red frame's left
+ * edge, and that button stands inside the frame's right end, so the line was
+ * running straight through it.
+ *
+ * IT IS CUT, NOT SCALED. The sprite is still drawn `box` px across, so the
+ * dashes keep the length, the spacing and the wander they were drawn with,
+ * and the windows onto it simply stop earlier — "the same row, bigger" holds,
+ * it is just less of the row. Scaling the sprite down to the shorter length
+ * would have taken the type and the ☁ down with it, which is not what was
+ * asked and would have set the field's type at three quarters of its size.
+ *
+ * `lineW` is therefore the only thing the row measures on the page; every
+ * other figure here stays a fraction of the DESIGN width.
+ */
+export function searchLineW(room: number): number {
+  return Math.max(0, Math.min(FIELD_W, room - FIELD_W * 0.151 * 0.9));
+}
+/*
+ * THERE IS NO FLOOR UNDER IT, and there was one for an afternoon. A floor
+ * applied after the ☁ is taken off gives the line back the very gap it was
+ * asked to keep: at 390px it clamped the line up to 74.8 bar px when the room
+ * was 96.6, so the ☁ — the thing the gap is measured in — came down on the
+ * dots button. The owner's rule is exact, so it is kept exactly, and on a
+ * window too narrow to hold a field the line simply runs out. It is the
+ * honest picture of there being no room, and the bar is unusable at that size
+ * for other reasons already (the frame it is scaled to is 66px wide there).
+ */
+
 export const CIG_SEARCH = {
   fieldW: FIELD_W,
   /** the sprite, and how big it is drawn so the line is the field's width */

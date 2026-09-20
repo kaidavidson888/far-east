@@ -31,9 +31,9 @@ import {
 } from '@/lib/cigRow';
 import { LANDING_ROW_CLEAR } from '@/lib/landing';
 import { CIG_HEADING_SIZE, CIG_TAG_MENU, TAG_HEADING, fitLabel, matchingPacks } from '@/lib/cigTags';
-import { searchPacks } from '@/lib/cigSearch';
+import { searchLineW, searchPacks } from '@/lib/cigSearch';
 import { CigSearch } from '@/components/CigSearch';
-import { CigDots, DOTS_REACH } from '@/components/CigDots';
+import { CigDots, DOTS_REACH, DOTS_RISE } from '@/components/CigDots';
 import { CIG_TOGGLE_GLYPH } from '@/lib/cigToggleGlyph';
 
 /**
@@ -160,6 +160,14 @@ const BAR_MIN_FIT = 0.68;
  * same call as the shelf's ROW_SCALE_FLOOR.
  */
 const MENU_MIN_ZOOM = 0.7;
+/**
+ * The air kept between the dots' drawing and the two things it sits between,
+ * the red frame's foot and the plus's line. Its floor is MENU_MIN_ZOOM — the
+ * scale below which this site's type stops rendering solid — so on a window
+ * where even that will not fit, the drawing overruns rather than shrinking
+ * into illegibility, which is the same call MENU_MIN_ZOOM itself makes.
+ */
+const CIG_DOTS_PAD = 3;
 
 type MenuLayout = {
   /** the menu's zoom */
@@ -177,10 +185,14 @@ type MenuLayout = {
   searchTop: number;
   /** the dots button: the search's mirror image, the other side of the plus */
   dotsLeft: number;
+  /** how much of the menu's scale the dots' DRAWING takes — see `dotsDraw` */
+  dotsDraw: number;
   /** the frame's own left edge, UNROUNDED: the search bar opens onto it */
   frameLeft: number;
   /** what the bar is zoomed by inside the menu's scale, to be the frame's width */
   barFit: number;
+  /** how long the search's dashed line is drawn, in the bar's own px */
+  searchLine: number;
 };
 
 export function CigScroller({
@@ -587,32 +599,55 @@ export function CigScroller({
      * the left and the plus's left edge.
      */
     const nextLeft = Wc / 2 + (list[i].w / 2 + CIG_GAP) * z;
+    const searchLeft = Math.round((prevRight + shutLeft) / 2 - plus / 2);
+    /*
+     * …AND HELD ON THE PAGE. Since the words grow out of its LEFT side (the
+     * owner's 2026-09-20 second ask) the drawing reaches 225 design px that
+     * way, back over the plus, so what has to stay on the page is its left
+     * edge and not its right. The mirror puts the button right of the middle
+     * and the reach is about a sixth of a screen, so this does not bite at
+     * any width measured — 360, 390, 1280, 1920, where the drawing's left
+     * edge lands at 44, 59, 534 and 875 against a 12px margin. It is here
+     * because a wide pack on a narrow window is the case nobody thinks to
+     * try, and a menu half off the page is worse than a button a few pixels
+     * off its mirror.
+     */
+    const dotsLeft = Math.max(
+      Math.round(CIG_CONTROLS.edge + DOTS_REACH * s),
+      Math.round((shutLeft + plus + nextLeft) / 2 - plus / 2),
+    );
+    const bar = fitBar(el, Wc / 2 - frameW / 2, frameW, s);
     const next: MenuLayout = {
       s,
       top,
       shutLeft,
       openLeft: Math.round(Wc / 2 - frameW / 2),
       room: Math.max(CIG_CONTROLS.height, Math.floor((Hc - CIG_CONTROLS.edge - gridTop) / s)),
-      searchLeft: Math.round((prevRight + shutLeft) / 2 - plus / 2),
+      searchLeft,
       searchTop: Math.round((frameFoot + top) / 2 - plus / 2),
+      dotsLeft,
       /*
-       * …AND HELD ON THE PAGE. Its words reach 213 design px to the right of
-       * the button, which on the owner's desktop is 150 and leaves 700px to
-       * spare, but on the narrowest phone with the widest pack in the frame
-       * comes to within a few pixels of the edge. Where the mirror would put
-       * the last letters off the screen the button stops there instead — but
-       * never back onto the plus: below about 370px there is no arrangement
-       * that fits, and the end of RECOMMENDED is clipped rather than the two
-       * buttons being stacked on one another. A judgement, not the owner's
-       * instruction — the same call as MENU_MIN_ZOOM above.
+       * HOW BIG THE WORDS MAY BE DRAWN, which is not the same as how big the
+       * button is. The button is the plus's size because it is the plus's
+       * mirror, and that size follows the FRAMED PACK: the widest pack in the
+       * catalogue (Fiit Menthol, 108) gives 1.37 where a mean one gives 0.73.
+       * The words hang three lines deep off a line with the red frame close
+       * above and the plus's line close below, so at 1.37 they ran 31px up
+       * into the frame and down onto the plus (measured, 1920x947; worse on a
+       * shorter window). The room each way from the ink's own line is half
+       * the distance between the frame's foot and the plus's top — the owner
+       * put the button midway between them — and the drawing takes as much of
+       * the menu's scale as fits in it, which is all of it for nine packs in
+       * ten. `MENU_MIN_DRAW` is the same judgement as `MENU_MIN_ZOOM`: below
+       * it the words would stop being readable, so there it overruns instead.
        */
-      dotsLeft: Math.max(
-        Math.round(shutLeft + plus + CIG_CONTROLS.gap * s),
-        Math.min(
-          Math.round((shutLeft + plus + nextLeft) / 2 - plus / 2),
-          Math.round(Wc - CIG_CONTROLS.edge - DOTS_REACH * s),
-        ),
-      ),
+      dotsDraw: +Math.max(
+        // the floor is on the scale the words are SEEN at, not on the
+        // fraction: at a wide pack `s` is nearly twice what a mean one gives,
+        // so two thirds of it is still bigger than the menu's own minimum
+        Math.min(1, MENU_MIN_ZOOM / s),
+        Math.min(1, ((top - frameFoot) / 2 - CIG_DOTS_PAD) / (DOTS_RISE * s)),
+      ).toFixed(4),
       /*
        * THE SEARCH BAR IS THE FRAME'S WIDTH EXACTLY, and neither of those two
        * numbers is the menu's. `openLeft` is rounded, which left the bar up to
@@ -623,7 +658,16 @@ export function CigScroller({
        * unrounded edge, and a zoom of its own inside the menu's — 1 wherever
        * the menu already fits, less where it is clamped.
        */
-      ...fitBar(el, Wc / 2 - frameW / 2, frameW, s),
+      ...bar,
+      /*
+       * …AND ITS LINE STOPS ONE ☁ SHORT OF THE DOTS BUTTON (the owner's
+       * 2026-09-20 ask). The bar starts at the frame's left edge and that
+       * button stands inside the frame's right end, so the dashes were
+       * running straight through it. The room is measured between the two in
+       * the BAR'S OWN px — its left edge to the button's, over the two zooms
+       * it is drawn through — and `searchLineW` takes the ☁ off that.
+       */
+      searchLine: searchLineW((dotsLeft - bar.frameLeft) / (s * bar.barFit)),
     };
     // The logo menu is drawn at the same scale as the plus (the owner's
     // 2026-09-19 ask), and it is a sibling of this component's controls, so
@@ -641,8 +685,10 @@ export function CigScroller({
       was.searchLeft === next.searchLeft &&
       was.searchTop === next.searchTop &&
       was.dotsLeft === next.dotsLeft &&
+      was.dotsDraw === next.dotsDraw &&
       was.frameLeft === next.frameLeft &&
-      was.barFit === next.barFit
+      was.barFit === next.barFit &&
+      was.searchLine === next.searchLine
         ? was
         : next,
     );
@@ -1477,7 +1523,17 @@ export function CigScroller({
         open={searchOpen}
         locked={locked}
         slides={menuSlides}
-        place={menu ? { left: searchOpen ? menu.frameLeft : menu.searchLeft, top: menu.searchTop, s: menu.s, fit: menu.barFit } : null}
+        place={
+          menu
+            ? {
+                left: searchOpen ? menu.frameLeft : menu.searchLeft,
+                top: menu.searchTop,
+                s: menu.s,
+                fit: menu.barFit,
+                line: menu.searchLine,
+              }
+            : null
+        }
         onOpenChange={(open) => {
           // "closes all other open menus around it": the tag menu and the dots,
           // which are the two that stand beside it. (The mountain's menu in the
@@ -1508,7 +1564,7 @@ export function CigScroller({
       <CigDots
         open={dotsOpen}
         slides={menuSlides}
-        place={menu ? { left: menu.dotsLeft, top: menu.searchTop, s: menu.s } : null}
+        place={menu ? { left: menu.dotsLeft, top: menu.searchTop, s: menu.s, draw: menu.dotsDraw } : null}
         onOpenChange={(open) => {
           if (open) {
             setTagsOpen(false);

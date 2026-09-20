@@ -26,12 +26,13 @@
  *     revealed the branches are at their apex" asks for. It comes back only by
  *     being run backwards — the button again, or another menu opening.
  *
- * WHERE THE WORDS GO. They hang to the RIGHT of the button, left-aligned with
- * one another as they were under the mountain, their block centred on the
- * button's middle line. Right, because the button stands on the row's own
- * controls line: the red frame is close above it and the plus's line close
- * below, and three lines of type fit in neither. Nothing in the ask settles
- * it, so it is the one call here that is mine.
+ * WHERE THE WORDS GO. They hang to the LEFT of the button (the owner's
+ * second ask of the day: "have the word buttons grow from the left side of
+ * the button not the right"), left-aligned with one another as they were
+ * under the mountain, their block centred on the button's middle line. To
+ * the side rather than above or below, because the button stands on the
+ * row's own controls line: the red frame is close above it and the plus's
+ * line close below, and three lines of type fit in neither.
  */
 import { writeFileSync, mkdirSync, rmSync } from 'node:fs';
 import sharp from 'sharp';
@@ -60,8 +61,15 @@ const BOXW = BTN;
  * opened by the + button", which is what a heading in that grid spans.
  */
 const BLOCK_W = BTN_W * 2 + GAP;
-/** The block stands one gap past the button, as everything on this row does. */
-const BLOCK_X = BOXW + GAP;
+/**
+ * THE BLOCK STANDS ONE GAP TO THE LEFT OF THE BUTTON — the owner's
+ * 2026-09-20 "have the word buttons grow from the left side of the button not
+ * the right". One gap, as everything on this row stands off its neighbour;
+ * the button's own left edge is x=0, so the block runs from -(gap + its
+ * width) to -gap, and the widest word — RECOMMENDED, which is what sets the
+ * width — is the one that ends on that gap.
+ */
+const BLOCK_X = -(GAP + BLOCK_W);
 
 /** What the three words are, in the order the gif drew them down the page. */
 const DOTS_ITEMS = [
@@ -85,8 +93,23 @@ const GROWTH = {
   speed: 240,
 };
 
-/** The run, at the gif's own pace: three words rather than the mountain's. */
-const FRAMES = 100;
+/**
+ * The run, at the gif's own pace: three words rather than the mountain's —
+ * and then the reach winding back in.
+ *
+ * THE BRANCH THAT CONNECTS TO THE OUTLINE RETRACTS ONCE THE WORDS ARE GROWN
+ * (the owner's 2026-09-20 ask: "have the branch that connects to the outline
+ * retract after the words are fully grown but leave the other branches
+ * connected to the words and the one on the left until the 3 dots button is
+ * pressed again"). So the run has two phases: the growth, which ends at the
+ * apex exactly as before, and then the REACH and everything hanging off it
+ * withdrawing back into the button, leaving the spine down the left, the
+ * three feeders and the words standing. That last frame is the resting
+ * state, and only running the whole thing backwards takes it away.
+ */
+const GROW_FRAMES = 100;
+const PULL_FRAMES = 24;
+const FRAMES = GROW_FRAMES + PULL_FRAMES;
 /** How much of a letter's own run it takes to come up, in page px of arc. */
 const WRITE_SOAK = 7;
 
@@ -205,28 +228,73 @@ LAID.forEach((b, i) => console.log(`    ${DOTS_ITEMS[i].id.padEnd(12)} ${b.x},${
 // ---- the network ------------------------------------------------------------
 const rng = mulberry32(SEED);
 const wob = (a) => a * (rng() * 2 - 1);
-const streams = [];
+/*
+ * TWO FAMILIES, BECAUSE ONE OF THEM LEAVES. Everything that hangs off the
+ * reach goes back into the button with it at the end of the run; everything
+ * on the spine and the feeders stays. They are kept apart from the moment
+ * they are grown — including their joins, which are made WITHIN each family
+ * and never across — because a link between the two would be left hanging in
+ * the air the moment the reach withdrew.
+ */
+const goes = [];
+const stays = [];
 
 /**
- * THE STEM LEAVES THE BUTTON'S RIGHT-HAND SIDE and runs down the left of the
- * words, and a feeder goes right along each one, writing it — the shape the
- * stack had under the mountain, turned to face the way these words now sit.
+ * THE INK LEAVES THE BUTTON'S LEFT-HAND SIDE, and it goes ROUND THE TOP of
+ * the words before it writes them. Two channels make the trunk where there
+ * was one:
+ *
+ *   REACH  out of the button's left edge at its middle, climbing over the top
+ *          of the block and turning down at its far corner.
+ *   SPINE  down that far edge past the three words, with a feeder going right
+ *          along each one and writing it — the shape the stack had under the
+ *          mountain, unchanged.
+ *
+ * ROUND, BECAUSE THE WORDS ARE LEFT-ALIGNED. The edge all three of them start
+ * at is the one FURTHEST from the button; the near edge is where they END,
+ * and it is ragged — SAVED and OFFERS stop 90px short of RECOMMENDED. A spine
+ * hugging the button would have to throw that 90px as a bare diagonal across
+ * nothing before either of their feeders reached a letter. Round the top,
+ * every feeder meets its word in five pixels, each word is still written LEFT
+ * TO RIGHT, and the three still arrive in reading order. (Mirroring the whole
+ * picture instead would have written every word backwards, which reads as the
+ * animation running in reverse.)
  */
-const stemWay = [{ x: BOXW, y: BOXW / 2 }, { x: BOXW + 5, y: BOXW / 2 + wob(2) }];
+const OVER = Math.min(...LAID.map((b) => b.y)) - 7;
+const SPINE_X = BLOCK_X - 5;
+const reachWay = [
+  { x: 0, y: BOXW / 2 },
+  { x: -9, y: BOXW / 2 - 5 + wob(1.5) },
+  { x: -30, y: OVER + 14 + wob(2) },
+  { x: -80, y: OVER + wob(1.5) },
+  { x: BLOCK_X + BLOCK_W * 0.45, y: OVER + 1 + wob(1.5) },
+  { x: SPINE_X + 10, y: OVER + 3 + wob(1) },
+  { x: SPINE_X, y: OVER + 11 },
+];
+const reach = channel({ pts: spline(reachWay, GROWTH.step), w0: 1.9, w1: 1.5, t0: 0, speed: 1, id: 'reach' });
+/*
+ * The reach is a SHOOT: three times the spine's length in two thirds of its
+ * time, so the wind-up before the first letter is a third of the run rather
+ * than half of it. It is never bare — it sprouts the whole way, at the
+ * network's own pace, which is what fills the space above the words.
+ */
+reach.dur = 0.26;
+reach.speed = reach.len / reach.dur;
+goes.push(reach);
+
+const stemWay = [{ x: SPINE_X, y: OVER + 11 }];
 const feedAt = [];
 for (let i = 0; i < 3; i++) {
   const b = LAID[i];
   const y = b.y + b.h / 2;
-  stemWay.push({ x: BLOCK_X - 5 + wob(1.5), y });
+  stemWay.push({ x: SPINE_X + wob(1.5), y });
   feedAt.push({ i, y });
 }
 stemWay.push({ x: BLOCK_X - 6, y: LAID[2].y + LAID[2].h + 6 });
-// in the order the stem is walked, top to bottom
-stemWay.sort((p, q) => (p.x === BOXW ? -1 : q.x === BOXW ? 1 : 0));
-const stem = channel({ pts: spline(stemWay, GROWTH.step), w0: 1.7, w1: 0.7, t0: 0, speed: 1, id: 'stem' });
-stem.dur = 0.55;
+const stem = channel({ pts: spline(stemWay, GROWTH.step), w0: 1.5, w1: 0.7, t0: reach.dur, speed: 1, id: 'stem' });
+stem.dur = 0.4;
 stem.speed = stem.len / stem.dur;
-streams.push(stem);
+stays.push(stem);
 
 const writers = [];
 for (const { i, y } of feedAt) {
@@ -251,17 +319,24 @@ for (const { i, y } of feedAt) {
   });
   c.dur = 0.34;
   c.speed = c.len / c.dur;
-  streams.push(c);
+  stays.push(c);
   writers[i] = c;
 }
 
-/** The bands: the growth stays beside its own words and off the button. */
-const top = Math.min(...LAID.map((b) => b.y)) - 14;
+/**
+ * The bands: the growth stays beside its own words and off the button. It is
+ * measured from the REACH as well as the words now — the reach runs above
+ * them and needs room on both sides of itself, or every child of it that
+ * pointed upward would be cut to a tick and dropped, and the whole top of
+ * the picture would grow downward only.
+ */
+const top = Math.min(OVER, ...LAID.map((b) => b.y)) - 10;
 const bottom = Math.max(...LAID.map((b) => b.y + b.h)) + 12;
-const band = (x, y) => y > top && y < bottom && x > BOXW + 1;
-sprout(stem, { ...GROWTH, gap0: 14, gap1: 8, lens: [12, 8, 5], bias: 0.5, inside: band }, rng, streams);
+const band = (x, y) => y > top && y < bottom && x < -1;
+sprout(reach, { ...GROWTH, gap0: 16, gap1: 9, lens: [12, 8, 5], bias: 0.5, inside: band }, rng, goes);
+sprout(stem, { ...GROWTH, gap0: 14, gap1: 8, lens: [12, 8, 5], bias: 0.5, inside: band }, rng, stays);
 for (let i = 0; i < 3; i++) {
-  sprout(writers[i], { ...GROWTH, twig: 0.5, bias: 0.35, inside: band }, rng, streams);
+  sprout(writers[i], { ...GROWTH, twig: 0.5, bias: 0.35, inside: band }, rng, stays);
 }
 /*
  * THE JOINS TAKE THE BAND AS WELL. A link bows by a third of the gap it
@@ -269,10 +344,41 @@ for (let i = 0; i < 3; i++) {
  * outside it — which is how the stem came to run 6px below everything else
  * and get sliced off square by the canvas edge.
  */
-streams.push(...linkTips(streams, { near: 11, chance: 0.6, maxLinks: 10, align: 0.8, inside: band, step: GROWTH.step, speed: GROWTH.speed }, rng));
+const JOIN = { near: 11, chance: 0.6, maxLinks: 10, align: 0.8, inside: band, step: GROWTH.step, speed: GROWTH.speed };
+stays.push(...linkTips(stays, JOIN, rng));
+goes.push(...linkTips(goes, JOIN, rng));
+const streams = [...stays, ...goes];
 const lastEnd = Math.max(...streams.map((c) => c.t0 + c.dur));
 if (lastEnd > 1) for (const c of streams) { c.t0 /= lastEnd; c.dur /= lastEnd; }
+/*
+ * WHERE EACH LEAVING CHANNEL IS ROOTED, as a fraction of the reach's own run.
+ * The withdrawal empties the reach from its tip back to the button, and a
+ * child has to be gone by the time the front reaches the place it grew from —
+ * so each one is given that place and empties into it. A child's BIRTH TIME
+ * is exactly that place for anything growing straight off the reach (sprout
+ * births it at parent.t0 + its arc fraction x parent.dur) and a little later
+ * for a child of a child, which is right: a twig goes before the branch that
+ * carries it.
+ */
+/**
+ * NOTHING MAY VANISH IN A SINGLE FRAME, which is what a detach of 1 means.
+ * The ratio is not bounded by the reach's own clock: a child of a child is
+ * born at its parent's pace (GROWTH.speed) and the reach is a shoot, so three
+ * of the thirty — two curled twigs and a link, 74px of run — are born after
+ * the reach has finished and came out at 1.005 to 1.057. Clamped to 1 their
+ * window was zero and they were switched off on the first pull frame: 149
+ * device px going dark in 42ms, five times the next frame's, at the corner
+ * where the reach hands over to the spine. They now have `PULL_MIN` of the
+ * pull to empty in, which is the least a stroke can retract in and still be
+ * seen to move.
+ */
+const PULL_MIN = 0.15;
+for (const c of goes) {
+  c.goes = true;
+  c.detach = c === reach ? 0 : Math.max(0, Math.min(1 - PULL_MIN, (c.t0 - reach.t0) / reach.dur));
+}
 console.log(`  the network: ${streams.length} channels, ${Math.round(streams.reduce((s, c) => s + c.len, 0))}px of run`);
+console.log(`    ${stays.length} stay when the words are written; ${goes.length} go back into the button with the reach`);
 
 // ---- the canvas --------------------------------------------------------------
 /*
@@ -319,13 +425,18 @@ const [gx0, gy0, gx1, gy1] = await (async () => {
     );
   return [X0 / SS + ox, Y0 / SS + oy, (X1 + 1) / SS + ox, (Y1 + 1) / SS + oy];
 })();
-/** How far above the button the canvas starts: the words reach above it. */
+/**
+ * How far above and to the LEFT of the button the canvas starts: the words
+ * hang off it on both counts, so the button is no longer in its corner.
+ * `logoHit` is what says where it is, and the page places the canvas from it.
+ */
 const SHIFT = Math.ceil(Math.max(0, -Math.min(gy0, ...LAID.map((b) => b.y)))) + SLACK;
-const VIEW_W = Math.ceil(Math.max(gx1, ...LAID.map((b) => b.x + b.w)) + SLACK);
+const OX = Math.ceil(Math.max(0, -Math.min(gx0, ...LAID.map((b) => b.x)))) + SLACK;
+const VIEW_W = Math.ceil(Math.max(gx1, ...LAID.map((b) => b.x + b.w), BOXW) + OX + SLACK);
 const VIEW_H = Math.ceil(Math.max(gy1, ...LAID.map((b) => b.y + b.h), BOXW) + SHIFT + SLACK);
 const RW = VIEW_W * SS, RH = VIEW_H * SS;
-translate(streams, 0, SHIFT);
-console.log(`  canvas ${VIEW_W}x${VIEW_H} page px; the button sits at 0,${SHIFT} inside it`);
+translate(streams, OX, SHIFT);
+console.log(`  canvas ${VIEW_W}x${VIEW_H} page px; the button sits at ${OX},${SHIFT} inside it`);
 
 if (process.env.DOTS_DEBUG) {
   mkdirSync('.tmp', { recursive: true });
@@ -348,7 +459,7 @@ for (const d of drawn) {
     const Y = d.top + y + SHIFT * SS;
     if (Y < 0 || Y >= RH) continue;
     for (let x = 0; x < d.w; x++) {
-      const X = d.left + x;
+      const X = d.left + x + OX * SS;
       if (X < 0 || X >= RW) continue;
       const o = (y * d.w + x) * 3;
       const a = (255 - Math.min(d.rgb[o], d.rgb[o + 1], d.rgb[o + 2])) / 255;
@@ -356,7 +467,7 @@ for (const d of drawn) {
     }
   }
 }
-const BOXES = LAID.map((b, i) => ({ ...DOTS_ITEMS[i], ...b, y: +(b.y + SHIFT).toFixed(1) }));
+const BOXES = LAID.map((b, i) => ({ ...DOTS_ITEMS[i], ...b, x: +(b.x + OX).toFixed(1), y: +(b.y + SHIFT).toFixed(1) }));
 const WORD = BOXES.map((b) => {
   const x0 = Math.max(0, Math.floor((b.x - 2) * SS)), y0 = Math.max(0, Math.floor((b.y - 2) * SS));
   const x1 = Math.min(RW, Math.ceil((b.x + b.w + 2) * SS)), y1 = Math.min(RH, Math.ceil((b.y + b.h + 2) * SS));
@@ -433,8 +544,33 @@ mkdirSync(FRAMES_DIR, { recursive: true });
 const ink = new Ink(RW, RH, SS);
 const revealed = new Array(BOXES.length).fill(-1e9);
 let total = 0;
+/** How full the picture is at the apex, for the resting frame to be read against. */
+let apex = 0;
+/** The ink left in each frame of the pull, so the withdrawal can be checked for pops. */
+const pull = [];
+/**
+ * WHICH PIXELS ARE THE LEAVING FAMILY'S AND NOBODY ELSE'S. The reach is drawn
+ * whole, and so is everything that stays; a pixel both of them cover — the
+ * corner where the reach hands over to the spine, a word it crosses, a curl
+ * that passes another — proves nothing about whether the reach has gone. What
+ * is left is the set that can only be the reach, and the resting frame must
+ * not light one of them.
+ */
+const reachOnly = (() => {
+  const mine = new Ink(RW, RH, SS);
+  for (const c of goes) mine.stroke(c, c.len);
+  const theirs = new Ink(RW, RH, SS);
+  for (const c of stays) theirs.stroke(c, c.len);
+  const list = [];
+  for (let i = 0; i < RW * RH; i++) {
+    // the same floor the frame is read at, or a letter’s own faint edge
+    // counts as the reach still being there
+    if (mine.a[i] > 0.25 && theirs.a[i] <= 0.04 && wordsField[i] <= 0.04) list.push(i);
+  }
+  return list;
+})();
 for (let f = 0; f < FRAMES; f++) {
-  const u = f / (FRAMES - 1);
+  const u = Math.min(1, f / (GROW_FRAMES - 1));
   /*
    * ONE CLOCK, AND IT ONLY GOES FORWARD. The mountain's run thins its ink away
    * over the last fifth; this one stops at the apex and holds — the owner's
@@ -443,10 +579,22 @@ for (let f = 0; f < FRAMES; f++) {
    * the button is pressed again or another menu opens.
    */
   const grown = easeInOut(u);
+  /*
+   * HOW MUCH OF THE REACH IS STILL OUT: 1 the whole way through the growth,
+   * then back to 0 over the pull. Each leaving channel is drawn to the same
+   * fraction of its own length, measured from where it is rooted, so the
+   * whole family empties into the button together and each piece runs out
+   * exactly as the front passes the place it grew from.
+   */
+  const out = f < GROW_FRAMES ? 1 : 1 - easeInOut((f - GROW_FRAMES + 1) / PULL_FRAMES);
   ink.clear();
 
   for (const c of streams) {
-    const s = frontArc(c, grown);
+    let s = frontArc(c, grown);
+    if (c.goes && out < 1) {
+      const room = 1 - c.detach;
+      s = Math.min(s, c.len * (room <= 1e-6 ? 0 : Math.max(0, Math.min(1, (out - c.detach) / room))));
+    }
     if (s <= 0) continue;
     ink.stroke(c, s, { gmask: glyphAt });
     if (s < c.len) {
@@ -476,6 +624,8 @@ for (let f = 0; f < FRAMES; f++) {
     }
   }
 
+  if (f >= GROW_FRAMES - 1) pull.push(ink.a.reduce((n, v) => n + (v > 0.04 ? 1 : 0), 0));
+
   const webp = await sharp(ink.rgba(), { raw: { width: RW, height: RH, channels: 4 } }).webp({ lossless: true, effort: 6 }).toBuffer();
   writeFileSync(`${FRAMES_DIR}/f${String(f).padStart(3, '0')}.webp`, webp);
   total += webp.length;
@@ -484,25 +634,59 @@ for (let f = 0; f < FRAMES; f++) {
     for (let i = 0; i < RW * RH; i++) if (ink.a[i] > 0.04) on++;
     if (on) fail(`the first frame draws ${on} device px; at rest this canvas is empty (the button is the page's)`);
   }
-  if (f === FRAMES - 1) {
-    let written = 0;
+  /** Every word, whole. Asked of the apex and again of the resting frame. */
+  const allWritten = (when) => {
     for (let i = 0; i < BOXES.length; i++) {
       const w = WORD[i];
       let got = 0;
       for (let y = 0; y < w.h; y++) for (let x = 0; x < w.w; x++) got += Math.min(ink.a[(w.y0 + y) * RW + w.x0 + x], w.f[y * w.w + x]);
-      if (got < w.ink * 0.97) fail(`"${BOXES[i].id}" is only ${((100 * got) / w.ink).toFixed(1)}% written at the apex`);
-      written++;
+      if (got < w.ink * 0.97) fail(`"${BOXES[i].id}" is only ${((100 * got) / w.ink).toFixed(1)}% written ${when}`);
     }
+  };
+  if (f === GROW_FRAMES - 1) {
+    allWritten('at the apex');
     /*
      * NOTHING TOUCHES THE EDGE. The canvas is measured off the network, so a
      * stroke reaching the border means the measuring and the drawing have
-     * come apart — and what it looks like is a branch cut off square.
+     * come apart — and what it looks like is a branch cut off square. The
+     * APEX is the frame to ask: it is the fullest the picture ever gets.
      */
     let edge = 0;
     for (let X = 0; X < RW; X++) if (ink.a[X] > 0.04 || ink.a[(RH - 1) * RW + X] > 0.04) edge++;
     for (let Y = 0; Y < RH; Y++) if (ink.a[Y * RW] > 0.04 || ink.a[Y * RW + RW - 1] > 0.04) edge++;
-    if (edge) fail(`${edge} device px of the last frame sit on the canvas border; a stroke is being cut off square`);
-    console.log(`  the last frame: all ${written} words fully written, the branches at their apex, nothing on the edge`);
+    if (edge) fail(`${edge} device px of the apex sit on the canvas border; a stroke is being cut off square`);
+    apex = ink.a.reduce((n, v) => n + (v > 0.04 ? 1 : 0), 0);
+    console.log(`  the apex (frame ${f}): all three words written, the branches at full reach, nothing on the edge`);
+  }
+  if (f === FRAMES - 1) {
+    /*
+     * THE RESTING FRAME: the words still whole, and not one pixel of the
+     * reach or of anything that grew off it left anywhere on the canvas —
+     * the owner's "leave the other branches connected to the words and the
+     * one on the left". It is measured by drawing that family on its own and
+     * asking the frame about every pixel of it.
+     */
+    allWritten('in the resting frame');
+    const over = reachOnly.reduce((n, i) => n + (ink.a[i] > 0.04 ? 1 : 0), 0);
+    if (over) fail(`${over} of the reach's own ${reachOnly.length} device px are still drawn in the resting frame`);
+    const rest = ink.a.reduce((n, v) => n + (v > 0.04 ? 1 : 0), 0);
+    /*
+     * AND IT WENT SMOOTHLY. A channel whose window has collapsed does not
+     * retract, it is switched off, and the only sign in a still is one frame
+     * shedding far more than its neighbours. So the pull's frame-to-frame
+     * drops are kept and the biggest is held against the mean: 3x is loose
+     * enough for the ends of the run, where the ink genuinely goes in a
+     * rush, and tight enough to catch a whole curl disappearing at once.
+     */
+    const drops = [];
+    for (let i = 1; i < pull.length; i++) drops.push(pull[i - 1] - pull[i]);
+    const mean = drops.reduce((a, b) => a + b, 0) / drops.length;
+    const worst = Math.max(...drops);
+    if (worst > mean * 3) {
+      fail(`the pull sheds ${worst} device px in one frame against a mean of ${mean.toFixed(1)}: something is being switched off rather than retracted`);
+    }
+    console.log(`  the resting frame: the reach is gone (${apex} device px of ink at the apex, ${rest} here), the words whole`);
+    console.log(`    the pull sheds ${mean.toFixed(1)} device px a frame, the worst ${worst} (x${(worst / mean).toFixed(2)})`);
   }
 }
 console.log(`wrote ${FRAMES} frames to ${FRAMES_DIR} (${Math.round(total / 1024)}KB, ${Math.round(total / FRAMES / 1024)}KB each)`);
@@ -519,7 +703,13 @@ writeFileSync(
       scale: +K.toFixed(5),
       hover: 'dim',
       /** where the button sits inside the canvas; the row places the button */
-      logoHit: { x: 0, y: SHIFT, w: BOXW, h: BOXW },
+      logoHit: { x: OX, y: SHIFT, w: BOXW, h: BOXW },
+      /**
+       * How far the INK reaches left of the button's own left edge — the
+       * canvas's edge less its slack. The row needs it to know whether the
+       * words have come down on top of the glass; see `dotsClear`.
+       */
+      inkReach: Math.round(-gx0),
       boxes: BOXES,
       stops: { base: { frames: FRAMES, viewW: VIEW_W, boxes: BOXES.map((b) => b.id) } },
     },

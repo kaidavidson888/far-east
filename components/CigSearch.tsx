@@ -81,7 +81,14 @@ function win(x0: number, y0: number, x1: number, y1: number, left: number, top: 
  * and what was typed is deleted — the login box's own rejection, aimed at the
  * sigil rather than the whole box.
  */
-export type SearchPlace = { left: number; top: number; s: number; fit: number };
+export type SearchPlace = {
+  left: number;
+  top: number;
+  s: number;
+  fit: number;
+  /** how long the dashed line is drawn, in the bar's own px — see `searchLineW` */
+  line: number;
+};
 
 export function CigSearch({
   open,
@@ -167,7 +174,12 @@ export function CigSearch({
    * with the field's own font and the size brought down until it fits, never
    * below what reads.
    */
-  const avail = CIG_SEARCH.fieldW - TEXT_LEFT - 2;
+  /**
+   * The line as it is actually drawn — the design row, cut where the dots
+   * button stands (`searchLineW`) — and the room for typing along it.
+   */
+  const lineW = place?.line ?? CIG_SEARCH.fieldW;
+  const avail = Math.max(0, lineW - TEXT_LEFT - 2);
   useLayoutEffect(() => {
     const el = inputRef.current;
     if (!el || !query) {
@@ -179,12 +191,14 @@ export function CigSearch({
     if (!ctx) return;
     ctx.font = `700 ${CIG_SEARCH.type}px ${getComputedStyle(el).fontFamily}`;
     const w = ctx.measureText(query).width;
-    // THE FLOOR IS IN SCREEN PX, and the bar is zoomed: 12 design px is 8.4 on
-    // a phone, under the 9 this site knows will not render solid. And iOS zooms
-    // the whole page on focusing a field set under 16px and does not zoom back,
-    // so on a touch screen the floor is 16; past it a long query scrolls in the
-    // field, which a text input does by itself.
-    const s = place?.s ?? 1;
+    // THE FLOOR IS IN SCREEN PX, and the bar is zoomed TWICE: 12 design px is
+    // 8.4 on a phone, under the 9 this site knows will not render solid. And
+    // iOS zooms the whole page on focusing a field set under 16px and does not
+    // zoom back, so on a touch screen the floor is 16; past it a long query
+    // scrolls in the field, which a text input does by itself. Both zooms
+    // count — the menu's and the bar's own `--cig-bar-fit`, which runs down to
+    // 0.68 — or the floor is overstated by up to half again.
+    const s = (place?.s ?? 1) * (place?.fit ?? 1);
     const coarse = window.matchMedia('(pointer: coarse)').matches;
     const floor = Math.min(CIG_SEARCH.type, Math.max(CIG_SEARCH.typeMin, (coarse ? 16 : 9) / s));
     const next = w <= avail ? CIG_SEARCH.type : Math.max(floor, +((CIG_SEARCH.type * avail) / w).toFixed(2));
@@ -193,7 +207,7 @@ export function CigSearch({
     // clamped to the line's end for a query long enough to scroll in the field
     ctx.font = `700 ${next}px ${getComputedStyle(el).fontFamily}`;
     setCaret(Math.min(avail, ctx.measureText(query).width) + next * CIG_SEARCH.caretGap);
-  }, [avail, query, place?.s]);
+  }, [avail, query, place?.s, place?.fit]);
 
   const g = SEARCH_GLYPH;
   return (
@@ -220,9 +234,16 @@ export function CigSearch({
           ref={toggleRef}
           type="button"
           className="cig-search-toggle"
-          // IT FADES OUT WHEN THE BAR ARRIVES and takes no press while it is
-          // gone: a button nobody can see is not one anybody should be able to
-          // hit or tab to. Escape, or scrolling the row, is the way back.
+          // IT FADES OUT WHEN THE BAR ARRIVES, and when the dots' words come
+          // down over it, and takes no press while it is gone: a button
+          // nobody can see is not one anybody should be able to hit or tab
+          // to. Escape, or scrolling the row, is the way back from its own
+          // bar; pressing the dots again brings it back from theirs.
+          // NOTHING ELSE TAKES IT AWAY. The dots' words grow along this line
+          // and cross it on a narrow window; for an afternoon the glass stood
+          // down for them, and the owner's word on that is "dont make the
+          // magnifying button disappear when the 3 dot menu is open"
+          // (2026-09-20). It keeps its place and stays pressable.
           inert={open || undefined}
           aria-expanded={open}
           aria-label={open ? (query.trim() && query.trim() !== lastHit.current ? 'Search' : 'Close the search') : 'Search the cigarettes'}
@@ -251,8 +272,12 @@ export function CigSearch({
           <div className="cig-search-marks" aria-hidden="true">
             <span className="cig-search-slot" style={{ '--i': 0, ...win(ROW.x0, TICK_Y0, ROW.tickX1, ROW.lineY0, 0, 0) } as React.CSSProperties} />
             {Array.from({ length: CIG_SEARCH.segments }, (_, k) => {
-              const a = ROW.x0 + ((ROW.x1 - ROW.x0) * k) / CIG_SEARCH.segments;
-              const b = ROW.x0 + ((ROW.x1 - ROW.x0) * (k + 1)) / CIG_SEARCH.segments;
+              // THE LINE IS CUT, NOT SQUEEZED: the windows stop earlier on a
+              // sprite still drawn at its own size, so the dashes keep the
+              // length and the spacing they were drawn with.
+              const span = lineW / CIG_SEARCH.box;
+              const a = ROW.x0 + (span * k) / CIG_SEARCH.segments;
+              const b = ROW.x0 + (span * (k + 1)) / CIG_SEARCH.segments;
               return (
                 <span
                   key={k}

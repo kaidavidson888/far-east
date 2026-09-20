@@ -1578,6 +1578,13 @@ ul, ol { list-style: none; }
   pointer-events: none;
   /* placed only once measured, so it never flashes in the corner */
   visibility: hidden;
+  /* ABOVE THE DOTS' WORDS, WHICH CROSS IT on a narrow window. The owner's
+     "dont make the magnifying button disappear when the 3 dot menu is open"
+     means it has to stay usable as well as visible, and the dots come after
+     it in the markup — without this, OFFERS' own box would lie over the glass
+     and swallow the press. Under `.cig-menu` still, which comes later again,
+     so the plus keeps the top of the pile. */
+  z-index: 2;
 }
 .cig-controls > .cig-search[data-placed] {
   visibility: visible;
@@ -1786,9 +1793,13 @@ ul, ol { list-style: none; }
    So it is built exactly as the search is — an outer box placed in screen px
    by `layoutMenu`, an inner one carrying the plus's own zoom — and the box,
    the rule and the inversion come from the block the plus and the glass
-   share. What is drawn out of it is a canvas: 100 baked frames of ink
-   branching out of this outline and writing the three words, scrubbed by
-   `useFrameScrub` and FROZEN at the apex, which is the last frame. */
+   share. What is drawn out of it is a canvas: 124 baked frames of ink
+   branching out of this outline to the LEFT and writing the three words,
+   scrubbed by `useFrameScrub` — 100 growing to the apex, then 24 in which the
+   branch that ties it to this button winds back in, leaving the words and
+   the spine down their left standing. The last frame is the resting state.
+   The canvas is placed and sized inline: it hangs off the button on three
+   sides and is scaled by `dotsDraw` to the room there is. */
 .cig-controls > .cig-dots {
   position: absolute;
   left: 0;

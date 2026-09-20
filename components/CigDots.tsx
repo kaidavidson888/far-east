@@ -27,9 +27,14 @@ import { useFrameScrub } from '@/lib/useFrameScrub';
  * rest and drops it on press. It turns over the length of the unfolding, so
  * the turn and the growth read as one movement.
  *
- * IT FREEZES AT THE APEX. There is no recede in the frames: the last one is
- * the three words written and the branches at full reach, which is where it
- * stays. Coming back is the same frames in reverse, at the scrub's own 2x.
+ * IT GROWS TO THE APEX AND THEN THE CONNECTOR WINDS BACK IN. 124 frames: 100
+ * of growth, ending with the three words written and every branch at full
+ * reach, then 24 in which the REACH — the branch that ties all this to the
+ * button — and everything sprouted off it withdraw into the outline, leaving
+ * the spine down the left, the three feeders and the words standing. That
+ * last frame is the resting state (the owner's "leave the other branches
+ * connected to the words and the one on the left"), and coming back is the
+ * whole run in reverse at the scrub's own 2x.
  *
  * ONLY TWO THINGS CLOSE IT — pressing the dots again, or another menu opening
  * beside it. A hand on the row does NOT, which is where it parts company with
@@ -40,10 +45,11 @@ const VIEW = geometry.frame;
 const HIT = geometry.logoHit;
 
 /**
- * How far the drawing reaches past the button's own left edge, in the menu's
- * design px. `layoutMenu` holds the whole of it on the page with this.
+ * How far the drawing reaches to the LEFT of the button's own left edge, in
+ * the menu's design px — which is where all of it is now. `REACH` is the
+ * canvas's edge, which `layoutMenu` keeps on the page.
  */
-export const DOTS_REACH = VIEW.w - HIT.x;
+export const DOTS_REACH = HIT.x;
 
 type DotsBox = {
   id: string;
@@ -56,6 +62,23 @@ type DotsBox = {
   h: number;
 };
 const BOXES = geometry.boxes as DotsBox[];
+
+/**
+ * …and how far the WORDS reach that way: 196 design px against the ink's 218,
+ * the difference being the spine and its curls. Nothing reads it today — the
+ * glass keeps its place under them, by the owner's word — but it is the
+ * measure anything that has to reason about where the lettering lands wants,
+ * and it is one line from the geometry rather than a number to be rediscovered.
+ */
+export const DOTS_WORDS = HIT.x - Math.min(...BOXES.map((b) => b.x));
+
+/**
+ * How far the drawing reaches above and below the line the ink leaves the
+ * button on (its middle), which is what it is scaled about. The taller of the
+ * two is what has to fit between the red frame's foot and the plus's top —
+ * see `dotsDraw` in CigScroller.
+ */
+export const DOTS_RISE = Math.max(HIT.y + HIT.h / 2, VIEW.h - HIT.y - HIT.h / 2);
 
 const src = (i: number) => `${geometry.dir}/f${String(i).padStart(3, '0')}.webp`;
 
@@ -70,8 +93,17 @@ export function CigDots({
   onOpenChange,
 }: {
   open: boolean;
-  /** where the box goes, in screen px, and the scale it is drawn at */
-  place: { left: number; top: number; s: number } | null;
+  /**
+   * Where the box goes, in screen px, the scale it is drawn at, and `draw` —
+   * how much of that scale the DRAWING takes. The button is always the plus's
+   * size (it is the plus's mirror), but the words hang three lines deep off a
+   * line with the red frame close above and the plus's line close below, and
+   * they scale with the framed pack: at the widest pack in the catalogue they
+   * are twice the size they are at the narrowest and run into both. `draw` is
+   * the room there is, measured by `layoutMenu`, and it is 1 for nine packs
+   * in ten.
+   */
+  place: { left: number; top: number; s: number; draw: number } | null;
   /** whether its moves are animated yet — see `menuSlides` in CigScroller */
   slides: boolean;
   onOpenChange: (open: boolean) => void;
@@ -141,6 +173,14 @@ export function CigDots({
 
   const press = useCallback(() => onOpenChange(!open), [onOpenChange, open]);
   const g = DOTS_GLYPH;
+  /*
+   * THE DRAWING IS SCALED ABOUT THE BUTTON'S LEFT EDGE AT ITS MIDDLE — the
+   * point the ink leaves from, so that wherever `draw` lands the first stroke
+   * still comes out of the same place on the button. `mid` takes a y in the
+   * canvas's own px and gives it in the button's, with that point fixed.
+   */
+  const draw = place?.draw ?? 1;
+  const mid = (y: number) => (y - HIT.y - HIT.h / 2) * draw + HIT.h / 2;
 
   return (
     <div
@@ -164,7 +204,12 @@ export function CigDots({
           className="cig-dots-canvas"
           width={VIEW.w * VIEW.scale}
           height={VIEW.h * VIEW.scale}
-          style={{ left: `${-HIT.x}px`, top: `${-HIT.y}px`, width: `${VIEW.w}px`, height: `${VIEW.h}px` }}
+          style={{
+            left: `${+(-HIT.x * draw).toFixed(2)}px`,
+            top: `${+mid(0).toFixed(2)}px`,
+            width: `${+(VIEW.w * draw).toFixed(2)}px`,
+            height: `${+(VIEW.h * draw).toFixed(2)}px`,
+          }}
           aria-hidden="true"
         />
 
@@ -206,7 +251,12 @@ export function CigDots({
               data-part={b.part}
               data-inert={b.inert ? '' : undefined}
               aria-label={b.label}
-              style={{ left: `${b.x - HIT.x}px`, top: `${b.y - HIT.y}px`, width: `${b.w}px`, height: `${b.h}px` }}
+              style={{
+                left: `${+((b.x - HIT.x) * draw).toFixed(2)}px`,
+                top: `${+mid(b.y).toFixed(2)}px`,
+                width: `${+(b.w * draw).toFixed(2)}px`,
+                height: `${+(b.h * draw).toFixed(2)}px`,
+              }}
               onPointerEnter={() => setOn(b.id)}
               onPointerDown={() => {
                 setOn(b.id);

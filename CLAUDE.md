@@ -910,6 +910,32 @@ no hits have the sigil flash red and delete whatever is written").
     `.cig-frame` rect — the one element that does NOT move with the row, being
     always centred — and uses it where it agrees with the model to within a
     few px, the model where it does not, which is only ever mid-motion.
+  - **AND IT STOPS ONE ☁ SHORT OF THE DOTS BUTTON** (the owner's 2026-09-20
+    "make the dashed line for the magnifying glass text editor stop one sigil
+    length from the 3 dots button"). The bar starts at the frame's left edge
+    and the dots button stands INSIDE the frame's right end — it is placed
+    between the plus and the pack beyond it, not at the frame's edge — so the
+    dashes were running straight through it. `searchLineW` in `lib/cigSearch.ts`
+    takes the room between the two, measured in the BAR'S OWN px (its left
+    edge to the button's, over both zooms), and takes one ☁ off it.
+    **IT IS CUT, NOT SCALED.** The sprite is still drawn `box` px across, so
+    the dashes keep the length, the spacing and the wander they were drawn
+    with and the windows onto them simply stop earlier; scaling the sprite
+    down to the shorter length would have taken the type and the ☁ with it and
+    set the field three quarters of its size. Every other figure in
+    `CIG_SEARCH` stays a fraction of the DESIGN width for the same reason —
+    `lineW` is the only thing the row measures on the page. The typing room
+    (`avail`) follows the cut, so a long query starts shrinking sooner.
+    **THERE IS NO FLOOR UNDER IT, and there was one for an afternoon.** A
+    floor applied after the ☁ is taken off gives the line back the very gap
+    it was asked to keep: at 390px it clamped the line up to 74.8 bar px
+    where the room was 96.6, and the ☁ — the thing the gap is measured in —
+    came down on the dots button. The rule is exact, so it is kept exactly,
+    and on a window too narrow to hold a field the line simply runs out;
+    the bar is unusable at that size for other reasons already (the frame it
+    is scaled to is 66px wide there). Measured: the line ends 29.0px short of
+    the dots at 1920 against a 30px ☁, and 20.0 short at 1280 against a 20px
+    ☁, and still starts exactly on the frame's left edge.
   - **A second zoom takes up the rest** (`--cig-bar-fit`), because where the
     menu's own zoom has hit MENU_MIN_ZOOM the menu is deliberately wider than
     the frame and the bar went with it. It floors at `BAR_MIN_FIT` 0.68, under
@@ -1000,8 +1026,10 @@ no hits have the sigil flash red and delete whatever is written").
   lands; Escape worked only from the field, not the glass; shutting dropped
   focus on BODY and now hands it to the glass; the type's floor is in SCREEN px
   (9, or 16 on a touch screen, under which iOS zooms the page and does not zoom
-  back); and on a coarse pointer both toggles get an invisible 38px target
-  while shut. **Left as they are**: "hard" and "mid" also find the packs NAMED
+  back) and counts BOTH zooms, the menu's and the bar's own `--cig-bar-fit`,
+  which runs to 0.68 — dividing by the menu's alone overstated the floor by
+  half again on a narrow window; and on a coarse pointer both toggles get an
+  invisible 38px target while shut. **Left as they are**: "hard" and "mid" also find the packs NAMED
   "Hard Pack" and "Mid-Size", which is the name being searched as asked;
   "cannabis" finds all 247, every pack having a strain; and the prefix rule
   lets "esse" find Guiyan Essence.
@@ -1030,6 +1058,11 @@ currently are but rescaled to be the width of two rows in the tag menu that
 gets opened by the + button. keep the same margins otherwise. only have the
 animation and the word buttons retract when another menu near it is opened or
 when the 3 dots button is pressed again").
+**Then, the same day, two more:** "have the word buttons grow from the left
+side of the button not the right", and "have the branch that connects to the
+outline retract after the words are fully grown but leave the other branches
+connected to the words and the one on the left until the 3 dots button is
+pressed again".
 `components/CigDots.tsx`, `scripts/build-dots-menu.mjs`, `lib/dotsGlyph.ts`,
 `lib/dotsmenu-geometry.json`, `public/dotsmenu/`.
 - **IT IS THE GLASS MIRRORED, AND THAT IS THE WHOLE PLACEMENT RULE.** The glass
@@ -1039,13 +1072,54 @@ when the 3 dots button is pressed again").
   (`dotsLeft` in `layoutMenu`). Worked from the model of the row AT REST like
   everything else there. Measured at 1920: both centres on their midpoints to
   within half a pixel, all three buttons 22x22, all on top 709 but the plus.
-  - **It is held on the page, and that clamp is a judgement.** The words reach
-    213 design px right of the button — 150px at the owner's desktop scale,
-    with 700 to spare — but on a phone with a wide pack in the frame the mirror
-    would put the end of RECOMMENDED off the screen, so the button stops at the
-    row's own 12px edge instead. It never goes back onto the plus: below about
-    370px nothing fits, and the last letters are clipped rather than the two
-    buttons stacked. Same call as `MENU_MIN_ZOOM`.
+  - **It is held on the page**, by its LEFT edge since the words went that
+    way: the drawing reaches 225 design px left of the button, and the clamp
+    keeps that much of the page clear. It does not bite at any width measured
+    (the drawing's left lands at 44, 59, 534 and 875 at 360, 390, 1280 and
+    1920, against a 12px margin) — the mirror puts the button right of the
+    middle and the reach is about a sixth of a screen. It is there for the
+    case nobody thinks to try, a wide pack on a narrow window.
+  - **THE WORDS CROSS THE GLASS ON A NARROW WINDOW, AND THE GLASS STAYS.**
+    They grow left along this line, which is the glass's line, and the room
+    between the two buttons is the framed pack's width and a bit: at 1920
+    with a mean pack they clear the glass by 15px, at 1600 they are 7px into
+    it, at 1280 by 35. **The owner's word is "dont make the magnifying button
+    disappear when the 3 dot menu is open"** (2026-09-20), so it does not.
+    Two answers were tried and taken out before that one: standing the glass
+    down only where a word would really be printed through it, which made it
+    appear and disappear as the reader scrolled the row (the room IS the
+    framed pack's width, and a hand on the row leaves this menu standing —
+    measured at 1600x900, three flips in twelve packs); and standing it down
+    whenever the words were painted, which is what the owner refused.
+    **So the glass is drawn OVER the lettering and stays pressable**:
+    `.cig-controls > .cig-search` takes `z-index: 2`, because the dots come
+    after it in the markup and OFFERS' own box would otherwise lie on top of
+    the glass and swallow the press. Checked at 1280 and 1920 with the words
+    out: `elementFromPoint` at the glass's middle is the glass, it is opaque
+    and not inert, and pressing it opens the bar and closes the dots.
+    `.cig-menu` comes later again, so the plus still has the top of the pile.
+    **`DOTS_WORDS` is left in `CigDots` unread**: it is the measure anything
+    reasoning about where the lettering lands will want.
+  - **AND THE DRAWING IS SCALED TO THE ROOM BETWEEN THE FRAME AND THE PLUS**
+    (`dotsDraw`). The button is the plus's size because it is the plus's
+    mirror, and that size follows the FRAMED PACK: the widest pack in the
+    catalogue (Fiit Menthol, 108 row px) gives a menu zoom of 1.37 where a
+    mean one gives 0.73, and at 2560 it reaches 1.83. The words hang three
+    lines deep off a line with the red frame close above and the plus's line
+    close below, so at those zooms they ran **31px up into the red frame and
+    down onto the plus** (measured at 1920x947 with that pack framed; worse on
+    a shorter window, worse again at 2560). The room each way from the ink's
+    own line is half the distance between the frame's foot and the plus's top
+    — the owner put the button midway between them — and the drawing takes as
+    much of the menu's scale as fits in it. **It is 1 for all but the three
+    widest packs.** It is scaled about the button's left edge at its middle,
+    which is the point the ink leaves from, so the first stroke comes out of
+    the same place whatever the scale. Its floor is `MENU_MIN_ZOOM` **on the
+    scale the words are SEEN at** rather than on the fraction — two thirds of
+    1.83 is still bigger than a mean pack's 0.73, so a floor on the fraction
+    was both too tight and too loose at once. Measured with the widest pack
+    framed at 1920x947, 1920x860, 2560x1080 and 3440x1440: the canvas clears
+    the frame by 2-4px and the plus by 8-10px, with SAVED 13 to 20px tall.
 - **THE MARK IS STORED LYING DOWN** (`npm run build:dotsglyph`). The owner drew
   a column and asked for it to TURN on press, so the path is written with its
   dots in a row — the tailed one on the left — and the button carries
@@ -1060,10 +1134,27 @@ when the 3 dots button is pressed again").
   the pixel, which is what "the same properties and parameters" is about.
 - **THE MENU IS THE GROW MENU'S MACHINERY POINTED AT THE OTHER THREE WORDS.**
   Same generated ink (`scripts/lib/ink-growth.mjs`), same `useFrameScrub`, same
-  hover dim. A stem leaves the button's right side and runs down the left of
-  the words; a feeder goes right along each one and writes it as it passes.
-  100 frames, 907KB, canvas 243x130 design px with the button at 0,51 inside
-  it.
+  hover dim. 124 frames, 1.4MB, canvas 261x132 design px with the button at
+  225,54 inside it — the words hang to its LEFT, so it is no longer in the
+  canvas's corner and `logoHit` is what says where it is.
+  - **THE TRUNK GOES ROUND THE TOP, and that is the words' own alignment
+    talking.** Two channels where there was one: a REACH out of the button's
+    left edge at its middle, climbing over the top of the block and turning
+    down at its far corner, and a SPINE down that far edge past the three
+    words with a feeder going right along each one. Round, because the words
+    are LEFT-ALIGNED: the edge all three start at is the one FURTHEST from the
+    button, and the near edge is where they END, ragged — SAVED and OFFERS
+    stop 90px short of RECOMMENDED. A spine hugging the button would have to
+    throw that 90px as a bare diagonal across nothing before either of their
+    feeders reached a letter. Round the top, every feeder meets its word in
+    five pixels, each word is still written LEFT TO RIGHT and the three still
+    arrive in reading order. **Mirroring the whole picture instead would have
+    written every word backwards**, which reads as the animation running in
+    reverse.
+  - **The reach is a SHOOT**: three times the spine's length in two thirds of
+    its time (0.26 against 0.4), so the wind-up before the first letter is a
+    third of the run rather than half of it. It is never bare — it sprouts the
+    whole way, at the network's own pace.
   - **THE THREE ARE SET AT ONE SIZE, matched on the X-HEIGHT.** The gif drew MY
     SAVED a third taller than the other two, which read as a heading over them
     while it still said "MY SAVED"; cut down to one word it is just a different
@@ -1079,9 +1170,57 @@ when the 3 dots button is pressed again").
     of two rows in the tag menu"). Every word's LEFT EDGE is the block's, and
     the vertical gaps are the drawn ones at the block's scale ("keep the same
     margins otherwise").
-  - **IT FREEZES AT THE APEX.** There is no recede in the frames: the last one
-    is the three words written and every branch at full reach. Coming back is
-    the same frames in reverse at the scrub's 2x — one bake, both directions.
+  - **IT FREEZES AT THE APEX — AND THEN THE REACH WINDS BACK IN.** The run
+    has two phases: 100 frames of growth ending at the apex exactly as before,
+    then 24 of the REACH and everything hanging off it withdrawing into the
+    button, leaving the spine down the left, the three feeders and the words
+    standing. That is the owner's "have the branch that connects to the
+    outline retract after the words are fully grown but leave the other
+    branches connected to the words and the one on the left". The last frame
+    is the resting state; coming back is the whole thing in reverse at the
+    scrub's 2x — one bake, both directions — so pressing the button reaches
+    back out to the words before taking them away, which is what a reverse
+    scrub of this run IS.
+  - **IT WITHDRAWS THE WAY IT CAME, AND SO DOES EVERYTHING ON IT.** The reach
+    is drawn from the button to a front that retreats from its tip, so the
+    last ink to go is at the button. Each child is drawn to the same fraction
+    of its own length measured from where it is rooted — `len x
+    clamp((out - detach) / (1 - detach))` — so the family empties together
+    and each piece runs out exactly as the front passes the place it grew
+    from. **`detach` is the child's BIRTH TIME as a fraction of the reach's
+    run**, which for anything growing straight off it IS its arc position
+    (`sprout` births a child at parent.t0 + its arc fraction x parent.dur).
+    A child of a child is born LATER, so its detach is LARGER, so `out`
+    passes it SOONER and it goes before the branch carrying it — which is the
+    order wanted, by the opposite arithmetic to the one first written here.
+  - **NOTHING MAY VANISH IN A SINGLE FRAME**, which is what a detach of 1
+    means: the window `1 - detach` is what the channel has to empty in. The
+    ratio is not bounded by the reach's clock — a child of a child grows at
+    the network's pace while the reach is a shoot — so three of the thirty
+    (two curled twigs and a link, 74px of run) came out at 1.005 to 1.057,
+    were clamped to 1, and were switched OFF on the first pull frame rather
+    than retracted: 149 device px going dark in 42ms, five times the next
+    frame's rate, at the corner where the reach hands over to the spine.
+    `PULL_MIN` (0.15) is the least window any of them may have. **The build
+    now measures the pull frame by frame** and fails if the worst single
+    frame sheds more than three times the mean — a whole curl disappearing at
+    once is invisible in a still and obvious in motion. It reads 139.5 px a
+    frame with a worst of 330 (x2.37), and that worst is the middle of the
+    pull, where `easeInOut` genuinely moves fastest.
+  - **THE TWO FAMILIES ARE KEPT APART FROM THE MOMENT THEY ARE GROWN**, joins
+    included: `linkTips` is run WITHIN `goes` and within `stays` and never
+    across, because a link between them would be left hanging in the air the
+    moment the reach withdrew.
+  - **The build proves the reach has gone**, and it does it on the pixels: the
+    leaving family is drawn whole, every pixel that the staying family and the
+    words do NOT also cover is collected, and the resting frame must not light
+    one of them. (Asked naively it failed on 311 px, all of them shared with
+    the spine, a word or a curl that stays.) The apex frame carries the checks
+    that used to be on the last frame — every word whole, nothing on the
+    canvas border — because the apex is now the fullest the picture gets.
+    Measured in the page: the ink rises to 22,614 device px at the apex and
+    rests at 19,256, and there is nothing at all left in the canvas's top
+    right, which is where the reach's arc was.
   - **The canvas is MEASURED OFF THE DRAWN NETWORK, not worked out from the
     polylines.** Estimated from the points and their taper it came out five
     pixels short at the foot and the last frame had four strokes sliced off
