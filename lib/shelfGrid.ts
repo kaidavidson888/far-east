@@ -1,6 +1,6 @@
 import type { CigPack } from './cigRow';
 import type { PackUnit } from './db';
-import landing from './landing-geometry.json';
+import shelfmenu from './shelfmenu-geometry.json';
 import { SPLASH_GEOM, splashAsset } from './splashFrames';
 import INK from '@/scripts/assets/far-east-ink.json';
 
@@ -43,8 +43,6 @@ import INK from '@/scripts/assets/far-east-ink.json';
  *            The pair is 4 apart and together exactly the pack's width.
  *   PACK     137 tall, every pack the same height whatever its width.
  */
-
-const LOGO = landing.parts.logo;
 
 /** One margin on every side of the page. */
 export const GRID_MARGIN = 24;
@@ -125,10 +123,48 @@ export const CARD = {
 export const PACK_RULE = CARD.rule;
 export const PACK_RULE_ALPHA = 0.5;
 
-/** The 遠東 logo, top left, at the size the landing page draws it. */
-export const GRID_LOGO = { w: LOGO.w, h: LOGO.h } as const;
+/**
+ * THE MOUNTAIN BUTTON'S SCALE ON THIS PAGE (the owner's 2026-09-21: the
+ * landing page's button, "with the same scale and margins in relation to the
+ * page border").
+ *
+ * On the landing page the number is published by `CigScroller`: the tag
+ * menu's own zoom, which is the framed pack's width over the menu's design
+ * width, floored at 0.7. There is no cigarette row here, so it has to be
+ * stated — and 0.7 is not an approximation of the landing page's value, it
+ * IS the landing page's value at every viewport narrower than about 1845px,
+ * because the floor binds everywhere below that. Above it the landing
+ * button grows, and it also changes there whenever the row settles on a pack
+ * of a different width, so "the same scale" has no single number to copy;
+ * the floor is the one the two pages actually share.
+ *
+ * IT IS CLAMPED DOWN ON A NARROW WINDOW, and that is the fourth word's
+ * doing. Three words reach 363px at 0.7 and fit a 390px phone; four reach
+ * 437 and do not. Below that the menu takes what room there is, which is the
+ * same bargain `MENU_MIN_ZOOM` strikes for the tag menu. `MENU_VIEW_W` is
+ * the canvas the bake wrote — read from the geometry, so it follows a
+ * rebuild rather than being typed again.
+ */
+export const MENU_VIEW_W = shelfmenu.frame.w;
+/** The button's own margin off the page's border, which the bake wrote. */
+export const MENU_MARGIN = shelfmenu.place.left;
+/** The landing page's floor, and so the scale the two pages share. */
+export const MENU_ZOOM_MAX = 0.7;
+/**
+ * The zoom that fits the whole row between the two margins.
+ *
+ * IT HAS TO BE MEASURED RATHER THAN WRITTEN IN CSS. A zoom is a unitless
+ * number and CSS cannot divide one length by another, so `min(0.7, (100vw -
+ * 20px) / 610)` is not a thing that can be written — that expression divides
+ * a length by a number and yields a length, which `min()` will not mix with
+ * 0.7. The landing page measures its own for the same reason.
+ */
+export function shelfMenuZoom(clientWidth: number): number {
+  const room = clientWidth - MENU_MARGIN * 2;
+  return Math.min(MENU_ZOOM_MAX, +(room / MENU_VIEW_W).toFixed(4));
+}
 
-/** The header band: the logo on the left, the shelf's worth on the right. */
+/** The header band: the shelf's worth, on the right. */
 export const GRID_HEADER = {
   top: GRID_MARGIN,
   /** the drawing sets the price's ink about as tall as the logo's top half */

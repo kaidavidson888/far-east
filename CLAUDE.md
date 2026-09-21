@@ -49,13 +49,16 @@ no CSS framework (tokens in `app/globals.css`). Deploys to Vercel.
 - `npm run audit:cigtext` — estimates every line of type on the built cigarette
   pages against the box it sits in and lists the tight ones, worst first, with
   the width it had in the original digits beside it. Run it after a font change.
-- `npm run build:menu` / `npm run build:growmenu` — bake the two logo menus into
-  `public/menu` + `lib/menu-geometry.json` and `public/growmenu` +
-  `lib/growmenu-geometry.json`. The bar menu is baked from the owner's
+- `npm run build:menu` / `npm run build:growmenu` — bake the logo menus into
+  `public/menu` + `lib/menu-geometry.json`, and `public/growmenu` +
+  `lib/growmenu-geometry.json` **and `public/shelfmenu` +
+  `lib/shelfmenu-geometry.json`: `build:growmenu` runs the one script TWICE,
+  the second time with `shelf`, which is the same bake pointed at a fourth
+  word.** The bar menu is baked from the owner's
   `monkey-bar.gif`. **The grow menu's animation is GENERATED** (`scripts/lib/
   ink-growth.mjs`); `monkey-grow.gif` is opened only for its words and the
-  scale they are laid out on. It takes about a minute, MEASURES everything it
-  can and stops rather than guessing, and `GROW_DEBUG=1 node
+  scale they are laid out on. Each bake takes about five seconds, MEASURES
+  everything it can and stops rather than guessing, and `GROW_DEBUG=1 node
   scripts/build-grow-menu.mjs` draws the finished network on its own instead
   of the frames. **It also cuts the button's mark** out of
   `scripts/assets/mountain.svg` and writes the page's still of it
@@ -199,15 +202,24 @@ artwork to fit a frame — that scales the margins with it, which is the thing b
   a GIF, and its frame 0 IS the page's own 遠東 logo**, measured to land on it rather than
   assumed. The landing page's grow menu is generated, and its frame 0 is the mountain
   button's mark.
-- **THERE ARE TWO MENUS AND ONE COMPONENT.** They are the same machine — same scrub, same
-  phases, same rules about pressing — and differ only in what was drawn and what the words
-  do, so each is described entirely by its geometry JSON and neither has its own copy of
-  `LogoMenu`. `menu="bar"` (the default) or `menu="grow"` picks one.
+- **THERE ARE THREE MENUS AND ONE COMPONENT.** They are the same machine — same scrub,
+  same phases, same rules about pressing — and differ only in what was drawn and what the
+  words do, so each is described entirely by its geometry JSON and none has its own copy
+  of `LogoMenu`. `menu="bar"` (the default), `"grow"` or `"shelf"` picks one. **A fourth
+  would be four lines**: an import, and an entry in `MENUS`, `PLAY_RATE` and `LATCH` —
+  and the last two matter, because a name missing from them falls back to 1 and to
+  `false`, i.e. the wrong speed and a menu that closes on any outside press.
   - **bar** — `npm run build:menu`, `scripts/assets/monkey-bar.gif`, `lib/menu-geometry.json`,
     `public/menu/`. A red box round the logo and three labelled boxes unfolding right, plus
     a fourth the bake synthesises for home. **The CIGARETTE PAGES use it** and need that
     fourth box, because there the logo is the menu's switch rather than a link. Its logo ink
     lands at 46,28.
+  - **shelf** — the SAME bake as grow, run a second time with a fourth word (HOME) and
+    its own output folder; `lib/shelfmenu-geometry.json`, `public/shelfmenu/`, 610x63
+    design px against grow's 505x58. **The SHELF PAGE uses it**, since its 遠東 logo —
+    which was its only way back to /landing — was replaced by this button on 2026-09-21.
+    See "THE SHELF'S MENU" in the shelf section for how HOME is set and why the zoom has
+    to be measured there.
   - **grow** — `npm run build:growmenu`, `lib/growmenu-geometry.json`,
     `public/growmenu/`. A mountain button, and ink that grows out of it carrying three
     words — about us, privacy policy, terms of service, in a row. **The LANDING PAGE uses
@@ -411,8 +423,9 @@ artwork to fit a frame — that scales the margins with it, which is the thing b
     its own, one colour per kind of child, and stops. It is the only way to judge the shape
     — a frame shows what has grown so far, which is not the same thing — and it is what
     caught the ticks, the stubs and the fishbone in the first three attempts.
-  - **What the build checks, and what it measured on the way in:** 113 channels and 3306px
-    of run; the words all cut with 0 px of the last frame falling outside their boxes;
+  - **What the build checks, and what it measured on the way in:** 59 channels and 1824px
+    of run (82 and 2487 for the shelf's four-word variant; it was 113 and 3306 while this
+    menu still carried six words); the words all cut with 0 px of the last frame falling outside their boxes;
     frame 0 the mark alone; the last frame the words and the mark with 0 px of growth left
     over. Verified in the page: the button on 10,10 at the row's scale and a tenth bigger
     than the plus (1.1004), the mark drained while the menu is open (409 against 1604 at
@@ -443,8 +456,10 @@ artwork to fit a frame — that scales the margins with it, which is the thing b
   the row with no change at all. OFFERS and RECOMMENDED are `inert`: drawn, hoverable and
   going nowhere, as they were on the page. **Not `disabled`** — a disabled control takes no
   pointer events in Chrome, so it would stop answering the pointer as well.
-- **The grow menu weighs 2.3MB** (142 frames, 926x328 device px), against the bar's
-  953KB. It was 2.2MB while it was still the gif re-composited, 2.9MB when it grew out of
+- **The grow menu weighs 1.13MB** (142 frames, 1010x116 device px), against the bar's
+  953KB — and the shelf's four-word variant 1.42MB at 1220x126, which is a second set of
+  frames and the price of the fourth word. (The 2.3MB/926x328 this note used to give was
+  from when the menu carried six words.) It was 2.2MB while it was still the gif re-composited, 2.9MB when it grew out of
   the logo at the drawing's own size, and 3.5MB before the logo came out of those frames —
   that mark was being stored 197 times over. It loads on `requestIdleCallback`, after the
   page's own artwork. That is what the frames genuinely cost: every ink pixel is pure
@@ -2305,11 +2320,19 @@ that was deleted.
   on the first press (skip-to-end if mid-run) and navigates only when it is
   already `open` — the owner's "after the animation is finished, click
   again". A button, not a link, so the first press cannot navigate.
-- **The logo is a link home** (`/landing`), per the logo-goes-home rule, and
-  the shelf's worth stands top right in the artwork's own `#FF0000`.
-  **The red rule that used to run under the header came off on 2026-09-21**
-  ("Remove the red line underneath the character logo"); it was the site's own
-  divider and was never in the export.
+- **THE 遠東 LOGO IS GONE AND THE MOUNTAIN BUTTON IS THERE INSTEAD** (the
+  owner's 2026-09-21: "remove the character logo and replace it with the
+  mountain button from the landing page with the same scale and margins in
+  relation to the page border and the same functionality but additionally
+  create a home button written in the same way as the other buttons"). See
+  "THE SHELF'S MENU" below. The shelf's worth stands top right in the
+  artwork's own `#FF0000`. **The red rule that used to run under the header
+  came off the same day** ("Remove the red line underneath the character
+  logo"); it was the site's own divider and was never in the export.
+- **The header is `justify-content: flex-end` with a `min-height`**, because
+  it lost its left item: without the min-height an empty worth makes it 0
+  tall, the grid starts at 56, and the menu — which LATCHES open — stands
+  over the first row of cards on a wide screen.
 - **THE NUMBERS ARE ALL IN `lib/shelfGrid.ts`**, each one saying which
   measurement of the drawing it came from and where it was evened up:
   margin 24, gutter 35 in both directions, five to a row on a desktop and
@@ -2523,6 +2546,79 @@ part-way turns it round from wherever it reached.
   the ring and spinning 73° and 141°. The five open POSITIONS are the
   drawing's own centroids and do not change either way.
 - Verified on the pixels: the open pose now sits on the drawing at **98.25%**.
+
+**THE SHELF'S MENU IS THE LANDING PAGE'S WITH A FOURTH WORD** (the owner's
+2026-09-21). `components/ShelfMenu.tsx`, `lib/shelfmenu-geometry.json`,
+`public/shelfmenu/`, and `LogoMenu menu="shelf"`.
+- **ONE SCRIPT BAKES BOTH MENUS**, and `npm run build:growmenu` now runs it
+  twice — `node scripts/build-grow-menu.mjs` then the same with `shelf`.
+  Everything but the word list is shared: the mark, the sky, the drain, the
+  network's rules and every proof. **Running it twice rather than looping
+  once** keeps the diff to a table at the top; the second gif read costs 1.5s,
+  which is the whole price. Two scripts would have duplicated ~500 lines, and
+  the dots menu already shows what that costs.
+- **THE LANDING PAGE MUST COME BACK BYTE-IDENTICAL, and that is the test.**
+  All 142 frames, `badge.webp` and `growmenu-geometry.json` were hashed before
+  the refactor and matched after. The word layout is computed BEFORE the
+  network's rng is seeded, so a fourth word cannot move the first three —
+  the shelf bake lays about/privacy/terms on 89.5 / 207.5 / 369.5, exactly
+  where the grow bake does.
+- **HOME IS NOT IN THE OWNER'S GIF AND CANNOT BE**: its six words carry no
+  `h` anywhere. Same wall the BAR menu hit, same answer —
+  `scripts/assets/menu-home-label.png`, the word set in the owner's face and
+  rendered in Chrome (librsvg, which sharp rasterises SVG with, ignores an
+  @font-face even with the font inlined). It is brought in by the SAME rule
+  the gif's words are sized by: `lineBands` finds its x-height and it is
+  scaled so that band is `X_STAR`, the reset button's own. Measured, its
+  x-height is 14 label px → 8.21 page px, i.e. exactly 15px type — so it is
+  the same size of the same face as its neighbours because it is measured
+  against the same thing, not because a factor was chosen.
+  - **The png is a COVERAGE map** (white ink on black) and everything
+    downstream works in ink over white, so it is inverted on the way in.
+    Drawn un-inverted the whole 110px square becomes ink and the build stops
+    on its stray-pixel count, which is the check doing its job.
+  - **Its box is the whole INK, not the x-height band.** The h's ascender
+    stands above the band, and a box cut to the band leaves it outside the
+    words' boxes, where it counts as stray and the build stops.
+  - It is upscaled 1.17x where the gif's three are downscaled 4.15x, and the
+    weights still agree: median stroke 4 / 4 / 5 / **5** device px, means
+    5.53 / 5.61 / 6.19 / **6.39**. No fresh render was needed.
+- **The two share one `badge.webp`, and the build proves it** rather than
+  assuming: the still is cut from frame 0, which is the mark alone, and the
+  mark is a function of the button's size and the vector with no word in it.
+  The shelf bake compares its own cut against the file byte for byte and
+  fails if they differ — if they ever do, the two buttons have drifted.
+- **`ROW_GAP` stays `inkLeftOf(2) - inkRightOf(1)`** — do NOT make it
+  `ITEMS.length`. The owner named that gap ("the last one between the TOS and
+  privacy policy"); it is the same number whether the menu carries three
+  words or four, and a fourth takes it rather than redefining it. Measured:
+  all four gaps 56.3.
+- **`--logo-menu-zoom` HAS TO BE MEASURED HERE.** On the landing page
+  `CigScroller` publishes it; there is no row on the shelf. **0.7 is not an
+  approximation of the landing page's value — it IS that value** at every
+  viewport under about 1845px, because the floor binds everywhere below
+  that. Above it the landing button grows, and it also moves whenever the
+  row settles on a pack of another width, so "the same scale" has no single
+  number to copy.
+  **It is clamped down on a narrow window, and the fourth word is why**:
+  three words reach 363px at 0.7 and fit a 390px phone, four reach 437 and
+  do not. **It cannot be a `min()` in CSS** — a zoom is unitless and CSS
+  cannot divide a length by a length, so `min(0.7, (100vw - 20px)/610)`
+  divides a length by a number and yields a length, which `min()` will not
+  mix with 0.7. Hence `ShelfMenu`, a client component whose only job is that
+  number; it renders `display: contents` so it is a carrier and nothing else.
+- **`.shelf .logo-menu` IS `position: fixed`, and only there.** `.shelf` is
+  the scroller (`overflow: auto`) and an absolutely placed child of a scroll
+  container travels with the content — a shelf of forty packs would carry
+  the button off the top. On the landing page the containing block is
+  `.artpage-stage` and fixed would break it. `.shelf` is itself `inset: 0`,
+  so the viewport and the page's border are the same box.
+- Verified in a real browser at 1920 and 390: the button on 10,10 at
+  23.09px (33 x 0.7) and 19.2px (the clamp), four words with HOME last going
+  to `/landing`, shut words out of the tab order and the a11y tree and
+  taking no pointer, hover unfolds, leaving does not close it, its own
+  button runs it back to the mark exactly, HOME wholly on the page at 390,
+  and the landing page still three words, still `absolute`, still on 10,10.
 
 **The plus beside the bookmark opens a quantity menu** (`components/CigQuantity.tsx`,
 `PLUS`/`QUANTITY_MENU`/`WHEEL` in `lib/cigPages.ts`). **TWO PAGES USE IT AND

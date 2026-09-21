@@ -65,8 +65,80 @@ import {
 
 const SRC = 'scripts/assets/monkey-grow.gif';
 const LANDING = 'lib/landing-geometry.json';
-const FRAMES_DIR = 'public/growmenu/frames';
-const GEOMETRY = 'lib/growmenu-geometry.json';
+
+/**
+ * TWO MENUS COME OUT OF THIS ONE BAKE, and `npm run build:growmenu` runs it
+ * twice — once with no argument and once with `shelf`.
+ *
+ *   grow   the landing page's: about us, privacy policy, terms of service.
+ *   shelf  the shelf page's (the owner's 2026-09-21 ask): the same three and
+ *          a fourth, HOME, because the shelf's 遠東 logo — which was its only
+ *          way back to /landing — is replaced by this button.
+ *
+ * IT IS ONE SCRIPT AND NOT TWO BECAUSE THEY MUST NOT DRIFT. Everything but
+ * the word list is shared: the mark, the sky, the drain, the network's rules
+ * and every proof. A copied script would be ~500 lines of that duplicated,
+ * and the dots menu already shows what copying costs (see the note in
+ * scripts/lib/menu-gif.mjs). Running it twice rather than looping once keeps
+ * the diff to the word list and the output paths; the gif read costs 1.5s
+ * the second time, which is the whole price.
+ *
+ * THE LANDING PAGE'S OUTPUT MUST COME BACK BYTE-IDENTICAL when this file is
+ * touched. The word layout is computed BEFORE the network's rng is seeded, so
+ * a fourth word cannot move the first three — proved: the shelf bake lays
+ * about/privacy/terms on exactly the coordinates the grow bake does.
+ */
+const MENUS = {
+  grow: {
+    framesDir: 'public/growmenu/frames',
+    geometry: 'lib/growmenu-geometry.json',
+    dir: '/growmenu/frames',
+    /** the one that cuts the mark's resting still; the other shares it */
+    badge: 'public/growmenu/badge.webp',
+    badgeSrc: '/growmenu/badge.webp',
+    items: [
+      { id: 'about', label: 'About us', href: '/about', from: 'gif', lines: 1 },
+      { id: 'privacy', label: 'Privacy policy', href: '/privacy', from: 'gif', lines: 2 },
+      { id: 'terms', label: 'Terms of service', href: '/terms', from: 'gif', lines: 2 },
+    ],
+  },
+  shelf: {
+    framesDir: 'public/shelfmenu/frames',
+    geometry: 'lib/shelfmenu-geometry.json',
+    dir: '/shelfmenu/frames',
+    /*
+     * NO BADGE OF ITS OWN. The resting still is cut out of frame 0, and frame
+     * 0 is the mark alone — its pixels depend on BADGE.size, BADGE_RULE,
+     * MARK_SIDE_AIR and the vector, not on a word. Measured: the two bakes'
+     * badge.webp come out byte-identical, so the shelf points at the grow
+     * menu's file rather than shipping a second copy of the same 238 bytes.
+     */
+    badge: null,
+    badgeSrc: '/growmenu/badge.webp',
+    items: [
+      { id: 'about', label: 'About us', href: '/about', from: 'gif', lines: 1 },
+      { id: 'privacy', label: 'Privacy policy', href: '/privacy', from: 'gif', lines: 2 },
+      { id: 'terms', label: 'Terms of service', href: '/terms', from: 'gif', lines: 2 },
+      /*
+       * HOME IS NOT IN THE OWNER'S GIF, and cannot be: its six words carry no
+       * `h` anywhere. This is the same wall the BAR menu hit, and the same
+       * answer — scripts/assets/menu-home-label.png, the word set in the
+       * owner's own webfont and rendered in Chrome, checked in because
+       * librsvg ignores an @font-face even with the font inlined. It is
+       * matched to the other three the way they are matched to each other,
+       * by X-HEIGHT, so it is the same size of the same face.
+       */
+      { id: 'home', label: 'Home', href: '/landing', from: 'label', src: 'scripts/assets/menu-home-label.png' },
+    ],
+  },
+};
+const WHICH = process.argv[2] ?? 'grow';
+if (!MENUS[WHICH]) {
+  throw new Error(`build-grow-menu: no menu called "${WHICH}" — try ${Object.keys(MENUS).join(' or ')}`);
+}
+const MENU = MENUS[WHICH];
+const FRAMES_DIR = MENU.framesDir;
+const GEOMETRY = MENU.geometry;
 
 /** Backing-store scale: 2 is what a dense screen wants. */
 const SS = 2;
@@ -103,19 +175,19 @@ const BADGE_RULE = 2;
  */
 const MARK_SIDE_AIR = 1;
 
-/** What the six words are, in reading order: the top row, then the stack. */
-/*
- * THREE, NOT SIX. MY SAVED, OFFERS and RECOMMENDED were under this button
- * until the owner's 2026-09-20 ask moved them onto the dots button beside the
- * row's plus; they are `DOTS_ITEMS` in scripts/build-dots-menu.mjs now. The
- * gif still draws all six and the front end still finds all six — the build
- * would stop if it did not — but only these three are laid out here.
+/**
+ * The words of THIS menu, in reading order along the row.
+ *
+ * THREE OF THEM COME OUT OF THE GIF, AND IT DRAWS SIX. MY SAVED, OFFERS and
+ * RECOMMENDED were under this button until the owner's 2026-09-20 ask moved
+ * them onto the dots button beside the row's plus; they are `DOTS_ITEMS` in
+ * scripts/build-dots-menu.mjs now. The gif still draws all six and the front
+ * end still finds all six — the build would stop if it did not — but only
+ * the ones listed here are laid out.
  */
-const ITEMS = [
-  { id: 'about', label: 'About us', href: '/about' },
-  { id: 'privacy', label: 'Privacy policy', href: '/privacy' },
-  { id: 'terms', label: 'Terms of service', href: '/terms' },
-];
+const ITEMS = MENU.items;
+/** How many of them the gif is the source for; they come first, in its order. */
+const GIF_ITEMS = ITEMS.filter((it) => it.from === 'gif').length;
 
 /** The words are set at the reset button's size, on the button's middle line. */
 const RESET_TYPE = 15;
@@ -144,9 +216,10 @@ const fail = (msg) => {
 const gif = await openMenuGif('build-grow-menu', { ss: SS });
 const { W, H, N, frameMs, K, START, BOX, last, pageX, pageY, gifX, gifY, topWords, glyphMask, components, lineBands, renderPiece } = gif;
 
-const measured = topWords.map((pb, wi) => {
+const measured = topWords.slice(0, GIF_ITEMS).map((pb, wi) => {
   const G = glyphMask(pb);
-  const expect = wi === 0 ? 1 : 2; // "about us" was drawn on one line, the others on two
+  // how many lines the gif drew this word on — "about us" one, the others two
+  const expect = ITEMS[wi].lines;
   const bands = lineBands(G, expect);
   const comps = components(G);
   const lines = bands.map(([a, b]) => ({ xTop: a, base: b, comps: [], x0: 1e9, x1: -1, y0: 1e9, y1: -1 }));
@@ -207,6 +280,50 @@ const SPACE_REL = (spaceGif * K) / xh(about); // the word space, in x-heights
 const k = measured.map((m) => X_STAR / xh(m));
 measured.forEach((m, i) => console.log(`    ${ITEMS[i].id.padEnd(8)} x-height ${xh(m).toFixed(2)} -> scaled x${k[i].toFixed(3)}`));
 
+/**
+ * A WORD THE GIF NEVER DREW, read off a coverage map instead.
+ *
+ * `menu-home-label.png` is white ink on black — the word set in the owner's
+ * face and rendered in Chrome, which is the only way to get it (librsvg,
+ * which sharp rasterises SVG with, ignores an @font-face even with the font
+ * inlined as a data URI). It is measured by exactly the rule the gif's words
+ * are: `lineBands` finds the x-height band and the word is scaled so that
+ * band is `X_STAR`, the reset button's own. So it arrives the same size as
+ * its neighbours because it is measured against the same thing, not because
+ * a factor was chosen.
+ */
+async function readLabel(src) {
+  const { data, info } = await sharp(src).removeAlpha().raw().toBuffer({ resolveWithObject: true });
+  const { width: w, height: h, channels: C } = info;
+  const cov = new Float32Array(w * h);
+  const m = new Uint8Array(w * h);
+  for (let i = 0; i < w * h; i += 1) {
+    cov[i] = data[i * C] / 255;
+    m[i] = data[i * C] > 127 ? 1 : 0;
+  }
+  let x0 = 1e9; let y0 = 1e9; let x1 = -1; let y1 = -1;
+  for (let y = 0; y < h; y += 1) {
+    for (let x = 0; x < w; x += 1) {
+      if (!m[y * w + x]) continue;
+      if (x < x0) x0 = x; if (x > x1) x1 = x;
+      if (y < y0) y0 = y; if (y > y1) y1 = y;
+    }
+  }
+  if (x1 < 0) fail(`${src} is blank`);
+  const [a, b] = lineBands({ m, w, h }, 1)[0];
+  /** page px per label px, so the band comes out at the row's x-height */
+  const ppl = X_STAR / (b - a);
+  console.log(
+    `    ${'label'.padEnd(8)} x-height ${b - a} px of ${src.split('/').pop()}`
+    + ` -> ${X_STAR.toFixed(2)} page px (x${ppl.toFixed(4)})`,
+  );
+  return { cov, w, h, ppl, band: [a, b], ink: { x0, y0, x1: x1 + 1, y1: y1 + 1 } };
+}
+const LABELS = new Map();
+for (const it of ITEMS) {
+  if (it.from === 'label') LABELS.set(it.id, await readLabel(it.src));
+}
+
 // ---- the pieces of the top row, and where each one goes --------------------
 const TOP_Y0 = Math.max(0, BOX.y0 - 30);
 const TOP_Y1 = BOX.y1;
@@ -221,10 +338,40 @@ const addPiece = (p) => {
 // nothing of the gif's own growth is copied now. It still sets the cursor.
 cursor += (topWords[0].x0 - BOX.x1) * kAbout;
 const wordPieces = [];
-for (let wi = 0; wi < 3; wi++) {
+for (let wi = 0; wi < ITEMS.length; wi += 1) {
+  if (ITEMS[wi].from === 'label') {
+    /*
+     * A label is already at its final size, so its piece is drawn at 1:1 and
+     * its own coordinates are label px x `ppl`. It is placed by the same two
+     * rules as a gif word — the middle of its x-height band onto the button's
+     * middle line, and its ink's left edge wherever the re-lay pass below
+     * puts it — so nothing downstream can tell the two apart.
+     *
+     * ITS BOX IS THE WHOLE INK, NOT THE X-HEIGHT BAND. The h's ascender
+     * stands above the band, and a box cut to the band leaves it outside the
+     * words' boxes, where the build counts it as stray ink and stops.
+     */
+    const L8 = LABELS.get(ITEMS[wi].id);
+    const P = L8.ppl;
+    const L = { x0: L8.ink.x0 * P, x1: L8.ink.x1 * P, y0: L8.ink.y0 * P, y1: L8.ink.y1 * P };
+    const p = {
+      name: ITEMS[wi].id,
+      label: ITEMS[wi].id,
+      x0: L.x0,
+      x1: L.x1,
+      sx: 1,
+      sy: 1,
+      refY: ((L8.band[0] + L8.band[1]) / 2) * P,
+      newRefY: ROW_MIDDLE,
+      newX0: cursor,
+    };
+    addPiece(p);
+    wordPieces[wi] = [{ p, L }];
+    continue;
+  }
   const m = measured[wi];
   const kw = k[wi];
-  if (wi > 0) {
+  if (wi > 0 && ITEMS[wi - 1].from === 'gif') {
     // the gap before this word, at twice its scaled width
     const kg = (k[wi - 1] + kw) / 2;
     cursor += (topWords[wi].x0 - topWords[wi - 1].x1) * kg * GAP_FACTOR;
@@ -270,11 +417,18 @@ const mapY = (p, y) => p.newRefY + (y - p.refY) * p.sy;
  */
 const inkLeftOf = (wi) => Math.min(...wordPieces[wi].map(({ p, L }) => mapX(p, L.x0)));
 const inkRightOf = (wi) => Math.max(...wordPieces[wi].map(({ p, L }) => mapX(p, L.x1)));
+/*
+ * THE 1 AND THE 2 ARE LITERAL ON PURPOSE — do not make them ITEMS.length.
+ * The owner named this gap: "the last one between the TOS and privacy
+ * policy". It is the gap the GIF drew between those two words, doubled, and
+ * it is the same number whether this menu carries three words or four. A
+ * fourth word placed after them must take that gap, not redefine it.
+ */
 const ROW_GAP = inkLeftOf(2) - inkRightOf(1);
 {
-  const was = [0, 1, 2].map((wi) => (wi ? inkLeftOf(wi) - inkRightOf(wi - 1) : inkLeftOf(0) - (BADGE.x + BADGE.size)));
+  const was = ITEMS.map((_, wi) => (wi ? inkLeftOf(wi) - inkRightOf(wi - 1) : inkLeftOf(0) - (BADGE.x + BADGE.size)));
   let want = BADGE.x + BADGE.size + ROW_GAP;
-  for (let wi = 0; wi < 3; wi++) {
+  for (let wi = 0; wi < ITEMS.length; wi += 1) {
     const shift = want - inkLeftOf(wi);
     for (const { p } of wordPieces[wi]) p.newX0 += shift;
     want = inkRightOf(wi) + ROW_GAP;
@@ -295,6 +449,26 @@ function lineOwner(m, gx, gy) {
 
 const drawn = [];
 for (const p of pieces) {
+  if (p.label) {
+    // The png is a COVERAGE map and everything downstream works in ink over
+    // white, so it is inverted on the way in; then resized by the same
+    // lanczos call renderPiece makes, at the scale the x-height match gave.
+    const L8 = LABELS.get(p.label);
+    const dw = Math.round(L8.w * L8.ppl * SS);
+    const dh = Math.round(L8.h * L8.ppl * SS);
+    const src = Buffer.alloc(L8.w * L8.h * 3);
+    for (let i = 0; i < L8.w * L8.h; i += 1) {
+      const v = Math.round(255 * (1 - L8.cov[i]));
+      src[i * 3] = v; src[i * 3 + 1] = v; src[i * 3 + 2] = v;
+    }
+    const rgb = await sharp(src, { raw: { width: L8.w, height: L8.h, channels: 3 } })
+      .resize({ width: dw, height: dh, fit: 'fill', kernel: 'lanczos3' })
+      .raw().toBuffer();
+    drawn.push({
+      rgb, w: dw, h: dh, left: Math.round(mapX(p, 0) * SS), top: Math.round(mapY(p, 0) * SS),
+    });
+    continue;
+  }
   const own = p.line === undefined ? null : (gx, gy) => lineOwner(measured[p.word], gx, gy) === p.line;
   const l = await renderPiece(p, TOP_Y0, TOP_Y1, own);
   if (l) drawn.push(l);
@@ -374,7 +548,7 @@ const streams = [];
  * being written, and a stroke through one strikes it out.
  */
 const topWay = [{ x: EXIT_TOP.x, y: EXIT_TOP.y }, { x: EXIT_TOP.x + 8, y: EXIT_TOP.y - 5 }];
-for (let i = 0; i < 3; i++) {
+for (let i = 0; i < LAID.length; i += 1) {
   const b = LAID[i];
   // OVER ONE WORD AND UNDER THE NEXT, crossing in the gaps where there is
   // nothing to cross. A run that stays on one side of the row can only ever
@@ -386,7 +560,7 @@ for (let i = 0; i < 3; i++) {
   topWay.push({ x: b.x + b.w * 0.2, y: line + wob(0.8) });
   topWay.push({ x: b.x + b.w * 0.64, y: line + (over ? -1 : 1.5) + wob(1) });
 }
-const lastTop = LAID[2];
+const lastTop = LAID[LAID.length - 1];
 topWay.push({ x: lastTop.x + lastTop.w + 6, y: ROW_MIDDLE - 4 });
 topWay.push({ x: lastTop.x + lastTop.w + 14, y: ROW_MIDDLE + 2 });
 const topMain = channel({ pts: spline(topWay, GROWTH.step), w0: 1.5, w1: 0.7, t0: 0, speed: 1, id: 'top' });
@@ -502,7 +676,15 @@ for (const d of drawn) {
   }
 }
 /** Each word cut out of it, with the box it stands in (canvas coordinates). */
-const BOXES = LAID.map((b, i) => ({ ...ITEMS[i], ...b, y: r2(b.y + SHIFT) }));
+/*
+ * `from`, `lines` and `src` say where a word was CUT FROM; they are inputs to
+ * this bake and no business of the page's, so they are dropped here rather
+ * than shipped in the geometry.
+ */
+const BOXES = LAID.map((b, i) => {
+  const { id, label, href } = ITEMS[i];
+  return { id, label, href, ...b, y: r2(b.y + SHIFT) };
+});
 const WORD = BOXES.map((b) => {
   const x0 = Math.max(0, Math.floor((b.x - 2) * SS)), y0 = Math.max(0, Math.floor((b.y - 2) * SS));
   const x1 = Math.min(RW, Math.ceil((b.x + b.w + 2) * SS)), y1 = Math.min(RH, Math.ceil((b.y + b.h + 2) * SS));
@@ -922,7 +1104,26 @@ for (let f = 0; f < FRAMES; f++) {
     for (let y = 0; y < MH; y++) for (let x = 0; x < MW; x++) {
       still[(y * MW + x) * 4 + 3] = Math.round(Math.min(1, ink.a[(MY + y) * RW + MX + x]) * 255);
     }
-    writeFileSync('public/growmenu/badge.webp', await sharp(still, { raw: { width: MW, height: MH, channels: 4 } }).webp({ lossless: true, effort: 6 }).toBuffer());
+    const cut = await sharp(still, { raw: { width: MW, height: MH, channels: 4 } })
+      .webp({ lossless: true, effort: 6 }).toBuffer();
+    if (MENU.badge) {
+      writeFileSync(MENU.badge, cut);
+    } else {
+      /*
+       * THE OTHER MENU SHARES THIS FILE, AND THAT IS CHECKED RATHER THAN
+       * ASSUMED. The still is cut from frame 0, whose pixels are the mark and
+       * nothing else (asserted just above), and the mark is a function of
+       * BADGE.size, BADGE_RULE, MARK_SIDE_AIR and the vector — no word enters
+       * it. So this bake must produce the very same bytes as the one that
+       * writes the file; if it ever does not, the two menus' buttons have
+       * drifted apart and one of them is drawing a still that is not its own.
+       */
+      const have = readFileSync(MENU.badgeSrc.replace(/^\//, 'public/'));
+      if (!have.equals(cut)) {
+        fail(`this menu's mark is not the one in ${MENU.badgeSrc}`
+          + ` (${cut.length} bytes against ${have.length}) — it cannot share that still`);
+      }
+    }
   }
   if (f === FRAMES - 1) {
     // the open state must be the words and the mark, and nothing else
@@ -947,7 +1148,7 @@ writeFileSync(
   `${JSON.stringify(
     {
       note: 'Generated by npm run build:growmenu — do not edit by hand.',
-      dir: '/growmenu/frames',
+      dir: MENU.dir,
       frame: { w: VIEW_W, h: VIEW_H, scale: SS },
       frames: FRAMES,
       frameMs,
@@ -967,7 +1168,7 @@ writeFileSync(
         // that then draws it at the unrounded height (23.94 against the baked
         // 24) resamples every row of it for a twentieth of a pixel. Whole
         // pixels, as everywhere else here.
-        mark: { src: '/growmenu/badge.webp', x: MX / SS, y: MY / SS, w: MW / SS, h: MH / SS },
+        mark: { src: MENU.badgeSrc, x: MX / SS, y: MY / SS, w: MW / SS, h: MH / SS },
       },
       boxes: BOXES,
       stops: { base: { frames: FRAMES, viewW: VIEW_W, boxes: BOXES.map((b) => b.id) } },

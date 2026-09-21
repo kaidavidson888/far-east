@@ -28,7 +28,7 @@
     "audit:cigtext": "node scripts/audit-cigpage-text.mjs",
     "build:cigtags": "node scripts/build-cigtags.mjs",
     "audit:cigs": "node scripts/audit-cigs.mjs",
-    "build:growmenu": "node scripts/build-grow-menu.mjs",
+    "build:growmenu": "node scripts/build-grow-menu.mjs && node scripts/build-grow-menu.mjs shelf",
     "build:searchglyph": "node scripts/build-search-glyph.mjs",
     "build:dotsglyph": "node scripts/build-dots-glyph.mjs",
     "build:dotsmenu": "node scripts/build-dots-menu.mjs",

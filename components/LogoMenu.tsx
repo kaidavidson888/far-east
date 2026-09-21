@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import barGeometry from '@/lib/menu-geometry.json';
 import growGeometry from '@/lib/growmenu-geometry.json';
+import shelfGeometry from '@/lib/shelfmenu-geometry.json';
 
 /**
  * A mark that unfolds into a menu.
@@ -104,6 +105,14 @@ type MenuGeometry = {
 const MENUS: Record<string, MenuGeometry> = {
   bar: barGeometry as MenuGeometry,
   grow: growGeometry as MenuGeometry,
+  /*
+   * THE SHELF'S IS THE GROW MENU WITH A FOURTH WORD. Same bake, same button,
+   * same mark, same rules — scripts/build-grow-menu.mjs writes both, and the
+   * three words they share land on identical coordinates. It exists because
+   * the shelf's 遠東 logo was its only way back to /landing and the owner
+   * replaced that logo with this button, so the menu had to grow a HOME.
+   */
+  shelf: shelfGeometry as MenuGeometry,
 };
 
 export type MenuName = keyof typeof MENUS;
@@ -129,7 +138,7 @@ const REVERSE_RATE = 2;
  * Reverse still runs at REVERSE_RATE times whatever forward is doing, so
  * "backwards at twice the speed" holds at any rate.
  */
-const PLAY_RATE: Record<string, number> = { bar: 1, grow: 0.8 };
+const PLAY_RATE: Record<string, number> = { bar: 1, grow: 0.8, shelf: 0.8 };
 
 /**
  * WHICH MENU CLOSES ONLY BY ITS OWN BUTTON — the owner's 2026-09-19 asks, in
@@ -155,7 +164,7 @@ const PLAY_RATE: Record<string, number> = { bar: 1, grow: 0.8 };
  * elsewhere closes it, because it sits over the page's own logo and that is
  * how a reader gets the page back.
  */
-const LATCH: Record<string, boolean> = { bar: false, grow: true };
+const LATCH: Record<string, boolean> = { bar: false, grow: true, shelf: true };
 
 /** Half strength under the pointer, a quarter while it is held. */
 const DIM = { hover: 0.5, press: 0.25 };

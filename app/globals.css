@@ -2777,15 +2777,34 @@ ul, ol { list-style: none; }
   font-family: var(--font-typed);
   font-synthesis: none;
 }
+/* THE MOUNTAIN BUTTON STANDS ON THE PAGE'S BORDER, NOT IN THE HEADER (the
+   owner's 2026-09-21 swap of the 遠東 logo for the landing page's button,
+   "with the same scale and margins in relation to the page border"). So the
+   header keeps only the worth, on the right.
+
+   IT HOLDS THE MENU'S OWN BAND OPEN. The header has no left item any more
+   and the worth is often empty, so without this the grid would start at 56px
+   and the menu — which LATCHES open — would stand over the first row of
+   cards on a wide screen. The band is the menu's reach at its own scale:
+   place.top + (frame.h - logoHit.y) x zoom, which is 10 + 58 x 0.7 = 50.6,
+   less the header's own 24px of padding. */
 .shelf-head {
   display: flex;
   align-items: flex-start;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: var(--shelf-gutter);
+  min-height: 32px;
 }
-.shelf-logo { display: block; line-height: 0; }
-.shelf-logo img { display: block; max-width: none; }
-.shelf-logo:focus-visible { outline: 2px solid #ff0000; outline-offset: 4px; }
+/* a carrier for the menu's scale and nothing else — see ShelfMenu */
+.shelf-menu { display: contents; }
+/* THE BUTTON MUST NOT SCROLL AWAY. `.shelf` is the scroller (overflow: auto),
+   and an absolutely placed child of a scroll container travels with the
+   content — a shelf of forty packs would carry the button off the top. Fixed
+   here only: on the landing page the containing block is `.artpage-stage`
+   and `position: fixed` would break it. `.shelf` is itself `inset: 0`, so
+   the viewport and the page's border are the same box and the 10px margins
+   land where they did. */
+.shelf .logo-menu { position: fixed; }
 /* the shelf's worth, in the artwork's own red. NOT --negative: that token is
    warm grey and is never an error colour, per the spec — and this is not an
    error, it is the number the page is about. */
@@ -3291,7 +3310,6 @@ input[type='reset'],
 .logo-menu-box,
 .seal-button,
 .seal-button-hit,
-.shelf-logo,
 .shelf-card-box {
   -webkit-touch-callout: none;
   user-select: none;
@@ -3305,7 +3323,6 @@ button img,
 .artpage-hit img,
 .artpage-decor img,
 .cig-slot img,
-.shelf-logo img,
 .shelf-card-pack img,
 canvas {
   -webkit-touch-callout: none;

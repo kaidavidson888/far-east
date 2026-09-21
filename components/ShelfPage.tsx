@@ -1,10 +1,9 @@
-import Link from 'next/link';
 import { BOOKMARK } from '@/lib/cigPages';
-import { HOME } from '@/lib/innerPage';
 import {
-  CARD, CARD_CARET, CARD_COMMENT_EM, GRID_GUTTER, GRID_HEADER, GRID_LOGO, GRID_MARGIN,
+  CARD, CARD_CARET, CARD_COMMENT_EM, GRID_GUTTER, GRID_HEADER, GRID_MARGIN,
   PACK_RULE, PACK_RULE_ALPHA, type ShelfEntry,
 } from '@/lib/shelfGrid';
+import { ShelfMenu } from './ShelfMenu';
 import { ShelfGrid } from './ShelfGrid';
 
 /**
@@ -30,9 +29,13 @@ import { ShelfGrid } from './ShelfGrid';
  * the numbers, each one saying which measurement of the drawing it came from
  * and where it was evened up.
  *
- * THE LOGO GOES HOME. Every page but the landing page and the splash sends it
- * to /landing. The red rule that used to run beneath it came off on
- * 2026-09-21 — it was the site's own divider, never in the export.
+ * THE MOUNTAIN BUTTON REPLACED THE 遠東 LOGO (the owner's 2026-09-21). It is
+ * the landing page's own — the same button, the same 10px margins off the
+ * page's border, the same scale, the same behaviour — and its menu is the
+ * landing page's with a fourth word, HOME, because the logo was this page's
+ * only way back to /landing and it has gone. The red rule that used to run
+ * beneath the logo came off the same day; it was the site's own divider and
+ * was never in the export.
  */
 
 export function ShelfPage({ entries, worth }: { entries: ShelfEntry[]; worth?: string }) {
@@ -67,16 +70,12 @@ export function ShelfPage({ entries, worth }: { entries: ShelfEntry[]; worth?: s
         '--card-typed': `calc(var(--card-caret-h) / ${CARD_CARET.band})`,
       } as React.CSSProperties}
     >
+      {/* THE BUTTON STANDS ON THE PAGE'S OWN BORDER, not in the header: its
+          10px margins are the landing page's and are measured from the edge
+          of the page, where this page's own margin is 24. */}
+      <ShelfMenu />
+
       <header className="shelf-head" style={{ paddingTop: GRID_HEADER.top }}>
-        <Link href={HOME} className="shelf-logo" aria-label="Far East, back to the landing page">
-          <img
-            src="/landing/parts/logo.svg"
-            alt=""
-            width={GRID_LOGO.w}
-            height={GRID_LOGO.h}
-            draggable={false}
-          />
-        </Link>
         {/* the shelf's worth, in the owner's face, in the artwork's own red */}
         <p className="shelf-worth" style={{ fontSize: GRID_HEADER.priceH }}>{worth ?? ''}</p>
       </header>
