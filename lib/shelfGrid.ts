@@ -49,24 +49,6 @@ export const GRID_MARGIN = 24;
 /** One gutter between the tracks, and between the rows. */
 export const GRID_GUTTER = 35;
 
-/** How many to a row. The owner's two numbers, and the width they change at. */
-export const GRID_COLS = { mobile: 3, desktop: 5 } as const;
-/**
- * Below this the grid is three wide: 3 x 90.7 + 2 x 35 + 2 x 24 = 390, the
- * drawing's own page, rounded up to the breakpoint the rest of the site uses.
- */
-export const GRID_MOBILE_MAX = 640;
-
-/**
- * THE PACK, AND WHY IT HAS A CEILING.
- *
- * A track on a 1920 screen is 346px across, and a pack drawn to fill it would
- * be 530 tall — one row of five filling the window. The drawing's pack is 137
- * tall on a 390 page; the height is capped and the pack sits centred in its
- * track with the air either side. The cap is a judgement, not the owner's.
- */
-export const PACK_H = { min: 137, max: 220 } as const;
-
 /**
  * EVERYTHING ON A CARD IS A FRACTION OF THE PACK'S HEIGHT, so the card holds
  * its proportions from a phone to a desktop rather than carrying one set of

@@ -166,6 +166,18 @@ const PLAY_RATE: Record<string, number> = { bar: 1, grow: 0.8, shelf: 0.8 };
  */
 const LATCH: Record<string, boolean> = { bar: false, grow: true, shelf: true };
 
+/**
+ * THE INK EACH MENU IS DRAWN IN, and it belongs here beside LATCH and
+ * PLAY_RATE for the same reason: it is a judgement about one menu, not a
+ * property of the drawing. The frames are baked with RGB zeroed and
+ * everything in the alpha channel, so any colour is a fill through the
+ * coverage — an antialiased edge at 50% stays at 50% and simply becomes that
+ * colour. Empty means "as baked", which is black.
+ *
+ * The shelf's page is red (the owner's 2026-09-21), so its menu is white.
+ */
+const INK: Record<string, string> = { bar: '', grow: '', shelf: '#ffffff' };
+
 /** Half strength under the pointer, a quarter while it is held. */
 const DIM = { hover: 0.5, press: 0.25 };
 
@@ -201,7 +213,7 @@ export function LogoMenu({ menu = 'bar', stop = 'base' }: { menu?: MenuName; sto
   }, []);
 
   /** Draw the frame the position is currently on, plus any pressed word. */
-  const paint = useCallback(() => {
+  const drawFrame = useCallback(() => {
     const canvas = canvasRef.current;
     const list = framesRef.current;
     if (!canvas || !list) return;
@@ -226,13 +238,18 @@ export function LogoMenu({ menu = 'bar', stop = 'base' }: { menu?: MenuName; sto
       if (!img?.complete || !img.naturalWidth) return;
       const w = box.w * SCALE;
       const h = box.h * SCALE;
-      // lift the word out and lay it back down fainter. Clearing first is what
-      // makes this a dim rather than a double exposure: drawing at half alpha
-      // over the word already there would only darken it.
-      ctx.clearRect(x, y, w, h);
+      // TAKE COVERAGE OFF; DO NOT REDRAW. This used to clear the word's rect
+      // and lay the frame back into it at half alpha, which is the same
+      // number (da x a either way) but NAMES A COLOUR: it re-introduces the
+      // baked black, and only came out right because a tint ran afterwards.
+      // `destination-out` only ever removes alpha, so it cannot fight the
+      // tint whatever order the two run in — and it is what CigDots already
+      // does, for the same reason.
+      const a = heldBoxRef.current === box.id ? DIM.press : DIM.hover;
       ctx.save();
-      ctx.globalAlpha = heldBoxRef.current === box.id ? DIM.press : DIM.hover;
-      ctx.drawImage(img, x, y, w, h, x, y, w, h);
+      ctx.globalCompositeOperation = 'destination-out';
+      ctx.fillStyle = `rgba(0,0,0,${1 - a})`;
+      ctx.fillRect(x, y, w, h);
       ctx.restore();
       return;
     }
@@ -241,6 +258,28 @@ export function LogoMenu({ menu = 'bar', stop = 'base' }: { menu?: MenuName; sto
     if (overlay?.complete) ctx.drawImage(overlay, x, y);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- menu and stop never change for a mounted menu
   }, [FRAMES]);
+
+  /**
+   * Draw, then tint — and it has to be a WRAPPER, not a line at the foot of
+   * the body above. That body returns early in four places (no hover, no
+   * box, and at the end of each hover branch), and `hoverBoxRef` is null for
+   * every frame of the run, so a tint appended inside it would be skipped on
+   * almost every paint. `source-in` keeps the destination's alpha and
+   * replaces its colour, which is exactly what an alpha-only drawing wants.
+   */
+  const paint = useCallback(() => {
+    drawFrame();
+    const ink = INK[menu];
+    if (!ink) return;
+    const canvas = canvasRef.current;
+    const ctx = canvas?.getContext('2d');
+    if (!canvas || !ctx) return;
+    ctx.save();
+    ctx.globalCompositeOperation = 'source-in';
+    ctx.fillStyle = ink;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.restore();
+  }, [drawFrame, menu]);
 
   /** Load every frame once, off the critical path. */
   const load = useCallback(() => {
@@ -539,20 +578,27 @@ export function LogoMenu({ menu = 'bar', stop = 'base' }: { menu?: MenuName; sto
           half a pixel off where the canvas draws the same mark and the two
           jogged as one took over from the other. Measured after the move:
           0,0 at every zoom. */}
+      {/* A MASKED BLOCK, NOT AN IMAGE. The still is baked with RGB zeroed and
+          everything in the alpha channel, so a mask over a block of colour
+          reproduces it pixel for pixel in ANY colour, where an <img> can only
+          ever be the black it was baked as — and the shelf's page is red, so
+          its button has to be white. Both menus take the same route, and
+          that is the point: the canvas tints its ink with `INK` and this
+          reads the same value, so the two cannot be recoloured by different
+          arithmetic. The handover between them is invisible only because
+          they are the same pixels. */}
       {badge ? (
-        /* eslint-disable-next-line @next/next/no-img-element */
-        <img
+        <span
           className="logo-menu-badge-mark"
-          src={badge.mark.src}
-          alt=""
           aria-hidden="true"
-          draggable={false}
           style={{
             left: px(badge.mark.x),
             top: px(badge.mark.y),
             width: px(badge.mark.w),
             height: px(badge.mark.h),
-          }}
+            '--logo-menu-badge': `url(${badge.mark.src})`,
+            ...(INK[menu] ? { '--logo-menu-ink': INK[menu] } : null),
+          } as React.CSSProperties}
         />
       ) : null}
 
