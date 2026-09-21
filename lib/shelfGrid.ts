@@ -109,8 +109,20 @@ export const CARD = {
  * edge on the image's, which is the only arrangement where nothing at all is
  * over the artwork. It is an absolutely placed ring rather than a border, so
  * it costs the card no width and the pack keeps its own.
+ *
+ * IT IS THE SAME WEIGHT AS THE BOXES OVER THE PACK (the owner's 2026-09-21
+ * "change the outlines around the cig images to the same thickness as the
+ * outlines above the image"), so it is `CARD.rule` rather than a number of
+ * its own — one line on the card, drawn red round the four boxes and
+ * half-black round the picture. It was 5, which is the site's divider weight
+ * and was never measured off this drawing.
+ *
+ * EVERYTHING ELSE FOLLOWS ON ITS OWN, because nothing carries the old figure
+ * separately: the ring, the outline the rows are pulled out to, the gap the
+ * rule stands in, and the width the quantity menu takes are all written in
+ * terms of this, and the menu measures the outline live.
  */
-export const PACK_RULE = 5;
+export const PACK_RULE = CARD.rule;
 export const PACK_RULE_ALPHA = 0.5;
 
 /** The 遠東 logo, top left, at the size the landing page draws it. */

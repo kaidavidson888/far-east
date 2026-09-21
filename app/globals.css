@@ -2852,10 +2852,12 @@ ul, ol { list-style: none; }
   margin-inline: auto;
   display: flex;
   flex-direction: column;
-  /* THE RULE HAS ITS OWN ROOM. It is drawn outside the image now, so it
-     stands IN the gap the drawing leaves between the pack and the rows —
-     4.8px of gap against a 5px rule left the grey touching the red boxes.
-     The drawing’s 3-of-137 is kept and the rule is added to it. */
+  /* THE RULE HAS ITS OWN ROOM. It is drawn outside the image, so it stands
+     IN the gap the drawing leaves between the pack and the rows. The
+     drawing’s 3-of-137 is kept CLEAR and the rule is added to it, whatever
+     the rule weighs — at the 5px it was first drawn at, 4.8px of gap left
+     the grey touching the red boxes. It is the boxes’ own 2px now, so this
+     only holds two pixels open, but the relation is the thing. */
   gap: calc(var(--card-drop) + var(--pack-rule));
 }
 /* THE ROWS SPAN THE OUTLINE, NOT THE PICTURE (the owner's 2026-09-21 "make
