@@ -43,8 +43,9 @@ no CSS framework (tokens in `app/globals.css`). Deploys to Vercel.
   → `public/fonts/far-east-N.woff2`). Splices the glyphs in at the table level
   and checks every letter comes back byte-identical. After it: bump N in
   `globals.css` and `app/layout.tsx`, re-measure `far-east-ink.json` in Chrome,
-  `build:shelf`, and `build:cigpages` (the phone pages embed the face). See
-  "The owner's own face".
+  and `build:cigpages` (the phone pages embed the face). See "The owner's own
+  face". (`build:shelf` used to be on that list; the shelf is a grid now and
+  reads no baked geometry — it sets its own type live, off the ink table.)
 - `npm run audit:cigtext` — estimates every line of type on the built cigarette
   pages against the box it sits in and lists the tight ones, worst first, with
   the width it had in the original digits beside it. Run it after a font change.
@@ -2284,212 +2285,251 @@ the thing that is not pressable. `grab`/`grabbing` on the cigarette row and `tex
 in the fields stay for the same reason: they say what the pointer can DO there,
 which neither cloud can.
 
-## The shelf, the plus, and Carton/Pack
+## THE SHELF IS A GRID OF CARDS (2026-09-20, rebuilt 2026-09-21)
 The seal leads to `/shelf`: the reader's saved packs, drawn from the owner's
-design (`scripts/assets/shelf-mobile.svg`). Three pieces, one rule between them
-— nothing on this page is a picture.
-- **The seal goes on the SECOND press.** `SealButton` runs its animation on the
-  first press (skip-to-end if mid-run) and navigates only when it is already
-  `open` — the owner's "after the animation is finished, click again". A button,
-  not a link, so the first press cannot navigate.
-- **The page is a template.** `npm run build:shelf` measures the design into
-  `lib/shelf-geometry.json` (every mark rasterised alone and its ink box read,
-  like split-svg-parts — Figma's rects carry quarter-pixel sizes and the type is
-  outlined, so pixels are the only honest source). `lib/shelfPage.ts` turns a
-  list of saved packs into a layout; `components/ShelfPage.tsx` draws it. Boxes
-  are boxes, rules are rules, the clouds are `/sigil.webp`, the packs are the
-  `/cigs/<id>.svg` marks the row uses, and **every word and number is re-set in
-  the owner's face** — which is the ask and what makes it sharp. Type is sized by
-  ink height: `size = inkHeight / (ascent/1000)`, ascents from
-  `far-east-ink.json`, and placed by baseline (0.825 of the size in a
-  line-height:1 box, measured in Chrome). **A numeral counts as its flat 688**
-  (`DIGIT_HEIGHT` in `build-shelf.mjs`), not the overshoot the table reports
-  for the round ones — the design draws numbers to the flat height, and the
-  owner asked for the new numerals with their sizing kept; sized by the
-  overshoot, `$240` would have dropped two per cent for the 0 in it. The
-  geometry came out identical after the font change, which is the proof.
-- **THE SHELF IS A GRID BETWEEN THE LOGO AND THE $ SIGN, TWO TO A LINE**
-  (`shelfFit`). The owner's rule, in steps: each row's left edge on the right
-  edge of the character logo and its right edge on the left edge of the
-  "Click # When Finished" box (since taken off the page — the $ sign's left
-  edge, which is where that box's edge was, is the line now), the rows keeping
-  their arrangement — and then "scale them down again, same parameters, so
-  that two fit in a row". So every
-  pack's rule starts on its row's own left edge (`DX = -frame.x` puts the
-  design's frame at row x=0; a wider pack grows right, into the gap before the
-  boxes — a pack over ~69px wide at row scale would reach the boxes, an old
-  latent edge), the boxes/panel/clouds keep the design's distance from it, two
-  rows side by side make a line (`SHELF_COLUMNS`), the gap between them is the
-  design's own pack-to-boxes gap (`COLUMN_GAP`, 15, read off the geometry, not
-  chosen), and one zoom lands the second column's panel edge on the $ sign:
-  `z = span / gridBodyWidth`. **Where a row lands is the stylesheet's**: each
-  `.shelf-row` carries its index as `--i`, and `left`/`top` come from `mod()`
-  and `round(down, …)` against `--cols`, `--col-pitch` and `--row-pitch`, which
-  the stage sets — the column count is decided from the width on the client, so
-  React does not place rows. Those functions have exactly the support of the
-  `round()` the cigarette page already leans on; a one-column pair declared
-  first is the fallback for anything older. The stage hands down `--rows-left`
-  (the logo's DRAWN right edge — its rounded left plus width, so the grid never
-  starts on a half pixel) and `--row-scale`; `.shelf-rows` divides both by the
-  zoom, since `zoom` scales its own offsets. **The span depends on the zoom** —
-  the logo is sized to the top pack, whose screen width is its row width × zoom
-  — and the $ sign moves with the logo too, since the price's box is the
-  logo's height (below) — so `shelfFit` iterates the fixed point: `z =
-  (dollarLeft − C) / (G + tw/2)`, or with the logo's height clamp binding,
-  `z = (dollarLeft − C − w/2) / G`, the box and the logo recomputed each
-  round until the logo's width holds. Verified at 961 (the fixture's six
-  packs, three lines): column one from the logo's right, column two's panel
-  edge on the $ within a pixel.
-  (Before this: one to a line between the same edges; before that, packs
-  centred on the logo's axis at 80% of the fit to the right margin; before
-  that, left on the margin. Each was the owner's instruction at the time.)
-- **Every pack in a column sits on one axis, and the elements stand a standard
-  margin off the widest** — the owner's rule. `shelfLayout` finds the widest
-  pack's rule on the shelf (`widestPack`), centres every pack in a box that
-  wide (a narrower pack floats with air either side), and moves the boxes,
-  panel and clouds right by `dx` so the first box stands `PACK_GAP` (the
-  design's own 15) past the widest pack's rule — exactly the design's
-  relation, which drew a 58 frame with the boxes at 73. So a row's width is
-  `rowWidthFor(widest)` = widest + 15 + `ELEMENTS_WIDTH` (253), which is the
-  design's 326 for the design's frame and grows with a wide pack; `shelfFit`
-  takes it as an input, and the stage sets `--col-pitch` from it. **The widest
-  is taken over the whole shelf**, not per column, so both columns are one width
-  and their boxes line up — the reading of "standardised"; per column would tie
-  each column's width to which packs happened to land in it, and the column
-  count is decided on the client. `shelfQuantityFrame(dx)` moves the plus's
-  menu with the boxes.
-- **The line is fitted to the $ sign, sigils excluded.** The owner's next ask:
-  "scale them all up … so the right edge of each row not including the sigils
-  is lined up with the $ sign". So the zoom is worked out against
-  `gridBodyWidth` — a whole row, the gap, then a row's BODY (`bodyWidthFor`:
-  widest + 15 + the boxes to the panel's edge, `BODY_RIGHT`, 233 in the design)
-  — rather than the line's full width, and the clouds run on past the $ line
-  into the margin, as excluding them implies. The $ sign's left edge is the
-  price box's left plus its rule and its clearance (`dollarLeft` in
-  `shelfFit`), and the price is placed INSIDE the box by its ink — the stage
-  works the element's origin back from where the ink must sit, by the run's
-  first bearing and the stroke's outer half — so the $ really does start on
-  that line. (It used to be hung by its element, and an element is as wide
-  as its run's advance, so the ink sat a bearing short of where the check
-  said; the check reads ink now.) Verified at 961 and 1280: column two's
-  panel edge on the $ to within a pixel, the clouds ending inside the right
-  margin.
-- **On a phone that rule has no room, and a fallback holds** — `ROW_SCALE_FLOOR`
-  (0.6). The price's box is held to the room beside the logo, but at 375 its
-  left is still around 150 and the logo's right at 85, a span of a few dozen
-  px that would draw a pair at a twentieth of their size. The owner wrote the
-  rule at a desktop. Below the floor the previous phone layout holds: ONE to a
-  line, every pack's rule on the left margin, rows at `FALLBACK_SHRINK` (0.8)
-  of the fit to the right margin. With two columns the switch lands at about
-  735px wide, so phones fall back and tablets get the pair. **That is a
-  judgement, not the owner's instruction**, kept in one place so it can be
-  moved or removed; `data-fit` on the stage says which mode is live.
-- **The logo is as wide as the top pack, about its own centre** — the owner's
-  rule, "use its current centre of mass as a guide". It comes out of the same
-  `shelfFit` solve as the rows (real width and height so the vector stays
-  sharp) with its centre fixed at the landing page's (65, 71.5). **Its height
-  is clamped** (`SHELF_LOGO.maxHeight`, 131): the top may not leave the page
-  and the bottom may not pass the foot of the price's ink, the header's own
-  baseline. On a desktop the zoomed pack is 100+px wide and a logo that wide is
-  250 tall — off the page and through the divider — so there it holds at 60
-  wide, and its right edge (95) is where the rows begin.
-- **The whole page comes down until the logo's top margin is its left margin**
-  — the owner's rule: the same distance from the page's top edge to the top
-  of the mark as from the left edge to the mark's own left. **The mark's own
-  left, not the page's 45**: the logo scales about its centre, so on a
-  desktop (60 wide, the clamp binding) its left is at 35 and its top was at
-  6, and it is the 35 that is matched; wherever the mark is as drawn both are
-  45. Both edges come out of the fit, so the shift does (`shelfTopShift`),
-  and it is not fixed: the stage hands it down as `--shelf-top`, every
-  top-anchored thing — logo, header box, price, divider, the rows block
-  (inside its zoom division) — adds it, and the stage's height grows by it.
-  Nothing moves relative to anything else. Verified at 961 (top 35 = left
-  35, shift 29) and 375: every other element down by exactly the shift.
-- **On the shelf the logo is a link home, not the menu.** The logo menu's first
-  frame IS the 40x87 logo, baked; it cannot sit on a rescaled mark without
-  every frame being redrawn. `/landing`, per the logo-goes-home rule.
-- **The quantity ("2c") is centred in its box** — equal margins to the rule above
-  and below, the digit's ink (its ascent is the run's tallest) being what is
-  centred. Placed relative to the inside of the rule. **A p is set smaller and
-  lifted**: at the digit's size its descender ran 1.7px past the inside of the
-  rule (the owner saw it clip), so it is set so that its whole ink — x-height
-  to the foot of the descender — is the digit's ink height, and lifted by that
-  descender, standing in the digit's own band with the same margins to the
-  rule; the c has no descender and is left as it was (`qty.p` in
-  `lib/shelfPage.ts`, from the `units` the shelf build writes into the
-  geometry). Verified: "4p" and "9p" end a pixel inside the rule.
-- **The price is bold and sits in its own box; the caption is gone.** The face
-  has one weight, so bold is a stroke on the glyphs (`-webkit-text-stroke`,
-  0.03 of the size, the age gate's trick). The owner's asks, in order: take
-  off the "Click # When Finished" caption and its box; put a black outline
-  round the price with the caption's own margins instead; scale the price and
-  its outline up to the logo's top and side margins; then a 5px outline, the
-  side margins equal to the top and bottom, and the right side on the right
-  end of the red line. So (`PRICE_BOX` in `lib/shelfPage.ts`): a 5px rule —
-  the divider's weight — with 11px clear on every side (what the caption had
-  above and below its rule at the design width); the box's top on the logo's
-  top, its right edge on `--aligned-right` where the divider ends, and its
-  height the logo's, so the two share one band; the type as large as makes
-  the run's INK, stroke included, fill that box less its clearances — the $
-  rises above the digits and drops below them, and the whole run is what is
-  held. On a narrow page the box is also held to the room between the logo's
-  right edge plus the design's 15px gap and the margin; where that binds it
-  is shorter than the band, its top still on the logo's. **The run is
-  measured in the page** by `ShelfStage` on a canvas with the element's own
-  computed font once the face is loaded — its ink width, rise, drop and first
-  bearing, exact where the ink table is a whole-unit estimate whose width is
-  the run's advance — and the origin of the element is worked back from where
-  the ink has to sit, then the ink is centred in the whole-pixel box so the
-  rounding's fraction splits between the sides. The table's figures are the
-  first paint. Verified at 961, 1280 and 375: the box's right on the
-  divider's right, its top on the logo's, its bottom on the logo's where the
-  band binds, the ink 11 ± 0.5 off the rule all round.
-- **The margins are symmetric, and everything meets the right one, at any
-  width.** The owner's rule: the aligned right edge holds the same margin from
-  the page's right as the logo holds from its left. The logo is left-anchored in
-  real px, so the right must be too — `--aligned-right` is `width - MARGIN`,
-  measured live by `components/ShelfStage.tsx`, not a fixed design x. The
-  price's box hangs its right edge from that line — the red divider's right
-  end — and the divider spans margin to margin. The rows do not reach the
-  right margin: they end at the $ sign (see the rule above).
-- **The rows are scaled with `zoom`, NOT `transform: scale`.** A transform
-  scales finished pixels, and at 2x the type, the rules and the packs all went
-  soft — the owner saw it. `zoom` lays the block out again at the new size, so
-  type is set at the size it shows at, rules draw at their zoomed weight, and
-  the packs come from their 3x rasters. `zoom` multiplies the block's OWN
-  offsets too, so `.shelf-rows` has both its `top` and its `left`
-  (`--rows-left`) divided by the zoom to land where they are meant to. The
-  stage's height grows with the zoom. Chrome floors a zoomed border (3px at
-  2.58 draws 7, not 7.74), so inset marks can sit <1px off.
-- **Inside a ruled box, children sit inside the rule.** An absolutely placed
-  child of a bordered box is positioned from the padding edge, so a mark
-  measured from the box's OUTER corner needs the rule's width taken off its
-  offset (`inside()` in `ShelfPage.tsx`) — or it lands 3px too far in, which is
-  what the owner saw on the plus and the bookmark.
-- **The reset's `img { max-width: 100% }` collapses an image whose absolute
-  parent has no width.** The row is a set of absolutely placed marks with no
-  width of its own, so the clouds went to 0 wide and vanished; `.shelf-cloud`
-  and `.shelf-pack img` set `max-width: none`.
-- **The document does not scroll under a fixed page.** The root layout's
-  1000px footer sits in the flow beneath every artwork page, so the html grew
-  its own scrollbar behind the page's — two bars stacked, 30px of dead space on
-  the right of every desktop view, on the landing and cigarette pages too.
-  `html:has(.artpage), html:has(.cigpage), html:has(.shelf)` → `overflow:
-  hidden`; the fixed page scrolls itself.
-- **The controls work.** The plus opens the same quantity wheels in the row's
-  own box (`SHELF_QUANTITY_FRAME`: from the plus box's corner to the panel's
-  far corner, three slots tall, `CigQuantity` takes a `frame`); the bookmark is
-  a form on `removePackAction` — the cigarette page's bookmark only ever adds,
-  so the shelf's is where a pack leaves, with its quantity.
-- **The red divider between header and shelf is an addition**, not in the export
-  (the only red there is the pack rules and the header caption). It is the
-  site's red rule (5px `#FF0000`) from the left margin to `--aligned-right`.
-- **The quantity shows as e.g. `2c`** in the third box — the amount then a
-  lowercase c/p — set in the face like everything else. A bookmark-only pack has
-  no quantity and the box is empty.
+landing-page design. **Everything the old shelf was is gone** — one pack to a
+line, the widest-pack solver, the fixed point that landed a row's end on the
+$ sign. `lib/shelfPage.ts` and `components/ShelfStage.tsx` are deleted;
+**`scripts/build-shelf.mjs` and `lib/shelf-geometry.json` are ORPHANED** —
+still in the tree, nothing but that build reads that geometry, and the page
+no longer does. (`scripts/assets/shelf-mobile.svg` is the owner's own drawing
+and is worth keeping whatever happens to the build.) That machinery existed
+because a line had to end on the $ sign and its width depended on which packs
+the reader had saved. A grid of equal tracks has no such constraint, so the
+page now arrives laid out instead of re-laying itself once the client has
+measured. If you are reading a note elsewhere in this file about `shelfFit`,
+`SHELF_COLUMNS`, `ROW_SCALE_FLOOR` or the shelf's `zoom`, it is about the page
+that was deleted.
+
+- **The seal still goes on the SECOND press.** `SealButton` runs its animation
+  on the first press (skip-to-end if mid-run) and navigates only when it is
+  already `open` — the owner's "after the animation is finished, click
+  again". A button, not a link, so the first press cannot navigate.
+- **The logo is a link home** (`/landing`), per the logo-goes-home rule, and
+  the shelf's worth stands top right in the artwork's own `#FF0000`.
+  **The red rule that used to run under the header came off on 2026-09-21**
+  ("Remove the red line underneath the character logo"); it was the site's own
+  divider and was never in the export.
+- **THE NUMBERS ARE ALL IN `lib/shelfGrid.ts`**, each one saying which
+  measurement of the drawing it came from and where it was evened up:
+  margin 24, gutter 35 in both directions, five to a row on a desktop and
+  three below 640px, `--pack-h: clamp(137px, 14vw, 220px)`.
+  `components/ShelfPage.tsx` draws the page, `ShelfGrid` the list,
+  `ShelfCard` one card.
+- **`--pack-h` IS DECLARED ON `.shelf`, beside the properties that read it.**
+  A custom property referring to another resolves WHERE IT IS DECLARED, so a
+  `--card-box-h` on `.shelf` could not see a `--pack-h` on the grid below it:
+  every calc fell back to auto and the rows came out the height of the page.
+  The tag menu's zoomed layer was caught by the same thing.
+- **`minmax(0, 1fr)`, NOT `1fr`.** A bare `1fr` is min-content aware, so a
+  track holding a wide pack takes more than one holding a narrow one — the
+  three came out 84.9, 87.8 and 89.3 on a phone. The owner asked for the
+  geometry to be even and this is what makes it.
+
+**THE CARD IS THE DRAWING'S FIRST PACK**, the only one drawn with its whole
+interface ("look at the first cigarette pack with the full UI and use that as
+a model for all the others"). Rendered at 4x, that card is:
+
+      [ 12x            63x18 ] [ bookmark  19x18 ]   <- outlined, red
+      [ the pack            88 x 137, rule on its edge ]
+      [ clouds 19x18 ] [ leave a comment <3   64x20 ] <- outline, then solid
+
+The narrow box swaps sides between the two rows — bookmark top RIGHT, clouds
+bottom LEFT. Every distance is a fraction of the PACK'S HEIGHT (`CARD` in
+`lib/shelfGrid.ts`: `boxH` 18/137, `drop` 3/137, `gap` 4/18), so the card
+holds its proportions from a phone to a desktop.
+
+- **THE HALF-BLACK RULE IS OUTSIDE THE PICTURE.** The drawing puts it over —
+  sampled across the first pack's left edge, the image starts at x=34 and
+  reads 76,8,25 through to x=38, with the artwork's own 152,12,49 only from
+  x=39, so it darkens the outermost five pixels. The owner's word is "on the
+  edge of the image not over it", so it is an absolutely placed ring with its
+  inner edge on the image's. Absolutely placed, so it costs the card no width.
+  It also needs its own room: 5px of rule against the drawing's 4.8px gap left
+  the grey touching the red boxes, so the gap is `drop + rule`.
+- **THE ROWS SPAN THE OUTLINE, NOT THE PICTURE** (2026-09-21: "make the rows
+  above and under each pack scale to fit within the edges of the outline
+  around the pack rather than the image itself"). The card is sized by the
+  IMAGE, the ring contributing nothing, so each row is pulled out by exactly
+  one rule (`margin-inline: calc(-1 * var(--pack-rule))`) and its ends land on
+  the outline's outer edges. Measured: rows 146.30 on an outline of 146.30 at
+  1920, and 94.9 on 94.9 at 390.
+  **DO NOT PUT A `max-width` ON `.shelf-card` to keep the outline out of the
+  gutter.** It does not do what it looks like: the image carries
+  `max-width: none` (it must — it is sized by its height so every pack stands
+  the same), so capping the card only detaches the rows from the picture. It
+  measured 90.7px rows on a 94.9px outline at 390, which is the one thing the
+  rows had just been made to line up with. The outline reaches a rule into the
+  35px gutter instead, which has room for it.
+- **THE CARD IS THE PACK'S OWN WIDTH, CENTRED IN ITS TRACK.** Stretched to the
+  track, a 346px desktop track gave a 346px pair of boxes over a 141px pack.
+- **THE COMMENT BAR MUST NOT SIZE THE CARD.** A flex item with nowrap text
+  contributes its whole run to the intrinsic width, so "Leave a comment <3"
+  was what decided how wide a card was and both rows ran well past the pack.
+  It is absolutely placed in a slot, which contributes nothing.
+- **`BOOKMARK.d` IS ALREADY AT ITS OWN ORIGIN.** Using `BOOKMARK.mark.left/top`
+  as the viewBox — which is where the mark sits on a cigarette's page — puts
+  it 160 units off and the box comes out empty. The viewBox is `0 0 34 38`.
+
+**ONE HOVER RULE FOR THE WHOLE PAGE** (2026-09-21): "whenever the user hovers
+over a button on this specific page make the outline or rectangle fill either
+red if its an outline or black if its solid. if its a outline have the element
+inside turn black if its solid have the element inside turn white". So there
+are exactly two kinds of control and each has one answer. The clouds used to
+keep a white mark on the filled box; that exception is gone. **The amount box
+is a `<span>` and the pointer is never on it** (below), so its fill is keyed
+off `.shelf-card-wide:hover` instead of its own `:hover`.
+
+**THE BOOKMARK ADDS OR REMOVES, AND THE CARD STAYS WHEN IT REMOVES.**
+- `togglePackAction` reads the state SERVER-SIDE rather than being told: a
+  server action is a public endpoint and the page calling it can be stale.
+  `packIsSaved` then `removePack`/`savePack`; both halves are race-safe
+  (`ON CONFLICT DO NOTHING` and an unconditional `DELETE`). No migration —
+  `pack_favorites` already has everything.
+- **The form field is `pack`, and it was `id`.** The action reads `pack`, so
+  `pageFor('')` returned null and the shelf's bookmark had been doing
+  **nothing at all** — no write, no revalidate, no error.
+- **A card whose pack has just been taken off stays on screen** (`data-off`,
+  the mark at 25%), because a shelf only holds what is saved: press the
+  bookmark and the row goes, the card unmounts, and the button has no second
+  direction to be pressed in. `ShelfGrid` keeps the union of the server's
+  entries and anything removed since the page loaded. The database is still
+  exactly the rows that are saved and a reload draws that. It also makes a
+  mis-press recoverable, which it was not — `/packs/<id>` is add-only.
+- **`/packs/<id>`'s bookmark is still add-only and stays that way.** There the
+  owner asked for red to be permanent. The two rules are complementary: that
+  page is where a pack joins, this is where it can leave.
+- `savePackAction` now also revalidates `/shelf`; it only revalidated the
+  cigarette page, so adding from there left the shelf stale.
+
+**THE AMOUNT BOX IS THE QUANTITY CONTROL, AND IT SHOWS THE COUNT IN PACKS.**
+- "take the number tagged with the pack and multiply by 1 if P was selected
+  and 10 if C was selected … dont display the letter just multiply"
+  (2026-09-21). `cardAmount` in `lib/shelfGrid.ts`. The CHECK holds `amount`
+  to 1..9 and `unit` to C or P, nullable only together, so the answer is
+  1..9, or 10..90 by tens, or nothing at all for a pack bookmarked and never
+  counted. **It is only lossless while `amount` stops at 9** — ten packs
+  would read the same as one carton. The unit is still said in the
+  accessible label, where there is room for it.
+- **HOVERING IT OPENS THE CIGARETTE PAGE'S OWN WHEELS**, at 50%, out of the
+  box's top-left, down and to the right, at the width of the pack's OUTLINE
+  (the owner's ask, and `CigQuantity`'s existing behaviour to the letter).
+- **`CigQuantity` IS BORROWED WHOLE AND NOT TOUCHED**, because 235 cigarette
+  pages depend on it. It draws its own invisible trigger and owns its own
+  open/closed state, so rather than teach it to be driven from outside, its
+  trigger is given the amount box's exact footprint and laid over it — which
+  is why the box is a `<span>`: two stacked controls would be two labels and
+  two focus rings for one thing.
+- **The frame's origin is (0, 0)** — `.shelf-card-wide` is the offset parent
+  and its corner is the amount box's, which since the rows span the outline
+  IS the outline's corner. `cardQuantityFrame` in `lib/shelfGrid.ts`.
+- **THE MENU'S HEIGHT IS NOT THE BOX'S**, and that is a judgement. The box is
+  18px on a phone; three wheel slots inside it would be a 4px pitch and 3px
+  type. The SLOT is sized off the pack with a floor (`max(14, packH * 0.11)`)
+  and the menu is three of them plus its rule. The box gives the menu its
+  corner, the outline gives it its width, neither gives it its height.
+- **The outline's width has to be MEASURED.** A pack is
+  `height: var(--pack-h); width: auto`, so how wide it comes out depends on
+  that pack's own artwork — a `ResizeObserver` on the pack, and no menu
+  mounted until it has reported.
+
+**THE COMMENT BAR IS A BUTTON YOU CAN TYPE IN** (2026-09-21).
+`components/ShelfCardComment.tsx`. At rest a solid red bar with a dashed rule
+alone, black at half strength; hovered, the bar fills black, the phrase
+appears in white and the rule goes white; pressed, the rule is white at full
+strength and blinks and what is typed runs from the left margin.
+- **THE PHRASE IS SET TO FIT THE BAR, AND THE DRAWING CANNOT BE FOLLOWED.**
+  It was `0.36` of the box's height, which gave 10.4px where the bar had room
+  for 7.3 and it read "Leave a comme". The drawing's bar is 64 x 20 with the
+  phrase filling 46% of it in the mockup's own narrow sans at about 3.5px;
+  this face is a third wider than any fallback, so the same 18 characters
+  want **11.916 ems** (measured in Chrome on the live bar at 100, 400 and
+  1000px, identical at all three) and the phrase lands near 7px, under the 9
+  this site knows a line needs to render solid. Fully visible is what was
+  asked for. `CARD_COMMENT_EM` is **12.05**, a per cent of slack, because
+  `<` is not in the owner's face and comes from "Exo 2" — a webfont, so the
+  figure is stable, but the slack covers Google Fonts failing to load.
+  **It is sized with `cqw`**: the slot is a `container-type: inline-size`, so
+  the size is worked out from the room there actually is.
+  On a phone it comes out near 5px — but the phrase only shows on hover and a
+  touch screen has none, so it is never shown at that size.
+- **THE CARET IS THE LOGIN BOX'S OWN DASHED RULE, AS A MASK.** One window onto
+  `blackbox.webp`, which is baked with RGB zeroed and everything in alpha, so
+  **a masked block of colour reproduces it pixel for pixel in any colour** —
+  which is what lets it be black at rest and white under the pointer.
+  `background-image` cannot do that, and this is the first place on the site
+  the dashed rule is drawn as a mask rather than an image (the login row's ☁
+  and the search bar's already were).
+  **It is EXACTLY ONE TILE, scaled uniformly.** The login row needs 5.66 tiles
+  for its 58px span and so uses six squeezed 5.6%; one tile's worth of line
+  needs no squeeze, so the dashes keep the proportion they were drawn with.
+  The mark is 0.0140 of the sprite wide and 0.072 tall, so a caret H tall is
+  H x 0.19444 across. **Do not widen the window past x 0.1140** — the EMAIL
+  label begins in the very next sprite column.
+- **HOW TALL: the cloud star's own height**, which is 0.5086 of the 100-unit
+  view (measured with `getBBox` on the rendered button) drawn into the clouds
+  box less its rule. Measured live: caret 12.66, star 12.66.
+- **THE TYPED RUN'S BAND IS THE CARET'S HEIGHT, AND THE BAND IS 1.062 em** —
+  b's 828 over y's 234, taken from `far-east-ink.json` rather than named.
+  **It is NOT the login row's 0.859**, which is I over P: an all-caps band,
+  right there because the login box sets everything in capitals, and two
+  fifths too short here where a reader can type a b or a y. Sized by the band
+  rather than by the word, the line does not jump between a comment with a
+  descender and one without.
+- **THE PHRASE STANDS AFTER THE CARET, not on it.** The caret takes the place
+  the L used to have, so a phrase starting at the same margin prints straight
+  through it — and the caret is meant to be seen on hover, since that is when
+  it goes white. One margin past the mark, the bar reads as an empty field
+  does: the insertion point, then what to type. Typed text goes the other way
+  round — the run at the left margin and the caret one margin past its end,
+  which is the owner's "typed text start to the left of the dashed line".
+- **The blink is `cig-search-blink`**, the site's one caret keyframe
+  (`steps(1)`, a hard on-off), and the mark is keyed on the text so every
+  keystroke restarts it solid. Reuse it; do not write a second.
+- **NOTHING IS SAVED.** `pack_favorites` has no column for a note, so
+  persisting a comment needs a migration and the owner applying it. The
+  typing is real and lives as long as the page does.
+
+**THE FIVE CLOUDS OPEN** (`components/ShelfClouds.tsx`, `lib/shelfClouds.ts`,
+`npm run build:shelfclouds`, from `scripts/assets/clouds-{shut,open}.svg`).
+Two poses of ONE object — all ten paths rasterise to the same area — so the
+button MOVES five marks rather than cross-fading two pictures. Hover or focus
+opens, a press latches, and it interpolates on one `t` so turning away
+part-way turns it round from wherever it reached.
+- **THE SWEEP ANSWERS BACKWARDS, AND THE BUILD SHIPPED IT THAT WAY.**
+  `iou(A, B, ang)` scores by pulling A's pixel grid back through a rotation of
+  the SAMPLING coordinates, so a high score means the angle that carries the
+  OPEN mark onto the SHUT one. The page needs the inverse. Emitting `+ang`
+  put **every** cloud at the wrong orientation at t=1 — whole-pose overlap
+  with the drawing **30.71%** — and the owner spotted it on the bottom-right
+  one, which was the worst of the five at 22.8% and the only one whose
+  silhouette changed shape (a long horizontal cloud drawn as a vertical
+  teardrop). `turn()` is the one place the inversion happens. **It was not a
+  mirror**: tested at mask and render level, every mirrored pairing peaks
+  near 47% against 88–99% unmirrored, and the mark's self-IoU at 180° is 40%,
+  so it is strongly chiral with no near-symmetry to hide in.
+- **THE 95% GATE PASSED A 31% ANSWER, BECAUSE IT WAS THE SAME ARITHMETIC RUN
+  TWICE.** The header claimed "THE RESULT IS PROVED BY DRAWING IT" and nothing
+  was ever drawn. It now renders the transform STRING the component writes
+  into the finished frame and compares it with the open drawing there —
+  the only measure that can see a turn reported in the wrong sense, because
+  it is the only one that asks the question the page asks. It reads 22.8–38.7
+  on the old data and 97.0–99.0 on the new.
+- **THE PAIRING WAS BEING CHOSEN BY NOISE.** `iou()`'s 25-cell table spans
+  96.5% to 97.0% — half a point — so the argmax over 120 permutations was
+  random. Rendered, the same table spans 88% to 99%. The pairing is now
+  `24013` where it was `23410`, and every cloud fans straight out: five
+  travels of about 31 units and no turn past 23°, against two clouds crossing
+  the ring and spinning 73° and 141°. The five open POSITIONS are the
+  drawing's own centroids and do not change either way.
+- Verified on the pixels: the open pose now sits on the drawing at **98.25%**.
 
 **The plus beside the bookmark opens a quantity menu** (`components/CigQuantity.tsx`,
-`PLUS`/`QUANTITY_MENU`/`WHEEL` in `lib/cigPages.ts`). The plus box is the
+`PLUS`/`QUANTITY_MENU`/`WHEEL` in `lib/cigPages.ts`). **TWO PAGES USE IT AND
+ONLY ONE HAS A PLUS**: the cigarette page, where the artwork draws the button,
+and the shelf card, where the amount box is the button and the component's own
+trigger is laid invisibly over it (see the shelf above). It is shared by 235
+pages, so change it with care — the shelf deliberately took none. The plus box is the
 artwork's (byte-identical in all 235 built pages, checked); only the hit area is
 the page's. Hovering shows the menu at 50% (`pointer-events:none`), pressing
 opens it solid at 100% over everything below — which cannot be pressed while it
@@ -2628,11 +2668,18 @@ the brand assets and review text in this repo are visible to anyone.
    `.verify/temp-user.mjs` inserts into `auth.users` directly and never goes
    through GoTrue; and a signed-in press still cannot be verified end to end
    locally — the DB layer under it is covered by `npm run verify:db` instead.
-8. **The pack shelf has no shelf page.** `/favorites` lists catalogue products
-   through `favoritesWithNotes`; `pack_favorites` is a separate table and
-   nothing renders it yet, so a bookmark can be added and not seen anywhere
-   else, and not removed. `savedPackIds()` in `lib/db.ts` is the query that
-   page will want.
+8. **The pack shelf has a page now — `/shelf` — and three things on it have
+   no data behind them.** `savedPacks()` feeds it and the bookmark there
+   both adds and removes, so a saved pack can be seen and taken off. What is
+   still hollow: **the worth in the header** (`ShelfPage` takes a `worth`
+   prop and the route passes none — `pack_favorites` keys on a pack id and
+   `lib/cigs.json` carries no money, so the shelf cannot be totalled);
+   **the comment bar**, which types but has nowhere to keep a note (a column
+   on `pack_favorites`, so a migration and the owner applying it); and **the
+   cloud button**, which opens exactly as asked and is wired to nothing.
+   All three are the owner's call, not oversights.
+   `/favorites` is still the separate CATALOGUE shelf, through
+   `favoritesWithNotes`.
 9. **The artwork pages are still centred on half pixels.** `styleFor` in
    `ArtworkPage.tsx` rounds the mark's own half-width but leaves `left: 50%`,
    and 50% of an odd stage width is a .5 — measured live on /about, the intro

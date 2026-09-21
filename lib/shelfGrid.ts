@@ -1,6 +1,8 @@
 import type { CigPack } from './cigRow';
 import type { PackUnit } from './db';
 import landing from './landing-geometry.json';
+import { SPLASH_GEOM, splashAsset } from './splashFrames';
+import INK from '@/scripts/assets/far-east-ink.json';
 
 /**
  * THE SHELF AS A GRID (the owner's 2026-09-20 redraw).
@@ -84,9 +86,15 @@ export const CARD = {
   markShare: 19 / 86,
   /** the red rule round the boxes */
   rule: 2,
-  /** the type in the amount box, and in the comment bar */
+  /** the type in the amount box, as a fraction of the box's height */
   amountEm: 0.62,
-  commentEm: 0.36,
+  /**
+   * The comment bar's side margin — what the L of the phrase already stood
+   * off the rectangle, and now also what the caret stands off it and what
+   * separates the caret from the typed run. The phrase is sized to fit
+   * between two of them; see CARD_COMMENT_EM.
+   */
+  commentPad: 0.22,
 } as const;
 
 /**
@@ -117,12 +125,152 @@ export const GRID_HEADER = {
   drop: 32,
 } as const;
 
-/**
- * The words in the drawing's own comment bar. It is drawn and does nothing:
- * `pack_favorites` has nowhere to keep a note, and inventing that is a
- * migration rather than a page — the old shelf's panel was the same.
- */
+/** The words in the drawing's own comment bar, which is now a button. */
 export const CARD_COMMENT = 'Leave a comment <3';
+
+/**
+ * HOW WIDE THAT PHRASE IS, IN EMS OF THE FACE THE BAR SETS IT IN — 11.916,
+ * measured on the live bar in Chrome with the element's own computed font, at
+ * 100, 400 and 1000px, identical to five places at all three.
+ *
+ * It is here because the bar has to SET THE PHRASE TO FIT (the owner's
+ * 2026-09-21 "Scale the leave a comment text down so its fully visible while
+ * having the margin it currently has between its left edge and the edge of
+ * the rectangle behind it on both sides"), and a fraction of the box's height
+ * cannot do that — the previous 0.36 gave 10.4px where the bar had room for
+ * 7.3, and the phrase read "Leave a comme".
+ *
+ * THE DRAWING CANNOT BE FOLLOWED HERE AND THAT IS WORTH KNOWING. Its bar is
+ * 64 x 20 with the phrase filling 46% of it, set in the mockup's own narrow
+ * sans at about 3.5px. This face is a third wider than any fallback (0.67em
+ * mean lowercase advance), so the same 18 characters want 11.9 ems: at this
+ * bar's width the phrase lands near 7px, under the 9 this site knows a line
+ * needs to render solid. Fully visible is what was asked for, so fully
+ * visible is what it gets, and the phrase only shows under the pointer.
+ *
+ * A HAIR OF SLACK (12.05 against 11.916, 1.1%) because one character of the
+ * eighteen is not in the owner's face: `<` comes from "Exo 2", the next in the
+ * stack. That is a webfont the site loads, so the figure is the same on every
+ * platform — but if Google Fonts ever fails to load, the `<` falls through to
+ * whatever the system has, and the slack is what keeps the phrase inside its
+ * bar when it does.
+ */
+export const CARD_COMMENT_EM = 12.05;
+
+/**
+ * THE VERTICAL DASHED CARET IN THE COMMENT BAR (the owner's 2026-09-21 "by
+ * default have a vertical dashed line like in the login bar that is the same
+ * height as the cloud star").
+ *
+ * It is the login box's own mark — one window onto `blackbox.webp`, the
+ * hand-drawn sprite, which is the same rule the splash's rows open with. Two
+ * things make it simpler here than there:
+ *
+ *   IT IS EXACTLY ONE TILE, SCALED. The login row needs 5.66 tiles for its
+ *   58px span and so uses six squeezed 5.6%; this caret is one drawn tile's
+ *   worth of line, so it is scaled uniformly and the dashes keep the
+ *   proportion they were drawn with — no squeeze, no stretch. That is what
+ *   fixes the width: the mark is 0.0140 of the sprite wide and 0.072 tall, so
+ *   a caret of height H is H x 0.19444 across, and its three dashes read.
+ *
+ *   IT IS A MASK, NOT AN IMAGE. The sprite is baked with RGB zeroed and every
+ *   thing in alpha, so a masked block of colour reproduces it pixel for pixel
+ *   in any colour — which is what lets the same mark be black at rest and
+ *   white under the pointer, one property changing. The login row's own ☁ and
+ *   the search bar's are built this way; this is the first time the dashed
+ *   rule is.
+ */
+const RULE = SPLASH_GEOM.parts.email;
+export const CARD_CARET = {
+  /** the sprite window: the email row's rule, x 43..49 and y 63..94 of 430 */
+  x0: RULE.x0,
+  y0: RULE.y0,
+  w: RULE.ruleX1 - RULE.x0,
+  h: RULE.dY0 - RULE.y0,
+  /** a caret H tall is this much across, which is the mark's drawn shape */
+  aspect: (RULE.ruleX1 - RULE.x0) / (RULE.dY0 - RULE.y0),
+  /** the sprite, versioned — a rebuild rewrites the file in place */
+  src: splashAsset('blackbox.webp'),
+  /**
+   * HOW TALL: the cloud star's own height. The shut rosette spans 50.86 of
+   * the 100-unit view (measured off the rendered button with getBBox), and
+   * the view is drawn into the clouds box less its rule — so the caret is
+   * that share of the same inner height and the two marks stand equal.
+   */
+  ofStar: 0.5086,
+  /**
+   * THE FACE'S WHOLE BAND, tallest ascender over deepest descender, taken
+   * from the ink table rather than named: b rises 828 and y drops 234, so
+   * 1.062 em. The typed run is set so that this band is the caret's height,
+   * which is "make the typed text the same height as the line".
+   *
+   * IT IS NOT THE LOGIN ROW'S 0.859. That is I over P — an all-caps band,
+   * right there because the login box sets everything in capitals, and two
+   * fifths too short here where a reader can type a b or a y. Sized by the
+   * band rather than by the word, the line does not jump between a comment
+   * with a descender and one without.
+   */
+  band: (Math.max(...Object.values(INK.asc)) + Math.max(...Object.values(INK.desc))) / INK.em,
+} as const;
+
+/**
+ * WHAT THE AMOUNT BOX SAYS (the owner's 2026-09-21: "take the number tagged
+ * with the pack and multiply by 1 if P was selected and 10 if C was selected
+ * … dont display the letter just multiply").
+ *
+ * A carton is ten packs, so this is the count in packs. `amount` is held to
+ * 1..9 and `unit` to C or P by the database's own CHECK, and the two are
+ * nullable only together — so the answer is one of 1..9, or 10..90 by tens,
+ * or nothing at all for a pack that was bookmarked and never counted.
+ *
+ * THE DISPLAY IS ONLY LOSSLESS WHILE `amount` STOPS AT 9. Ten packs would
+ * read as 10 and so would one carton; the wheels offer 1-9, so the collision
+ * cannot happen today. Widen that range and this becomes lossy. The unit is
+ * still named in the accessible label, where there is room for it.
+ */
+export function cardAmount(amount: number | null, unit: PackUnit | null): number | null {
+  if (!amount || !unit) return null;
+  return amount * (unit === 'C' ? 10 : 1);
+}
+
+/**
+ * THE WHEELS, OPENING OUT OF THE AMOUNT BOX (the owner's 2026-09-21: "If the
+ * user hovers over the outline have the same + button selector menu appear
+ * coming from the top left corner of the outline and going down and to the
+ * right. Make it 50% opacity and the same width as the outline around the cig
+ * image").
+ *
+ * That is `CigQuantity` unchanged — hover at 50%, press for solid, and a
+ * `clip-path` that opens from the element's own top-left rightward and
+ * downward. All this has to supply is the frame, and the frame's origin is
+ * (0, 0) because the amount box's own corner is the offset parent's corner
+ * and, since the rows now span the outline, that corner IS the outline's.
+ *
+ * THE MENU'S HEIGHT IS NOT THE BOX'S, and that is the one judgement here. The
+ * box is 18/137 of the pack — 18px on a phone — and three wheel slots inside
+ * it would be a 4px pitch and 3px type, far under the 9px this site knows a
+ * line needs. So the SLOT is sized first, off the pack, with a floor; the
+ * menu is three of them and its rule. The box gives the menu its corner and
+ * the pack outline gives it its width; neither gives it its height.
+ */
+export function cardQuantityFrame(
+  outlineW: number,
+  box: { w: number; h: number },
+  packH: number,
+) {
+  const stroke = CARD.rule;
+  /** one wheel slot: a ninth of the pack, never under 14 */
+  const pitch = Math.max(14, Math.round(packH * 0.11));
+  return {
+    // the trigger lies exactly over the amount box, so the box is the button
+    plus: { left: 0, top: 0, width: box.w, height: box.h },
+    menu: { left: 0, top: 0, width: outlineW, height: pitch * 3 + stroke * 2 },
+    stroke,
+    pitch,
+    // the ratio the old shelf's wheels used, kept so the two read alike
+    fontSize: Math.round(pitch * 0.78),
+  };
+}
 
 /**
  * One pack on the shelf: the pack itself, and how much of it the reader has

@@ -20,19 +20,25 @@
  *
  *   1. Each path is rasterised on its own at 8x and reduced to area, centroid
  *      and a mask.
- *   2. The five are paired against the five by trying ALL 120 permutations and
+ *   2. For each pair the rotation is found by sweeping the angle and scoring
+ *      the overlap, coarse then fine. Second moments would give it in closed
+ *      form up to a 180 degree ambiguity; the sweep has no ambiguity to
+ *      resolve and is a second of work. THE SWEEP ANSWERS BACKWARDS and
+ *      `turn()` inverts it — see the note there, which is a shipped bug.
+ *   3. The five are paired against the five by trying ALL 120 permutations and
  *      keeping the one with the best total overlap. A greedy match on bounding
  *      boxes gets four of the five right and swaps the two that happen to sit
  *      at similar angles — which is exactly the sort of thing that looks fine
  *      in a still and crosses over in motion.
- *   3. For each pair the rotation is found by sweeping the angle and scoring
- *      the overlap, coarse then fine. Second moments would give it in closed
- *      form up to a 180 degree ambiguity; the sweep has no ambiguity to
- *      resolve and is a second of work.
- *   4. THE RESULT IS PROVED BY DRAWING IT. The shut path is transformed by the
- *      answer and compared with the open path it should land on; the build
- *      fails under 95% intersection-over-union. A registration that is quietly
- *      a few degrees out would show as a cloud arriving crooked.
+ *   4. THE RESULT IS PROVED BY DRAWING IT, AND BOTH 2 AND 3 ARE SCORED ON THAT
+ *      DRAWING. The shut path is put through the transform string the
+ *      component itself writes, rasterised into the finished frame, and
+ *      compared with the open drawing in that same frame; the build fails
+ *      under 95%. This is the only measure that can see a turn reported in
+ *      the wrong sense, because it is the only one that asks the question the
+ *      page asks. Scoring against `iou()` instead — which is what the header
+ *      used to claim and the code did not do — passed a whole-pose overlap of
+ *      31% at 96.9%.
  *
  * Emits lib/shelfClouds.ts: the five paths about their own centres, each with
  * where it sits shut and where it sits open, in one square viewBox so the page
@@ -76,6 +82,45 @@ async function mask(d, w, h) {
   if (!n) fail('a path rasterised to nothing');
   return { a, W, H, n, cx: sx / n, cy: sy / n };
 }
+
+/**
+ * One path drawn THROUGH A TRANSFORM into the finished square frame — the
+ * frame the page draws in, at the same K px per unit as everything else.
+ *
+ * This is what makes the proof below a proof. `iou()` compares two marks by
+ * pulling one back through a rotation of its own sampling coordinates, which
+ * cannot tell a turn from its inverse; this renders the transform STRING the
+ * component writes and looks at the pixels, so a sign error has nowhere to
+ * hide. Pass `xf` exactly as ShelfClouds.tsx composes it.
+ */
+async function placed(d, xf, view) {
+  const n = Math.round(view * K);
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${n}" height="${n}" `
+    + `viewBox="0 0 ${view} ${view}"><g transform="${xf}">`
+    + `<path d="${d}" fill="#000"/></g></svg>`;
+  const r = await sharp(Buffer.from(svg)).flatten({ background: '#ffffff' }).greyscale()
+    .raw().toBuffer({ resolveWithObject: true });
+  const W = r.info.width, H = r.info.height, C = r.info.channels;
+  const a = new Uint8Array(W * H);
+  let on = 0;
+  for (let i = 0; i < W * H; i += 1) if (r.data[i * C] < 128) { a[i] = 1; on += 1; }
+  return { a, W, H, n: on };
+}
+
+/** Two masks already in the same frame, compared where they lie. */
+function overlap(A, B) {
+  let both = 0, only = 0;
+  for (let i = 0; i < A.a.length; i += 1) {
+    if (A.a[i] && B.a[i]) both += 1;
+    else if (A.a[i] || B.a[i]) only += 1;
+  }
+  return both / Math.max(1, both + only);
+}
+
+/** The transform the page writes, in one place so the proof cannot drift. */
+const xform = (place, ox, oy, view) =>
+  `translate(${view / 2 + place.x} ${view / 2 + place.y}) `
+  + `rotate(${place.a}) translate(${-ox} ${-oy})`;
 
 /** The overlap of B on A when B is turned by `ang` about its own centroid. */
 function iou(A, B, ang) {
@@ -129,28 +174,6 @@ if (spread > 2) fail(`the ten clouds are not one mark: areas span ${spread.toFix
 console.log(`ten clouds, area ${(areas[0]).toFixed(1)} each (spread ${spread.toFixed(2)})`);
 
 /*
- * ALL 120 PAIRINGS, and the best total overlap wins. Registering 25 pairs is
- * the expensive part, so it is done once into a table and the permutations
- * only read it.
- */
-const table = [];
-for (let i = 0; i < 5; i += 1) {
-  table.push([]);
-  for (let j = 0; j < 5; j += 1) table[i].push(register(S[i], O[j]));
-}
-const perms = [];
-(function walk(left, acc) {
-  if (!left.length) { perms.push(acc.slice()); return; }
-  for (const j of left) walk(left.filter((k) => k !== j), [...acc, j]);
-}([0, 1, 2, 3, 4], []));
-let pick = null;
-for (const p of perms) {
-  const total = p.reduce((sum, j, i) => sum + table[i][j].iou, 0);
-  if (!pick || total > pick.total) pick = { p, total };
-}
-console.log(`best pairing ${pick.p.join('')} — mean overlap ${(pick.total / 5 * 100).toFixed(2)}%`);
-
-/*
  * One square frame for both poses, so the page draws one viewBox and the
  * clouds travel inside it. The open drawing is the larger, and both are
  * centred on their own middle.
@@ -178,10 +201,90 @@ console.log(
   + `open on ${openMid.x.toFixed(2)},${openMid.y.toFixed(2)} `
   + `(artboard ${(open.w / 2).toFixed(1)},${(open.h / 2).toFixed(1)})`,
 );
+
+/*
+ * THE TURN IS FOUND BY THE SWEEP AND THEN INVERTED, AND THAT IS NOT A DETAIL.
+ *
+ * `iou(A, B, ang)` scores by pulling A's pixel grid back through a rotation of
+ * the SAMPLING coordinates, so a high score means `B(p) = A(R(ang)·p)` — the
+ * angle that carries the OPEN mark onto the SHUT one. The page needs the other
+ * direction. Emitting `+ang` shipped every cloud misoriented at t=1 (whole-pose
+ * overlap with the drawing: 31%), and the 95% gate passed it, because the gate
+ * was the same arithmetic run a second time. `turn()` is the one place the
+ * inversion happens.
+ */
+const turn = (rad) => {
+  // THE SHORT WAY ROUND. The sweep answers in 0..360, so a cloud that settles
+  // ten degrees anticlockwise comes back as 349.6 — and a button that turns it
+  // 349.6 degrees is a cloud spinning almost all the way round to arrive where
+  // it nearly already was.
+  const d = (-rad * 180) / Math.PI;
+  return +((((d + 180) % 360) + 360) % 360 - 180).toFixed(2);
+};
+
+/*
+ * WHERE THE FIVE OPEN SLOTS ARE, AND WHAT BELONGS IN EACH. The slots are the
+ * open drawing's own five clouds, each drawn in the finished frame — so this
+ * is the picture the button has to arrive at, rasterised.
+ */
+const target = [];
+for (let j = 0; j < 5; j += 1) {
+  target.push(await placed(
+    open.paths[j],
+    `translate(${VIEW / 2 - openMid.x} ${VIEW / 2 - openMid.y})`,
+    VIEW,
+  ));
+}
+
+/*
+ * ALL 120 PAIRINGS, SCORED ON THE PIXELS THE PAGE WILL DRAW.
+ *
+ * The sweep finds each pair's angle; the pairing is then chosen by rendering
+ * the shut path into the open slot through the component's own transform and
+ * measuring the overlap there. It used to be chosen on `iou()`'s own numbers,
+ * and those span 96.5% to 97.0% across all 25 pairs — half a point, which is
+ * rasterisation noise, so the argmax over 120 permutations was picking at
+ * random. Rendered, the same table spans 88% to 99% and the answer is the one
+ * where every cloud fans straight out: five travels of about 31 units and no
+ * turn past 23 degrees, against two clouds crossing the ring and spinning 73
+ * and 141 degrees under the old pick.
+ */
+const table = [];
+for (let i = 0; i < 5; i += 1) {
+  table.push([]);
+  for (let j = 0; j < 5; j += 1) {
+    const r = register(S[i], O[j]);
+    const place = {
+      x: O[j].cx / K - openMid.x,
+      y: O[j].cy / K - openMid.y,
+      a: turn(r.ang),
+    };
+    const drawn = await placed(
+      shut.paths[i], xform(place, S[i].cx / K, S[i].cy / K, VIEW), VIEW,
+    );
+    table[i].push({ ang: r.ang, a: place.a, iou: overlap(drawn, target[j]) });
+  }
+}
+const perms = [];
+(function walk(left, acc) {
+  if (!left.length) { perms.push(acc.slice()); return; }
+  for (const j of left) walk(left.filter((k) => k !== j), [...acc, j]);
+}([0, 1, 2, 3, 4], []));
+let pick = null;
+for (const p of perms) {
+  const total = p.reduce((sum, j, i) => sum + table[i][j].iou, 0);
+  if (!pick || total > pick.total) pick = { p, total };
+}
+console.log(`best pairing ${pick.p.join('')} — mean overlap ${(pick.total / 5 * 100).toFixed(2)}%`);
+
 const clouds = [];
 for (let i = 0; i < 5; i += 1) {
   const j = pick.p[i];
   const r = table[i][j];
+  // The gate now reads the RENDERED overlap — the shut path put through the
+  // page's own transform against the open drawing, in the page's own frame.
+  // On the sign error above it reads 22.8% to 38.7% and stops the build;
+  // `iou()` read 96.9% for the same data and let it through.
   if (r.iou < MIN_IOU) {
     fail(`cloud ${i} lands on ${j} at only ${(r.iou * 100).toFixed(1)}% overlap: the motion is wrong`);
   }
@@ -195,11 +298,7 @@ for (let i = 0; i < 5; i += 1) {
     open: {
       x: +(O[j].cx / K - openMid.x).toFixed(3),
       y: +(O[j].cy / K - openMid.y).toFixed(3),
-        // THE SHORT WAY ROUND. The sweep answers in 0..360, so a cloud that
-      // settles ten degrees anticlockwise comes back as 349.6 — and a button
-      // that turns it 349.6 degrees is a cloud spinning almost all the way
-      // round to arrive where it nearly already was.
-    a: +(((((r.ang * 180) / Math.PI) + 180) % 360 + 360) % 360 - 180).toFixed(2),
+      a: r.a,
     },
     iou: +(r.iou * 100).toFixed(2),
     /** the shut path, moved so its centroid is the origin */
@@ -208,7 +307,7 @@ for (let i = 0; i < 5; i += 1) {
     oy: +(S[i].cy / K).toFixed(3),
   });
   console.log(
-    `  cloud ${i} → ${j}: turns ${((r.ang * 180) / Math.PI).toFixed(1)}°, `
+    `  cloud ${i} → ${j}: turns ${r.a.toFixed(1)}°, `
     + `travels ${Math.hypot(clouds[i].open.x - clouds[i].shut.x, clouds[i].open.y - clouds[i].shut.y).toFixed(1)}u, `
     + `overlap ${(r.iou * 100).toFixed(2)}%`,
   );

@@ -2798,12 +2798,10 @@ ul, ol { list-style: none; }
   /* the face has one weight, so bold is a stroke — the age gate's trick */
   -webkit-text-stroke: 0.03em #ff0000;
 }
-/* the site's red rule, margin to margin */
-.shelf-divider {
-  margin-top: var(--shelf-gutter);
-  height: 5px;
-  background: #ff0000;
-}
+/* The red rule that used to run under the header came off on 2026-09-21
+   ("Remove the red line underneath the character logo"). It was never in the
+   owner's export — it was the site's own 5px divider, added when this page
+   was first drawn. */
 .shelf-empty {
   margin: var(--shelf-gutter) 0 0;
   font-family: var(--font-display);
@@ -2843,8 +2841,14 @@ ul, ol { list-style: none; }
    the card holds its proportions from a phone to a desktop rather than
    carrying one set of numbers that only look right at 390px. */
 .shelf-card {
+  /* THE PACK DECIDES, AND NOTHING ELSE MAY. A cap here does not do what it
+     looks like it does: the image inside carries `max-width: none` (it has
+     to — it is sized by its height so that every pack stands the same), so
+     capping the card only detaches the rows from the picture. Measured on a
+     390px phone it gave 90.7px rows on a 94.9px outline, which is exactly
+     the thing the rows were just made to line up with. The outline reaches
+     a rule into the 35px gutter instead, which it has room for. */
   width: fit-content;
-  max-width: 100%;
   margin-inline: auto;
   display: flex;
   flex-direction: column;
@@ -2854,10 +2858,21 @@ ul, ol { list-style: none; }
      The drawing’s 3-of-137 is kept and the rule is added to it. */
   gap: calc(var(--card-drop) + var(--pack-rule));
 }
+/* THE ROWS SPAN THE OUTLINE, NOT THE PICTURE (the owner's 2026-09-21 "make
+   the rows above and under each pack scale to fit within the edges of the
+   outline around the pack rather than the image itself").
+
+   The card is sized by the pack IMAGE — the half-black rule is an absolutely
+   placed ring and contributes no width — so a row told to fill the card ends
+   a rule short of the outline at each end. Each row is pulled out by exactly
+   that rule instead, which lands its ends on the outline's OUTER edges. A
+   negative margin rather than a wider card, so the pack is still the one
+   thing deciding how wide a card is. */
 .shelf-card-row {
   display: flex;
   gap: var(--card-gap);
   height: var(--card-box-h);
+  margin-inline: calc(-1 * var(--pack-rule));
 }
 /* the wide box and the narrow one, in the drawing's own 19:86 */
 .shelf-card-wide { position: relative; flex: 1 1 0; min-width: 0; display: flex; }
@@ -2882,18 +2897,48 @@ ul, ol { list-style: none; }
   line-height: 1;
   overflow: hidden;
 }
-.shelf-card-amount { font-size: calc(var(--card-box-h) * 0.62); }
+.shelf-card-amount { font-size: calc(var(--card-box-h) * var(--card-amount-em)); }
 .shelf-card-mark svg { display: block; height: 62%; width: auto; }
+/* A CARD WHOSE PACK HAS JUST BEEN TAKEN OFF stays on screen, and its
+   bookmark says so — the mark goes faint, and pressing it puts the pack
+   back. See ShelfGrid: the shelf in the database is only what is saved, and
+   a reload draws exactly that; this is a second direction for the button to
+   be pressed in, which the owner asked for and a disappearing card cannot
+   give. */
+.shelf-card[data-off] .shelf-card-mark svg { opacity: 0.25; }
+.shelf-card[data-off] .shelf-card-pack { opacity: 0.45; }
+/* ONE HOVER RULE FOR THE WHOLE PAGE (the owner's 2026-09-21: "whenever the
+   user hovers over a button on this specific page make the outline or
+   rectangle fill either red if its an outline or black if its solid. if its a
+   outline have the element inside turn black if its solid have the element
+   inside turn white").
+
+   So there are exactly two kinds of control here and each has one answer:
+   an OUTLINED box fills red and its mark goes black; a SOLID box fills black
+   and its mark goes white. The clouds used to keep a white mark on the filled
+   box — that exception is gone, because black on red is the rule now and it
+   reads. */
 .shelf-card-box:hover,
 .shelf-card-box:focus-visible {
   background: #ff0000;
-  color: #ffffff;
+  color: #000000;
   outline: none;
 }
-/* the clouds keep their own ground when the box fills: they are the mark, and
-   a red mark on red is nothing at all */
-.shelf-clouds:hover,
-.shelf-clouds:focus-visible { color: #ffffff; }
+/* THE AMOUNT BOX IS A SPAN, AND THE POINTER IS NEVER ON IT. Its control is
+   the quantity menu's own invisible trigger, laid exactly over it — one
+   button, one label, one focus ring, and `CigQuantity` left alone for the
+   235 cigarette pages that also use it. So the fill is keyed off the wrapper
+   the two share. */
+.shelf-card-wide:hover > .shelf-card-amount,
+.shelf-card-wide:focus-within > .shelf-card-amount {
+  background: #ff0000;
+  color: #000000;
+}
+/* the solid one: it fills black and its marks reverse to white — on focus
+   too, so a reader arriving by keyboard gets the same bar as one arriving by
+   pointer */
+.shelf-card-comment:hover,
+.shelf-card-comment:focus-within { background: #000000; }
 .shelf-clouds svg { display: block; width: 100%; height: 100%; }
 
 /* the solid red bar, with the drawing's own words. It is inert: the pack
@@ -2904,26 +2949,141 @@ ul, ol { list-style: none; }
    two rows ran well past the pack on every card. An absolutely placed child
    contributes nothing, so the pack is left as the only thing that can set
    the width — which is what the drawing says it is. */
-.shelf-card-comment-slot { position: relative; flex: 1 1 0; min-width: 0; }
+.shelf-card-comment-slot {
+  position: relative;
+  flex: 1 1 0;
+  min-width: 0;
+  /* THE PHRASE IS SET TO THE BAR, and this is what lets it be: `cqw` is the
+     slot's own width, so the size below is worked out from the room there
+     actually is rather than from a fraction of the box's height, which is
+     what left it reading "Leave a comme". */
+  container-type: inline-size;
+}
 .shelf-card-comment {
   position: absolute;
   inset: 0;
   margin: 0;
-  display: flex;
-  align-items: center;
-  padding-inline: calc(var(--card-box-h) * 0.22);
   background: #ff0000;
+  overflow: hidden;
+  /* the bar fills black under the pointer, like every solid control here */
+  transition: background-color 120ms ease-out;
+}
+/* THE FIELD IS THE CONTROL AND IT IS THE WHOLE BAR. It carries no visible
+   text of its own: a real input cannot be given a hand-drawn caret, so what
+   is seen is drawn beside it and this only takes the keystrokes. Its own
+   caret is turned off for the same reason the search bar turns its off —
+   there is no sense in two marks saying the same thing. */
+.shelf-card-comment-field {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: transparent;
+  caret-color: transparent;
+  font: inherit;
+  outline: none;
+}
+.shelf-card-comment-field:focus-visible { outline: none; }
+.shelf-card-comment:focus-within { outline: 2px solid #ffffff; outline-offset: -2px; }
+
+.shelf-card-comment-say,
+.shelf-card-comment-run {
+  position: absolute;
+  top: 50%;
+  left: var(--card-comment-pad);
+  transform: translateY(-50%);
   color: #ffffff;
   font-family: var(--font-typed);
   font-weight: 700;
   font-synthesis: none;
   line-height: 1;
-  /* 0.36 of the box is 6.5px on a phone, under the 9 this site knows a line
-     needs to render solid, so the floor wins there and the drawing's ratio
-     takes over on anything larger */
-  font-size: max(9px, calc(var(--card-box-h) * 0.36));
   white-space: nowrap;
-  overflow: hidden;
+  pointer-events: none;
+}
+/* THE DRAWING'S OWN WORDS, ONLY UNDER THE POINTER. Sized to the bar: the
+   phrase is 11.92 ems in this face and the bar has to hold it between its
+   margins, so the size is what is left over divided by that. See
+   CARD_COMMENT_EM in lib/shelfGrid.ts for why the drawing's own proportion
+   cannot be used and why there is a per cent of slack in the divisor.
+
+   IT STANDS AFTER THE CARET, not on it. The caret takes the place the L used
+   to have, so a phrase starting at the same margin is printed straight
+   through it — and the caret is meant to be seen on hover, since that is
+   when it goes white. Set one margin past the mark, the bar reads as an
+   empty field does: the insertion point, then what to type. The room left is
+   the bar less three margins and the mark. */
+.shelf-card-comment-say {
+  left: calc(var(--card-comment-pad) * 2 + var(--card-caret-w));
+  font-size: calc(
+    (100cqw - 3 * var(--card-comment-pad) - var(--card-caret-w)) / var(--card-comment-em)
+  );
+  opacity: 0;
+  transition: opacity 120ms ease-out;
+}
+.shelf-card-comment:hover .shelf-card-comment-say { opacity: 1; }
+/* it is a placeholder, so it steps aside the moment there is anything to say
+   instead — and while the field has the caret, which is when it would be
+   about to */
+.shelf-card-comment[data-typed] .shelf-card-comment-say,
+.shelf-card-comment[data-open] .shelf-card-comment-say { opacity: 0; }
+
+/* what has been typed, its whole band the caret's height */
+.shelf-card-comment-run { font-size: var(--card-typed); }
+
+/* THE CARET: the login box's own dashed rule, one drawn tile of it, scaled.
+   A MASK over a block of colour rather than an image, because the mark has
+   to be black at rest and white under the pointer and a background-image
+   cannot change colour — blackbox.webp is baked with RGB zeroed and
+   everything in alpha, so a mask reproduces it exactly in any colour. */
+.shelf-card-comment-caret {
+  position: absolute;
+  top: 50%;
+  left: var(--card-comment-pad);
+  width: var(--card-caret-w);
+  height: var(--card-caret-h);
+  transform: translateY(-50%);
+  pointer-events: none;
+  opacity: 0.5;
+  transition: opacity 120ms ease-out, left 90ms linear;
+}
+/* one margin past the run once there is one, and never off the right end */
+.shelf-card-comment[data-typed] .shelf-card-comment-caret {
+  left: min(
+    calc(var(--card-comment-pad) * 2 + var(--run)),
+    calc(100% - var(--card-comment-pad) - var(--card-caret-w))
+  );
+}
+.shelf-card-comment-caret > i {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: #010101;
+  -webkit-mask-image: var(--card-caret-src);
+          mask-image: var(--card-caret-src);
+  -webkit-mask-repeat: no-repeat;
+          mask-repeat: no-repeat;
+  -webkit-mask-size: var(--card-caret-d) var(--card-caret-d);
+          mask-size: var(--card-caret-d) var(--card-caret-d);
+  -webkit-mask-position: var(--card-caret-x) var(--card-caret-y);
+          mask-position: var(--card-caret-x) var(--card-caret-y);
+  transition: background-color 120ms ease-out;
+}
+.shelf-card-comment:hover .shelf-card-comment-caret > i,
+.shelf-card-comment[data-open] .shelf-card-comment-caret > i { background: #ffffff; }
+/* pressed: full strength and blinking. `cig-search-blink` is the site's one
+   caret keyframe — steps(1), a hard on-off rather than a pulse — and the
+   mark is keyed on the text in the markup so every keystroke restarts it
+   solid, which is what a real caret does. */
+.shelf-card-comment[data-open] .shelf-card-comment-caret { opacity: 1; }
+.shelf-card-comment-caret > i[data-blink] {
+  animation: cig-search-blink 1060ms steps(1, end) infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .shelf-card-comment-caret > i[data-blink] { animation: none; }
 }
 
 /* THE PACK, AND THE HALF-BLACK RULE ON ITS EDGE. The drawing puts that rule

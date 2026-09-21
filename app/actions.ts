@@ -11,8 +11,9 @@ import { safeNext, signInGate, siteOrigin } from '@/lib/siteUrl';
 import { pageFor } from '@/lib/cigPages';
 import { CIG_PACKS } from '@/lib/cigRow';
 import {
-  accountState, createShare, deleteReview, getCigaretteBySlug, removePack, revokeShare, savePack,
-  savedPackIds, setFavoriteNote, setPackQuantity, toggleFavorite, upsertReview,
+  accountState, createShare, deleteReview, getCigaretteBySlug, packIsSaved, removePack,
+  revokeShare, savePack, savedPackIds, setFavoriteNote, setPackQuantity, toggleFavorite,
+  upsertReview,
 } from '@/lib/db';
 
 export type FormState = { error?: string; ok?: string } | null;
@@ -318,6 +319,8 @@ export async function savePackAction(formData: FormData) {
 
   await savePack(user.id, page.id);
   revalidatePath(`/packs/${id}`);
+  // the shelf draws this row, so it goes stale the moment one is added
+  revalidatePath('/shelf');
 }
 
 /**
@@ -333,6 +336,38 @@ export async function removePackAction(formData: FormData) {
   if (!user) redirect(signInGate('/shelf'));
 
   await removePack(user.id, page.id);
+  revalidatePath('/shelf');
+  revalidatePath(`/packs/${id}`);
+}
+
+/**
+ * THE SHELF'S BOOKMARK PUTS A PACK ON OR TAKES IT OFF (the owner's 2026-09-21
+ * "The bookmark button should add or remove a pack from the users
+ * favorites/saved").
+ *
+ * The cigarette page's bookmark is still add-only and stays that way — there
+ * the owner asked for red to be permanent, and once a pack is saved that
+ * control stops being a control. The two rules are complementary: that page
+ * is where a pack joins, this is where it can leave and come back.
+ *
+ * IT READS THE STATE SERVER-SIDE RATHER THAN BEING TOLD. A server action is a
+ * public endpoint and the page that calls it can be stale, so a caller saying
+ * "this one is saved, remove it" is a caller that can be wrong. Asking the
+ * database costs one more round trip and cannot desync. Both halves are safe
+ * to lose a race on: the insert is `ON CONFLICT DO NOTHING` and the delete is
+ * unconditional.
+ */
+export async function togglePackAction(formData: FormData) {
+  const id = String(formData.get('pack') ?? '');
+  const page = pageFor(id);
+  if (!page) return;
+
+  const user = await currentUser();
+  if (!user) redirect(signInGate('/shelf'));
+
+  if (await packIsSaved(user.id, page.id)) await removePack(user.id, page.id);
+  else await savePack(user.id, page.id);
+
   revalidatePath('/shelf');
   revalidatePath(`/packs/${id}`);
 }

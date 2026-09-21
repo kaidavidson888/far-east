@@ -1,13 +1,11 @@
 import Link from 'next/link';
-import { removePackAction } from '@/app/actions';
 import { BOOKMARK } from '@/lib/cigPages';
 import { HOME } from '@/lib/innerPage';
 import {
-  CARD, CARD_COMMENT, GRID_GUTTER, GRID_HEADER, GRID_LOGO, GRID_MARGIN,
+  CARD, CARD_CARET, CARD_COMMENT_EM, GRID_GUTTER, GRID_HEADER, GRID_LOGO, GRID_MARGIN,
   PACK_RULE, PACK_RULE_ALPHA, type ShelfEntry,
 } from '@/lib/shelfGrid';
-import { ShelfClouds } from './ShelfClouds';
-import { ShelfCardQuantity } from './ShelfCardQuantity';
+import { ShelfGrid } from './ShelfGrid';
 
 /**
  * THE SHELF, REDRAWN AS A GRID (the owner's 2026-09-20 redraw): the 遠東 logo
@@ -19,7 +17,11 @@ import { ShelfCardQuantity } from './ShelfCardQuantity';
  * that as a model for all the others"). Two outlined boxes over the pack — the
  * amount and the bookmark — and two under it — the clouds and a solid red
  * comment bar. The narrow box swaps sides between the rows, bookmark top right
- * and clouds bottom left, and each row spans exactly the pack's width.
+ * and clouds bottom left.
+ *
+ * THE ROWS SPAN THE OUTLINE, NOT THE PICTURE (2026-09-21). The half-black rule
+ * is drawn outside the image, so each row is pulled out by exactly that rule
+ * and its ends land on the outline's outer edges.
  *
  * WHAT WENT, AND WHY. The old shelf drew one pack to a line with its boxes,
  * panel and clouds beside it, and a fixed-point solver sized the line so it
@@ -28,22 +30,9 @@ import { ShelfCardQuantity } from './ShelfCardQuantity';
  * the numbers, each one saying which measurement of the drawing it came from
  * and where it was evened up.
  *
- * IT IS LAID OUT IN CSS, NOT MEASURED IN JAVASCRIPT. The old page had to
- * measure, because a row's width depended on the widest pack the reader had
- * saved. A grid of equal tracks is equal at any size, so the column count is a
- * media query and every distance on a card is a fraction of the pack's own
- * height — which means the page arrives laid out rather than re-laying itself
- * once the client has measured.
- *
- * THE AMOUNT BOX IS THE QUANTITY CONTROL, because the drawing has no plus on
- * it and printing the amount alone would take away the only way to change it;
- * pressing it opens the same wheels the cigarette page's plus opens. The
- * bookmark is the other half of that page's: there it only ever adds, so here
- * it takes the pack off the shelf. The comment bar is drawn and inert — the
- * pack shelf has nowhere to keep a note, which was true of the old panel too.
- *
  * THE LOGO GOES HOME. Every page but the landing page and the splash sends it
- * to /landing.
+ * to /landing. The red rule that used to run beneath it came off on
+ * 2026-09-21 — it was the site's own divider, never in the export.
  */
 
 export function ShelfPage({ entries, worth }: { entries: ShelfEntry[]; worth?: string }) {
@@ -57,8 +46,25 @@ export function ShelfPage({ entries, worth }: { entries: ShelfEntry[]; worth?: s
         '--card-drop': `calc(var(--pack-h) * ${CARD.drop})`,
         '--card-gap': `calc(var(--card-box-h) * ${CARD.gap})`,
         '--card-rule': `${CARD.rule}px`,
+        '--card-amount-em': CARD.amountEm,
         '--pack-rule': `${PACK_RULE}px`,
         '--pack-rule-alpha': PACK_RULE_ALPHA,
+        // the comment bar: the margin the phrase already had, and the size
+        // that makes the phrase fit between two of them (see CARD_COMMENT_EM)
+        '--card-comment-pad': `calc(var(--card-box-h) * ${CARD.commentPad})`,
+        '--card-comment-em': CARD_COMMENT_EM,
+        // THE HAND-DRAWN CARET, as one window onto the login box's own sprite.
+        // `--caret-d` is how wide the whole 430px sprite is drawn to make the
+        // window come out at the height wanted; every other number is that
+        // scale times the window's own fraction.
+        '--card-caret-h': `calc((var(--card-box-h) - 2 * var(--card-rule)) * ${CARD_CARET.ofStar})`,
+        '--card-caret-d': `calc(var(--card-caret-h) / ${CARD_CARET.h})`,
+        '--card-caret-w': `calc(var(--card-caret-h) * ${CARD_CARET.aspect})`,
+        '--card-caret-x': `calc(var(--card-caret-d) * ${-CARD_CARET.x0})`,
+        '--card-caret-y': `calc(var(--card-caret-d) * ${-CARD_CARET.y0})`,
+        '--card-caret-src': `url(${CARD_CARET.src})`,
+        // the typed run, set so its whole band is the caret's height
+        '--card-typed': `calc(var(--card-caret-h) / ${CARD_CARET.band})`,
       } as React.CSSProperties}
     >
       <header className="shelf-head" style={{ paddingTop: GRID_HEADER.top }}>
@@ -75,59 +81,16 @@ export function ShelfPage({ entries, worth }: { entries: ShelfEntry[]; worth?: s
         <p className="shelf-worth" style={{ fontSize: GRID_HEADER.priceH }}>{worth ?? ''}</p>
       </header>
 
-      <div className="shelf-divider" role="presentation" />
-
       {entries.length === 0 ? (
         <p className="shelf-empty">
           Nothing on the shelf yet. The bookmark on a cigarette&rsquo;s page puts it here.
         </p>
       ) : (
-        <ul className="shelf-grid" style={{ marginTop: GRID_HEADER.drop }}>
-          {entries.map(({ pack, amount, unit }) => (
-            <li className="shelf-card" key={pack.id}>
-              {/* over the pack: the amount, then the bookmark */}
-              <div className="shelf-card-row">
-                <ShelfCardQuantity id={pack.id} name={pack.name} amount={amount} unit={unit} />
-                <form action={removePackAction} className="shelf-card-narrow">
-                  <input type="hidden" name="id" value={pack.id} />
-                  <button
-                    type="submit"
-                    className="shelf-card-box shelf-card-mark"
-                    aria-label={`Take ${pack.name} off the shelf`}
-                  >
-                    {/* BOOKMARK.d is already moved to its own origin — the
-                        `mark` box is where it sits on a cigarette's page, and
-                        using that as the viewBox put the mark 160 units off
-                        to the left of it and the box came out empty. */}
-                    <svg
-                      viewBox={`0 0 ${BOOKMARK.mark.width} ${BOOKMARK.mark.height}`}
-                      aria-hidden="true"
-                      focusable="false"
-                      preserveAspectRatio="xMidYMid meet"
-                    >
-                      <path d={BOOKMARK.d} fill="currentColor" />
-                    </svg>
-                  </button>
-                </form>
-              </div>
-
-              <Link href={`/packs/${pack.id}`} className="shelf-card-pack">
-                <img src={`/cigs/${pack.id}.svg`} alt={pack.name} draggable={false} />
-                <span className="sr-only">{pack.name}</span>
-              </Link>
-
-              {/* under it: the clouds, then the comment bar */}
-              <div className="shelf-card-row">
-                <div className="shelf-card-narrow">
-                  <ShelfClouds label={`Open the clouds on ${pack.name}`} />
-                </div>
-                <div className="shelf-card-comment-slot">
-                  <p className="shelf-card-comment">{CARD_COMMENT}</p>
-                </div>
-              </div>
-            </li>
-          ))}
-        </ul>
+        <ShelfGrid
+          entries={entries}
+          bookmark={BOOKMARK}
+          style={{ marginTop: GRID_HEADER.drop }}
+        />
       )}
     </div>
   );
