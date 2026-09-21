@@ -18,10 +18,11 @@ import { ShelfClouds } from './ShelfClouds';
  * to the top edge of the grouping of the other 3 buttons and the bottom edge
  * of the pack outline."
  *
- * So there is ONE margin and it does two jobs: the air that centres a button
- * in the 35px gap under the pack is also the distance the number square
- * stands off the pack's right edge. At the mountain button's 23.1px that is
- * 5.95px. `wheelClear` in lib/shelfWheel.ts.
+ * So there is ONE margin and it does two jobs: the three stand a margin under
+ * the pack and a margin above the next, which is what keeps them equidistant,
+ * and the number square stands that same margin off the pack's right edge.
+ * It is `WHEEL_MARGIN` — the drawing's own 35 — and the PACK is what gives to
+ * make room for it, since the pitch is fixed at half the screen.
  *
  * ONE ROW OF THREE. The landing page's three are an inverted triangle — the
  * glass and the dots on an upper line with the plus centred below, about

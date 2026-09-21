@@ -29,18 +29,40 @@ import { GRID_GUTTER, PACK_RULE } from './shelfGrid';
  * screen. Measured at 1920x947, 1440x820, 1280x720 and 390x844: 50.0% every
  * time.
  *
- * G is `GRID_GUTTER`, "the current distance between each pack in a row" —
- * the same 35 the grid put between its tracks — and r is the pack's rule,
- * which is drawn outside the image so it counts toward the gap.
+ * r is the pack's rule, drawn outside the image so it counts toward the gap.
+ *
+ * G STARTED AS THE GRID'S OWN 35 — "the current distance between each pack in
+ * a row" — and is no longer, because the three controls stand in that gap:
+ * see WHEEL_MARGIN just below. The pitch is untouched by that change, being
+ * half the screen whatever G is; what gives is the pack.
  */
 
-/** The gap between one pack and the next, top to bottom. */
-export const WHEEL_GAP = GRID_GUTTER;
+/**
+ * ONE MARGIN, EVERYWHERE (the owner's 2026-09-21 "scale the packs down to
+ * match the original margin constraints between them while keeping the
+ * buttons equidistant").
+ *
+ * The three controls stand in the gap under the pack, so the gap is not just
+ * pack-to-pack any more: it is margin, buttons, margin. Held at the drawing's
+ * own 35 the buttons had 5.95px of air either side, which is not a margin —
+ * it is what was left over. So the MARGIN is the constant now and the GAP
+ * falls out of it, and the packs take the difference, because the pitch is
+ * fixed at half the screen by the half-revealed rule and cannot give.
+ *
+ * The buttons stay equidistant by construction: one margin above them, one
+ * below, so they are still centred between one pack and the next.
+ */
+export const WHEEL_MARGIN = GRID_GUTTER;
+
+/** Pack to pack: a margin, the row of controls, a margin. */
+export function wheelGap(button: number): number {
+  return WHEEL_MARGIN * 2 + button;
+}
 
 /** The image's height, and the pitch, for a viewport of this height. */
-export function wheelScale(viewportH: number) {
+export function wheelScale(viewportH: number, button: number) {
   const pitch = viewportH / 2;
-  const image = Math.max(40, pitch - 2 * PACK_RULE - WHEEL_GAP);
+  const image = Math.max(40, pitch - 2 * PACK_RULE - wheelGap(button));
   return { pitch, image, outline: image + 2 * PACK_RULE };
 }
 
@@ -100,7 +122,7 @@ export const WHEEL_MOTION = {
 } as const;
 
 /**
- * WHERE THE CONTROLS STAND, worked out from the wheel AT REST.
+ * WHERE THE CONTROLS STAND.
  *
  * The owner: the three buttons "equidistant vertically between the selected
  * pack and the pack half appeared on the bottom", and the number square "on
@@ -108,18 +130,13 @@ export const WHEEL_MOTION = {
  * and the pack outline to the top edge of the grouping of the other 3 buttons
  * and the bottom edge of the pack outline".
  *
- * So one number does both: the clearance that centres a button in the gap.
- * The three sit in the gap under the pack with that much air above and below,
- * and the number square stands the same distance off the pack's right edge.
+ * ONE NUMBER DOES BOTH, and it is `WHEEL_MARGIN`: the three stand one margin
+ * under the pack and one margin above the next, which is what keeps them
+ * equidistant, and the number square stands that same margin off the pack's
+ * right edge.
  *
  * ONE ROW OF THREE, NOT THE LANDING PAGE'S TRIANGLE. Its glass and dots share
- * an upper line with the plus centred below, about 100px from top to bottom —
- * and two lines of mountain-button-sized squares cannot fit a 35px gap. The
- * owner chose the row, which keeps the button size and the equidistant rule
- * exactly.
+ * an upper line with the plus centred below, about 100px from top to bottom,
+ * and two lines of these squares would not fit. The owner chose the row.
  */
-export function wheelClear(button: number): number {
-  return (WHEEL_GAP - button) / 2;
-}
-
 export type WheelPack = CigPack;

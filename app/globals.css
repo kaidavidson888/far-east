@@ -2883,7 +2883,7 @@ ul, ol { list-style: none; }
    above and below. */
 .shelf-wheel-row {
   position: absolute;
-  top: calc(100% + var(--pack-rule) + (var(--wheel-gap) - var(--btn)) / 2);
+  top: calc(100% + var(--pack-rule) + var(--wheel-margin));
   left: 50%;
   transform: translateX(-50%);
   display: flex;
@@ -2898,7 +2898,7 @@ ul, ol { list-style: none; }
 .shelf-wheel-amount {
   position: absolute;
   top: 50%;
-  left: calc(100% + var(--pack-rule) + (var(--wheel-gap) - var(--btn)) / 2);
+  left: calc(100% + var(--pack-rule) + var(--wheel-margin));
   transform: translateY(-50%);
   z-index: 3;
 }

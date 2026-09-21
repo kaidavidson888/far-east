@@ -5,7 +5,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { cigPaintMs } from '@/lib/cigRow';
 import { PACK_RULE, type ShelfEntry } from '@/lib/shelfGrid';
 import {
-  WHEEL_GAP, WHEEL_MOTION, wheelCopies, wheelLayout, wheelScale,
+  WHEEL_MARGIN, WHEEL_MOTION, wheelCopies, wheelGap, wheelLayout, wheelScale,
 } from '@/lib/shelfWheel';
 import { ShelfWheelControls } from './ShelfWheelControls';
 
@@ -73,7 +73,7 @@ export function ShelfWheel({ entries, bookmark, button }: Props) {
   const [resting, setResting] = useState(false);
 
   const n = entries.length;
-  const geom = wheelScale(size.h || 800);
+  const geom = wheelScale(size.h || 800, button);
   const PITCH = geom.pitch;
   const copies = wheelCopies(n, PITCH, size.h || 800);
   const LAP = wheelLayout(n * copies, PITCH).total;
@@ -82,7 +82,7 @@ export function ShelfWheel({ entries, bookmark, button }: Props) {
   const compute = useCallback(() => {
     const H = size.h;
     if (!n || !H) return { out: [] as Slot[], near: 0 };
-    const pitch = wheelScale(H).pitch;
+    const pitch = wheelScale(H, button).pitch;
     const reps = wheelCopies(n, pitch, H);
     const lap = n * reps * pitch;
     const mid = H / 2;
@@ -110,19 +110,19 @@ export function ShelfWheel({ entries, bookmark, button }: Props) {
       }
     }
     return { out, near };
-  }, [n, size.h]);
+  }, [n, size.h, button]);
 
   /** How far the nearest pack is from the middle. */
   const offCentre = useCallback(() => {
     const H = size.h;
     if (!n || !H) return 0;
-    const pitch = wheelScale(H).pitch;
+    const pitch = wheelScale(H, button).pitch;
     // a pack's own middle sits on the wheel at (k + 1/2) * pitch; the wheel
     // is centred when that lands on the screen's middle
     const k = offsetRef.current / pitch;
     const rest = k - Math.round(k);
     return -rest * pitch;
-  }, [n, size.h]);
+  }, [n, size.h, button]);
 
   const draw = useCallback(() => {
     const { out, near } = compute();
@@ -217,7 +217,7 @@ export function ShelfWheel({ entries, bookmark, button }: Props) {
     // to be nearest the new middle: the pitch has changed under it, so the
     // offset has to be put back on the same pack rather than left where it
     // was. The row learned this one the hard way (`offFramed`).
-    offsetRef.current = pickedRef.current * wheelScale(size.h).pitch;
+    offsetRef.current = pickedRef.current * wheelScale(size.h, button).pitch;
     velRef.current = 0;
     seekRef.current = null;
     draw();
@@ -310,7 +310,7 @@ export function ShelfWheel({ entries, bookmark, button }: Props) {
   /** Press a pack that is not in the middle and it comes to the middle. */
   const seekTo = (slot: Slot) => {
     if (!size.h) return;
-    const pitch = wheelScale(size.h).pitch;
+    const pitch = wheelScale(size.h, button).pitch;
     // the offset that puts THIS instance in the middle: it is the one on
     // screen, so it is always the short way round
     seekRef.current = offsetRef.current + (slot.y + pitch / 2 - size.h / 2);
@@ -320,7 +320,7 @@ export function ShelfWheel({ entries, bookmark, button }: Props) {
 
   const nudge = (by: number) => {
     if (!size.h) return;
-    const pitch = wheelScale(size.h).pitch;
+    const pitch = wheelScale(size.h, button).pitch;
     seekRef.current = (seekRef.current ?? offsetRef.current) + by * pitch;
     velRef.current = 0;
     run();
@@ -349,7 +349,8 @@ export function ShelfWheel({ entries, bookmark, button }: Props) {
         '--wheel-pitch': `${PITCH}px`,
         '--wheel-image': `${image}px`,
         '--wheel-outline': `${outline}px`,
-        '--wheel-gap': `${WHEEL_GAP}px`,
+        '--wheel-gap': `${wheelGap(button)}px`,
+        '--wheel-margin': `${WHEEL_MARGIN}px`,
       } as React.CSSProperties}
     >
       {slots.map((s) => {

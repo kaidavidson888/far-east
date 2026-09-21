@@ -2322,12 +2322,23 @@ answer:
 
       P = H/2 - 2r - G      and      pitch = P + 2r + G = H/2 exactly
 
-with H the viewport's height, G the grid's own 35 and r the pack's 2px rule.
+with H the viewport's height, r the pack's 2px rule and G the gap.
 **THE PITCH IS HALF THE SCREEN**, which is the whole geometry in one line and
 the reason the halves come out at 50.0% at *every* size rather than at one: a
-pack half a screen away has exactly half of itself on screen. Measured at
-1920x947 and 390x844 — the pack dead centre, both neighbours 50.0%, the gap
-35.00.
+pack half a screen away has exactly half of itself on screen. **G IS NOT THE GRID'S 35 ANY MORE**, and that is the owner's follow-up:
+"scale the packs down to match the original margin constraints between them
+while keeping the buttons equidistant". The three controls stand in that gap,
+and at 35 they had 5.95px of air either side — which is not a margin, it is
+what was left over. So the MARGIN is the constant (`WHEEL_MARGIN`, the
+drawing's own 35) and the gap falls out of it as margin + buttons + margin =
+93.1. **The pitch does not move** — it is half the screen whatever G is — so
+the PACK takes the difference and comes down from 434.5 to 376.4 at
+1920x947. The buttons stay equidistant by construction: one margin above,
+one below.
+
+Measured at 1920x947 and 390x844 — the pack dead centre, both neighbours
+50.0%, the gap 93.11 against a wanted 93.09, the three one margin under the
+pack and the number one margin off its right.
 
 **IT IS THE ROW'S MOTION, NOT THE ROW'S CODE.** `WHEEL_MOTION` imports the
 brake, the fling cap, the settle and the 8fps beat straight from
