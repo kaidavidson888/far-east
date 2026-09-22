@@ -160,15 +160,6 @@ export function shelfMenuZoom(clientWidth: number): number {
   return Math.min(MENU_ZOOM_MAX, +(room / MENU_VIEW_W).toFixed(4));
 }
 
-/** The header band: the shelf's worth, on the right. */
-export const GRID_HEADER = {
-  top: GRID_MARGIN,
-  /** the drawing sets the price's ink about as tall as the logo's top half */
-  priceH: 38,
-  /** below the divider, before the first row of packs */
-  drop: 32,
-} as const;
-
 /**
  * WHAT THE SHELF IS WORTH, and where the money comes from.
  *
@@ -189,9 +180,8 @@ export const GRID_HEADER = {
  * they have any. So a shelf nobody has counted reads $0 — that is the data
  * being honest, not the sum being broken.
  *
- * It is worked out on the SERVER so the 247-pack tag table never reaches
- * this page's bundle; the row already carries it, but the shelf does not
- * need to.
+ * The caller supplies the price, so the 247-pack tag table stays on the
+ * server and never reaches this page's bundle.
  */
 export function shelfWorth(entries: ShelfEntry[], priceOf: (id: string) => number): string {
   let total = 0;

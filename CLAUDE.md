@@ -2516,6 +2516,37 @@ real and is stated in the file: the two ticks are two places now.**
 - The quantity wheels still open out of the number square, at the pack
   outline's width, held to the room left on the page.
 
+**WHAT THE SHELF IS WORTH — AND IT HAS DATA BEHIND IT NOW.** This number was
+drawn from the first day and totalled NOTHING for three redraws:
+`pack_favorites` keys on a pack id and `lib/cigs.json` carries no money, so
+the route passed no `worth` at all. **`cigtags.json` has the price**: it is
+generated from the owner's own 235 cigarette pages and carries a PRICE PER
+PACK for all 247 — the $15/$25/$30 the tag menu filters by. `shelfWorth`
+multiplies it by `cardAmount` (the wheels' answer, a carton counted as ten)
+and sums.
+- **It is totalled on the SERVER**, so the 247-pack tag table never reaches
+  this page's bundle. The row already carries it; the shelf need not.
+- **A PACK WITH NO AMOUNT IS WORTH NOTHING**, which is the same answer its
+  own number square gives. A shelf nobody has counted reads $0 — the data
+  being honest, not the sum being broken.
+- **WHERE IT STANDS** (the owner's "equidistant from top and bottom edge of
+  page and left edge of page and left edge of cig image outline"): on the
+  page's middle line, and centred again between the page's left edge and the
+  pack outline's. That second one needs the pack's width, which only the
+  wheel knows, so **`ShelfWheel` publishes `--wheel-width` up to `.shelf`** —
+  `CigScroller` hands the mountain button's zoom to its own stage the same
+  way and for the same reason.
+- **A TENTH LARGER THAN THE NUMBER IN THE SELECTOR**, which is why
+  `CARD.countEm` is a name and not a literal: it is stated once and read
+  twice. Measured 13.98 against 12.705, a ratio of exactly 1.1.
+- **THE TWO MARKS POINT IN AND BLINK; THE NUMBER DOES NOT.** They reuse
+  `cig-search-blink`, the site's one caret keyframe. **`>` and `<` are not
+  in the owner's face** — letters, digits, # and $ and nothing else — so they
+  are set in the next family in the stack, as the `<` of "Leave a comment
+  <3" already was.
+- **The header is gone with it.** `.shelf-head` held only this, and the worth
+  is placed against the page now, not laid out in a band.
+
 **BLACK PAGE, WHITE CONTROLS** ("change the page background to red and the
 outline buttons and all their elements to white … make the new hover an
 inversion of colors to black fill with white as the color of the elements
