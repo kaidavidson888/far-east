@@ -2914,9 +2914,19 @@ ul, ol { list-style: none; }
   z-index: 3;
 }
 
-/* EVERY CONTROL IS THE MOUNTAIN BUTTON'S SIZE AND SQUARE, white on the red
-   page; under the pointer it inverts to a black fill with white marks and no
-   outline at all. */
+/* EVERY CONTROL IS THE MOUNTAIN BUTTON'S SIZE AND SQUARE, and at rest it is
+   its MARK alone (the owner's 2026-09-21: "make the things inside the
+   outline buttons red and remove the outlines until user hover or click and
+   make them red as well but with 50% opacity on hover and 100% on click").
+
+   THE LINE IS KEPT IN THE BOX AND NOT DRAWN — `solid transparent`, not
+   `none` — so the control is the same size whether its outline is showing
+   or not and nothing shifts under the pointer.
+
+   THE OPACITY IS IN THE BORDER'S OWN COLOUR, never on the element ("the
+   inside parts opacity should stay consistent"). An `opacity` on the button
+   would take the mark down with the line; an alpha in the border takes only
+   the line. */
 .shelf-wheel-btn {
   box-sizing: border-box;
   display: flex;
@@ -2926,21 +2936,26 @@ ul, ol { list-style: none; }
   height: var(--btn);
   padding: 0;
   background: transparent;
-  border: var(--card-rule) solid #ffffff;
-  color: #ffffff;
+  border: var(--card-rule) solid transparent;
+  color: #ff0000;
   font-family: var(--font-typed);
   font-weight: 700;
   font-synthesis: none;
   line-height: 1;
   overflow: hidden;
+  transition: border-color 120ms ease-out;
 }
+/* under the pointer: the line arrives at half strength */
 button.shelf-wheel-btn:hover,
+.shelf-wheel-amount:hover .shelf-wheel-count {
+  border-color: rgb(255 0 0 / 0.5);
+}
+/* pressed — and a keyboard's focus counts, since it is the same reach for
+   the same control */
+button.shelf-wheel-btn:active,
 button.shelf-wheel-btn:focus-visible,
-.shelf-wheel-amount:hover .shelf-wheel-count,
 .shelf-wheel-amount:focus-within .shelf-wheel-count {
-  background: #000000;
-  border-color: transparent;
-  color: #ffffff;
+  border-color: #ff0000;
   outline: none;
 }
 .shelf-wheel-mark svg { display: block; height: 62%; width: auto; }
@@ -2964,7 +2979,8 @@ button.shelf-wheel-btn:focus-visible,
   width: var(--card-caret-w);
   height: var(--card-caret-h);
   transform: translateY(-50%);
-  background: #ffffff;
+  /* the mark inside a control, so it is the controls' red */
+  background: #ff0000;
   -webkit-mask-image: var(--card-caret-src);
           mask-image: var(--card-caret-src);
   -webkit-mask-repeat: no-repeat;

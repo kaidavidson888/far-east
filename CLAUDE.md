@@ -2464,11 +2464,24 @@ outline buttons and all their elements to white … make the new hover an
 inversion of colors to black fill with white as the color of the elements
 inside the box and no outline" — then, the same day, "make the background
 black").
-- **THE HOVER AND THE GROUND ARE THE SAME COLOUR NOW, and that is a live
-  problem, not a settled one.** The inversion fills a control BLACK and drops
-  its outline; on a black page that leaves nothing but the mark floating.
-  It was designed against the red ground the same ask specified. Raised with
-  the owner; until they say, the hover is as written.
+- **A CONTROL AT REST IS ITS MARK ALONE** (the owner's 2026-09-21: "make the
+  things inside the outline buttons red and remove the outlines until user
+  hover or click and make them red as well but with 50% opacity on hover and
+  100% on click"). Red marks on the black ground, no outline until the
+  pointer arrives; then the line at half strength, and at full while it is
+  pressed or has the keyboard. This replaced the black-fill inversion, which
+  had become the same colour as the page.
+  - **THE LINE IS KEPT IN THE BOX AND NOT DRAWN** — `solid transparent`, not
+    `none` — so a control is the same size whether its outline shows or not
+    and nothing shifts under the pointer.
+  - **THE OPACITY IS IN THE BORDER'S OWN COLOUR, never on the element**
+    ("the inside parts opacity should stay consistent"). An `opacity` on the
+    button would take the mark down with the line; an alpha in the border
+    takes only the line.
+  - **The mountain button was NOT included.** The owner named it explicitly
+    when the controls last changed colour ("including the mountain button")
+    and did not this time, and its ink is baked rather than CSS — so it is
+    still white. Flagged.
 - The red the page used to be is the artwork's own `#FF0000`. **Not
   `--negative`** — that token is warm grey and is never an error colour, per
   the spec.
