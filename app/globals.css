@@ -2874,17 +2874,28 @@ ul, ol { list-style: none; }
   max-width: none;
   pointer-events: none;
 }
-/* THE RULE IS WHITE NOW (the owner's 2026-09-21 "make them white"), like
-   every other mark on the red page. It was the drawing's low-opacity black;
-   half strength was part of being black, so it goes with the colour — white
-   at 50% over red is pink, which is not what was asked for. Still drawn on
-   the edge of the image and never over it. */
+/* THE RULE ANSWERS THE POINTER NOW (the owner's 2026-09-21: "make the
+   outlines around the packs 50% opacity which switches to red and 100%
+   opacity on click and red and 75% on hover"). White at half strength at
+   rest, red at three quarters under the pointer, red at full while pressed.
+   Still drawn on the edge of the image and never over it — the drawing's
+   low-opacity black went white when the page did, and it takes its opacity
+   in the colour rather than on the element so the picture under it is never
+   faded with it. */
 .shelf-wheel-pack::after {
   content: '';
   position: absolute;
   inset: calc(-1 * var(--pack-rule));
-  border: var(--pack-rule) solid #ffffff;
+  border: var(--pack-rule) solid rgb(255 255 255 / 0.5);
   pointer-events: none;
+  transition: border-color 120ms ease-out;
+}
+.shelf-wheel-pack:hover::after {
+  border-color: rgb(255 0 0 / 0.75);
+}
+.shelf-wheel-pack:active::after,
+.shelf-wheel-pack:focus-visible::after {
+  border-color: #ff0000;
 }
 .shelf-wheel-pack:focus-visible { outline: 2px solid #ffffff; outline-offset: 6px; }
 
@@ -3056,12 +3067,12 @@ button.shelf-wheel-btn:focus-visible,
 
 /* ---- the mountain button, white on red ---------------------------------- */
 .logo-menu[data-menu='shelf'] .logo-menu-logo.logo-menu-badge {
-  border-color: #ffffff;
-  color: #ffffff;
+  border-color: #ff0000;
+  color: #ff0000;
 }
 .logo-menu[data-menu='shelf'] .logo-menu-logo:focus-visible,
 .logo-menu[data-menu='shelf'] .logo-menu-box:focus-visible {
-  outline: 2px solid #ffffff;
+  outline: 2px solid #ff0000;
 }
 /* The still's own colour comes down from the component as
    `--logo-menu-ink`, the very value the canvas tints with — see the mask on

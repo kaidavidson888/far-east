@@ -174,9 +174,14 @@ const LATCH: Record<string, boolean> = { bar: false, grow: true, shelf: true };
  * coverage — an antialiased edge at 50% stays at 50% and simply becomes that
  * colour. Empty means "as baked", which is black.
  *
- * The shelf's page is red (the owner's 2026-09-21), so its menu is white.
+ * The shelf's page went red and its menu with it went white; the page is
+ * black now and the owner has asked for the button and its animation in the
+ * artwork's red, so that is what this says. The resting still reads the very
+ * same value (it is handed down as `--logo-menu-ink`), which is what keeps
+ * the handover between the page's copy of the mark and the canvas's
+ * invisible — they have to be the same pixels in the same colour.
  */
-const INK: Record<string, string> = { bar: '', grow: '', shelf: '#ffffff' };
+const INK: Record<string, string> = { bar: '', grow: '', shelf: '#ff0000' };
 
 /** Half strength under the pointer, a quarter while it is held. */
 const DIM = { hover: 0.5, press: 0.25 };

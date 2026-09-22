@@ -2535,10 +2535,20 @@ black").
     ("the inside parts opacity should stay consistent"). An `opacity` on the
     button would take the mark down with the line; an alpha in the border
     takes only the line.
-  - **The mountain button was NOT included.** The owner named it explicitly
-    when the controls last changed colour ("including the mountain button")
-    and did not this time, and its ink is baked rather than CSS — so it is
-    still white. Flagged.
+  - **THE MOUNTAIN BUTTON IS RED TOO NOW** (the owner's "make the mountain
+    button and its animation red as well"), which closes the inconsistency
+    flagged when the other controls went red without it. One value does it:
+    `INK.shelf` in `LogoMenu` tints the canvas AND is handed to the resting
+    still as `--logo-menu-ink`, so the page's copy of the mark and the
+    canvas's cannot be recoloured apart — which is the whole reason that
+    handover is invisible. Measured: the shelf menu's ink 255,0,0 over 5,519
+    opaque px, the landing page's still 0,0,0 over 4,826.
+- **THE PACK'S RULE ANSWERS THE POINTER** (the owner's "make the outlines
+    around the packs 50% opacity which switches to red and 100% opacity on
+    click and red and 75% on hover"): white at half strength at rest, red at
+    three quarters under the pointer, red at full while pressed. The opacity
+    is in the COLOUR, never on the element — on the element it would take
+    the photograph under it down with the line.
 - The red the page used to be is the artwork's own `#FF0000`. **Not
   `--negative`** — that token is warm grey and is never an error colour, per
   the spec.
