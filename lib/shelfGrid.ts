@@ -90,19 +90,21 @@ export const CARD = {
  * over the artwork. It is an absolutely placed ring rather than a border, so
  * it costs the card no width and the pack keeps its own.
  *
- * IT IS THE SAME WEIGHT AS THE BOXES OVER THE PACK (the owner's 2026-09-21
- * "change the outlines around the cig images to the same thickness as the
- * outlines above the image"), so it is `CARD.rule` rather than a number of
- * its own — one line on the card, drawn red round the four boxes and
- * half-black round the picture. It was 5, which is the site's divider weight
- * and was never measured off this drawing.
+ * IT IS 5, AND IT IS ITS OWN NUMBER AGAIN (the owner's 2026-09-21 "make the
+ * black outlines around the cig images 5px"). It was 5 to begin with, went
+ * to `CARD.rule` for an afternoon when the ask was "the same thickness as
+ * the outlines above the image" — the four red boxes that stood over a card
+ * — and those boxes are gone with the grid. So the pack's rule answers to
+ * nothing but itself now, and the controls' 2px rule answers to nothing but
+ * itself either.
  *
- * EVERYTHING ELSE FOLLOWS ON ITS OWN, because nothing carries the old figure
- * separately: the ring, the outline the rows are pulled out to, the gap the
- * rule stands in, and the width the quantity menu takes are all written in
- * terms of this, and the menu measures the outline live.
+ * EVERYTHING ELSE FOLLOWS ON ITS OWN, because nothing carries the figure
+ * separately: the ring, the pack's own height (the pitch is fixed at half
+ * the screen, so a heavier rule costs the IMAGE six pixels), the margins the
+ * controls keep off the outline, and the width the quantity menu opens to
+ * are all written in terms of this, and the menu measures the outline live.
  */
-export const PACK_RULE = CARD.rule;
+export const PACK_RULE = 5;
 export const PACK_RULE_ALPHA = 0.5;
 
 /**

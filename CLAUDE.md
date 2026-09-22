@@ -2322,7 +2322,8 @@ answer:
 
       P = H/2 - 2r - G      and      pitch = P + 2r + G = H/2 exactly
 
-with H the viewport's height, r the pack's 2px rule and G the gap.
+with H the viewport's height, r the pack's rule (5px, its own number —
+the controls' 2px is separate) and G the gap.
 **THE PITCH IS HALF THE SCREEN**, which is the whole geometry in one line and
 the reason the halves come out at 50.0% at *every* size rather than at one: a
 pack half a screen away has exactly half of itself on screen. **G IS NOT THE GRID'S 35 ANY MORE**, and that is the owner's follow-up:
@@ -2339,6 +2340,14 @@ one below.
 Measured at 1920x947 and 390x844 — the pack dead centre, both neighbours
 50.0%, the gap 93.11 against a wanted 93.09, the three one margin under the
 pack and the number one margin off its right.
+
+**THE PACK'S RULE IS 5 AND ANSWERS TO NOTHING BUT ITSELF** (the owner's "make
+the black outlines around the cig images 5px"). It was 5, went to `CARD.rule`
+for an afternoon when the ask was "the same thickness as the outlines above
+the image" — the four red boxes that stood over a card — and those boxes went
+with the grid. The controls' own 2px is a separate number. A heavier rule
+costs the IMAGE rather than the pitch, which cannot move: 376.4 -> 370.4 at
+1920x947, exactly the six pixels the two extra rules take.
 
 **IT IS THE ROW'S MOTION, NOT THE ROW'S CODE.** `WHEEL_MOTION` imports the
 brake, the fling cap, the settle and the 8fps beat straight from
