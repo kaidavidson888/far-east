@@ -54,7 +54,42 @@ export const CIG_GAP = 26;
  * into the broad ones: the margin is the part that is really fixed, and the
  * frame takes its width from the pack it is holding.
  */
-export const CIG_OUTLINE = { x: 8, y: 8, stroke: 5, colour: '#ff0000' };
+/*
+ * ITS LINE IS THE BUTTON TRIANGLE'S, AND IT IS BLACK (the owner's
+ * 2026-09-22: "turn the outline on the selected cig image to the same width
+ * as the outlines around the button triangle and turn it black"). It was the
+ * artwork's 5px red. The MARGIN is untouched at 8, so the frame's outer box
+ * is exactly where it was and nothing that measures against it moves — the
+ * menu's zoom, the search bar's width and `fitBar` all read that box.
+ */
+export const CIG_OUTLINE = { x: 8, y: 8, colour: '#000000' };
+
+/** The rule every control on the row is drawn with, in the MENU's own px. */
+export const CIG_BUTTON_RULE = 2;
+
+/**
+ * THE FRAME'S LINE IS MATCHED ON THE SCREEN, NOT ON THE NUMBER, and that
+ * is the owner's choice, asked: the row is zoomed about 3.3x at 1920 and
+ * the triangle's buttons are not, so the same stated 2px would have drawn
+ * 6.6 real pixels round the pack against 1.5 on the buttons — six times
+ * the line, which is not "the same width" to anyone looking at it.
+ *
+ * So the width is SOLVED rather than stated: two of the menu's pixels,
+ * expressed in the row's. It therefore moves when either zoom moves — the
+ * menu's own scale follows the framed pack's width — which is exactly what
+ * keeps the two lines equal at every viewport and on every pack.
+ */
+export function cigFrameRule(menuZoom: number, rowZoom: number): number {
+  return (CIG_BUTTON_RULE * menuZoom) / (rowZoom || 1);
+}
+
+/**
+ * The clear band between that line and the pack — the margin less the line
+ * — which is the space the owner asked to have fill under the pointer.
+ */
+export function cigFrameBand(menuZoom: number, rowZoom: number): number {
+  return Math.max(0, CIG_OUTLINE.x - cigFrameRule(menuZoom, rowZoom));
+}
 
 /** The frame's outer box, vertically. 92 + 8 + 8 = 108. */
 export const CIG_FRAME_H = CIG_HEIGHT + CIG_OUTLINE.y * 2;
@@ -68,7 +103,16 @@ export const CIG_FRAME_H = CIG_HEIGHT + CIG_OUTLINE.y * 2;
  * and pushed out so that the clearance they had from the packs is now the
  * clearance they have from the frame.
  */
-export const CIG_RULE = { thickness: CIG_OUTLINE.stroke, gap: 9 };
+/*
+ * THEY NO LONGER FOLLOW THE FRAME, and that is deliberate. They were given
+ * "the frame's own weight and colour", and the frame has since gone to a 2px
+ * black line — but `CIG_BAND_H` below is built out of this thickness, so
+ * following it would have taken the row's whole band from 136 to 130 and
+ * moved the packs, the plus and every menu measured against them. The owner
+ * asked about the frame, not about the row's geometry. So the 5 and the red
+ * are pinned here, where they used to be read off `CIG_OUTLINE`.
+ */
+export const CIG_RULE = { thickness: 5, gap: 9, colour: '#ff0000' };
 
 /** The row's own height: the frame, plus room for a rule either side. */
 export const CIG_BAND_H = CIG_FRAME_H + (CIG_RULE.gap + CIG_RULE.thickness) * 2;

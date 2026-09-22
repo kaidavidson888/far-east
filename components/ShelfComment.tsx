@@ -267,9 +267,27 @@ export function ShelfComment({
         if (e.key === 'Escape') { e.preventDefault(); onClose?.(); }
       }}
     >
+      {/* THE TRANSFER FUNCTION THAT PUTS THE DASHED RULE BACK AT FULL
+          STRENGTH. The mark is two device pixels by ten, so the browser's
+          downscale of the drawn dashes leaves no row solid; this multiplies
+          what survives and clips the rest, which takes each dash to 255 and
+          each gap to nothing. Its slope and intercept were measured off the
+          rendered profile — see the stylesheet.
+
+          ONE INSTANCE ONLY, and that holds because only the pack the wheel
+          has stopped on carries controls. */}
+      <svg className="shelf-comment-defs" aria-hidden focusable="false">
+        <filter id="shelf-ink-solid" colorInterpolationFilters="sRGB">
+          <feComponentTransfer>
+            <feFuncA type="linear" slope="2.5" intercept="-0.15" />
+          </feComponentTransfer>
+        </filter>
+      </svg>
+
       {/* THE VERTICAL DASHED RULE, white and in the corner. It is the login
           box's own sprite at the scale the square set it, so the dashes are
-          the same dashes; only its colour and its place have changed. */}
+          the same dashes; only its colour and its place have changed. The
+          mask is on its `::before` so the filter above can reach it. */}
       <i className="shelf-comment-caret" aria-hidden />
 
       {/* the prompt, in the owner's own words and their own lower case */}

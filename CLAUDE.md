@@ -711,7 +711,62 @@ carries a copy of that pack's cleaned mark (`fitPhoto` reads `public/cigs/<id>.s
 so `npm run build:cigpages` has to follow `npm run build:cigs` or the row and the
 page will disagree about the same cigarette.
 
-**AT REST, A PACK IS DEAD CENTRE AND THE RED FRAME IS ON IT — always** (the
+**THE FRAME IS A BLACK HAIRLINE NOW, AND THE BAND INSIDE IT FILLS UNDER THE
+POINTER** (the owner's 2026-09-22: "turn the outline on the selected cig
+image to the same width as the outlines around the button triangle and turn
+it black. on hover or click keep the outline but fill the space between the
+outline and the edges of the cig image with black on hover keep it at 75% on
+click make it 100% keep the outline at 100% … the entire time"). It was the
+artwork's 5px red. `CIG_OUTLINE`, `cigFrameRule`, `cigFrameBand`.
+- **THE OUTER BOX HAS NOT MOVED.** The margin is still the drawing's 8, so
+  everything measured against this frame is untouched — the tag menu's zoom,
+  the search bar's width, `fitBar`, `frameW`. Only the line's weight and
+  colour changed, and a band appeared inside it.
+- **"THE SAME WIDTH" IS MATCHED ON THE SCREEN, NOT ON THE NUMBER, and the
+  owner chose that, asked.** The row is zoomed about 3.3x at 1920 and the
+  triangle's buttons are not, so the site's usual answer — state 2px and let
+  the scale take it — would have drawn 6.6 real pixels round the pack
+  against 1.46 on the buttons. Six times the line is not "the same width" to
+  anyone looking at it. So the width is SOLVED: two of the MENU's pixels
+  expressed in the ROW's, `2 * menuZoom / rowZoom`, which moves when either
+  zoom does — and the menu's own scale follows the framed pack's width, so
+  the two lines stay equal at every viewport and on every pack. Measured at
+  1920x947: the frame's line 1.456 screen px against the buttons' 1.457.
+  - **THIS IS THE FIRST PLACE ON THE SITE WHERE A WEIGHT IS NOT STATED IN
+    ITS OWN COORDINATES**, and it is only right because the two things
+    being matched live in different scales. Elsewhere — the mountain's 2px
+    rule, the shelf's card rule — the pair share a coordinate system and
+    the number is the answer.
+  - **`clientWidth`/`offsetWidth` CANNOT CHECK THIS.** They are integers, so
+    on a sub-pixel border they rounded the frame's line to 1.65 and the
+    buttons' to 1.09 and made a match look like a 50% miss. Read the zoom
+    off the chain (`.cig-row`, `.cig-menu-scale`) and multiply.
+- **THE BAND IS THE MARGIN LESS THE LINE** — about 7.56 row px — and it is
+  drawn as an INSET SHADOW so that nothing is ever painted over the
+  photograph: with no offset and no blur, a spread draws a ring just inside
+  the padding box, which with the line taken off is exactly the band. A
+  background would have covered the pack as well. The line is opaque at
+  every moment, as asked; only the band's alpha moves.
+- **IT ANSWERS THE PACK'S POINTER THROUGH `:has()`, NOT THROUGH STATE.** The
+  frame is `pointer-events: none` and must stay so — it lies over the packs
+  and must not eat the press — so `.cig-row:has(.cig-slot-picked:hover)` is
+  what hears the framed pack. **Not React state**: this component re-renders
+  eight times a second while the row moves, and every pointer move
+  reconciling the whole row is the mistake the tag menu's scrollbar already
+  records.
+- **THE KEYBOARD RULES NO LONGER FOLLOW THE FRAME.** They were given "the
+  frame's own weight and colour", but `CIG_BAND_H` is built out of that
+  weight — following it would have taken the row's band from 136 to 130 and
+  moved the packs, the plus and every menu measured against them. The owner
+  asked about the frame, not about the row's geometry, so the 5 and the red
+  are pinned in `CIG_RULE` where they used to be read off `CIG_OUTLINE`.
+  They are the focus ring, seen only from the keyboard.
+- **PASSAGES BELOW STILL CALL IT "THE RED FRAME".** They are about where it
+  stands, not what colour it is, and the name is what this file has always
+  used; the 5px red it names is this one, now a black hairline. The red
+  rule on a CIGARETTE'S OWN PAGE is a different mark and is untouched.
+
+**AT REST, A PACK IS DEAD CENTRE AND THE FRAME IS ON IT — always** (the
 owner's 2026-09-19 "make sure the selector red rectangle always ends up on the
 middle image by the end of the scroll"). Four things broke it, all fixed in
 `CigScroller`, and each is worth knowing before touching the tick:
@@ -2629,12 +2684,60 @@ evenly including an even space before the first one and after the last one").
 the square was a button). `components/ShelfComment.tsx`, `EDITOR` and
 `NOTE_MAX` in `lib/shelfGrid.ts`, `setPackNote`, `setPackNoteAction`, and
 `pack_favorites.note`/`note_at` — migration **0009**, NOT YET APPLIED.
-- **TEN PIXELS, FOUR TIMES, AND IT IS THE SAME TEN.** The vertical rule stands
-  10 inside the rectangle on the left, the top AND the foot — which is what
-  sets the rectangle's height AT ONE ROW, since that is the only way a mark
-  in a corner can be "10px away from the edge on all edges" — the run begins
-  10 past the rule, and the ☁ waits 10 past the prompt. Measured at 1920x947:
-  10.00 / 10.00 / 10.00 / 10.00 / 10.00, the box 33.7 tall over a 9.7 rule.
+- **TEN PIXELS, EVERYWHERE, AND IT IS THE SAME TEN.** The rule stands 10
+  inside the rectangle on the left and the top; the run begins 10 past the
+  rule and **wraps 10 short of the right edge**; the ☁ waits 10 past the
+  prompt; and there is 10 above the first row's ink and 10 below the last
+  row's. Measured at 1920x947: 10.00 at every one of them, at 1, 2, 3 and 8
+  rows.
+  - **THE RIGHT MARGIN IS THE LEFT ONE** (the owner's 2026-09-22: "make sure
+    the margins before the typed text creates a new line is the same on both
+    sides using the left as a model"). The run used to stop a margin AND a
+    ☁ short — the mark's width was reserved on every row — which made the
+    right margin three times the left. **The ☁ is clamped into the box with
+    a `min()` instead**, so on a row filled right up to the wrap it stands
+    one margin in, over the last of the run, which is what the search bar's
+    ☁ does at the end of its line. Measured: it never comes closer than
+    10.02px to the inner right edge, at any length.
+  - **THE BOTTOM MARGIN IS MEASURED TO THE INK, NOT TO THE BASELINE** (the
+    owner's "make sure the margins on top and bottom are the same each time
+    a new line is typed using the top as a model"). A ROW is the face's
+    whole band, so `pad + rows * row + pad` puts one margin above the
+    tallest ascender and one below the deepest descender however many rows
+    there are. It was measured to the last BASELINE, and a descender then
+    ate 2.7px of the bottom margin, so the foot read tighter than the head.
+  - **THIS COSTS THE EARLIER "10px ON ALL EDGES", and the two cannot both
+    hold.** The vertical rule's foot IS the first baseline, so a margin
+    measured to the ink and a margin measured to that rule differ by exactly
+    the descent: the rule now stands 10 from the left and the top and 12.7
+    from the bottom. The later instruction wins; the box went 33.7 to 36.5
+    at one row.
+- **THE RULE IS SOLID WHITE, AND NOTHING WAS EVER SET BELOW FULL** (the
+  owner's 2026-09-22 "the dashed line in the text editor should be 100%
+  opacity when the menu is open at all times"). The colour is `#ffffff` and
+  the element is at 1. **WHAT IS FAINT IS THE RESAMPLING**, and this is the
+  general lesson: the drawing is crisp — its dash cores read a flat 255 down
+  the sprite with real gaps between them — but the mark is **2 x 10 DEVICE
+  PIXELS**, a 3.2:1 reduction of a 6 x 31 window, and at that ratio no
+  output row lies wholly inside a dash. Measured down the rendered mark:
+  135, 181, 81, 22, 157, 179, 179, 80, 13, 145. Not one row solid, which is
+  precisely a grey dashed line.
+  - **THE ALPHA IS PUT BACK WITH A TRANSFER FUNCTION, not a redraw**: an
+    SVG `feFuncA type="linear" slope="2.5" intercept="-0.15"`. Rendered
+    through the filter as authored, those ten values come back 255 for every
+    dash row, ~166 where a row straddles a dash and a gap, and 0 and 19 for
+    the gaps — solid, and still dashed, with every dash the length and the
+    wander it was drawn with.
+  - **THE FILTER IS ON THE ELEMENT AND THE MASK ON ITS `::before`, and that
+    order is the whole trick.** A filter is applied BEFORE the mask, so
+    filtering a masked element does nothing whatever to the mask's own
+    alpha. Masking the child and filtering the parent puts the transfer
+    function after the mask, which is where the softness is.
+  - **COMPOSITING THE MASK WITH ITSELF CANNOT GET THERE**, and was tried
+    first: `mask-composite`'s initial value is `add`, but `add` is
+    source-over, so sixteen layers still only reach 88% and they lift the
+    gaps as much as the dashes.
+  - The SQUARE's own marks are left alone — the owner named the editor's.
 - **THE SQUARE DISAPPEARS AND THE RECTANGLE TAKES THE WHOLE OUTLINE** (the
   owner's 2026-09-22: "when the text editor opens have the original outline
   button disappear and have the text editor fit between both edges of the cig
@@ -2655,16 +2758,16 @@ the square was a button). `components/ShelfComment.tsx`, `EDITOR` and
     the moment it shuts.
 - **IT GROWS BY A ROW AT A TIME, DOWNWARD** (the owner's "make the rectangle
   expand by a row as a new row of text is written"). A row is one whole BAND
-  of the face, so a descender can never touch the ascender under it; at one
-  row the box is the height it always was, and `top` is worked out from that
-  one-row height so **the first line of type never moves under the reader**
-  as the box gets taller. Measured: 1 / 2 / 5 / 9 rows at 33.70 / 46.17 /
-  83.55 / 133.39px, each exactly one band apart.
+  of the face, so a descender can never touch the ascender under it, and
+  `top` is worked out from the ONE-ROW height so **the first line of type
+  never moves under the reader** as the box gets taller. Measured: 1 / 2 /
+  3 / 8 rows at 36.46 / 48.92 / 61.38 / 123.68px, each exactly one band
+  apart, with 10.00 of margin above the ink and 10.00 below it every time.
   - **THE HEIGHT IS NOT TRANSITIONED, on purpose.** It is a layout property,
     so every frame would be a main-thread repaint — the mistake the tag menu
     was rewritten twice to get away from — and it also made the box and the
     mark standing in it measure different things in the same frame.
-  - **A FULL 150 CHARACTERS IS ABOUT SEVEN ROWS AND REACHES PAST THE CLOUD
+  - **A FULL 150 CHARACTERS IS EIGHT ROWS AND REACHES PAST THE CLOUD
     STAR**, which the editor then covers with its own black. The star is
     live and visible for a short comment, which is the ordinary case;
     capping the rows or standing the star aside is the owner's call, not

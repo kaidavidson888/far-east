@@ -2574,12 +2574,50 @@ ul, ol { list-style: none; }
    margin the design gives it, so it travels with that pack and hops to the
    next as the lead changes. It sits over the packs, so it must not eat the
    press. */
+/* SINCE 2026-09-22 IT IS A 2px BLACK LINE WITH A BAND INSIDE IT THAT FILLS
+   UNDER THE POINTER (the owner: "turn the outline on the selected cig image
+   to the same width as the outlines around the button triangle and turn it
+   black. on hover or click keep the outline but fill the space between the
+   outline and the edges of the cig image with black on hover keep it at 75%
+   on click make it 100% keep the outline at 100% … the entire time").
+
+   THE OUTER BOX HAS NOT MOVED — the margin is still the drawing's 8 — so
+   everything measured against this frame is untouched: the tag menu's zoom,
+   the search bar's width, `fitBar`. What the thinner line leaves behind is
+   `CIG_FRAME_BAND`, 6px of clear paper between it and the pack, and that is
+   the space the owner means.
+
+   THE FILL IS AN INSET SHADOW, so nothing is ever painted over the
+   photograph: with no offset and no blur, a spread draws a ring just inside
+   the PADDING box, which with the line taken off is exactly the band. The
+   line itself is opaque throughout; only the band's alpha moves.
+
+   IT ANSWERS THE PACK'S POINTER, NOT ITS OWN — the frame is
+   `pointer-events: none` and always has been, because it lies over the
+   packs and must not eat the press. `:has()` on the row is what lets a line
+   of CSS hear the framed pack instead. **Not React state**: this component
+   re-renders eight times a second while the row moves, and every pointer
+   move reconciling the whole row is the mistake the tag menu's scrollbar
+   already records. */
 .cig-frame {
   position: absolute;
   display: block;
   border-style: solid;
   pointer-events: none;
   box-sizing: border-box;
+  box-shadow: inset 0 0 0 var(--cig-frame-band, 0) rgb(0 0 0 / 0);
+  transition: box-shadow 120ms ease-out;
+}
+.cig-row:has(.cig-slot-picked:hover) .cig-frame {
+  box-shadow: inset 0 0 0 var(--cig-frame-band, 0) rgb(0 0 0 / 0.75);
+}
+.cig-row:has(.cig-slot-picked:active) .cig-frame {
+  box-shadow: inset 0 0 0 var(--cig-frame-band, 0) #000000;
+}
+@media (prefers-reduced-motion: reduce) {
+  .cig-frame,
+  .cig-row:has(.cig-slot-picked:hover) .cig-frame,
+  .cig-row:has(.cig-slot-picked:active) .cig-frame { transition: none; }
 }
 
 /* ------------------------------------------------------------- logo menu --
@@ -3291,8 +3329,20 @@ button.shelf-wheel-btn:focus-visible,
   --text-top: calc(var(--editor-pad) + var(--card-caret-h)
                    - var(--type) * var(--editor-first));
   --send-w: calc(var(--card-caret-h) * var(--sigil-ratio));
-  /* one row, which is the height it has always had */
-  --h1: calc(var(--card-caret-h) + 2 * var(--editor-pad) + 2 * var(--editor-rule));
+  /* ONE MARGIN ABOVE THE INK AND ONE BELOW IT, the same margin, however
+     many rows there are (the owner's 2026-09-22: "make sure the margins on
+     top and bottom are the same each time a new line is typed using the top
+     as a model"). A ROW is the face's whole band, ascender to descender, so
+     `pad + rows * row + pad` is exactly that — where it used to be measured
+     to the last BASELINE, which let a descender eat 2.7px of the bottom
+     margin and made the foot read tighter than the head.
+
+     IT COSTS THE EARLIER "10px ON ALL EDGES": the vertical rule's foot IS
+     the first baseline, so the rule now stands 10 from the left and the top
+     and 12.7 from the bottom. The two asks cannot both hold — a margin
+     measured to the ink and a margin measured to the baseline differ by the
+     descent — and this is the later one. */
+  --h1: calc(2 * var(--editor-pad) + var(--row) + 2 * var(--editor-rule));
   --h: calc(var(--h1) + (var(--rows, 1) - 1) * var(--row));
 
   box-sizing: border-box;
@@ -3338,12 +3388,47 @@ button.shelf-wheel-btn:focus-visible,
 /* THE VERTICAL DASHED RULE, white and ten pixels inside the rectangle on the
    left, the top and the foot — which is what sets the rectangle's height.
    Same sprite and same scale as the square's, so the dashes match. */
+/* IT IS SOLID WHITE WHENEVER THE EDITOR IS OPEN (the owner's 2026-09-22:
+   "the dashed line in the text editor should be 100% opacity when the menu
+   is open at all times").
+
+   NOTHING WAS EVER SET BELOW FULL — the colour is `#ffffff` and the element
+   is at 1. WHAT IS FAINT IS THE RESAMPLING. Measured: the drawing itself is
+   crisp, its dash cores reading a flat 255 down the sprite with real gaps
+   between them (255 x6, then 0..43, then 255 x10 …) — but this mark is
+   **2 x 10 device pixels**, a 3.2:1 reduction of a 6 x 31 window, and a
+   browser's downscale of a 6-on/5-off pattern at that ratio has no output
+   row that lies wholly inside a dash. Rendered, the profile came out
+   135, 181, 81, 22, 157, 179, 179, 80, 13, 145: not one row solid, which
+   is precisely a grey dashed line.
+
+   SO THE ALPHA IS PUT BACK, with a transfer function rather than a redraw.
+   `slope 2.5, intercept -0.15` takes every dash row to a full 255, holds
+   the rows that straddle a dash and a gap at about 160, and takes the gaps
+   to 17 and 0 — so the mark goes solid and STAYS DASHED, with every dash
+   the length, the place and the wander it was drawn with. Compositing the
+   mask with itself was tried first and cannot get there: it is source-over,
+   so sixteen layers still only reach 88% and they lift the gaps as much as
+   the dashes.
+
+   THE FILTER IS ON THE ELEMENT AND THE MASK ON ITS `::before`, and that
+   order is the whole trick: a filter is applied BEFORE the mask, so
+   filtering a masked element does nothing at all to the mask's own alpha.
+   Masking the child and filtering the parent puts the transfer function
+   after the mask, where the softness is. */
 .shelf-comment-caret {
   position: absolute;
   left: var(--editor-pad);
   top: var(--editor-pad);
   width: var(--card-caret-w);
   height: var(--card-caret-h);
+  filter: url('#shelf-ink-solid');
+  pointer-events: none;
+}
+.shelf-comment-caret::before {
+  content: '';
+  position: absolute;
+  inset: 0;
   background: #ffffff;
   -webkit-mask-image: var(--card-caret-src);
           mask-image: var(--card-caret-src);
@@ -3353,7 +3438,6 @@ button.shelf-wheel-btn:focus-visible,
           mask-size: var(--card-caret-d) var(--card-caret-d);
   -webkit-mask-position: var(--card-caret-x) var(--card-caret-y);
           mask-position: var(--card-caret-x) var(--card-caret-y);
-  pointer-events: none;
 }
 /* THE PROMPT AND THE RUN ARE THE SAME LINE OF TYPE, SITTING ON THE RULE (the
    owner's "Make sure the typed text bottom edge is aligned with the bottom
@@ -3368,8 +3452,14 @@ button.shelf-wheel-btn:focus-visible,
   position: absolute;
   top: var(--text-top);
   left: var(--text-x);
-  /* the ☁ always has room to stand at the end of the run */
-  right: calc(var(--editor-pad) + var(--send-w));
+  /* THE RUN WRAPS ONE MARGIN SHORT OF THE RIGHT EDGE, which is the margin
+     it begins after on the left (the owner's 2026-09-22: "make sure the
+     margins before the typed text creates a new line is the same on both
+     sides using the left as a model"). It used to stop a margin AND a ☁
+     short, reserving the mark's own width on every row — which made the
+     right margin three times the left. The ☁ is clamped into the box
+     instead, as the search bar's is clamped to its line's end. */
+  right: var(--editor-pad);
   font-family: var(--font-typed);
   font-size: var(--type);
   font-weight: 700;
@@ -3402,7 +3492,15 @@ button.shelf-wheel-btn:focus-visible,
    makes a new row, and the rectangle is as tall as there are rows. It never
    scrolls and never shows a grip: it is exactly as tall as its own text. */
 .shelf-comment-field {
-  height: calc(var(--rows, 1) * var(--row));
+  /* ITS BOX SITS A SHADE ABOVE THE INK IT HOLDS, so its height has to carry
+     that shade or the last row's descender is clipped by the `overflow:
+     hidden` below. `--text-top` puts the box `(first - asc)` of a type size
+     above the band — 0.33px — which used to disappear into the slack the
+     old baseline-measured height left over; now that the box is sized to
+     the ink exactly, it is the one thing hanging out of it. Only the `y`
+     reaches that far, which is why it took a measurement to see. */
+  height: calc(var(--rows, 1) * var(--row)
+               + var(--type) * (var(--editor-first) - var(--editor-asc)));
   padding: 0;
   margin: 0;
   background: none;
@@ -3427,13 +3525,33 @@ button.shelf-wheel-btn:focus-visible,
   pointer-events: none;
 }
 .shelf-comment-tip { display: inline-block; width: 0; }
+/* the filter's definition: it draws nothing itself and must not be laid out */
+.shelf-comment-defs {
+  position: absolute;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
 /* THE ☁: the caret and the send in one mark. Its LEFT EDGE is the tip — the
    point the site's own cursor is hotspotted on — so that is what stands
    where the next letter will go. Solid at three quarters until the reader is
    in the field, then full and blinking on the site's one caret keyframe. */
 .shelf-comment-send {
   position: absolute;
-  left: calc(var(--text-x) + var(--caret-x, 0px));
+  /* It stands where the next letter goes, but never outside the box: on a
+     row filled right up to the wrap it is held one margin in from the
+     edge, over the last of the run, which is what the search bar's ☁ does
+     at the end of its line.
+
+     THE `max()` IS THE FLOOR AND IT IS NOT DECORATION. A pack is sized off
+     the viewport, so on a short window the clamp's own arm falls BELOW the
+     place the run starts — at a 640x360 landscape phone it lands at 10.5
+     against a text start of 21.9 — and the mark would be painted to the
+     LEFT of the first letter, across the dashed rule. `caret-x` is itself
+     never negative, so the run's start is the floor. */
+  left: max(var(--text-x),
+            min(calc(var(--text-x) + var(--caret-x, 0px)),
+                calc(100% - var(--editor-pad) - var(--send-w))));
   /* on the row it is standing at, with its foot on that row's baseline */
   top: calc(var(--editor-pad) + var(--caret-row, 0) * var(--row));
   width: var(--send-w);

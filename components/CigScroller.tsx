@@ -9,6 +9,8 @@ import {
   CIG_GAP,
   CIG_HEIGHT,
   CIG_OUTLINE,
+  cigFrameBand,
+  cigFrameRule,
   CIG_PACKS,
   CIG_RULE,
   PAINT_MS,
@@ -1417,7 +1419,9 @@ export function CigScroller({
           // drawn bigger, laid out the same — see cigZoom
           zoom: String(zoom),
           '--cig-rule': `${CIG_RULE.thickness}px`,
-          '--cig-red': CIG_OUTLINE.colour,
+          // the keyboard rules' own red, which used to be the frame's — see
+          // CIG_RULE, and the frame is a black 2px line now
+          '--cig-red': CIG_RULE.colour,
         } as React.CSSProperties
       }
       onPointerDown={onPointerDown}
@@ -1547,9 +1551,15 @@ export function CigScroller({
             top: `${(CIG_BAND_H - CIG_FRAME_H) / 2}px`,
             width: `${pick.w + CIG_OUTLINE.x * 2}px`,
             height: `${CIG_FRAME_H}px`,
-            borderWidth: `${CIG_OUTLINE.stroke}px`,
+            // THE LINE IS THE TRIANGLE'S BUTTONS' LINE AS THE EYE SEES IT,
+            // which means solving it: two of the menu's pixels expressed in
+            // the row's, since the row is zoomed and the buttons are not.
+            // See `cigFrameRule`. The band under it is the margin less the
+            // line, and the stylesheet draws it as an inset ring.
+            borderWidth: `${cigFrameRule(menu?.s ?? 1, zoom).toFixed(3)}px`,
             borderColor: CIG_OUTLINE.colour,
-          }}
+            '--cig-frame-band': `${cigFrameBand(menu?.s ?? 1, zoom).toFixed(3)}px`,
+          } as React.CSSProperties}
         />
       ) : null}
 
