@@ -5,7 +5,8 @@ import { savedPacks } from '@/lib/db';
 import { CIG_PACKS } from '@/lib/cigRow';
 import { signInGate } from '@/lib/siteUrl';
 import { ShelfPage } from '@/components/ShelfPage';
-import type { ShelfEntry } from '@/lib/shelfGrid';
+import { shelfWorth, type ShelfEntry } from '@/lib/shelfGrid';
+import cigtags from '@/lib/cigtags.json';
 
 export const metadata: Metadata = {
   // the root layout appends " · Far East"
@@ -35,5 +36,13 @@ export default async function ShelfRoute() {
     return pack ? [{ pack, amount: s.amount, unit: s.unit }] : [];
   });
 
-  return <ShelfPage entries={entries} />;
+  /*
+   * THE PRICE COMES OFF THE OWNER'S OWN CIGARETTE PAGES, by way of
+   * `cigtags.json` — the "price per pack" the tag menu filters by. Read here
+   * rather than in the component so the 247-pack table stays on the server.
+   */
+  const price = new Map(Object.entries(cigtags.tags).map(([id, t]) => [id, t.price] as const));
+  const worth = shelfWorth(entries, (id) => price.get(id) ?? 0);
+
+  return <ShelfPage entries={entries} worth={worth} />;
 }

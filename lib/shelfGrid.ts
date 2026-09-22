@@ -73,6 +73,12 @@ export const CARD = {
   /** the type in the amount box, as a fraction of the box's height */
   amountEm: 0.62,
   /**
+   * The number in the selector, sized to hold its widest value ("90") inside
+   * the square. The shelf's worth is a tenth larger than this — the owner's
+   * rule, so it is stated once and read twice.
+   */
+  countEm: 0.55,
+  /**
    * The comment bar's side margin — what the L of the phrase already stood
    * off the rectangle, and now also what the caret stands off it and what
    * separates the caret from the typed run. The phrase is sized to fit
@@ -162,6 +168,39 @@ export const GRID_HEADER = {
   /** below the divider, before the first row of packs */
   drop: 32,
 } as const;
+
+/**
+ * WHAT THE SHELF IS WORTH, and where the money comes from.
+ *
+ * This number was drawn from the first day and had NOTHING BEHIND IT for
+ * three redraws: `pack_favorites` keys on a pack id and `lib/cigs.json`
+ * carries no money, so the shelf could not be totalled and the route passed
+ * no `worth` at all.
+ *
+ * IT CAN BE TOTALLED FROM `cigtags.json`. That file is generated from the
+ * owner's own 235 cigarette pages and carries a PRICE PER PACK for every one
+ * of the 247 — the "$15 / $25 / $30" the tag menu filters by, read off the
+ * pages themselves rather than invented here. Multiply it by how many packs
+ * the reader says they have (`cardAmount`, which is the wheels' answer with
+ * a carton counted as ten) and sum.
+ *
+ * A PACK WITH NO AMOUNT SET IS WORTH NOTHING, which is the same answer its
+ * own number square gives: the shelf holds it, and the reader has not said
+ * they have any. So a shelf nobody has counted reads $0 — that is the data
+ * being honest, not the sum being broken.
+ *
+ * It is worked out on the SERVER so the 247-pack tag table never reaches
+ * this page's bundle; the row already carries it, but the shelf does not
+ * need to.
+ */
+export function shelfWorth(entries: ShelfEntry[], priceOf: (id: string) => number): string {
+  let total = 0;
+  for (const e of entries) {
+    const packs = cardAmount(e.amount, e.unit);
+    if (packs) total += packs * priceOf(e.pack.id);
+  }
+  return `$${total.toLocaleString('en-US')}`;
+}
 
 /** The words in the drawing's own comment bar, which is now a button. */
 export const CARD_COMMENT = 'Leave a comment <3';

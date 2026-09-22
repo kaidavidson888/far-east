@@ -1,6 +1,6 @@
 import { BOOKMARK } from '@/lib/cigPages';
 import {
-  CARD, CARD_CARET, GRID_HEADER, GRID_MARGIN, MENU_ZOOM_MAX,
+  CARD, CARD_CARET, GRID_MARGIN, MENU_ZOOM_MAX,
   PACK_RULE, type ShelfEntry,
 } from '@/lib/shelfGrid';
 import { ShelfMenu } from './ShelfMenu';
@@ -42,6 +42,10 @@ export function ShelfPage({ entries, worth }: { entries: ShelfEntry[]; worth?: s
       style={{
         '--shelf-margin': `${GRID_MARGIN}px`,
         '--card-rule': `${CARD.rule}px`,
+        // every control is the mountain button's size, and the worth is
+        // sized off the number one of them carries
+        '--btn': `${button}px`,
+        '--count-em': CARD.countEm,
         '--pack-rule': `${PACK_RULE}px`,
         // the dashed rule in the text editor's square: the margin it kept
         // off the left edge when this was a bar, and its own height
@@ -63,10 +67,21 @@ export function ShelfPage({ entries, worth }: { entries: ShelfEntry[]; worth?: s
           of the page, where this page's own margin is 24 */}
       <ShelfMenu />
 
-      <header className="shelf-head" style={{ paddingTop: GRID_HEADER.top }}>
-        {/* the shelf's worth, in the owner's face, white on the red ground */}
-        <p className="shelf-worth" style={{ fontSize: GRID_HEADER.priceH }}>{worth ?? ''}</p>
-      </header>
+      {/*
+        WHAT THE SHELF IS WORTH, in the empty half of the page beside the
+        wheel: equidistant from the page's top and bottom and from its left
+        edge and the pack outline's (the owner's 2026-09-21). The two marks
+        point in at the number and blink; the number does not.
+
+        THE ARROWS ARE NOT IN THE OWNER'S FACE — it carries letters, digits,
+        # and $ and nothing else — so they are set in the next family in the
+        stack, as the `<` of "Leave a comment <3" already is.
+      */}
+      <p className="shelf-worth">
+        <i className="shelf-worth-arrow" aria-hidden>&gt;</i>
+        <span>{worth ?? ''}</span>
+        <i className="shelf-worth-arrow" aria-hidden>&lt;</i>
+      </p>
 
       {entries.length === 0 ? (
         <p className="shelf-empty">

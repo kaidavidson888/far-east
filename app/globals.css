@@ -2788,22 +2788,46 @@ ul, ol { list-style: none; }
   font-family: var(--font-typed);
   font-synthesis: none;
 }
-.shelf-head {
-  position: absolute;
-  top: 0;
-  right: var(--shelf-margin);
-  padding-top: var(--shelf-margin);
-  z-index: 2;
-}
-/* white on the red ground, like every other mark on the page */
+/* WHAT THE SHELF IS WORTH, in the empty half of the page beside the wheel
+   (the owner's 2026-09-21: "put it equidistant from top and bottom edge of
+   page and left edge of page and left edge of cig image outline").
+
+   So it is centred on the page's own middle line, and centred again between
+   the page's left edge and the pack outline's — which is `50% - half the
+   pack - the rule`, halved. `--wheel-width` is published up here by the
+   wheel, which is the only thing that knows how wide a pack came out; the
+   row does the same for the mountain button's zoom.
+
+   A TENTH LARGER THAN THE NUMBER IN THE SELECTOR, which is the owner's
+   rule and is why `--count-em` is a name rather than a literal. */
 .shelf-worth {
+  position: absolute;
+  top: 50%;
+  left: calc((50% - var(--wheel-width, 0px) / 2 - var(--pack-rule)) / 2);
+  transform: translate(-50%, -50%);
   margin: 0;
-  color: #ffffff;
+  display: flex;
+  align-items: baseline;
+  gap: 0.35em;
+  color: #ff0000;
   font-weight: 700;
   line-height: 1;
   letter-spacing: 0.01em;
+  white-space: nowrap;
+  font-size: calc(var(--btn) * var(--count-em) * 1.1);
   /* the face has one weight, so bold is a stroke — the age gate's trick */
-  -webkit-text-stroke: 0.03em #ffffff;
+  -webkit-text-stroke: 0.03em #ff0000;
+  z-index: 2;
+}
+/* THE TWO MARKS POINT IN AT THE NUMBER AND BLINK; the number does not.
+   `cig-search-blink` is the site's one caret keyframe — steps(1), a hard
+   on-off rather than a pulse — and it is reused rather than rewritten. */
+.shelf-worth-arrow {
+  font-style: normal;
+  animation: cig-search-blink 1060ms steps(1, end) infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .shelf-worth-arrow { animation: none; }
 }
 .shelf-empty {
   position: absolute;
@@ -2996,7 +3020,7 @@ button.shelf-wheel-btn:focus-visible,
 .shelf-wheel-mark:not([data-saved]) svg { opacity: 0.35; }
 .shelf-clouds svg { display: block; width: 100%; height: 100%; }
 /* the count: sized to hold its widest value, "90", inside the square */
-.shelf-wheel-count { font-size: calc(var(--btn) * 0.55); }
+.shelf-wheel-count { font-size: calc(var(--btn) * var(--count-em)); }
 
 /* THE TEXT EDITOR IS A SQUARE BUTTON that will open a larger editor — the
    owner's next piece of work. For now it carries the login box's own dashed

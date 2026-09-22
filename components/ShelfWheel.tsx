@@ -179,6 +179,19 @@ export function ShelfWheel({ entries, bookmark, button }: Props) {
   const planRef = useRef(plan);
   planRef.current = plan;
 
+  /*
+   * THE PACK'S WIDTH IS PUBLISHED UP TO THE PAGE, because the wheel is the
+   * only thing that knows it — a pack is sized from the viewport and its own
+   * artwork — and the shelf's worth is placed against the pack outline's
+   * left edge while living outside the wheel. `CigScroller` hands the
+   * mountain button's zoom to its own stage the same way, for the same
+   * reason: a sibling needs a number only this component can work out.
+   */
+  useEffect(() => {
+    const up = stageRef.current?.parentElement;
+    if (up) up.style.setProperty('--wheel-width', `${plan.width}px`);
+  }, [plan.width]);
+
   /**
    * KEEP THE OFFSET INSIDE ONE LAP.
    *
