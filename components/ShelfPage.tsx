@@ -51,6 +51,10 @@ export function ShelfPage({ entries, worth }: { entries: ShelfEntry[]; worth?: s
         '--card-caret-w': `calc(var(--card-caret-h) * ${CARD_CARET.aspect})`,
         '--card-caret-x': `calc(var(--card-caret-d) * ${-CARD_CARET.x0})`,
         '--card-caret-y': `calc(var(--card-caret-d) * ${-CARD_CARET.y0})`,
+        // the line under it, off the same sprite at the same scale
+        '--card-rule-h': `calc(var(--card-caret-d) * ${CARD_CARET.hh})`,
+        '--card-rule-x': `calc(var(--card-caret-d) * ${-CARD_CARET.hx0})`,
+        '--card-rule-y': `calc(var(--card-caret-d) * ${-CARD_CARET.hy0})`,
         '--card-caret-src': `url(${CARD_CARET.src})`,
       } as React.CSSProperties}
     >

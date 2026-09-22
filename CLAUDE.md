@@ -2429,6 +2429,34 @@ real and is stated in the file: the two ticks are two places now.**
     because a notch's seek lands in one tick — so a notch used to be an
     eighth of a second of nothing and then the whole move, with the controls
     away for 250ms of it.
+- **THE OFF-CENTRE PACKS ARE DRAWN HALF SIZE, WITH A QUARTER SHOWING** (the
+  owner's "scale the bottom and top packs down so only 1/4 of them is
+  visible while the middle one remains the same"). **The two halves of that
+  ask pull against each other and it is worth knowing why**: with the gap
+  where it was, a QUARTER-reveal needs the neighbours BIGGER, not smaller —
+  what is on screen below the middle pack is fixed, so filling it with a
+  quarter of something makes that something four times it. Showing LESS of a
+  pack means moving it further away. Asked, the owner chose half-size
+  neighbours, so `WHEEL_FAR_SCALE` is 0.5 and the step solves to
+  `H/2 + k.P/4` — which puts the wheel back on a UNIFORM pitch and so puts
+  the settle, the arrow keys and the seek back on one number. The scale is
+  smooth in the distance from the middle, so a pack grows into the centre
+  rather than popping. Measured over four stops: 22.4% to 23.8%, against 25%
+  for a pack of the mean height.
+- **A PRESS MEANT FOR A CONTROL IS NOT A PRESS ON THE WHEEL**, and taking it
+  as one CLOSED THE QUANTITY MENU THE MOMENT IT OPENED — the menu's trigger
+  cancels its own pointerdown, but the press also reached the stage, and the
+  matching pointerup ran `endDrag` -> `run()` -> `setResting(false)`, which
+  unmounts the controls, and the menu is one of them. `e.defaultPrevented`
+  on the way in, and `endDrag` returns without running the tick for a press
+  that never became a drag.
+- **THE TEXT EDITOR'S SQUARE CARRIES BOTH MARKS OF A LOGIN ROW**: the
+  vertical dashed rule at the margin it kept when this was a bar, and the
+  horizontal one the typed letters sit on, which keeps that same margin off
+  the box on the left, the right and the foot. Same sprite, same scale, so
+  the dashes match. Measured: 7.08 left, 7.07 right.
+- **A PACK WITH NO AMOUNT SET READS 0**, not an empty box: the shelf holds
+  it, so the honest answer to "how many" is none rather than nothing.
 - **THE CONTROLS HANG OFF THE PACK, NOT THE SLOT** (`.shelf-wheel-stand`). A
   slot is the full width of the page — it has to be, to centre a pack of any
   width — so a control placed at its 100% lands at the page's edge. The number

@@ -5,7 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { cigPaintMs } from '@/lib/cigRow';
 import { PACK_RULE, type ShelfEntry } from '@/lib/shelfGrid';
 import {
-  WHEEL_MARGIN, WHEEL_MOTION, wheelCopies, wheelGap, wheelLayout, wheelWidth,
+  WHEEL_MARGIN, WHEEL_MOTION, wheelCopies, wheelGap, wheelLayout, wheelScaleAt, wheelWidth,
 } from '@/lib/shelfWheel';
 import { ShelfWheelControls } from './ShelfWheelControls';
 
@@ -47,8 +47,11 @@ type Props = {
   button: number;
 };
 
-/** One drawing of one pack: which entry, and where its MIDDLE is on screen. */
-type Slot = { key: string; i: number; mid: number; h: number };
+/**
+ * One drawing of one pack: which entry, where its MIDDLE is on screen, and
+ * how big it is drawn — full in the middle, half a step out.
+ */
+type Slot = { key: string; i: number; mid: number; h: number; s: number };
 
 /**
  * HOW MUCH WHEEL TRAVEL MOVES THE SELECTION BY ONE, in normalised pixels.
@@ -108,7 +111,7 @@ export function ShelfWheel({ entries, bookmark, button }: Props) {
     const W = size.w || 800;
     const ratios = entries.map((e) => e.pack.h / e.pack.w);
     const width = wheelWidth(H, W, button, ratios);
-    const one = wheelLayout(ratios, width, button);
+    const one = wheelLayout(ratios, width, H);
     const reps = wheelCopies(one.total, H);
     // the repeats are laid out as one long list, so a lap is longer than the
     // screen and no pack is ever drawn twice at once
@@ -120,7 +123,7 @@ export function ShelfWheel({ entries, bookmark, button }: Props) {
         height.push(one.height[i]);
       }
     }
-    return { width, pos, height, lap: one.total * reps };
+    return { width, pos, height, step: one.step, lap: one.total * reps };
   }, [entries, n, size.h, size.w, button]);
 
   /** Where the wheel is. Pure — no DOM, no state. */
@@ -137,11 +140,14 @@ export function ShelfWheel({ entries, bookmark, button }: Props) {
     for (let l = -1; l <= laps; l += 1) {
       for (let k = 0; k < pos.length; k += 1) {
         const c = mid + (pos[k] + l * lap - off);
-        const h = height[k];
+        // FULL IN THE MIDDLE, HALF A STEP OUT, and smoothly between — so a
+        // pack grows into the middle as the wheel turns rather than popping
+        const s = wheelScaleAt((c - mid) / plan.step);
+        const h = height[k] * s;
         if (c - h / 2 > H + WHEEL_MOTION.pad) break;
         if (c + h / 2 < -WHEEL_MOTION.pad) continue;
         const i = k % n;
-        out.push({ key: `${l}:${k}`, i, mid: c, h });
+        out.push({ key: `${l}:${k}`, i, mid: c, h, s });
         const d = Math.abs(c - mid);
         if (d < best) { best = d; near = i; }
       }
@@ -391,6 +397,14 @@ export function ShelfWheel({ entries, bookmark, button }: Props) {
   // ---- the drag -----------------------------------------------------------
   const endDrag = useCallback(() => {
     if (!draggingRef.current && !pressRef.current) return;
+    // A PRESS THAT NEVER BECAME A DRAG HAS NOTHING TO HAND BACK TO. Running
+    // the tick for it takes the controls away and brings them back for
+    // nothing, which flickers them on every click.
+    if (!draggingRef.current) {
+      pressRef.current = null;
+      trailRef.current = [];
+      return;
+    }
     const trail = trailRef.current;
     const now = performance.now();
     const old = trail.find((s) => now - s.t <= WHEEL_MOTION.flingWindowMs) ?? trail[0];
@@ -423,6 +437,16 @@ export function ShelfWheel({ entries, bookmark, button }: Props) {
 
   const onPointerDown = (e: React.PointerEvent) => {
     if (!n || e.button !== 0) return;
+    /*
+     * A PRESS MEANT FOR A CONTROL IS NOT A PRESS ON THE WHEEL, and taking it
+     * as one CLOSED THE QUANTITY MENU THE MOMENT IT OPENED. The menu's
+     * trigger sits inside the selected slot and cancels its own pointerdown;
+     * without this the press also reached the wheel, and the matching
+     * pointerup ran `endDrag` -> `run()` -> `setResting(false)`, which
+     * unmounts the controls — and the menu is one of them. So the reader
+     * pressed the number and nothing appeared.
+     */
+    if (e.defaultPrevented) return;
     stop();
     // A HAND ON THE WHEEL OUTRANKS ANYTHING THE WHEEL WAS DOING. The seek a
     // notch left in flight has to go, or the drag's anchor is taken from an
@@ -523,7 +547,7 @@ export function ShelfWheel({ entries, bookmark, button }: Props) {
           <div
             className="shelf-wheel-slot"
             key={s.key}
-            style={{ top: `${s.mid}px` }}
+            style={{ top: `${s.mid}px`, '--slot-scale': s.s } as React.CSSProperties}
             data-picked={mine ? '' : undefined}
             aria-hidden={mine ? undefined : true}
           >

@@ -2865,7 +2865,11 @@ ul, ol { list-style: none; }
      This is the opposite of the landing row and of the grid that stood here,
      which both stand them at one HEIGHT — and it is what makes the wheel
      carry an array of positions rather than one pitch. */
-  width: var(--wheel-width);
+  /* AND THE OFF-CENTRE ONES ARE DRAWN SMALLER (the owner's 2026-09-21): the
+     slot carries its own scale, full in the middle and half a step out, so
+     only a quarter of a neighbour peeks in. The rule round it stays 5px —
+     that is a line weight the owner set, not part of the picture. */
+  width: calc(var(--wheel-width) * var(--slot-scale, 1));
   height: auto;
   max-width: none;
   pointer-events: none;
@@ -2989,6 +2993,27 @@ button.shelf-wheel-btn:focus-visible,
           mask-size: var(--card-caret-d) var(--card-caret-d);
   -webkit-mask-position: var(--card-caret-x) var(--card-caret-y);
           mask-position: var(--card-caret-x) var(--card-caret-y);
+  pointer-events: none;
+}
+/* THE LINE THE LETTERS SIT ON, the other half of a login row. It keeps the
+   same margin off the box on the LEFT AND THE RIGHT as the vertical rule
+   keeps on the left, and the same off the foot — one margin all round the
+   two marks. Same sprite, same scale, so the dashes match. */
+.shelf-wheel-underline {
+  position: absolute;
+  left: var(--card-comment-pad);
+  right: var(--card-comment-pad);
+  bottom: var(--card-comment-pad);
+  height: var(--card-rule-h);
+  background: #ff0000;
+  -webkit-mask-image: var(--card-caret-src);
+          mask-image: var(--card-caret-src);
+  -webkit-mask-repeat: no-repeat;
+          mask-repeat: no-repeat;
+  -webkit-mask-size: var(--card-caret-d) var(--card-caret-d);
+          mask-size: var(--card-caret-d) var(--card-caret-d);
+  -webkit-mask-position: var(--card-rule-x) var(--card-rule-y);
+          mask-position: var(--card-rule-x) var(--card-rule-y);
   pointer-events: none;
 }
 

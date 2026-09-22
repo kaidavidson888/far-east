@@ -79,25 +79,46 @@ export function wheelWidth(
 }
 
 /**
- * Where each pack sits on the wheel, and how long one lap is.
+ * HOW FAR APART THE PACKS STAND, AND HOW SMALL THE OFF-CENTRE ONES ARE
+ * (the owner's 2026-09-21 "scale the bottom and top packs down so only 1/4
+ * of them is visible while the middle one remains the same").
  *
- * `pos` is the middle of each pack's IMAGE along the wheel — what the settle
- * aims at and what the page puts on the screen's middle. Consecutive image
- * boxes stand `2r + G` apart: the two rules, which are drawn outside their
- * pictures, and the gap.
+ * THE TWO HALVES OF THAT ASK PULL AGAINST EACH OTHER, and it is worth
+ * knowing why. With the gap where it was, a QUARTER-reveal needs the
+ * neighbours BIGGER, not smaller: what is on screen below the middle pack is
+ * fixed, so filling it with a quarter of something means that something is
+ * four times it. Showing less of a pack means moving it further away. Asked,
+ * the owner chose half-size neighbours — so they are drawn at
+ * `WHEEL_FAR_SCALE` and stand far enough out that a quarter of THAT peeks.
+ *
+ * Solve it for a pack of the shelf's mean height P:
+ *
+ *   the neighbour's middle sits at   H/2 + step
+ *   it is drawn k.P tall, so its top is   H/2 + step - k.P/2
+ *   visible = H - that = H/2 - step + k.P/2, and we want that to be k.P/4
+ *
+ *      =>  step = H/2 + k.P/4
+ *
+ * so the step is one number for the whole wheel again — which also puts the
+ * settle, the arrow keys and the seek back on a uniform pitch.
+ *
+ * THE MIDDLE PACK IS UNTOUCHED: `wheelWidth` is unchanged, so it is drawn
+ * exactly as it was, and only its neighbours shrink.
  */
-export function wheelLayout(ratios: number[], width: number, button: number) {
-  const step = 2 * PACK_RULE + wheelGap(button);
-  const pos: number[] = [];
-  const height: number[] = [];
-  let y = 0;
-  for (const r of ratios) {
-    const h = width * r;
-    height.push(h);
-    pos.push(y + h / 2);
-    y += h + step;
-  }
-  return { pos, height, total: y };
+export const WHEEL_FAR_SCALE = 0.5;
+
+/** How much of its full size a pack `d` steps from the middle is drawn at. */
+export function wheelScaleAt(d: number): number {
+  // smooth, so a pack does not pop between sizes as the wheel turns
+  return 1 - (1 - WHEEL_FAR_SCALE) * Math.min(1, Math.abs(d));
+}
+
+export function wheelLayout(ratios: number[], width: number, viewportH: number) {
+  const height = ratios.map((r) => width * r);
+  const mean = height.reduce((s, h) => s + h, 0) / (height.length || 1);
+  const step = viewportH / 2 + (WHEEL_FAR_SCALE * mean) / 4;
+  const pos = height.map((_, i) => i * step);
+  return { pos, height, step, total: step * height.length };
 }
 
 /**

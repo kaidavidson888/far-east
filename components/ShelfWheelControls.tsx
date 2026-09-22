@@ -127,16 +127,23 @@ export function ShelfWheelControls({
           className="shelf-wheel-btn shelf-wheel-note"
           aria-label={`Leave a comment on ${pack.name}`}
         >
-          {/* the login box's own dashed rule, kept where it stood relative to
-              the left edge when this was a bar */}
+          {/* THE TWO MARKS THAT MAKE A ROW OF THE LOGIN BOX: its vertical
+              dashed rule, kept where it stood relative to the left edge when
+              this was a bar, and the horizontal one the typed letters sit
+              on — the same margin off the box on the left and the right as
+              the vertical keeps on the left. */}
           <i className="shelf-wheel-caret" aria-hidden />
+          <i className="shelf-wheel-underline" aria-hidden />
         </button>
       </div>
 
       {/* the number, centred on the pack, one margin off its right edge */}
       <div className="shelf-wheel-amount" style={{ '--btn': `${button}px` } as React.CSSProperties}>
         <span ref={countRef} className="shelf-wheel-btn shelf-wheel-count">
-          <span aria-hidden>{says ?? ''}</span>
+          {/* A PACK WITH NO AMOUNT SET READS 0 (the owner's 2026-09-21), not
+              an empty box: the shelf holds it, so the honest answer to "how
+              many" is none rather than nothing. */}
+          <span aria-hidden>{says ?? 0}</span>
           <span className="sr-only">
             {has ? `${pack.name}: ${has}, ${says} in packs` : `${pack.name}: no amount set`}
           </span>

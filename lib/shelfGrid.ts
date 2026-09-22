@@ -227,6 +227,19 @@ export const CARD_CARET = {
   h: RULE.dY0 - RULE.y0,
   /** a caret H tall is this much across, which is the mark's drawn shape */
   aspect: (RULE.ruleX1 - RULE.x0) / (RULE.dY0 - RULE.y0),
+  /**
+   * THE LINE UNDER IT, from the same drawing (the owner's 2026-09-21 "add a
+   * bottom dashed line that has the same margins on its left and right side
+   * with the outline box as the vertical one"). It is the login row's own
+   * horizontal dash band — the line the typed letters sit on — so the two
+   * marks in this little box are the two marks that make a row of the login
+   * box, at the same scale and from the same hand.
+   */
+  hx0: RULE.textX0,
+  hy0: RULE.dY0,
+  hh: RULE.dY1 - RULE.dY0,
+  /** how much of the band's length there is to draw from */
+  hw: RULE.dashX1 - RULE.textX0,
   /** the sprite, versioned — a rebuild rewrites the file in place */
   src: splashAsset('blackbox.webp'),
   /**
