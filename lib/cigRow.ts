@@ -44,6 +44,32 @@ export const CIG_HEIGHT = drawnHeight;
 /** Between one pack and the next. Measured: 25, 25, 28, 27. */
 export const CIG_GAP = 26;
 
+/*
+ * THE PITCH FIGURES, up here because `cigLayout` defaults to the mean one
+ * and `CIG_SPIN_LAP` calls that at module scope — declared any further down
+ * and the module throws on import. What they are FOR is the five-pack rule;
+ * that note is with `cigZoom`.
+ */
+/** The widest pack there is, which is what a pitch may not fall below. */
+export const CIG_MAX_W = CIG_PACKS.reduce((m, p) => Math.max(m, p.w), 0);
+/** The drawing's own mean pitch: its mean width plus its gap. */
+export const CIG_MEAN_PITCH = +(
+  CIG_PACKS.reduce((s, p) => s + p.w, 0) / CIG_PACKS.length + CIG_GAP
+).toFixed(3);
+/**
+ * The narrowest pitch there can be: the widest pack, so that no slot is ever
+ * narrower than the pack standing in it.
+ *
+ * IT IS NOT `CIG_MAX_W + CIG_GAP`, which is what it was for an hour. Adding
+ * the drawing's air on top guarantees 26px between even the two widest packs
+ * — and costs the owner's height rule on every ordinary laptop: at 1366x768
+ * it capped the zoom at 2.549 and drew the pack 234.5 tall where a third of
+ * the window is 256, measured. The floor now binds only below about a 1.57:1
+ * window, and at the floor itself only two 108-wide packs standing next to
+ * each other would actually touch; every narrower pack still carries air.
+ */
+export const CIG_MIN_PITCH = CIG_MAX_W;
+
 /**
  * The selection frame, as a margin around whichever pack it holds.
  *
@@ -120,14 +146,24 @@ export const CIG_BAND_H = CIG_FRAME_H + (CIG_RULE.gap + CIG_RULE.thickness) * 2;
 /** Where each pack starts, and how long one lap is. */
 export type CigLayout = { left: number[]; total: number };
 
-export function cigLayout(list: CigPack[] = CIG_PACKS): CigLayout {
-  const left: number[] = [];
-  let x = 0;
-  for (const p of list) {
-    left.push(x);
-    x += p.w + CIG_GAP;
-  }
-  return { left, total: x };
+/**
+ * EVERY PACK SITS IN THE MIDDLE OF A SLOT ONE PITCH WIDE — so the centres
+ * are equally spaced whatever the packs' own widths, which is what makes
+ * "half of the first and the fifth" exact rather than average (see the
+ * five-pack note further down). It used to walk left to right adding
+ * `w + CIG_GAP`, which spaced the EDGES evenly and let the pitch wander
+ * with each pack's width.
+ *
+ * The pitch is solved from the window (`cigPitch`), so the layout has to be
+ * handed one; it defaults to the drawing's own mean, which is what the
+ * module-level `CIG_SPIN_LAP` below is measured with.
+ */
+export function cigLayout(
+  list: CigPack[] = CIG_PACKS,
+  pitch: number = CIG_MEAN_PITCH,
+): CigLayout {
+  const left = list.map((p, i) => i * pitch + (pitch - p.w) / 2);
+  return { left, total: pitch * list.length };
 }
 
 /** 125ms — the source animation's frame time. */
@@ -294,6 +330,19 @@ export const CIG_SPIN_SPEED = 10290;
  * means one cycle of the whole catalogue, so it is the full lap rather than a
  * screenful.
  */
+/*
+ * IT IS STILL WHAT THE SPIN COUNTS, and that survived an attempt to make
+ * it cleverer. Now that the pitch is solved from the window, the row's REAL
+ * lap changes with the viewport and with whatever list is on the row — so
+ * reading it live looks more honest and is wrong twice over: after a shelf
+ * of six packs is swapped in, "one lap" is 839px and the first tick has
+ * already overshot it, collapsing reset's roulette wheel to a single frame;
+ * and for the catalogue it stretches an unskippable lock from two seconds
+ * to nearly six on a wide short window. This constant is the lap AT THE
+ * DRAWING'S OWN GAP, which is the distance `CIG_SPIN_SPEED` below was
+ * picked against to give exactly 2.0s — and what hides the swap is the
+ * speed, not landing on a lap boundary.
+ */
 export const CIG_SPIN_LAP = cigLayout().total;
 
 /**
@@ -384,12 +433,83 @@ export const CIG_SPIN_CATCH = ((CIG_SPIN_SPEED - CIG_FLING_MAX) / CATCH_MS) * 10
  * height, stays clear of what the page draws above it.
  */
 export const CIG_VISIBLE_MAX = 7;
-export const CIG_MEAN_PITCH = CIG_SPIN_LAP / CIG_PACKS.length;
-export function cigZoom(screenW: number, screenH: number, clearAbove: number): number {
-  const byWidth = screenW / (CIG_VISIBLE_MAX * CIG_MEAN_PITCH);
-  const roomAbove = screenH / 2 - clearAbove;
-  const byHeight = (roomAbove * 2) / CIG_BAND_H;
-  return +Math.max(1, Math.min(byWidth, byHeight)).toFixed(3);
+
+/* ---------------------------------------------------------------------------
+ * SINCE 2026-09-22: FIVE PACKS, A THIRD OF THE WINDOW TALL, WITH THE FIRST
+ * AND THE FIFTH HALVED (the owner: "please space the packs so that only 5
+ * are on the screen at a time on the landing page and make the 5 equidistant
+ * with only half of the 5th and 1st showing make the pack height 1/3 of the
+ * total window"). It was seven packs and a zoom set by the screen's width.
+ *
+ * THE HEIGHT SETS THE ZOOM AND THE GAP TAKES UP THE SLACK, which is the only
+ * way both halves of the ask can hold: a pack's WIDTH follows from its
+ * height (the marks are drawn 92 tall and 40..108 wide), so once the height
+ * is a third of the window there is nothing left to scale, and what has to
+ * give is the space between them.
+ *
+ * HALF OF THE FIRST AND THE FIFTH SHOWING IS WHAT FIXES THE PITCH. A pack is
+ * half revealed when the screen's edge passes through its middle — so the
+ * first pack's centre is on the left edge, the fifth's on the right, and the
+ * four pitches between them span the screen exactly. Hence `screenW / 4`.
+ *
+ * "EQUIDISTANT" IS EQUAL CENTRES — A CONSTANT PITCH — NOT EQUAL GAPS, and
+ * that is what makes the halves exact. These packs are not one width (40 to
+ * 108), so the two readings part company: with the drawing's constant GAP
+ * the pitch follows each pack's own width, and five of them span whatever
+ * they happen to add up to. Built that way first and measured at 1920x947,
+ * the end packs showed 64% and 75% of themselves instead of half, because
+ * that run of five averaged 52.4 where the catalogue averages 57.1.
+ *
+ * A constant pitch is also what the SHELF's wheel does, and the owner drove
+ * it there for this same arrangement: one `step`, positions `i * step`,
+ * every neighbour exactly half revealed. The cost here is the mirror of the
+ * shelf's — the gaps now vary, so a narrow pack carries more air either
+ * side than a wide one — and that is the lesser of the two, because the gap
+ * is the thing nobody measures and the halves are the thing the owner
+ * asked for.
+ */
+
+/** How many packs are on screen at once, the outermost two halved. */
+export const CIG_VISIBLE = 5;
+/** The pack's height as a share of the window. */
+export const CIG_HEIGHT_SHARE = 1 / 3;
+/* The three pitch figures this rule needs are declared up beside CIG_GAP —
+   `cigLayout` takes CIG_MEAN_PITCH as its default and CIG_SPIN_LAP calls it
+   at module scope, so declaring them here would be a temporal dead zone and
+   the whole row would throw on import. */
+
+/**
+ * THE ZOOM IS THE HEIGHT RULE, held to the widest at which five still fit
+ * with the drawing's own gap between them. On an ordinary desktop the height
+ * binds and the gap opens up; on a window too narrow to hold five packs that
+ * tall, the WIDTH binds instead and the packs come down in size — because
+ * "only 5 on the screen" is the thing the sentence starts with, and five
+ * shorter packs is a smaller departure than a sixth arriving.
+ *
+ * THE CLEARANCE CAP IS GONE. The zoom used to be held so the band stayed
+ * clear of the label column above it — but those three labels moved into the
+ * logo menu on 2026-09-16 and that space has been empty ever since, so the
+ * cap was protecting nothing and would have bitten on every window under
+ * about 828px tall, i.e. most laptops, keeping the pack off the third of the
+ * window it is now asked to be. The menu still draws OVER the row where the
+ * two meet, which is the arrangement `LANDING_ROW_CLEAR`'s own note already
+ * describes.
+ */
+export function cigZoom(screenW: number, screenH: number): number {
+  const byHeight = (screenH * CIG_HEIGHT_SHARE) / CIG_HEIGHT;
+  const byWidth = screenW / ((CIG_VISIBLE - 1) * CIG_MIN_PITCH);
+  return +Math.max(0.5, Math.min(byHeight, byWidth)).toFixed(3);
+}
+
+/**
+ * ONE PACK TO THE NEXT, CENTRE TO CENTRE, in row px: a quarter of the
+ * screen, which is what puts the first pack's middle on the left edge and
+ * the fifth's on the right. Never less than the widest pack plus the
+ * drawing's own gap — and at that point the zoom above has already stopped
+ * growing, so the two agree rather than fighting.
+ */
+export function cigPitch(screenW: number, zoom: number): number {
+  return +Math.max(CIG_MIN_PITCH, screenW / zoom / (CIG_VISIBLE - 1)).toFixed(3);
 }
 
 /**

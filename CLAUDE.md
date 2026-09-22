@@ -832,14 +832,105 @@ maintaining everything else the same … just big enough where only 7 packs at
 max are visible on screen at a time"). A CSS `zoom` on `.cig-row`, as the
 shelf's rows are zoomed — the layout, the physics and the paint all still
 work in row px; the row is simply rendered larger, the same motion at the same
-pace. The zoom is the screen's width over seven mean pitches of the catalogue
-(lap ÷ pack count, ~88px): about 1.6 at 961 wide, 2.1 at 1280, never below 1
-(a phone already shows fewer than seven), and capped so the band — centred on
-the screen's height — stays clear of the label column above it
-(`LANDING_ROW_CLEAR`). Pointer and wheel movement come in screen px and are
+pace. Pointer and wheel movement come in screen px and are
 divided by the zoom, so a drag keeps the packs under the hand one for one; the
 reset button reads the zoomed band height (`--cig-band`) so it keeps its 8px
 under the row. `clientWidth` on the zoomed row is in row px already.
+
+**SINCE 2026-09-22 IT IS FIVE PACKS, A THIRD OF THE WINDOW TALL, WITH THE
+FIRST AND FIFTH HALVED** (the owner: "please space the packs so that only 5
+are on the screen at a time on the landing page and make the 5 equidistant
+with only half of the 5th and 1st showing make the pack height 1/3 of the
+total window"). It was seven packs and a zoom set by the screen's WIDTH —
+the 2026-09-14 ask above, which this supersedes.
+- **THE HEIGHT SETS THE ZOOM AND THE PITCH TAKES UP THE SLACK**, which is the
+  only way both halves of the ask can hold: a pack's width follows from its
+  height (drawn 92 tall, 40..108 wide), so once the height is a third of the
+  window there is nothing left to scale and what has to give is the space
+  between them. Measured at 1920x947: the pack 315.6 tall against H/3 =
+  315.7, and exactly five on screen.
+- **HALF OF THE FIRST AND FIFTH SHOWING IS WHAT FIXES THE PITCH.** A pack is
+  half revealed when the screen's edge passes through its middle, so the
+  first pack's centre is on the left edge and the fifth's on the right, and
+  the four pitches between them span the screen exactly: `screenW / 4`.
+- **"EQUIDISTANT" IS EQUAL CENTRES, NOT EQUAL GAPS, and the difference is
+  visible.** These packs are not one width, so the two readings part
+  company. Built with the drawing's constant GAP first — `left[i]` walking
+  left to right adding `p.w + CIG_GAP`, which is what the row had always
+  done — and measured at 1920x947, the end packs showed **64% and 75% of
+  themselves instead of half**, because that particular run of five averaged
+  52.4 where the catalogue averages 57.1. A CONSTANT PITCH makes it exact
+  for every pack: `left[i] = i*pitch + (pitch - p.w)/2`, every pack centred
+  in a slot one pitch wide. Measured after: centres at -1.7, 480.3, 960.7,
+  1441, 1919.6 against an ideal 480, and the ends 49.1% and 50.2%.
+  - **The SHELF's wheel is the precedent** — one `step`, positions
+    `i * step` — and the owner drove it there for this same arrangement.
+  - **The cost is the mirror of the shelf's**: the gaps now VARY, so a
+    narrow pack carries more air either side than a wide one. That is the
+    lesser of the two, the gap being the thing nobody measures.
+- **`CIG_MIN_PITCH` IS THE FLOOR AND IT IS THE WIDEST PACK PLUS THE
+  DRAWING'S GAP.** Below it the slots would be narrower than the packs in
+  them and wide packs would overlap. Where the window is too narrow to hold
+  five packs a third of it tall, `cigZoom` stops at that pitch and the PACKS
+  come down in size instead — "only 5 on the screen" is what the sentence
+  starts with, and five shorter packs is a smaller departure than a sixth
+  arriving. On a 390x844 phone the width binds and the zoom is 1.17.
+- **THE CLEARANCE CAP IS GONE, deliberately.** The zoom used to be held so
+  the band stayed clear of the label column above it — but those three
+  labels moved into the logo menu on 2026-09-16 and the space has been empty
+  since, so the cap was protecting nothing and would have bitten on every
+  window under about 828px tall, i.e. most laptops, keeping the pack off the
+  third of the window it is now asked to be. `LANDING_ROW_CLEAR` is no
+  longer read by the row. The menu still draws OVER the row where the two
+  meet, which its own note already describes.
+- **A TDZ TRAP, HIT AND FIXED: `cigLayout` DEFAULTS TO `CIG_MEAN_PITCH` AND
+  `CIG_SPIN_LAP` CALLS IT AT MODULE SCOPE.** Declared beside the five-pack
+  note where they belong, the three pitch constants sat 130 lines BELOW that
+  call and the whole module threw on import — the landing page, the
+  cigarette pages, everything. They are up beside `CIG_GAP` for that reason
+  and nothing else; a default parameter is evaluated at call time, and one
+  of those calls is at import.
+- **What moved in the component:** `pitchRef` replaces the `CIG_GAP`
+  constant and is recomputed in `measure()` right after the zoom and before
+  the width and `offFramed`, so the three stay in step; `stepBy` is ONE
+  NUMBER in both directions now (it used to need the left pack of the pair,
+  since the old pitch was that pack's width plus the gap); `layoutMenu`'s
+  `prevRight`/`nextLeft` are `Wc/2 -/+ (pitch - neighbourW/2) * z`, the
+  NEIGHBOUR's width rather than the framed pack's; and the first paint
+  centres pack 0 at `pitch/2 - width/2`. Verified: the frame lands on the
+  picked pack to 0.02px at load, after a wheel throw and after an arrow
+  key, and the glass and the dots still sit centred between their
+  neighbours to 2.2px.
+- **THE OFFSET MUST BE RESCALED WHEN THE PITCH MOVES, and forgetting it is
+  the trap this change sets for the next person.** `offsetRef` is an
+  absolute distance along a lap, read modulo that lap — so once the pitch
+  is a function of the WINDOW, the very same number names a different pack
+  at a different size, and the error grows with how far the row has been
+  scrolled. Caught by an adversarial pass, reproduced against the real
+  catalogue: a window dragged 120px taller after a while of browsing put
+  the frame on a pack thirty-odd places away with the reader's own pack
+  nowhere on screen, and `offFramed` cannot save it because it can only
+  find a pack that is still drawn. `measure` now multiplies the offset (and
+  any in-flight `seekRef`) by the ratio of the pitches.
+  - **IT IS EXACT, NOT A NUDGE**: the screen is four pitches wide, so its
+    middle is two pitches, and both sides of "which pack is at the middle"
+    scale together. Only where the pitch is at its floor is it approximate,
+    and there the pack is still on screen so `offFramed` finishes the job.
+    Verified after: scroll a long way, change the height, and the framed
+    pack is the same one, 0.2px off centre with the frame exactly on it.
+- **THE SPIN'S LAP IS STILL THE CONSTANT `CIG_SPIN_LAP`, and this is the
+  second trap.** It was changed to `layoutRef.current.total` — the
+  honest-looking reading of "one lap" once the pitch became a function of
+  the window — and that is wrong twice over. `total` is `pitch x THIS
+  LIST's length`, so after My Saved has left a six-pack shelf on the row
+  the next spin's lap is 839px and the FIRST tick at 125ms has already
+  travelled 1,286: reset's roulette wheel collapses to a single frame,
+  where the owner's rule is that it plays the same animation as My Saved.
+  And for the catalogue the lap moves with the viewport, stretching an
+  UNSKIPPABLE lock from the tuned 2.0s to 3.4s at 1920x947 and 5.7s on a
+  wide short window. `CIG_SPIN_SPEED` was picked off a table against that
+  constant to give two seconds, and what hides the swap is the SPEED, not
+  landing on a lap boundary.
 
 **MY SAVED SPINS THE ROW LIKE A ROULETTE WHEEL AND SWAPS THE PACKS MID-SPIN.**
 Pressing it throws the row at `CIG_SPIN_SPEED` (10,290px/s, 54x the pace the

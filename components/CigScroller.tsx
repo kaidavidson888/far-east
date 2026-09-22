@@ -6,7 +6,8 @@ import { savedPacksAction } from '@/app/actions';
 import {
   CIG_BAND_H,
   CIG_FRAME_H,
-  CIG_GAP,
+  CIG_MEAN_PITCH,
+  CIG_SPIN_LAP,
   CIG_HEIGHT,
   CIG_OUTLINE,
   cigFrameBand,
@@ -19,13 +20,13 @@ import {
   CIG_FRAME_HOLD_MS,
   CIG_BRAKE,
   CIG_SPIN_SPEED,
-  CIG_SPIN_LAP,
   CIG_SPIN_CATCH,
   CIG_SPIN_PAINT_MS,
   cigPaintMs,
   REFERENCE_SPEED,
   SPEED,
   cigLayout,
+  cigPitch,
   cigZoom,
   CIG_CONTROLS,
   CIG_MENU_FADE_MS,
@@ -33,7 +34,6 @@ import {
   CIG_MENU_SHUT_MS,
   type CigPack,
 } from '@/lib/cigRow';
-import { LANDING_ROW_CLEAR } from '@/lib/landing';
 import { CIG_HEADING_SIZE, CIG_TAG_MENU, TAG_HEADING, fitLabel, matchingPacks } from '@/lib/cigTags';
 import { searchLineW, searchPacks } from '@/lib/cigSearch';
 import { CigSearch } from '@/components/CigSearch';
@@ -253,6 +253,14 @@ export function CigScroller({
   const [packs, setPacks] = useState<CigPack[]>(CIG_PACKS);
   const packsRef = useRef<CigPack[]>(CIG_PACKS);
   const layoutRef = useRef(cigLayout(CIG_PACKS));
+  /**
+   * THE SPACE BETWEEN TWO PACKS IS NOW SOLVED FROM THE WINDOW, not stated:
+   * it is whatever makes five packs span the screen with the outermost two
+   * halved (the owner's 2026-09-22 — see `cigGap`). It lives in a ref for
+   * the reason the layout does: the tick, the menu's placement and the
+   * arrow keys all read it, and none of them may force a render.
+   */
+  const pitchRef = useRef(CIG_MEAN_PITCH);
 
   const rowRef = useRef<HTMLDivElement | null>(null);
   /** The tag grid, which is the box the menu's own scrollbar belongs to. */
@@ -664,7 +672,13 @@ export function CigScroller({
      * `cigTagsRight` once had.) It does hop a few px when the row settles on a
      * pack of another width, as the menu beside it does, and slides there.
      */
-    const prevRight = Wc / 2 - (list[i].w / 2 + CIG_GAP) * z;
+    // ITS NEIGHBOUR IS ONE PITCH AWAY, CENTRE TO CENTRE, so its right edge
+    // is that centre plus its OWN half-width — the framed pack's width no
+    // longer comes into it, the row having gone to a constant pitch.
+    const n = list.length;
+    const prevW = list[(i - 1 + n) % n].w;
+    const nextW = list[(i + 1) % n].w;
+    const prevRight = Wc / 2 - (pitchRef.current - prevW / 2) * z;
     /*
      * THE DOTS ARE THE GLASS MIRRORED — the owner's "another button within a
      * box outline mirrored from the magnifying glass button … they will share
@@ -674,7 +688,7 @@ export function CigScroller({
      * right of the framed one, where the glass is halfway between the pack to
      * the left and the plus's left edge.
      */
-    const nextLeft = Wc / 2 + (list[i].w / 2 + CIG_GAP) * z;
+    const nextLeft = Wc / 2 + (pitchRef.current - nextW / 2) * z;
     const searchLeft = Math.round((prevRight + shutLeft) / 2 - plus / 2);
     /*
      * …AND HELD ON THE PAGE. Since the words grow out of its LEFT side (the
@@ -788,7 +802,7 @@ export function CigScroller({
     if (!next.length) return;
 
     packsRef.current = next;
-    layoutRef.current = cigLayout(next);
+    layoutRef.current = cigLayout(next, pitchRef.current);
     setPacks(next);
 
     // The offset is taken modulo the lap and the lap has just changed length,
@@ -828,6 +842,24 @@ export function CigScroller({
           const v = velRef.current;
           offsetRef.current += v * dt;
           spin.travelled += v * dt;
+          /*
+           * THE THROW IS A DISTANCE, NOT THE CURRENT LAP, and it has to be.
+           * It was briefly `layoutRef.current.total` — the honest-looking
+           * reading of "one lap" once the pitch became a function of the
+           * window — and that is wrong twice over. `total` is
+           * `pitch x THIS LIST's length`, so after My Saved has left a
+           * six-pack shelf on the row the next spin's lap is 839px and the
+           * FIRST tick at 125ms has already travelled 1,286: reset's
+           * roulette wheel collapses to one frame, where the owner's rule
+           * is that it plays the same animation as My Saved. And for the
+           * catalogue the lap now moves with the viewport, stretching an
+           * UNSKIPPABLE lock from the tuned 2.0s to 3.4s at 1920x947 and
+           * 5.7s on a wide short window.
+           *
+           * `CIG_SPIN_SPEED` was picked off a table against this exact
+           * constant to give two seconds, and what hides the swap is the
+           * SPEED, not landing on a lap boundary. So the constant stays.
+           */
           if (spin.travelled >= CIG_SPIN_LAP && spin.ids) {
             swapTo(spin.ids);
             spin.phase = 'catch';
@@ -1129,10 +1161,42 @@ export function CigScroller({
       // the zoom first: it changes the row's own width, and a change here
       // re-lays the row out and brings this observer straight back
       const screenW = document.documentElement.clientWidth;
-      const z = cigZoom(screenW, window.innerHeight, LANDING_ROW_CLEAR);
+      const z = cigZoom(screenW, window.innerHeight);
       if (z !== zoomRef.current) {
         zoomRef.current = z;
         setZoom(z);
+      }
+      // AND THEN THE GAP, which follows the zoom and the screen: the space
+      // that makes five packs span it. Re-laying the row out HERE, before
+      // the width is taken and before `offFramed` runs, is what keeps the
+      // three in step — every one of them reads `layoutRef`, and a resize
+      // that moved the packs without moving the offset would leave the
+      // frame on a pack that is no longer under it.
+      const p = cigPitch(screenW, z);
+      if (p !== pitchRef.current) {
+        const was = pitchRef.current;
+        pitchRef.current = p;
+        layoutRef.current = cigLayout(packsRef.current, p);
+        /*
+         * AND THE OFFSET IS RESCALED WITH IT. It is an absolute distance
+         * along a lap whose length has just changed, so the very same
+         * number names a DIFFERENT pack at the new pitch — and the error
+         * grows with how far the row has been scrolled. Left alone, a
+         * window dragged taller after a while of browsing put the frame
+         * on a pack thirty-odd places away, with the one the reader was
+         * looking at nowhere on screen; `offFramed` below cannot save it,
+         * because it can only find a pack that is still drawn.
+         *
+         * Scaling by the ratio of the pitches is EXACT, not a nudge: the
+         * screen is four pitches wide, so its middle is two pitches, and
+         * both sides of "which pack is at the middle" scale together.
+         * (Where the pitch is at its floor the screen is wider than four
+         * of them and the scaling is approximate — and there `offFramed`
+         * does finish the job, the pack still being on screen.)
+         */
+        const k = p / was;
+        offsetRef.current *= k;
+        if (seekRef.current !== null) seekRef.current *= k;
       }
       // THE ROW'S WIDTH IN ITS OWN PX IS WORKED OUT, NOT READ OFF THE ROW.
       // It used to be `el.clientWidth`, which is right only once the zoom
@@ -1162,7 +1226,9 @@ export function CigScroller({
         // whichever one an offset of zero happens to leave nearest, so the
         // page looks the same on every load and at every width — which is
         // what the design's own still shows.
-        offsetRef.current = packsRef.current[0].w / 2 - widthRef.current / 2;
+        // its centre is half a pitch along, the packs being centred in
+        // slots of one pitch each rather than packed edge to edge
+        offsetRef.current = pitchRef.current / 2 - widthRef.current / 2;
         first = false;
       } else if (!timerRef.current && !draggingRef.current) {
         // A resize moves the middle; bring the FRAMED pack back to it. It
@@ -1383,18 +1449,14 @@ export function CigScroller({
   /**
    * One pack along.
    *
-   * The distance between two packs is set by the width of the left one of
-   * the pair, so stepping back is the *previous* pack's pitch, not this
-   * one's — packs are 38 to 80 wide and using the wrong end of the pair
-   * lands short of where you came from.
+   * IT IS ONE NUMBER NOW. The distance between two packs used to be set by
+   * the width of the left one of the pair, so stepping back had to use the
+   * PREVIOUS pack's pitch or it landed short of where you came from. Since
+   * the row went to a constant pitch (the owner's five-pack rule, 2026-09-22)
+   * every step is the same length in both directions, and the pair no
+   * longer comes into it.
    */
-  const stepBy = (dir: 1 | -1) => {
-    if (selected < 0) return CIG_GAP * dir;
-    const list = packsRef.current;
-    const n = list.length;
-    const from = dir === 1 ? selected : (selected - 1 + n) % n;
-    return (list[from].w + CIG_GAP) * dir;
-  };
+  const stepBy = (dir: 1 | -1) => pitchRef.current * dir;
   const onKeyDown = (e: React.KeyboardEvent) => {
     if (lockRef.current) return; // the My Saved spin is unskippable
     if (e.key === 'ArrowRight') {
