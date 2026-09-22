@@ -2814,7 +2814,8 @@ ul, ol { list-style: none; }
   line-height: 1;
   letter-spacing: 0.01em;
   white-space: nowrap;
-  font-size: calc(var(--btn) * var(--count-em) * 1.1);
+  /* stated once on `.shelf`, because the five sigils are this tall too */
+  font-size: var(--worth-size);
   /* the face has one weight, so bold is a stroke — the age gate's trick */
   -webkit-text-stroke: 0.03em #ff0000;
   z-index: 2;
@@ -2955,6 +2956,103 @@ ul, ol { list-style: none; }
   transform: translateX(-50%);
   display: flex;
   z-index: 3;
+  transition: left 380ms ease-out, transform 380ms ease-out, opacity 160ms ease-out;
+}
+/* PRESSED, IT STANDS DOWN TO THE LEFT AND HANDS THE LINE OVER (the owner's
+   2026-09-22: "have the button keep its outline and move to have its left
+   edge aligned with the cig image outlines left edge after moving its
+   opacity should be 25%").
+
+   `left` goes to the outline's own edge, which is one rule outside this
+   stand, and the centring translate goes with it — 380ms, the slide the tag
+   menu's box uses, so a moving box on this site moves at one pace.
+
+   THE FADE WAITS FOR THE MOVE. "After moving" is a sequence, so the opacity
+   carries the slide's whole length as its delay on the way OUT and none on
+   the way back — the base rule above is the way back. */
+.shelf-wheel-star[data-open] {
+  left: calc(-1 * var(--pack-rule));
+  transform: translateX(0);
+  opacity: 0.25;
+  transition: left 380ms ease-out, transform 380ms ease-out, opacity 160ms ease-out 380ms;
+}
+/* AND IT KEEPS ITS OUTLINE ("have the button keep its outline"), which it
+   would otherwise drop the moment the pointer moved onto a sigil. Written
+   here rather than as another `:hover` so that it holds however the reader
+   got there — pointer, keyboard or a press that has already been let go. */
+.shelf-wheel-star[data-open] .shelf-wheel-btn {
+  border-color: #ff0000;
+}
+
+/* ---- the five sigils ---------------------------------------------------- */
+/* FIVE MARKS IN THE RUN BETWEEN THE STOOD-DOWN STAR AND THE OUTLINE'S RIGHT
+   EDGE (the owner's 2026-09-22), on the star's own line.
+
+   THE EVEN SPACING IS `space-evenly` AND NOT ARITHMETIC: five items with six
+   equal gaps, one before the first and one after the last, is precisely what
+   that keyword lays out. So this row is given the span and the browser
+   divides it — nothing here has to know how wide the pack came out, which is
+   the one thing that changes with every pack on the wheel.
+
+   EACH BUTTON IS EXACTLY ITS MARK'S WIDTH, and that is load-bearing. A
+   press target wider than the mark would still space the BUTTONS evenly,
+   but the gap before the first mark and after the last would come out
+   narrower than the gaps between them by half the slack. The target gains
+   its height instead: the row is a whole button tall. */
+.shelf-wheel-rate {
+  position: absolute;
+  top: calc(100% + var(--star-top));
+  left: calc(var(--btn) - var(--pack-rule));
+  right: calc(-1 * var(--pack-rule));
+  height: var(--btn);
+  display: flex;
+  align-items: center;
+  justify-content: space-evenly;
+  opacity: 0;
+  z-index: 3;
+  transition: opacity 160ms ease-out;
+}
+/* they arrive once the star has stood down, not while it is still moving */
+.shelf-wheel-rate[data-open] {
+  opacity: 1;
+  transition: opacity 160ms ease-out 380ms;
+}
+.shelf-wheel-sigil {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--sigil-w);
+  height: var(--btn);
+  padding: 0;
+  background: none;
+  border: 0;
+  line-height: 0;
+}
+/* THE MARK: /sigil.webp as a mask over a block of colour, which is how every
+   ☁ on this site is drawn — an <img> could only ever be the black it was
+   baked as, and this one has two colours to be.
+
+   RED AT THREE QUARTERS, WHITE AT FULL. The owner's "red with black fill
+   normally at 75% opacity then go to 100% opacity and the default black fill
+   with white on hover and click": the black fill is the page, which the
+   spirals and the ground around the mark show through, so what changes
+   between the two states is one colour. THE OPACITY IS IN THAT COLOUR, this
+   page's rule for all of its controls. */
+.shelf-wheel-sigil i {
+  display: block;
+  width: var(--sigil-w);
+  height: var(--sigil-h);
+  background: rgb(255 0 0 / 0.75);
+  -webkit-mask: url('/sigil.webp') center / 100% 100% no-repeat;
+          mask: url('/sigil.webp') center / 100% 100% no-repeat;
+  transition: background-color 120ms ease-out;
+}
+.shelf-wheel-sigil[data-lit] i { background: #ffffff; }
+.shelf-wheel-sigil:focus-visible { outline: 2px solid #ff0000; outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) {
+  .shelf-wheel-star,
+  .shelf-wheel-rate,
+  .shelf-wheel-sigil i { transition: none; }
 }
 .shelf-wheel-form { display: flex; }
 /* THE NUMBER, centred on the pack, one of the same margins off its right
@@ -3282,7 +3380,8 @@ input[type='reset'],
 .seal-button,
 .seal-button-hit,
 .shelf-wheel,
-.shelf-wheel-btn {
+.shelf-wheel-btn,
+.shelf-wheel-sigil {
   -webkit-touch-callout: none;
   user-select: none;
   -webkit-user-select: none;
@@ -3370,6 +3469,7 @@ input[type='radio'],
 .logo-menu-logo,
 .logo-menu-box,
 .shelf-wheel-btn,
+.shelf-wheel-sigil,
 .seal-button-hit {
   cursor: url('/sigil-cursor-press.png') 0 14, pointer;
   cursor: image-set(url('/sigil-cursor-press.png') 1x, url('/sigil-cursor-press@2x.png') 2x) 0 14, pointer;
@@ -3436,6 +3536,7 @@ input[type='radio']:active,
 .logo-menu-logo:active,
 .logo-menu-box:active,
 .shelf-wheel-btn:active,
+.shelf-wheel-sigil:active,
 .seal-button-hit:active {
   cursor: url('/sigil-cursor.png') 0 14, pointer;
   cursor: image-set(url('/sigil-cursor.png') 1x, url('/sigil-cursor@2x.png') 2x) 0 14, pointer;

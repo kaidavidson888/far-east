@@ -294,6 +294,44 @@ export const CARD_CARET = {
 } as const;
 
 /**
+ * THE FIVE SIGILS THAT OPEN BESIDE THE CLOUD STAR (the owner's 2026-09-22:
+ * "I want 5 sigils to appear all scaled to the same height as the total price
+ * number space them evenly including an even space before the first one and
+ * after the last one. Make them fit between the newly moved cloud star button
+ * and the right edge of the cig image outline").
+ *
+ * THE EVEN SPACING IS `space-evenly`, NOT ARITHMETIC. Five marks with six
+ * equal gaps, the first and the last included, is exactly what that keyword
+ * lays out — so the row is given the span to fill (the star's right edge to
+ * the pack outline's) and the browser divides it. Nothing here has to know
+ * how wide a pack came out, which is the thing that changes with every pack
+ * on the wheel.
+ */
+export const RATE = {
+  /** five, the owner's count */
+  count: 5,
+  /** the ☁ as drawn — public/sigil.webp is 126 x 60 */
+  aspect: 126 / 60,
+  /**
+   * AS TALL AS THE TOTAL PRICE NUMBER, which is a band and not one value.
+   * Taken off the ink table as the tallest ascent and the deepest descent of
+   * the TEN DIGITS (703 and 31, so 0.734 em) rather than of whatever the
+   * total happens to read today — sized to the digits it contains, a mark
+   * would stand a pixel taller on a shelf worth $1,200 than on one worth
+   * $1,100, which is not a rule anybody could see the sense of.
+   *
+   * IT IS THE DIGITS AND NOT THE `$`. That glyph rises to 781 and drops to
+   * 94, half again as tall, and the owner named the NUMBER.
+   */
+  em: ([...'0123456789'] as (keyof typeof INK.asc)[]).reduce(
+    (m, d) => Math.max(m, INK.asc[d]), 0,
+  ) / INK.em
+    + ([...'0123456789'] as (keyof typeof INK.desc)[]).reduce(
+      (m, d) => Math.max(m, INK.desc[d]), 0,
+    ) / INK.em,
+} as const;
+
+/**
  * WHAT THE AMOUNT BOX SAYS (the owner's 2026-09-21: "take the number tagged
  * with the pack and multiply by 1 if P was selected and 10 if C was selected
  * … dont display the letter just multiply").
@@ -360,4 +398,10 @@ export function cardQuantityFrame(
  * one-pack-to-a-line design. That design went with the redraw and so did the
  * module; it is in git, along with components/ShelfStage.tsx.)
  */
-export type ShelfEntry = { pack: CigPack; amount: number | null; unit: PackUnit | null };
+export type ShelfEntry = {
+  pack: CigPack;
+  amount: number | null;
+  unit: PackUnit | null;
+  /** 1-5 sigils, or null for a pack the reader has not rated */
+  rating: number | null;
+};

@@ -426,8 +426,54 @@ export async function savePack(userId: string, packId: string): Promise<void> {
 import type { PackUnit } from './cigPages';
 export type { PackUnit };
 
-/** A shelf entry: the pack, and how much of it if the reader said. */
-export type SavedPack = { packId: string; amount: number | null; unit: PackUnit | null };
+/**
+ * A shelf entry: the pack, how much of it the reader said they have, and what
+ * they think of it in sigils (1-5, or null for a pack they have not rated).
+ */
+export type SavedPack = {
+  packId: string;
+  amount: number | null;
+  unit: PackUnit | null;
+  rating: number | null;
+};
+
+/**
+ * ASK FOR THE RATING, AND COPE WITH IT NOT BEING THERE YET.
+ *
+ * `pack_favorites.rating` arrives with migration 0008, and this team applies
+ * migrations by hand, once, by their author — so there is a window where this
+ * code is deployed and the column is not. The shelf is a whole page; it reads
+ * as unrated rather than 500ing over five little marks, exactly as the landing
+ * page does for `profiles.big_shares`.
+ *
+ * 42703 IS "COLUMN DOES NOT EXIST" AND NOTHING ELSE IS CAUGHT. This is one
+ * known and temporary state, not a catch-all — every other error still throws.
+ *
+ * IT IS NOT MEMOISED, deliberately. Remembering "the column is missing" would
+ * save one failed query per read and would then go on reading no ratings for
+ * as long as the process lived after the owner applied the migration. Asking
+ * every time costs a round trip only while the column really is absent, and
+ * the page heals itself the moment it lands.
+ */
+async function withRating<T>(asked: () => Promise<T>, without: () => Promise<T>): Promise<T> {
+  try {
+    return await asked();
+  } catch (e) {
+    if ((e as { code?: string })?.code !== '42703') throw e;
+    console.warn('pack_favorites.rating is missing — apply supabase/migrations/0008_pack_rating.sql');
+    return without();
+  }
+}
+
+/** int2 arrives as a number already; a null must stay null, not become 0. */
+const num = (v: number | null) => (v === null ? null : Number(v));
+
+type PackRow = {
+  pack_id: string; amount: number | null; unit: PackUnit | null; rating: number | null;
+};
+const asSaved = (r: PackRow): SavedPack => ({
+  packId: r.pack_id, amount: num(r.amount), unit: r.unit, rating: num(r.rating),
+});
 
 /**
  * Take a pack off the shelf. The bookmark on a cigarette's page is add-only
@@ -443,13 +489,17 @@ export async function removePack(userId: string, packId: string): Promise<void> 
 /** One pack's shelf entry, or null if it is not on the shelf. What a cigarette's page asks. */
 export async function packEntry(userId: string, packId: string): Promise<SavedPack | null> {
   const sql = db();
-  const rows = await sql<{ pack_id: string; amount: number | null; unit: PackUnit | null }[]>`
-    SELECT pack_id, amount, unit FROM pack_favorites
-    WHERE user_id = ${userId} AND pack_id = ${packId}
-  `;
-  if (!rows.length) return null;
-  const r = rows[0];
-  return { packId: r.pack_id, amount: r.amount === null ? null : Number(r.amount), unit: r.unit };
+  const rows = await withRating(
+    () => sql<PackRow[]>`
+      SELECT pack_id, amount, unit, rating FROM pack_favorites
+      WHERE user_id = ${userId} AND pack_id = ${packId}
+    `,
+    () => sql<PackRow[]>`
+      SELECT pack_id, amount, unit, NULL::smallint AS rating FROM pack_favorites
+      WHERE user_id = ${userId} AND pack_id = ${packId}
+    `,
+  );
+  return rows.length ? asSaved(rows[0]) : null;
 }
 
 /**
@@ -479,20 +529,59 @@ export async function setPackQuantity(
   `;
 }
 
-/** The whole shelf with its quantities, most recently saved first. */
+/**
+ * The whole shelf with its quantities and its ratings, most recently saved
+ * first. A null amount is not "nought of them" and a null rating is not
+ * "nought sigils" — both mean the reader has not said.
+ */
 export async function savedPacks(userId: string): Promise<SavedPack[]> {
   const sql = db();
-  const rows = await sql<{ pack_id: string; amount: number | null; unit: PackUnit | null }[]>`
-    SELECT pack_id, amount, unit FROM pack_favorites
-    WHERE user_id = ${userId} ORDER BY created_at DESC
-  `;
-  return rows.map((r) => ({
-    packId: r.pack_id,
-    // int2 comes back as a number already, but a null must stay a null rather
-    // than becoming 0 — a shelf entry with no quantity is not "nought of them".
-    amount: r.amount === null ? null : Number(r.amount),
-    unit: r.unit,
-  }));
+  const rows = await withRating(
+    () => sql<PackRow[]>`
+      SELECT pack_id, amount, unit, rating FROM pack_favorites
+      WHERE user_id = ${userId} ORDER BY created_at DESC
+    `,
+    () => sql<PackRow[]>`
+      SELECT pack_id, amount, unit, NULL::smallint AS rating FROM pack_favorites
+      WHERE user_id = ${userId} ORDER BY created_at DESC
+    `,
+  );
+  return rows.map(asSaved);
+}
+
+/**
+ * WHAT THE READER THINKS OF A PACK, in sigils — the row of five that opens
+ * beside the cloud star on the shelf (the owner's 2026-09-22).
+ *
+ * It SAVES THE PACK TOO if it is not already on the shelf, which is
+ * `setPackQuantity`'s rule and holds here for the same reason: these controls
+ * stand beside one another rather than behind one another. On the shelf every
+ * pack is saved already, so the insert is only ever the update.
+ *
+ * IT ANSWERS WHETHER IT SAVED rather than returning void, because migration
+ * 0008 may not be applied yet and the page draws an optimistic fill the moment
+ * a sigil is pressed. Told `false`, the row puts itself back to what the
+ * database really holds — a rating that silently did not save is worse than
+ * one that visibly did not.
+ */
+export async function setPackRating(
+  userId: string,
+  packId: string,
+  rating: number,
+): Promise<boolean> {
+  const sql = db();
+  return withRating(
+    async () => {
+      await sql`
+        INSERT INTO pack_favorites (user_id, pack_id, rating)
+        VALUES (${userId}, ${packId}, ${rating})
+        ON CONFLICT (user_id, pack_id)
+        DO UPDATE SET rating = EXCLUDED.rating
+      `;
+      return true;
+    },
+    async () => false,
+  );
 }
 
 /** Everything on this reader's pack shelf, most recently saved first. */

@@ -5,6 +5,7 @@ import { togglePackAction } from '@/app/actions';
 import { cardAmount, cardQuantityFrame, type ShelfEntry } from '@/lib/shelfGrid';
 import { CigQuantity } from './CigQuantity';
 import { ShelfClouds } from './ShelfClouds';
+import { ShelfRating } from './ShelfRating';
 
 /**
  * WHAT STANDS UNDER THE PACK THE WHEEL HAS STOPPED ON.
@@ -41,7 +42,7 @@ import { ShelfClouds } from './ShelfClouds';
  * the dashed rule and takes a press; what it opens comes next.
  */
 export function ShelfWheelControls({
-  entry: { pack, amount, unit },
+  entry: { pack, amount, unit, rating },
   bookmark,
   button,
   packRef,
@@ -56,6 +57,18 @@ export function ShelfWheelControls({
   packRef: React.RefObject<HTMLElement | null>;
 }) {
   const [saved, setSaved] = useState(true);
+  /**
+   * WHETHER THE CLOUD STAR IS LATCHED OPEN. It is reported by the button
+   * itself rather than kept in step with a second boolean here: pressing it
+   * stands it down to the pack outline's left edge at a quarter strength and
+   * puts the five sigils out beside it (the owner's 2026-09-22), and it
+   * closes them again.
+   *
+   * IT RESETS WITH THE PACK, because these controls only exist while the
+   * wheel is at rest on one and are unmounted the moment it moves — so the
+   * sigils cannot be left standing beside a pack they were not opened on.
+   */
+  const [ratingOpen, setRatingOpen] = useState(false);
   const countRef = useRef<HTMLSpanElement | null>(null);
   const [room, setRoom] = useState<{ w: number; h: number } | null>(null);
 
@@ -152,13 +165,41 @@ export function ShelfWheelControls({
         </form>
       </div>
 
-      {/* the star, on the pack's own axis and a line below the pair */}
+      {/*
+        THE STAR, on the pack's own axis and a line below the pair — until it
+        is pressed. Then it STANDS DOWN TO THE LEFT (the owner's 2026-09-22:
+        "have the button keep its outline and move to have its left edge
+        aligned with the cig image outlines left edge after moving its
+        opacity should be 25%"), which clears the line for the five sigils.
+
+        THE QUARTER STRENGTH IS ON THE ELEMENT, and it is the one place on
+        this page where that is right. Everywhere else the opacity is in a
+        colour, so that a line going faint does not take its mark with it —
+        here it is the whole control receding, outline and clouds together,
+        because it has handed the line over to the row it just opened.
+      */}
       <div
         className="shelf-wheel-star"
+        data-open={ratingOpen ? '' : undefined}
         style={{ '--btn': `${button}px`, '--star-top': `${starTop.toFixed(2)}px` } as React.CSSProperties}
       >
-        <ShelfClouds label={`Open the clouds on ${pack.name}`} className="shelf-wheel-btn" />
+        <ShelfClouds
+          label={`Rate ${pack.name}`}
+          className="shelf-wheel-btn"
+          onPress={setRatingOpen}
+        />
       </div>
+
+      {/* the five sigils, filling the run from the stood-down star's right
+          edge to the pack outline's right edge */}
+      <ShelfRating
+        packId={pack.id}
+        name={pack.name}
+        rating={rating}
+        open={ratingOpen}
+        button={button}
+        starTop={starTop}
+      />
 
       {/* the number, centred on the pack, one margin off its right edge */}
       <div className="shelf-wheel-amount" style={{ '--btn': `${button}px` } as React.CSSProperties}>

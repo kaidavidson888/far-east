@@ -243,6 +243,30 @@ try {
   `;
   check('a pack nobody saved reads back as unsaved', absent === undefined);
 
+  // — the five sigils —
+  // The rating is 1-5 and NULL means "not rated", which is a state the row of
+  // sigils actually draws (five unfilled ones) rather than a row waiting to be
+  // filled in. It is deliberately not 0: nought sigils and no opinion would
+  // then be the same answer, and a reader can only ever press a sigil.
+  const [noSigils] = await sql`
+    SELECT rating FROM pack_favorites WHERE user_id = ${uid} AND pack_id = ${PACK}
+  `;
+  check('a pack on the shelf starts unrated', noSigils.rating === null, JSON.stringify(noSigils));
+
+  // Constrained in the database as well as in the UI, because the UI is not
+  // the only way in: setPackRatingAction is a server action and a server
+  // action is a public endpoint.
+  for (const bad of [0, 6, -1]) {
+    let refused = false;
+    try {
+      await sql`
+        UPDATE pack_favorites SET rating = ${bad}
+        WHERE user_id = ${uid} AND pack_id = ${PACK}
+      `;
+    } catch { refused = true; }
+    check(`the database refuses a rating of ${bad}`, refused);
+  }
+
   // two readers keep separate shelves — the queries are scoped by user_id and
   // nothing else is watching, so this is the check that matters most here
   const other = randomUUID();
@@ -369,6 +393,43 @@ try {
   check('packIsSaved sees it', await lib.packIsSaved(owner, '04_ESSE-Change_Strawberry'));
   check('packIsSaved says no to one nobody saved',
     (await lib.packIsSaved(owner, '99_Nothing')) === false);
+
+  // — the rating, through the real module —
+  // It shares a row with the bookmark and the quantity, so the checks that
+  // matter are that it comes back a NUMBER (int2 through the driver, and a
+  // null must stay a null) and that the three answers do not overwrite one
+  // another.
+  check('setPackRating says it saved',
+    (await lib.setPackRating(owner, '04_ESSE-Change_Strawberry', 4)) === true);
+  const sigilled = (await lib.savedPacks(owner))
+    .find((p) => p.packId === '04_ESSE-Change_Strawberry');
+  check('savedPacks reads the rating back as a number',
+    sigilled?.rating === 4 && typeof sigilled.rating === 'number', JSON.stringify(sigilled));
+  check('packEntry carries it too',
+    (await lib.packEntry(owner, '04_ESSE-Change_Strawberry'))?.rating === 4);
+
+  await lib.setPackRating(owner, '04_ESSE-Change_Strawberry', 2);
+  const [oneRow] = await sql`
+    SELECT COUNT(*)::int AS n FROM pack_favorites
+    WHERE user_id = ${owner} AND pack_id = '04_ESSE-Change_Strawberry'
+  `;
+  check('rating a pack again moves it rather than adding a row', oneRow.n === 1,
+    JSON.stringify(oneRow));
+
+  await lib.setPackQuantity(owner, '04_ESSE-Change_Strawberry', 3, 'C');
+  const both = await lib.packEntry(owner, '04_ESSE-Change_Strawberry');
+  check('the quantity and the rating are separate answers',
+    both?.rating === 2 && both.amount === 3 && both.unit === 'C', JSON.stringify(both));
+
+  // rating something puts it on the shelf, exactly as setting a quantity does:
+  // these controls stand beside one another, not behind one another
+  await lib.setPackRating(owner, '99_Nothing', 5);
+  check('rating a pack that was not saved saves it',
+    (await lib.packIsSaved(owner, '99_Nothing'))
+      && (await lib.packEntry(owner, '99_Nothing'))?.rating === 5);
+  const unratedToo = await lib.packEntry(owner, '99_Nothing');
+  check('a rated pack with no quantity keeps a null amount',
+    unratedToo?.amount === null && unratedToo.unit === null, JSON.stringify(unratedToo));
 
   const marked = cigs.filter((c) => new Set(favIds).has(c.id));
   check('catalogue marks saved items as on the shelf', marked.length === favIds.length,

@@ -38,7 +38,14 @@ export function ShelfClouds({
   className,
 }: {
   label: string;
-  onPress?: () => void;
+  /**
+   * Told whether the clouds are now latched OPEN, not merely that they were
+   * pressed. The latch lives in here, so this is the one place that knows —
+   * and a parent that has to draw something while they are open (the shelf's
+   * row of sigils) would otherwise keep a second copy of the same boolean and
+   * have to hope the two never came apart.
+   */
+  onPress?: (open: boolean) => void;
   className?: string;
 }) {
   const [t, setT] = useState(0);
@@ -46,7 +53,9 @@ export function ShelfClouds({
   const at = useRef(0);
   const raf = useRef(0);
   const last = useRef(0);
-  const latched = useRef(false);
+  // OPEN IS STATE, NOT A REF: the button carries `data-open` so that it can
+  // keep its outline while it is open, and a ref cannot repaint an attribute.
+  const [open, setOpen] = useState(false);
 
   const run = useCallback(() => {
     if (raf.current) return;
@@ -94,14 +103,16 @@ export function ShelfClouds({
       className={`shelf-card-box shelf-clouds${className ? ` ${className}` : ''}`}
       aria-label={label}
       aria-expanded={t > 0.5}
-      onPointerEnter={() => { if (!latched.current) aim(1); }}
-      onPointerLeave={() => { if (!latched.current) aim(0); }}
-      onFocus={() => { if (!latched.current) aim(1); }}
-      onBlur={() => { if (!latched.current) aim(0); }}
+      data-open={open ? '' : undefined}
+      onPointerEnter={() => { if (!open) aim(1); }}
+      onPointerLeave={() => { if (!open) aim(0); }}
+      onFocus={() => { if (!open) aim(1); }}
+      onBlur={() => { if (!open) aim(0); }}
       onClick={() => {
-        latched.current = !latched.current;
-        aim(latched.current ? 1 : 0);
-        onPress?.();
+        const next = !open;
+        setOpen(next);
+        aim(next ? 1 : 0);
+        onPress?.(next);
       }}
     >
       {/* THE BOX IS THE DRAWING'S OWN EMPTY OUTLINE, and the clouds open

@@ -33,7 +33,7 @@ export default async function ShelfRoute() {
   // but a pack that ever left the row should drop off the shelf, not break it
   const entries: ShelfEntry[] = shelf.flatMap((s) => {
     const pack = byId.get(s.packId);
-    return pack ? [{ pack, amount: s.amount, unit: s.unit }] : [];
+    return pack ? [{ pack, amount: s.amount, unit: s.unit, rating: s.rating }] : [];
   });
 
   /*

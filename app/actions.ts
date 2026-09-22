@@ -12,7 +12,8 @@ import { pageFor } from '@/lib/cigPages';
 import { CIG_PACKS } from '@/lib/cigRow';
 import {
   accountState, createShare, deleteReview, getCigaretteBySlug, packIsSaved, removePack,
-  revokeShare, savePack, savedPackIds, setFavoriteNote, setPackQuantity, toggleFavorite,
+  revokeShare, savePack, savedPackIds, setFavoriteNote, setPackQuantity, setPackRating,
+  toggleFavorite,
   upsertReview,
 } from '@/lib/db';
 
@@ -396,6 +397,42 @@ export async function setPackQuantityAction(packId: string, amount: number, unit
   await setPackQuantity(user.id, page.id, amount, unit);
   revalidatePath(`/packs/${packId}`);
   revalidatePath('/shelf');
+}
+
+/**
+ * HOW MANY SIGILS THE READER FILLED — their account's rating for this
+ * cigarette (the owner's 2026-09-22, the row that opens beside the cloud
+ * star on the shelf).
+ *
+ * Plain arguments rather than a form, as the quantity is: the row commits on
+ * the press, with nothing to submit.
+ *
+ * IT ANSWERS WITH WHAT IS ACTUALLY STORED, and the row draws that. The five
+ * sigils fill the instant one is pressed — waiting on a round trip to colour
+ * a mark under the pointer would feel broken — so the answer is how the page
+ * finds out whether that optimism was right. Two ways it can be wrong: the
+ * range is refused, or migration 0008 is not applied to the project yet.
+ *
+ * Everything is checked again here because a server action is a public
+ * endpoint; the database's CHECK is the last line, not the first.
+ */
+export async function setPackRatingAction(
+  packId: string,
+  rating: number,
+): Promise<{ rating: number | null }> {
+  const page = pageFor(packId);
+  if (!page) return { rating: null };
+  if (!Number.isInteger(rating) || rating < 1 || rating > 5) return { rating: null };
+
+  const user = await currentUser();
+  if (!user) redirect(signInGate('/shelf'));
+
+  const saved = await setPackRating(user.id, page.id, rating);
+  if (!saved) return { rating: null };
+
+  revalidatePath('/shelf');
+  revalidatePath(`/packs/${packId}`);
+  return { rating };
 }
 
 /**

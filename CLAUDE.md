@@ -2516,6 +2516,74 @@ real and is stated in the file: the two ticks are two places now.**
 - The quantity wheels still open out of the number square, at the pack
   outline's width, held to the room left on the page.
 
+**THE CLOUD STAR STANDS DOWN AND FIVE SIGILS TAKE ITS LINE** (the owner's
+2026-09-22: "when the user clicks on the cloud star button have the button
+keep its outline and move to have its left edge aligned with the cig image
+outlines left edge after moving its opacity should be 25% and I want 5 sigils
+to appear all scaled to the same height as the total price number space them
+evenly including an even space before the first one and after the last one").
+`components/ShelfRating.tsx`, `RATE` in `lib/shelfGrid.ts`, and
+`pack_favorites.rating` — migration **0008**, NOT YET APPLIED (Known gaps).
+- **THE EVEN SPACING IS `space-evenly`, NOT ARITHMETIC.** Five marks with six
+  equal gaps — one before the first and one after the last — is exactly what
+  that keyword lays out, so the row is handed the span (the stood-down star's
+  right edge to the pack outline's right edge) and the browser divides it.
+  Nothing has to know how wide the pack came out, which is the one thing that
+  changes with every pack on the wheel. Measured at 1920x947: six gaps of
+  16.34px to the hundredth, the row's right edge dead on the outline's.
+  - **EACH BUTTON IS EXACTLY ITS MARK'S WIDTH, and that is load-bearing.** A
+    wider target still spaces the BUTTONS evenly, but the end gaps then come
+    out narrower than the inner ones by half the slack, which is the one
+    thing the ask names. The target gains its HEIGHT instead — the row is a
+    whole button tall.
+- **AS TALL AS THE TOTAL PRICE NUMBER means the DIGITS' BAND**, off the ink
+  table: the tallest ascent and deepest descent of 0-9 (703 and 31, 0.734 em)
+  rather than of whatever the total reads today, or a mark would stand a pixel
+  taller on a shelf worth $1,200 than on one worth $1,100. Not the `$`, which
+  rises 781 and drops 94. The worth's own size is stated once as
+  `--worth-size` on `.shelf` and read by both. Measured: 10.25px against a
+  13.98px number.
+- **"RED WITH BLACK FILL" AND "BLACK FILL WITH WHITE" ARE ONE COLOUR
+  CHANGING.** The ☁ is ink with its spirals cut out, so what shows through
+  and around it is the page — which has been black since the 21st. So the
+  mark is red at 75% at rest and white at 100% when lit, which is also this
+  page's own hover language. A black rectangle behind each mark would draw
+  nothing that is not already there and would change the thing being spaced:
+  the owner asked for five sigils, not five boxes. The opacity is in the
+  colour, never on the element, as everywhere else here.
+- **THE STAR'S QUARTER STRENGTH IS THE ONE PLACE `opacity` GOES ON THE
+  ELEMENT.** Everywhere else on this page it is in a colour so that a line
+  going faint does not take its mark down with it — here it is the whole
+  control receding, outline and clouds together, because it has handed its
+  line over to the row it just opened. It KEEPS ITS OUTLINE at full red
+  (`.shelf-wheel-star[data-open] .shelf-wheel-btn`), written as a state
+  rather than another `:hover` so it holds however the reader got there.
+  The move is 380ms, the tag menu's own slide; **the fade carries that as a
+  DELAY on the way out and none on the way back**, which is what "after
+  moving" says.
+- **THE LATCH IS REPORTED, NOT MIRRORED.** `ShelfClouds` owns it, so it hands
+  it out (`onPress(open)`) rather than letting the controls keep a second
+  boolean that has to be kept in step. It resets with the pack, since these
+  controls are unmounted the moment the wheel moves.
+- **IT FILLS BEFORE THE SERVER ANSWERS AND PUTS ITSELF BACK IF NOTHING WAS
+  SAVED.** `setPackRatingAction` answers with what is actually stored rather
+  than returning void, which is how the row tells a refused range or an
+  unapplied migration from a save. Verified live with 0008 absent: three
+  sigils fill on the press and are back to red within 30ms, with
+  `pack_favorites.rating is missing` in the server log.
+- **THE RATING IS ONE STORE, NOT TWO.** "To the users profile and to the
+  server" is the same place said twice — the account. A copy in the browser
+  would be a second answer that can disagree, and then neither is the rating.
+  It lives on the shelf row (`pack_favorites`), which is already exactly the
+  pair (reader, pack) with a unique key on it, so rating something saves it
+  to the shelf exactly as setting a quantity does.
+- Ratings are **1-5 with NULL for "not rated"**, constrained in the database
+  as well as in the UI because a server action is a public endpoint. NULL
+  rather than 0: nought sigils and no opinion would otherwise be the same
+  answer, and a reader can only ever press a sigil. **There is no way to
+  un-rate** — nothing was asked for, so nothing was invented.
+- This is not `reviews.rating`, which is 1-10 against a catalogue row.
+
 **WHAT THE SHELF IS WORTH — AND IT HAS DATA BEHIND IT NOW.** This number was
 drawn from the first day and totalled NOTHING for three redraws:
 `pack_favorites` keys on a pack id and `lib/cigs.json` carries no money, so
@@ -2782,6 +2850,18 @@ the brand assets and review text in this repo are visible to anyone.
    draws and animates and every submission says sign-in is switched off.
    **None of the OTP calls has been exercised against a live project** — the
    logic is reviewed, the network is not.
+0c. **MIGRATION `0008_pack_rating.sql` IS WRITTEN AND NOT YET APPLIED.** It
+   adds `pack_favorites.rating` — the five sigils beside the cloud star.
+   `npm run verify:db` passes with it (63/63, twelve of them new and covering
+   the column end to end through the real `lib/db.ts`: the range the database
+   refuses, the rating coming back a number, the quantity and the rating not
+   overwriting one another, and rating an unsaved pack saving it). **The
+   author applies it once, in the SQL Editor.** Until then `savedPacks` and
+   `packEntry` catch Postgres `42703` ONLY and re-ask without the column, so
+   the shelf reads as unrated rather than 500ing, and `setPackRating` answers
+   `false` — which makes the row of sigils fill on the press and go back,
+   with a line in the server log. Delete the fallbacks in `withRating` once
+   the column is live.
 1. **Deploy is not yet green.** See HANDOFF.md → Deployment. The middleware was removed to get
    past `MIDDLEWARE_INVOCATION_FAILED`; that commit (`f6b03ff`) still needs pushing.
 2. **No session refresh on plain page loads** (middleware removed). Readers who only browse are
