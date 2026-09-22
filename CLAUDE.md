@@ -2439,10 +2439,19 @@ real and is stated in the file: the two ticks are two places now.**
   pack means moving it further away. Asked, the owner chose half-size
   neighbours, so `WHEEL_FAR_SCALE` is 0.5 and the step solves to
   `H/2 + k.P/4` — which puts the wheel back on a UNIFORM pitch and so puts
-  the settle, the arrow keys and the seek back on one number. The scale is
-  smooth in the distance from the middle, so a pack grows into the centre
-  rather than popping. Measured over four stops: 22.4% to 23.8%, against 25%
-  for a pack of the mean height.
+  the settle, the arrow keys and the seek back on one number. Measured over
+  four stops: 22.4% to 23.8%, against 25% for a pack of the mean height.
+  - **THE SHRINKING EASES OUT** (the owner's "make the downscaling of the
+    other packs slow down as the user scales with the downscaling being more
+    noticable during the intial scroll"). It was linear in the distance — one
+    steady rate the whole way out. Now it is steep as a pack leaves the middle
+    and flat by the time it is a full step away, so most of the change happens
+    at the start of a scroll. **The ends are untouched**, which is what makes
+    `WHEEL_FALLOFF` safe to dial: 1 is the old straight line, 3 is what is
+    drawn, and at d = 0 and d = 1 the answer is the same either way — so the
+    RESTING picture is exactly as it was and only the way it gets there has
+    changed. Measured mid-travel: the departing pack at 0.69 and the arriving
+    one at 0.51, where the straight line gave 0.85 and 0.65.
 - **A PRESS MEANT FOR A CONTROL IS NOT A PRESS ON THE WHEEL**, and taking it
   as one CLOSED THE QUANTITY MENU THE MOMENT IT OPENED — the menu's trigger
   cancels its own pointerdown, but the press also reached the stage, and the

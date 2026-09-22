@@ -107,10 +107,34 @@ export function wheelWidth(
  */
 export const WHEEL_FAR_SCALE = 0.5;
 
+/**
+ * HOW THE SHRINKING IS SPREAD OVER THE TRAVEL (the owner's 2026-09-21 "make
+ * the downscaling of the other packs slow down as the user scales with the
+ * downscaling being more noticable during the intial scroll").
+ *
+ * It was linear in the distance, so a pack lost its size at one steady rate
+ * the whole way out. It EASES OUT now: steep as a pack leaves the middle and
+ * flat by the time it is a full step away, so most of the change happens in
+ * the first part of a scroll and the last part barely moves.
+ *
+ * THE ENDS ARE UNTOUCHED, which is what makes this safe to dial. At d = 0 it
+ * is still 1 and at d = 1 still `WHEEL_FAR_SCALE`, so the RESTING picture —
+ * the middle pack full size, the neighbours at half with a quarter
+ * showing — is exactly as it was; only the way it gets there has changed.
+ *
+ * `WHEEL_FALLOFF` is that one number: 1 is the old straight line, 2 is
+ * gentle, 3 is what is drawn now. Along the first tenth of a step a pack
+ * loses 13.6% of its size where the straight line lost 5%, and over the last
+ * tenth it loses 0.5% where the line lost 5.
+ */
+export const WHEEL_FALLOFF = 3;
+
 /** How much of its full size a pack `d` steps from the middle is drawn at. */
 export function wheelScaleAt(d: number): number {
+  const t = Math.min(1, Math.abs(d));
   // smooth, so a pack does not pop between sizes as the wheel turns
-  return 1 - (1 - WHEEL_FAR_SCALE) * Math.min(1, Math.abs(d));
+  const eased = 1 - (1 - t) ** WHEEL_FALLOFF;
+  return 1 - (1 - WHEEL_FAR_SCALE) * eased;
 }
 
 export function wheelLayout(ratios: number[], width: number, viewportH: number) {
