@@ -2771,16 +2771,20 @@ ul, ol { list-style: none; }
   position: fixed;
   inset: 0;
   z-index: 100;
-  /* the artwork's own red. NOT --negative: that token is warm grey and is
-     never an error colour, per the spec. */
-  background: #ff0000;
-  /* THE PAGE DOES NOT SCROLL ANY MORE — the wheel is the scrolling. A
-     scroll container here would fight the wheel's own wheel handler and put
-     a grey bar down the red edge. */
+  /* BLACK (the owner's 2026-09-21), where it was the artwork's red for an
+     afternoon. The controls stayed white, so they read against it — but the
+     HOVER did not, and that is worth knowing: the inversion fills a control
+     black and drops its outline, which on a black page leaves nothing but
+     the mark. See `.shelf-wheel-btn:hover`. */
+  background: #000000;
+  /* THE PAGE DOES NOT SCROLL — the wheel is the scrolling. A scroll
+     container here would fight the wheel's own wheel handler and put a bar
+     down the edge. */
   overflow: hidden;
-  /* the ground is neither light nor dark now, but saying nothing lets a
-     browser doing auto-dark remap the page — see the note on .artpage */
-  color-scheme: light;
+  /* the page paints its own dark ground, and saying so is what stops a
+     browser or OS doing auto-dark from remapping it — see the note on
+     .artpage, where the same declaration says `light` for the same reason */
+  color-scheme: dark;
   font-family: var(--font-typed);
   font-synthesis: none;
 }

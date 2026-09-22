@@ -2417,12 +2417,23 @@ real and is stated in the file: the two ticks are two places now.**
 - The quantity wheels still open out of the number square, at the pack
   outline's width, held to the room left on the page.
 
-**RED PAGE, WHITE CONTROLS, BLACK ON HOVER** ("change the page background to
-red and the outline buttons and all their elements to white … make the new
-hover an inversion of colors to black fill with white as the color of the
-elements inside the box and no outline").
-- The red is the artwork's own `#FF0000`. **Not `--negative`** — that token is
-  warm grey and is never an error colour, per the spec.
+**BLACK PAGE, WHITE CONTROLS** ("change the page background to red and the
+outline buttons and all their elements to white … make the new hover an
+inversion of colors to black fill with white as the color of the elements
+inside the box and no outline" — then, the same day, "make the background
+black").
+- **THE HOVER AND THE GROUND ARE THE SAME COLOUR NOW, and that is a live
+  problem, not a settled one.** The inversion fills a control BLACK and drops
+  its outline; on a black page that leaves nothing but the mark floating.
+  It was designed against the red ground the same ask specified. Raised with
+  the owner; until they say, the hover is as written.
+- The red the page used to be is the artwork's own `#FF0000`. **Not
+  `--negative`** — that token is warm grey and is never an error colour, per
+  the spec.
+- `color-scheme` is `dark` now rather than `light`: the page paints its own
+  dark ground, and saying so is what stops a browser or OS doing auto-dark
+  from remapping it. The declaration exists for that reason on the artwork
+  pages too, where it says `light` for the same reason.
 - **`.shelf` IS `overflow: hidden` NOW.** The wheel is the scrolling; a scroll
   container would fight its own wheel handler and put a grey bar down the red
   edge.
