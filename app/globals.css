@@ -3071,23 +3071,28 @@ button.shelf-wheel-btn:focus-visible,
   pointer-events: none;
 }
 
-/* ---- the borrowed quantity wheels, on a red page ------------------------ */
+/* ---- the borrowed quantity wheels ---------------------------------------- */
 /* `CigQuantity` is shared with all 235 cigarette pages, so its own rules are
    never edited — they are overridden here. Its scheme there is a red panel
-   with white stripes and black type, and a red panel is invisible on a red
-   page, so it takes the same inversion the controls take: black ground,
-   white rule, white marks. */
+   with white stripes and black type; here it is a BLACK panel with RED
+   everything (the owner's 2026-09-21 "make the white in the number selector
+   red"), which puts it with the rest of the page's controls.
+
+   THE ONE WHITE LEFT IS THE DIGIT THAT IS CHOSEN, and it has to be: it is
+   cut through the red window, so red on red would be nothing at all. That
+   is the cigarette pages' own arrangement one colour along — there the
+   window is red and the value in it white, and so it is here. */
 .shelf .cigpage-quantity {
   background: #000000;
-  border-color: #ffffff;
+  border-color: #ff0000;
 }
 .shelf .cigpage-wheel { background: #000000; }
-.shelf .cigpage-wheel-window { background: #ffffff; }
-.shelf .cigpage-wheel-item { color: #ffffff; }
+.shelf .cigpage-wheel-window { background: #ff0000; }
+.shelf .cigpage-wheel-item { color: #ff0000; }
 .shelf .cigpage-wheel-item[data-centred],
-.shelf .cigpage-wheel[data-picked] .cigpage-wheel-item[data-selected] { color: #000000; }
+.shelf .cigpage-wheel[data-picked] .cigpage-wheel-item[data-selected] { color: #ffffff; }
 .shelf .cigpage-wheel:focus-visible,
-.shelf .cigpage-plus-hit:focus-visible { outline: 2px solid #ffffff; outline-offset: 2px; }
+.shelf .cigpage-plus-hit:focus-visible { outline: 2px solid #ff0000; outline-offset: 2px; }
 
 /* ---- the mountain button, white on red ---------------------------------- */
 .logo-menu[data-menu='shelf'] .logo-menu-logo.logo-menu-badge {
