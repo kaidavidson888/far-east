@@ -2592,9 +2592,16 @@ black").
   edge.
 - **THE BORROWED QUANTITY WHEELS ARE OVERRIDDEN, NEVER EDITED.**
   `CigQuantity`'s own scheme is a red panel with white stripes and black type,
-  which is invisible on a red page — but those rules are shared with all 235
-  cigarette pages, so the shelf restates them under `.shelf` and gives them
-  the same inversion: black ground, white rule, white marks.
+  and those rules are shared with all 235 cigarette pages — so the shelf
+  restates them under `.shelf`. Here it is a BLACK panel with RED everything
+  (the owner's "make the white in the number selector red"), which puts it
+  with the rest of the page's controls. **THE ONE WHITE LEFT IS THE DIGIT
+  THAT IS CHOSEN, and it has to be**: it is cut through the red window, so
+  red on red would be nothing at all. That is the cigarette pages' own
+  arrangement one colour along — there the window is red and the value in it
+  white, and so it is here. Measured with the wheels open: panel 0,0,0,
+  border 255,0,0, stripes 0,0,0, windows 255,0,0, a plain digit 255,0,0 and
+  the centred one 255,255,255.
 - **THE MOUNTAIN BUTTON'S OWN HOVER IS STILL THE ANIMATION**, not a fill. It
   has never had a colour hover — its answer to a pointer is to unfold — and
   the inversion is applied to the page's own outlined controls.
