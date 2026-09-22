@@ -294,9 +294,9 @@ export const CARD_CARET = {
 } as const;
 
 /**
- * HOW LONG A COMMENT MAY BE — `saveNoteAction`'s own 400, which is the cap
- * the catalogue shelf's note has carried since the beginning and so is the
- * cap "the existing comment system" means.
+ * HOW LONG A COMMENT MAY BE — 150 characters, the owner's 2026-09-22 cap.
+ * (It was `saveNoteAction`'s own 400 for an afternoon, that being the
+ * catalogue note's; this is the pack comment's own number.)
  *
  * IT LIVES HERE RATHER THAN IN `app/actions.ts` because that module is
  * `'use server'`, and such a module may export only async functions: a plain
@@ -305,7 +305,7 @@ export const CARD_CARET = {
  * exist. `lib/authPolicy.ts` exists for the same reason. The editor reads it
  * for `maxLength` and the action slices to it.
  */
-export const NOTE_MAX = 400;
+export const NOTE_MAX = 150;
 
 /**
  * THE TEXT EDITOR, ONCE IT IS OPENED (the owner's 2026-09-22). Every figure
@@ -347,15 +347,37 @@ export const EDITOR = {
    */
   baseline: 0.825,
   /**
-   * SO THE LIFT IS ALMOST NOTHING, and it is worth having written down. To
-   * put a run's ink TOP on the rule's top, the box goes at
-   * `rule.top - baseline * size + maxAscent * size` — and this face's
-   * tallest ascender (b, 828) lands within three thousandths of where a
-   * `line-height: 1` box already puts its baseline. So the correction is
-   * 0.003 of the type size: real, stated, and under a hundredth of a pixel
-   * at the size this editor sets.
+   * THE TYPE SITS ON THE RULE, IT DOES NOT STRADDLE IT (the owner's
+   * 2026-09-22: "Make sure the typed text bottom edge is aligned with the
+   * bottom edge of the dashed line").
+   *
+   * So the run's BASELINE goes on the rule's foot — text on a ruled page —
+   * and its ASCENT is the rule's height, which is what "the same height as
+   * the line" means once the bottom is pinned. The size therefore divides by
+   * the face's tallest ascender (b, 828) rather than by its whole band:
+   * 11.71px against the 9.15 the band gave, which also lifts it clear of the
+   * 9px floor this site knows type stops rendering solid below.
+   *
+   * It was hung from its ink TOP before this, with the whole band one rule
+   * high — which put the bottom of a word without descenders 2.1px above the
+   * rule's foot. That is what the owner was looking at.
    */
-  lift: Math.max(...Object.values(INK.asc)) / INK.em - 0.825,
+  asc: Math.max(...Object.values(INK.asc)) / INK.em,
+  /**
+   * A ROW IS ONE WHOLE BAND of the face, tallest ascender over deepest
+   * descender, so a descender on one line cannot touch an ascender on the
+   * next — and the rectangle grows by exactly this much per row (the
+   * owner's "make the rectangle expand by a row as a new row of text is
+   * written"). At one row the box is the height it always was.
+   */
+  band: CARD_CARET.band,
+  /**
+   * WHERE THE FIRST BASELINE FALLS inside a box set at `--row` line-height,
+   * as a multiple of the type size: half the leading plus where a
+   * `line-height: 1` box puts its baseline. It is what the text box is
+   * lifted by so that baseline lands on the rule's foot.
+   */
+  first: (CARD_CARET.band - 1) / 2 + 0.825,
 } as const;
 
 /**

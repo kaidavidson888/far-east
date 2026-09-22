@@ -1082,6 +1082,12 @@ no hits have the sigil flash red and delete whatever is written").
   callout, the white cloud, the held cloud) as well as the shared control rule
   and its focus ring — `.cig-search-toggle` is in all five. Its computed cursor
   was checked: the white cloud.
+- **`transition` IS A SHORTHAND, so a second rule at the same specificity
+  drops what the first set.** `.shelf-wheel-note { transition: opacity … }`
+  quietly cancelled the `border-color` transition every control gets from
+  `.shelf-wheel-btn` — both 0,1,0, this one later — so that one square's
+  outline snapped on under the pointer while its neighbour's eased. Restate
+  what you are not changing, or use the longhands.
 
 **THE DOTS OPEN SAVED, OFFERS AND RECOMMENDED** (the owner's 2026-09-20 ask,
 with their three spirals attached: "create another button within a box outline
@@ -2536,6 +2542,16 @@ evenly including an even space before the first one and after the last one").
     out narrower than the inner ones by half the slack, which is the one
     thing the ask names. The target gains its HEIGHT instead — the row is a
     whole button tall.
+  - **UNLESS THERE IS NOT THE ROOM, AND THEN ALL FIVE GIVE TOGETHER**
+    (`min(var(--sigil-w), 16%)`). A pack is sized off the viewport, so on a
+    short window — a phone held sideways — the run falls below the five
+    marks' own width and `space-evenly` pushes them OUT of it at both ends
+    and over the cloud star, which is the control that shuts them. Capped,
+    the marks shrink, the six gaps stay equal and nothing covers the star:
+    the owner's spacing rule holds at every size and only the height, which
+    is tied to the price number, gives where it cannot. Measured at
+    829x390: marks 6.58 wide inside a 41.19px run, six gaps of 1.38. At any
+    ordinary width the cap is nowhere near binding (21.53 against 32.9).
 - **AS TALL AS THE TOTAL PRICE NUMBER means the DIGITS' BAND**, off the ink
   table: the tallest ascent and deepest descent of 0-9 (703 and 31, 0.734 em)
   rather than of whatever the total reads today, or a mark would stand a pixel
@@ -2545,12 +2561,17 @@ evenly including an even space before the first one and after the last one").
   13.98px number.
 - **"RED WITH BLACK FILL" AND "BLACK FILL WITH WHITE" ARE ONE COLOUR
   CHANGING.** The ☁ is ink with its spirals cut out, so what shows through
-  and around it is the page — which has been black since the 21st. So the
-  mark is red at 75% at rest and white at 100% when lit, which is also this
-  page's own hover language. A black rectangle behind each mark would draw
-  nothing that is not already there and would change the thing being spaced:
-  the owner asked for five sigils, not five boxes. The opacity is in the
-  colour, never on the element, as everywhere else here.
+  and around it is the page — which has been black since the 21st. A black
+  rectangle behind each mark would draw nothing that is not already there
+  and would change the thing being spaced: the owner asked for five sigils,
+  not five boxes. The opacity is in the colour, never on the element, as
+  everywhere else here.
+  - **IT IS WHITE AT 75% AT REST AND RED AT 100% WHEN LIT** — the owner's
+    2026-09-22 "Flip the red and white colors for the sigils", where it was
+    red at rest and white when lit. Filled now matches the page's own accent,
+    which is what every other mark on it wears. **The text editor's ☁ is not
+    flipped with them**: it has no white state to trade, being red at three
+    quarters and red at full.
 - **THE STAR'S QUARTER STRENGTH IS THE ONE PLACE `opacity` GOES ON THE
   ELEMENT.** Everywhere else on this page it is in a colour so that a line
   going faint does not take its mark down with it — here it is the whole
@@ -2561,6 +2582,25 @@ evenly including an even space before the first one and after the last one").
   The move is 380ms, the tag menu's own slide; **the fade carries that as a
   DELAY on the way out and none on the way back**, which is what "after
   moving" says.
+  - **AND IT COMES BACK TO FULL UNDER THE POINTER** (the owner's 2026-09-22:
+    "Have the star cloud button go to 100% opacity on hover or click when
+    closing the menu too"). A quarter strength is how it stands ASIDE; it is
+    still the control that shuts the sigils, and a reader reaching for it
+    should see what they are about to press. Measured: 0.25 at rest open,
+    1 under a real pointer.
+  - **"AFTER MOVING" IS A SECOND STATE, NOT A `transition-delay`, and this
+    is the general lesson.** A delay belongs to the DESTINATION of a
+    transition — so a 380ms delay written on `[data-open]` also applied when
+    LEAVING the hover, and the button held at full brightness long after the
+    pointer had gone: a flash trailing the mouse. `data-stood` is set by the
+    component once the slide is over, so the fade is its own transition with
+    its own ending and the hover has nothing to wait for. Measured after:
+    `transition-delay` 0s on all three properties.
+  - **THE REDUCED-MOTION OVERRIDES HAVE TO BE WRITTEN AS HEAVILY AS WHAT
+    THEY TURN OFF.** `.shelf-wheel-star` (0,1,0) cannot beat
+    `.shelf-wheel-star[data-open]` (0,2,0), so the plain selectors sat there
+    switching nothing off at all and a reader who had asked for less motion
+    got every transition anyway.
 - **THE LATCH IS REPORTED, NOT MIRRORED.** `ShelfClouds` owns it, so it hands
   it out (`onPress(open)`) rather than letting the controls keep a second
   boolean that has to be kept in step. It resets with the pack, since these
@@ -2591,15 +2631,44 @@ the square was a button). `components/ShelfComment.tsx`, `EDITOR` and
 `pack_favorites.note`/`note_at` — migration **0009**, NOT YET APPLIED.
 - **TEN PIXELS, FOUR TIMES, AND IT IS THE SAME TEN.** The vertical rule stands
   10 inside the rectangle on the left, the top AND the foot — which is what
-  sets the rectangle's height, since that is the only way a mark in a corner
-  can be "10px away from the edge on all edges" — the run begins 10 past the
-  rule, and the ☁ waits 10 past the prompt. Measured at 1920x947: 10.00 /
-  10.00 / 10.00 / 10.00 / 10.00, the box 33.7 tall over a 9.7 rule.
-- **THE MARKS MOVED OUT OF THE SQUARE; THEY WERE NOT DRAWN AGAIN.** The owner
-  placed the vertical rule against THE RECTANGLE, so there is one of it, and
-  the button it came from is its outline alone while the editor is open —
-  which is the cloud star's arrangement when it stands down for the sigils.
-  The square moves to the outline's left edge on the same 380ms slide.
+  sets the rectangle's height AT ONE ROW, since that is the only way a mark
+  in a corner can be "10px away from the edge on all edges" — the run begins
+  10 past the rule, and the ☁ waits 10 past the prompt. Measured at 1920x947:
+  10.00 / 10.00 / 10.00 / 10.00 / 10.00, the box 33.7 tall over a 9.7 rule.
+- **THE SQUARE DISAPPEARS AND THE RECTANGLE TAKES THE WHOLE OUTLINE** (the
+  owner's 2026-09-22: "when the text editor opens have the original outline
+  button disappear and have the text editor fit between both edges of the cig
+  image outline"). It stood down to the outline's left edge for an afternoon,
+  as the cloud star does — but with the editor running edge to edge there is
+  nowhere for the square to stand. Its marks were already the rectangle's:
+  the owner placed the vertical rule against THE RECTANGLE, so there is one
+  of it and it was never drawn twice. Measured: 845.59 → 1074.41, the pack
+  outline to the pixel.
+  - **SO THERE ARE THREE WAYS OUT, and each is one a reader reaches for**:
+    the ☁ (or Enter) sends and shuts, Escape shuts without sending, and the
+    cloud star shuts it by asking for the other menu. A control that opens
+    something and then vanishes has to leave a door.
+  - **THE ROW UNDER IT GOES `inert`.** The editor covers the whole line
+    including the favourite, and a button nobody can see should not be
+    tabbable behind a black rectangle. Verified: `elementFromPoint` at the
+    favourite's middle is the editor while it is open, the favourite again
+    the moment it shuts.
+- **IT GROWS BY A ROW AT A TIME, DOWNWARD** (the owner's "make the rectangle
+  expand by a row as a new row of text is written"). A row is one whole BAND
+  of the face, so a descender can never touch the ascender under it; at one
+  row the box is the height it always was, and `top` is worked out from that
+  one-row height so **the first line of type never moves under the reader**
+  as the box gets taller. Measured: 1 / 2 / 5 / 9 rows at 33.70 / 46.17 /
+  83.55 / 133.39px, each exactly one band apart.
+  - **THE HEIGHT IS NOT TRANSITIONED, on purpose.** It is a layout property,
+    so every frame would be a main-thread repaint — the mistake the tag menu
+    was rewritten twice to get away from — and it also made the box and the
+    mark standing in it measure different things in the same frame.
+  - **A FULL 150 CHARACTERS IS ABOUT SEVEN ROWS AND REACHES PAST THE CLOUD
+    STAR**, which the editor then covers with its own black. The star is
+    live and visible for a short comment, which is the ordinary case;
+    capping the rows or standing the star aside is the owner's call, not
+    one to make unasked.
 - **THE RECTANGLE IS AN OUTLINE, NOT A PANEL, and the PROMPT is what settles
   it.** "A rectangle that is white with the same opacity as the outline of the
   cig images" borrows that outline's half strength — but a white word at a
@@ -2618,29 +2687,47 @@ the square was a button). `components/ShelfComment.tsx`, `EDITOR` and
   LINE and its two controls are placed on it at `50% ∓ 2.5/1.5 x --btn` — the
   arithmetic the flex gap was doing. Measured: both land within a twentieth
   of a pixel of where they stood.
-- **THE TYPE IS HUNG FROM THE RULE, NOT FROM A BOX NEAR IT.** Its size is the
-  one that makes the FACE's whole ink band one rule high (`CARD_CARET.band`),
-  and the box is lifted by `EDITOR.lift` — the three thousandths between this
-  face's tallest ascender (b, 828) and where a `line-height: 1` box puts its
-  baseline (0.825, the figure the login row measured in Chrome). Measured in
-  the page: the face's ascent at 1000px reads 828.125 against the ink table's
-  828, so the correction is right and under a hundredth of a pixel here.
-  **The type comes out 9.15px**, which clears the site's 9px floor and no
-  more — on a touch screen it is under the 16px at which iOS zooms the page
-  and does not zoom back. The owner's rule is explicit ("the same height as
-  the line"), so it is kept; flagged rather than fudged.
+- **THE TYPE SITS ON THE RULE; IT DOES NOT STRADDLE IT** (the owner's
+  2026-09-22 "Make sure the typed text bottom edge is aligned with the bottom
+  edge of the dashed line"). The BASELINE goes on the rule's foot — text on a
+  ruled page — and the ASCENT is the rule's height, so the top of a letter
+  meets the top of the rule and the bottom of the word meets its bottom, and
+  the earlier "the same height as the line" still holds. The size therefore
+  divides by the face's tallest ascender (b, 828) rather than by its whole
+  band. **It was hung from its ink TOP before this**, with the band one rule
+  high, which put a word without descenders 2.1px above the foot — that is
+  what the owner was looking at.
+  - The box is lifted by `EDITOR.first` — half the leading plus where a
+    `line-height: 1` box puts its baseline (0.825, the figure the login row
+    measured in Chrome). Measured in the page: the face's ascent at 1000px
+    reads 828.125 against the ink table's 828, and the first baseline lands
+    0.047px off the rule's foot, which is the constant rounded to 4dp.
+  - **The type comes out 11.73px** where the band reading gave 9.15 — which
+    also lifts it clear of the 9px floor this site knows type stops
+    rendering solid below. It is still under the 16px at which iOS zooms a
+    page on focus and does not zoom back; flagged rather than fudged.
 - **THE ☁ IS THE CARET AND THE SUBMIT IN ONE MARK**, which is the login box's
   arrangement and the search bar's. Its TIP is its LEFT edge — the point the
   site's own cursor is hotspotted on (0 14) — so that is what stands where
   the next letter goes. Solid red at 75% until the reader is in the field,
   then full and blinking on `cig-search-blink`. Enter sends too.
-  - **THE RUN IS MEASURED OFF A MIRROR**, a hidden copy of the value in the
-    field's own font, with the field's `scrollLeft` taken off it — so there
-    is no font string to assemble and get wrong, and the mark stays with the
-    text once the field has begun to scroll. The field's right edge reserves
-    the ☁'s width so it can always stand at the end. Measured: runs of 5.50 /
-    44.08 / 115.13px put the mark at 5.50 / 44.09 / 115.14 past the text's
-    start.
+  - **THE RUN IS MEASURED OFF A MIRROR**, a hidden copy of the value laid out
+    at the field's own width in the field's own font, so it WRAPS in exactly
+    the same places — which is the only thing that can be right about a row
+    count once the field is a textarea. The field's right edge reserves the
+    ☁'s width so it can always stand at the end.
+  - **IT IS MEASURED BETWEEN TWO MARKS, and that is what makes it exact.** An
+    empty inline-block sits with its BOTTOM on the baseline, so its top is a
+    baseline-offset above the line it is on, not the line's top. Taken
+    against the mirror's own box that read as four fifths of a row, rounded
+    to a whole one, and **the ☁ stood a row too low at every length** —
+    caught in the page, not in review. Taken against a mark laid out the same
+    way on the first row, the offset is in both and cancels. Measured after:
+    the mark's foot is on its row's baseline to a hundredth of a pixel at 1,
+    2, 5 and 9 rows.
+  - **THE ROW COUNT IS THE CARET'S OWN ROW PLUS ONE**, not the mirror's
+    height over the row: one measurement, so the box cannot come out a row
+    shorter than the mark standing in it.
   - **THE PROMPT GIVES WAY, NEVER THE MARK.** While "leave a comment <3" is
     showing it is standing where the text will go, so the ☁ waits one prompt
     and one gap past it and moves back to the first letter's place when the
@@ -2653,16 +2740,87 @@ the square was a button). `components/ShelfComment.tsx`, `EDITOR` and
   falls out of the mark not being in the square any more once the editor is
   open. Verified with a real pointer: `cig-search-blink` at 1.06s on the
   underline and none on the vertical rule.
+- **THE EDITOR KEEPS ITS OWN KEYS AND ITS OWN POINTER, and it has to.** It
+  is rendered INSIDE the wheel's stage, which turns an arrow key into a step
+  and a six-pixel press into a drag — and both end at `setResting(false)`,
+  which unmounts these controls and takes an unsent comment with them. So
+  the form stops every `keydown` (ArrowUp to move between the rows of a
+  comment was throwing the comment away) and every `pointerdown` (a drag to
+  select across two rows killed the selection AND the editor).
+  - **IT IS `stopPropagation`, NOT `preventDefault`.** The quantity stripes
+    cancel their pointerdown; a TEXT FIELD may not — cancelling it is what
+    stops the caret being placed and the selection being made.
+  - **THE WHEEL NEEDS A NATIVE LISTENER ON THE FORM.** React registers
+    `wheel` at the ROOT, which is ABOVE the stage, so a synthetic `onWheel`
+    here would run after the stage had already stepped — and React's is
+    passive besides. Same arrangement `CigQuantity` uses.
+  - The stage's arrow handler also gained the `e.defaultPrevented` guard its
+    two sibling gesture handlers already carried. That is the backstop; the
+    fix is at the form.
+  - **The five sigils stop their pointerdown too** — a press with a few
+    pixels of wobble used to take the row away instead of filling it. Their
+    WHEEL is deliberately left alone: they do not scroll, and a hand on the
+    wheel outranks a menu, which is the landing row's rule.
+- **FOCUS GOES ONTO THE FORM WHEN IT OPENS, not into the field.** The row
+  that held the opening square goes `inert` in the same breath, so without
+  this focus landed on `<body>` and **Escape — a documented way out — was
+  heard by nobody**. The form and not the field, because focusing the field
+  would take the prompt away, and the prompt is there to be read.
+- **A SUBMIT THAT CHANGES NOTHING WRITES NOTHING.** Pressing the ☁ is the
+  ordinary way to put an untouched editor away, and an unguarded upsert then
+  stamped `note_at` with today for a comment written last Monday — and put a
+  pack BACK on the shelf that the favourite had just taken off.
+- **ENTER DOES NOT SEND WHILE AN IME HAS A CANDIDATE OPEN**
+  (`e.nativeEvent.isComposing`). Choosing a character is not submitting, and
+  without the guard a Pinyin reader could not type one.
+- **THE PROMPT SHRINK-WRAPS, AND THAT IS LOAD-BEARING.** The ☁ waits ten
+  pixels past its BOX, so when `right` was hoisted into the rule the three
+  runs share, the box became the whole column and the mark stood against the
+  rectangle's right edge. `right: auto; width: max-content`.
+- **THE MIRROR IS AN `<i>`, SO IT IS SET `font-style: normal`.** Left
+  italic it measures a different run from the upright field — visibly so
+  wherever a glyph falls through to the next family, the face carrying no
+  punctuation.
+- **IT RE-MEASURES ON A RESIZE.** The editor is as wide as the pack and the
+  pack is sized off the VIEWPORT, so a narrowed window rewraps the run while
+  `--rows` still says what it said — and the field is `overflow: hidden` at
+  exactly that many rows, so the reader's last line was cut off the bottom
+  with nothing to say so. None of the effect's other dependencies can see a
+  resize; `button` least of all, being a constant.
+- **A SAVE IN FLIGHT CLOSES THE EDITOR, NOT WHATEVER IS OPEN.** The reader
+  can press the cloud star during the round trip; the captured `onClose`
+  then shut the sigils they had just asked for. Both the current state and
+  the current `request` are read off refs.
 - **A REFUSED SAVE FLOODS THE RECTANGLE AND KEEPS WHAT WAS TYPED.** The search
   bar deletes a query that found nothing because there is nothing worth
   keeping; a comment is the reader's own writing and throwing it away would be
   the worst thing this control could do. **A SAVED ONE SHUTS THE EDITOR** —
   that is a judgement, not an ask: a submit with no visible answer is worse,
   and reopening shows the comment.
+- **ONE MENU AT A TIME HERE TOO** (the owner's 2026-09-22: "Have the same
+  parameters as the landing page button triangle where a menu will close
+  itself before a new one can open"). `request` in `ShelfWheelControls` is
+  `CigScroller`'s, PORTED rather than reinvented, and the reason it is ONE
+  piece of state (`'rating' | 'editor' | null`) is the same: two booleans can
+  both be true however carefully the code is written, and this pair cannot.
+  Asked back while leaving, a menu turns round at once; a second request
+  replaces the queued one without restarting the wait.
+  - **`MENU_EXIT_MS` IS NOT ONE NUMBER HERE**, because the two do not leave
+    the same way: the rating's sigils fade while the cloud star SLIDES back
+    (380, the tag menu's own), and the editor has nothing that slides since
+    its square disappears rather than standing aside — the rectangle fades
+    out and the square fades back in behind it, so it costs two fades (320).
+  - **THE CLOUDS TOOK A CONTROLLED `open` PROP FOR THIS.** Their latch lived
+    inside the button, which could not hear "shut, because the reader asked
+    for the editor". It still latches for itself when nobody is telling it.
+  - Verified in the page: editor out, press the star → `--` for 320ms and
+    only then `-R`. Never both.
 - **THE COMMENT IS THE EXISTING SYSTEM'S OWN SHAPE**: one piece of the
   reader's writing per (reader, pack), `text not null default ''`, capped at
-  `saveNoteAction`'s own 400 — which is `favorites.note` exactly, and the
-  `unique (user_id, …)` both of this site's commentary tables carry. **If the
+  the owner's **150 characters** (it was `saveNoteAction`'s 400 for an
+  afternoon, that being the catalogue note's) — which is `favorites.note`
+  exactly, and the `unique (user_id, …)` both of this site's commentary
+  tables carry. **If the
   owner wants a THREAD** — many comments on one pack, from one reader or
   several — that is a table of its own and is not assumed here.
   - **`note_at` IS ITS OWN COLUMN** because `created_at` is when the pack was

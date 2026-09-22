@@ -563,6 +563,12 @@ export function ShelfWheel({ entries, bookmark, button }: Props) {
       onContextMenu={(e) => { if (draggingRef.current) e.preventDefault(); }}
       onDragStart={(e) => e.preventDefault()}
       onKeyDown={(e) => {
+        // A CONTROL INSIDE THE SLOT KEEPS ITS OWN KEYS, the same guard the
+        // wheel and the press carry. The text editor stops its keys at the
+        // form, so this is the backstop rather than the fix — but a
+        // stepped pack unmounts these controls, and an unsent comment goes
+        // with them, so it is worth having both.
+        if (e.defaultPrevented) return;
         if (e.key === 'ArrowDown') { e.preventDefault(); nudge(1); }
         if (e.key === 'ArrowUp') { e.preventDefault(); nudge(-1); }
       }}

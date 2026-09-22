@@ -34,17 +34,21 @@ const SHUT_MS = 420;
 
 export function ShelfClouds({
   label,
+  open: told,
   onPress,
   className,
 }: {
   label: string;
   /**
-   * Told whether the clouds are now latched OPEN, not merely that they were
-   * pressed. The latch lives in here, so this is the one place that knows —
-   * and a parent that has to draw something while they are open (the shelf's
-   * row of sigils) would otherwise keep a second copy of the same boolean and
-   * have to hope the two never came apart.
+   * Asked to open or close, rather than told it was pressed. The shelf keeps
+   * ONE piece of state for which of its menus is out — a menu has to be able
+   * to be shut because another was asked for, which a latch living in here
+   * could not hear (see ShelfWheelControls, and the landing row's `request`
+   * that it is modelled on). Left out, the button latches for itself, which
+   * is how it behaved before it had a menu to belong to.
    */
+  open?: boolean;
+  /** Told which way it was just asked to go. */
   onPress?: (open: boolean) => void;
   className?: string;
 }) {
@@ -55,7 +59,9 @@ export function ShelfClouds({
   const last = useRef(0);
   // OPEN IS STATE, NOT A REF: the button carries `data-open` so that it can
   // keep its outline while it is open, and a ref cannot repaint an attribute.
-  const [open, setOpen] = useState(false);
+  // Its own latch is only used when nobody is telling it — see the prop.
+  const [latched, setLatched] = useState(false);
+  const open = told ?? latched;
 
   const run = useCallback(() => {
     if (raf.current) return;
@@ -92,6 +98,20 @@ export function ShelfClouds({
 
   useEffect(() => () => cancelAnimationFrame(raf.current), []);
 
+  /**
+   * THE CLOUDS FOLLOW `open`, WHEREVER IT CAME FROM. Being told to shut —
+   * because the reader opened the text editor instead — has to gather them
+   * just as pressing the button does, and the press itself no longer aims
+   * at anything: it asks, and this answers. A hover is left alone, since it
+   * does not change `open` and the handlers above stand down while it is
+   * true. Guarded on `want` so mounting shut does not start a tick with
+   * nowhere to go.
+   */
+  useEffect(() => {
+    const to = open ? 1 : 0;
+    if (want.current !== to) aim(to);
+  }, [open, aim]);
+
   // `ease` is only the shape of the travel; `t` itself stays linear so that
   // turning round part-way picks up exactly where it had got to
   const u = t < 0.5 ? 2 * t * t : 1 - ((-2 * t + 2) ** 2) / 2;
@@ -110,8 +130,7 @@ export function ShelfClouds({
       onBlur={() => { if (!open) aim(0); }}
       onClick={() => {
         const next = !open;
-        setOpen(next);
-        aim(next ? 1 : 0);
+        setLatched(next);
         onPress?.(next);
       }}
     >

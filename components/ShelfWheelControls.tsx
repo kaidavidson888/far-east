@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { togglePackAction } from '@/app/actions';
 import { cardAmount, cardQuantityFrame, type ShelfEntry } from '@/lib/shelfGrid';
 import { CigQuantity } from './CigQuantity';
@@ -42,6 +42,32 @@ import { ShelfRating } from './ShelfRating';
  * give instructions on that construction after u are done". So it carries
  * the dashed rule and takes a press; what it opens comes next.
  */
+/** Which of the pack's two menus is out; one at a time, and never two. */
+type Menu = 'rating' | 'editor' | null;
+
+/**
+ * HOW LONG EACH ONE TAKES TO LEAVE once it has been told to, which is what
+ * the next has to wait for — the landing row's `MENU_EXIT_MS`, for the
+ * owner's "a menu will close itself before a new one can open".
+ *
+ * THEY ARE NOT THE SAME, because the two menus do not leave the same way.
+ * The rating's sigils fade while the cloud star SLIDES back to the middle
+ * of the pack, and the slide is the longer of the two — the tag menu's own
+ * 380. The editor has nothing that slides since the owner had its square
+ * disappear rather than stand aside: the rectangle fades out and the square
+ * fades back in AFTER it, one behind the other, so it costs two fades.
+ *
+ * Every figure is the one the stylesheet animates by. A second copy would
+ * drift, and the drift would show as exactly the overlap this rule exists
+ * to prevent.
+ */
+const SLIDE_MS = 380;
+const FADE_MS = 160;
+const MENU_EXIT_MS: Record<Exclude<Menu, null>, number> = {
+  rating: SLIDE_MS,
+  editor: FADE_MS * 2,
+};
+
 export function ShelfWheelControls({
   entry: { pack, amount, unit, rating, note },
   bookmark,
@@ -59,24 +85,98 @@ export function ShelfWheelControls({
 }) {
   const [saved, setSaved] = useState(true);
   /**
-   * WHETHER THE CLOUD STAR IS LATCHED OPEN. It is reported by the button
-   * itself rather than kept in step with a second boolean here: pressing it
-   * stands it down to the pack outline's left edge at a quarter strength and
-   * puts the five sigils out beside it (the owner's 2026-09-22), and it
-   * closes them again.
+   * ONE MENU AT A TIME, AND THE NEXT WAITS FOR THE LAST TO GO — the landing
+   * row's rule, which the owner asked for here too ("Have the same
+   * parameters as the landing page button triangle where a menu will close
+   * itself before a new one can open"). `request` below is `CigScroller`'s,
+   * ported rather than reinvented, and the reason it is ONE piece of state
+   * is the same: two booleans can both be true however carefully the code is
+   * written, and this pair cannot.
    *
    * IT RESETS WITH THE PACK, because these controls only exist while the
-   * wheel is at rest on one and are unmounted the moment it moves — so the
-   * sigils cannot be left standing beside a pack they were not opened on.
+   * wheel is at rest on one and are unmounted the moment it moves — so a
+   * menu cannot be left standing beside a pack it was not opened on.
    */
-  const [ratingOpen, setRatingOpen] = useState(false);
+  const [openMenu, setOpenMenu] = useState<Menu>(null);
+  const ratingOpen = openMenu === 'rating';
+  const noteOpen = openMenu === 'editor';
+  /** What is still on its way out, and what is to follow it. */
+  const leavingRef = useRef<Menu>(null);
+  const nextRef = useRef<Menu>(null);
+  const waitRef = useRef(0);
+  useEffect(() => () => window.clearTimeout(waitRef.current), []);
+
+  const request = useCallback((next: Menu) => {
+    // Asked back while it is still leaving: turn it around at once rather
+    // than waiting for it to finish going. Every part of both menus is a
+    // transition that reverses from wherever it has reached, so this reads
+    // as one movement — and a reader pressing the same button twice means it.
+    if (next !== null && next === leavingRef.current) {
+      window.clearTimeout(waitRef.current);
+      leavingRef.current = null;
+      nextRef.current = null;
+      setOpenMenu(next);
+      return;
+    }
+    // Something is already on its way out: whatever is asked for now goes
+    // after it, replacing anything queued. The wait is NOT restarted — the
+    // one that is leaving has been leaving all this time.
+    if (leavingRef.current) {
+      nextRef.current = next;
+      return;
+    }
+    if (openMenu === next) return;
+    if (openMenu === null) {
+      setOpenMenu(next);
+      return;
+    }
+    // close what is out and hold the next until it has gone. The timer is set
+    // HERE and not inside the updater: React may run an updater twice, and it
+    // is not the place for a side effect.
+    leavingRef.current = openMenu;
+    nextRef.current = next;
+    setOpenMenu(null);
+    window.clearTimeout(waitRef.current);
+    waitRef.current = window.setTimeout(() => {
+      leavingRef.current = null;
+      const queued = nextRef.current;
+      nextRef.current = null;
+      if (queued) setOpenMenu(queued);
+    }, MENU_EXIT_MS[openMenu]);
+  }, [openMenu]);
+
   /**
-   * WHETHER THE TEXT EDITOR IS OPEN (the owner's 2026-09-22). Pressing the
-   * square stands it down to the pack outline's left edge, exactly as the
-   * cloud star does, and opens the rectangle beside it. Pressing it again —
-   * or saving a comment — shuts it.
+   * CLOSING "ME", NOT "WHATEVER IS OPEN". A save is in flight across a
+   * round trip, and the reader can press the cloud star while it is: by the
+   * time the editor's `onClose` runs, the rating may be the menu that is
+   * out, and a plain `request(null)` — captured, with a `request` frozen at
+   * the render where the editor was open — would shut the sigils the reader
+   * had just asked for. Both the current state and the current `request`
+   * are read off refs, so this closes the editor only if the editor is
+   * still what is open.
    */
-  const [noteOpen, setNoteOpen] = useState(false);
+  const openRef = useRef<Menu>(openMenu);
+  openRef.current = openMenu;
+  const requestRef = useRef(request);
+  requestRef.current = request;
+  const closeEditor = useCallback(() => {
+    if (openRef.current === 'editor') requestRef.current(null);
+  }, []);
+
+  /**
+   * WHETHER THE STAR HAS FINISHED STANDING DOWN. "After moving its opacity
+   * should be 25%" is a sequence, and a sequence is a second state rather
+   * than a `transition-delay` — a delay belongs to the destination of a
+   * transition, so it also made LEAVING the hover wait 380ms and left the
+   * button glowing behind the pointer.
+   */
+  const [stood, setStood] = useState(false);
+  useEffect(() => {
+    if (!ratingOpen) { setStood(false); return undefined; }
+    const t = window.setTimeout(() => setStood(true), SLIDE_MS);
+    return () => window.clearTimeout(t);
+  }, [ratingOpen]);
+
   const countRef = useRef<HTMLSpanElement | null>(null);
   const [room, setRoom] = useState<{ w: number; h: number } | null>(null);
 
@@ -135,7 +235,16 @@ export function ShelfWheelControls({
         the row stood, so the gap between them is the three slots the row had
         less their own width — 3 x the button.
       */}
-      <div className="shelf-wheel-row" style={{ '--btn': `${button}px` } as React.CSSProperties}>
+      <div
+        className="shelf-wheel-row"
+        /* THE EDITOR COVERS THIS WHOLE LINE once it is open — it runs edge
+           to edge of the pack's outline now — so the two controls under it
+           go out of reach rather than staying tabbable behind a black
+           rectangle. The editor's own square is hidden there anyway. */
+        inert={noteOpen}
+        data-shut={noteOpen ? '' : undefined}
+        style={{ '--btn': `${button}px` } as React.CSSProperties}
+      >
         {/* THE TEXT EDITOR'S SQUARE. Shut, it carries the two marks that
             make a row of the login box: the vertical dashed rule and the
             horizontal one the letters sit on, standing the same margin off
@@ -153,7 +262,7 @@ export function ShelfWheelControls({
           aria-label={noteOpen
             ? `Close the comment on ${pack.name}`
             : `Leave a comment on ${pack.name}`}
-          onClick={() => setNoteOpen((v) => !v)}
+          onClick={() => request(noteOpen ? null : 'editor')}
         >
           <i className="shelf-wheel-caret" aria-hidden />
           <i className="shelf-wheel-underline" aria-hidden />
@@ -199,12 +308,14 @@ export function ShelfWheelControls({
       <div
         className="shelf-wheel-star"
         data-open={ratingOpen ? '' : undefined}
+        data-stood={stood ? '' : undefined}
         style={{ '--btn': `${button}px`, '--star-top': `${starTop.toFixed(2)}px` } as React.CSSProperties}
       >
         <ShelfClouds
           label={`Rate ${pack.name}`}
           className="shelf-wheel-btn"
-          onPress={setRatingOpen}
+          open={ratingOpen}
+          onPress={(want) => request(want ? 'rating' : null)}
         />
       </div>
 
@@ -215,7 +326,7 @@ export function ShelfWheelControls({
         note={note}
         open={noteOpen}
         button={button}
-        onSaved={() => setNoteOpen(false)}
+        onClose={closeEditor}
       />
 
       {/* the five sigils, filling the run from the stood-down star's right

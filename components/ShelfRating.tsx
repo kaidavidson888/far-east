@@ -98,6 +98,13 @@ export function ShelfRating({
         '--star-top': `${starTop.toFixed(2)}px`,
       } as React.CSSProperties}
       onPointerLeave={() => setOver(0)}
+      /* A PRESS ON A SIGIL IS NOT A PRESS ON THE WHEEL. The stage turns any
+         press it sees into a drag past six pixels and stops resting, which
+         unmounts these controls — so a press with a few pixels of wobble in
+         it would take the row of sigils away instead of filling them. A
+         WHEEL over them is left alone on purpose: they do not scroll, and a
+         hand on the wheel outranks a menu, which is the landing row's rule. */
+      onPointerDown={(e) => e.stopPropagation()}
     >
       {Array.from({ length: RATE.count }, (_, i) => i + 1).map((k) => (
         <button

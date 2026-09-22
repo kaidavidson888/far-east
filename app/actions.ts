@@ -441,9 +441,9 @@ export async function setPackRatingAction(
  * owner's 2026-09-22) — "whatever the user typed … incorporated into the
  * existing comment system".
  *
- * `NOTE_MAX` IS `saveNoteAction`'S OWN 400, and the slice is here rather than
- * in the database for the same reason it is there: a server action is a
- * public endpoint, and what holds the cap is that nothing can reach the
+ * `NOTE_MAX` IS THE OWNER'S 150, and the slice is here rather than in the
+ * database for the same reason `saveNoteAction`'s 400 is: a server action is
+ * a public endpoint, and what holds the cap is that nothing can reach the
  * column without passing through this line. It lives in `lib/shelfGrid.ts`
  * because the editor needs it too and **a `'use server'` module may only
  * export async functions** — a plain `const` here silently strips every

@@ -2983,8 +2983,27 @@ ul, ol { list-style: none; }
 .shelf-wheel-star[data-open] {
   left: calc(-1 * var(--pack-rule));
   transform: translateX(0);
+}
+/* "AFTER MOVING ITS OPACITY SHOULD BE 25%" IS A SECOND STATE, NOT A DELAY.
+   It was a `transition-delay` for an afternoon, and a delay belongs to the
+   DESTINATION of a transition — so leaving the hover below also waited 380ms
+   and the button held at full brightness long after the pointer had gone,
+   which reads as a flash trailing the mouse. `data-stood` is set by the
+   component once the slide is over, so the fade is its own transition with
+   its own ending and the hover has nothing to wait for. */
+.shelf-wheel-star[data-stood] {
   opacity: 0.25;
-  transition: left 380ms ease-out, transform 380ms ease-out, opacity 160ms ease-out 380ms;
+  transition: left 380ms ease-out, transform 380ms ease-out, opacity 160ms ease-out;
+}
+/* AND IT COMES BACK TO FULL UNDER THE POINTER (the owner's 2026-09-22: "Have
+   the star cloud button go to 100% opacity on hover or click when closing the
+   menu too"). A quarter strength is how it stands ASIDE; it is still the
+   control that shuts the sigils, and a reader reaching for it should see what
+   they are about to press. */
+.shelf-wheel-star[data-stood]:hover,
+.shelf-wheel-star[data-stood]:active,
+.shelf-wheel-star[data-stood]:focus-within {
+  opacity: 1;
 }
 /* AND IT KEEPS ITS OUTLINE ("have the button keep its outline"), which it
    would otherwise drop the moment the pointer moved onto a sigil. Written
@@ -3027,11 +3046,21 @@ ul, ol { list-style: none; }
   opacity: 1;
   transition: opacity 160ms ease-out 380ms;
 }
+/* EACH IS ITS MARK'S WIDTH — UNLESS THERE IS NOT THE ROOM, and then all
+   five give together. A pack is sized off the viewport, so on a short
+   window (a phone held sideways) the run between the stood-down star and
+   the outline's right edge falls below the five marks' own width, and
+   `space-evenly` would then push them OUT of the run at both ends and over
+   the star — which is the control that shuts them. Capped at a fifth of the
+   run less its share of the gaps, the marks shrink and the six gaps stay
+   equal, so the owner's rule holds at every size and only the height, which
+   is tied to the price number, gives where it cannot. At any ordinary width
+   the cap is nowhere near binding (21.5px against 32.9). */
 .shelf-wheel-sigil {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: var(--sigil-w);
+  width: min(var(--sigil-w), 16%);
   height: var(--btn);
   padding: 0;
   background: none;
@@ -3042,26 +3071,43 @@ ul, ol { list-style: none; }
    ☁ on this site is drawn — an <img> could only ever be the black it was
    baked as, and this one has two colours to be.
 
-   RED AT THREE QUARTERS, WHITE AT FULL. The owner's "red with black fill
-   normally at 75% opacity then go to 100% opacity and the default black fill
-   with white on hover and click": the black fill is the page, which the
-   spirals and the ground around the mark show through, so what changes
-   between the two states is one colour. THE OPACITY IS IN THAT COLOUR, this
-   page's rule for all of its controls. */
+   WHITE AT THREE QUARTERS, RED AT FULL — the owner's 2026-09-22 "Flip the
+   red and white colors for the sigils", where it was red at rest and white
+   when lit. Filled now matches the page's own accent, which is what every
+   other mark on it wears. The black fill is the page, which the spirals and
+   the ground around the mark show through, so what changes between the two
+   states is ONE COLOUR — and THE OPACITY IS IN THAT COLOUR, this page's rule
+   for all of its controls.
+
+   The text editor's own ☁ is not flipped with them: it has no white state to
+   trade, being red at three quarters and red at full. */
 .shelf-wheel-sigil i {
   display: block;
-  width: var(--sigil-w);
-  height: var(--sigil-h);
-  background: rgb(255 0 0 / 0.75);
+  /* the mark fills its button and keeps the ☁'s own drawn shape, so the
+     cap above takes the height with the width rather than squashing it */
+  width: 100%;
+  aspect-ratio: var(--sigil-ratio);
+  background: rgb(255 255 255 / 0.75);
   -webkit-mask: url('/sigil.webp') center / 100% 100% no-repeat;
           mask: url('/sigil.webp') center / 100% 100% no-repeat;
   transition: background-color 120ms ease-out;
 }
-.shelf-wheel-sigil[data-lit] i { background: #ffffff; }
-.shelf-wheel-sigil:focus-visible { outline: 2px solid #ff0000; outline-offset: 2px; }
+.shelf-wheel-sigil[data-lit] i { background: #ff0000; }
+.shelf-wheel-sigil:focus-visible { outline: 2px solid #ffffff; outline-offset: 2px; }
+/* A READER WHO HAS ASKED FOR LESS MOTION GETS NONE OF IT — and these have
+   to be written at least as heavily as the states they are turning off.
+   `.shelf-wheel-star` (0,1,0) cannot beat `.shelf-wheel-star[data-open]`
+   (0,2,0), so the plain selectors silently left every transition running. */
 @media (prefers-reduced-motion: reduce) {
   .shelf-wheel-star,
+  .shelf-wheel-star[data-open],
+  .shelf-wheel-star[data-open]:hover,
+  .shelf-wheel-star[data-open]:active,
+  .shelf-wheel-star[data-open]:focus-within,
+  .shelf-wheel-star[data-stood],
+  .shelf-wheel-star[data-stood]:hover,
   .shelf-wheel-rate,
+  .shelf-wheel-rate[data-open],
   .shelf-wheel-sigil i { transition: none; }
 }
 .shelf-wheel-form { display: flex; line-height: 0; }
@@ -3134,18 +3180,27 @@ button.shelf-wheel-btn:focus-visible,
    owner's next piece of work. For now it carries the login box's own dashed
    rule, kept the same distance off its left edge as it stood when this was a
    bar, white on the red page and white again on the black fill. */
-/* IT MOVES WHEN IT IS PRESSED, exactly as the cloud star does and at the
-   same pace — the owner asked for both on the same day and in the same
-   words. Its own marks go with the move: the vertical rule and the line
-   under it are the RECTANGLE's now, where the owner placed them, so what is
-   left standing here is the outline. */
-.shelf-wheel-note { transition: left 380ms ease-out; }
-.shelf-wheel-btn.shelf-wheel-note[data-open] {
-  left: calc(-1 * var(--pack-rule));
-  border-color: #ff0000;
+/* IT GOES WHEN IT IS PRESSED (the owner's 2026-09-22: "when the text editor
+   opens have the original outline button disappear"). It stood down to the
+   outline's left edge for an afternoon, as the cloud star does — but the
+   editor runs edge to edge of that outline now and there is nowhere for the
+   square to stand. Its marks were already the rectangle's.
+
+   IT GOES FIRST AND COMES BACK LAST, which is the ONE MENU AT A TIME rule
+   written in two transitions: no delay on the way out, and the arriving
+   rectangle waits that fade; on the way back the rectangle goes first and
+   this waits for it. */
+/* `transition` IS A SHORTHAND, so it resets what `.shelf-wheel-btn` set —
+   both selectors are 0,1,0 and this one is later. Without `border-color`
+   restated, this square's outline would snap on under the pointer while
+   the favourite a button away eased in over 120ms. */
+.shelf-wheel-note {
+  transition: opacity 160ms ease-out 160ms, border-color 120ms ease-out;
 }
-.shelf-wheel-note[data-open] .shelf-wheel-caret,
-.shelf-wheel-note[data-open] .shelf-wheel-underline { display: none; }
+.shelf-wheel-btn.shelf-wheel-note[data-open] {
+  opacity: 0;
+  transition: opacity 160ms ease-out, border-color 120ms ease-out;
+}
 /* THE BOTTOM DASH BLINKS UNDER THE POINTER AND STOPS ON THE PRESS (the
    owner's 2026-09-22), which falls out of the mark not being there any
    more once the editor is open. `cig-search-blink` is the site's one caret
@@ -3222,32 +3277,55 @@ button.shelf-wheel-btn:focus-visible,
    ITS RULE IS THE CONTROLS' 2px, not the pack's 5: what was borrowed was the
    opacity, and every box on this page is drawn at the controls' weight. */
 .shelf-comment {
-  /* everything inside hangs off these four; the scalars they use come from
-     EDITOR and CARD_CARET in lib/shelfGrid.ts, so each is stated once */
-  --type: calc(var(--card-caret-h) / var(--editor-band));
+  /* Everything inside hangs off these; the scalars they use come from EDITOR
+     and CARD_CARET in lib/shelfGrid.ts, so each is stated once.
+
+     `--type` divides by the face's tallest ASCENDER, not by its whole band,
+     because the run now sits ON the rule: its baseline is the rule's foot
+     and its ascent is the rule's height. `--row` is the whole band, so a
+     descender can never touch the ascender beneath it, and it is exactly
+     what the rectangle grows by. */
+  --type: calc(var(--card-caret-h) / var(--editor-asc));
+  --row: calc(var(--type) * var(--editor-band));
   --text-x: calc(2 * var(--editor-pad) + var(--card-caret-w));
+  --text-top: calc(var(--editor-pad) + var(--card-caret-h)
+                   - var(--type) * var(--editor-first));
   --send-w: calc(var(--card-caret-h) * var(--sigil-ratio));
-  --h: calc(var(--card-caret-h) + 2 * var(--editor-pad) + 2 * var(--editor-rule));
+  /* one row, which is the height it has always had */
+  --h1: calc(var(--card-caret-h) + 2 * var(--editor-pad) + 2 * var(--editor-rule));
+  --h: calc(var(--h1) + (var(--rows, 1) - 1) * var(--row));
 
   box-sizing: border-box;
   position: absolute;
-  left: calc(var(--btn) - var(--pack-rule));
+  /* EDGE TO EDGE OF THE PACK'S OUTLINE (the owner's 2026-09-22), where it
+     began one square in from the left — the square it began past is gone. */
+  left: calc(-1 * var(--pack-rule));
   right: calc(-1 * var(--pack-rule));
+  /* AT ONE ROW IT IS CENTRED ON THE SQUARE'S OWN LINE, and it GROWS
+     DOWNWARD from there: `top` is worked out from the one-row height, so
+     the first line of type never moves under the reader as the box gets
+     taller. Every text editor in the world does it this way. */
   top: calc(100% + var(--pack-rule) + var(--wheel-margin)
-            + var(--btn) / 2 - var(--h) / 2);
+            + var(--btn) / 2 - var(--h1) / 2);
   height: var(--h);
   margin: 0;
   background: var(--editor-fill);
   border: var(--editor-rule) solid var(--editor-ink);
   opacity: 0;
   z-index: 4;
+  /* THE HEIGHT IS NOT TRANSITIONED, on purpose. It is a layout property, so
+     every frame of it would be a main-thread repaint — the mistake this
+     stylesheet's tag menu was rewritten twice to get away from — and the box
+     grows by one row, once, as the row appears. That is what a text editor
+     does, and it keeps the box and the mark in it measuring the same thing
+     at the same moment. */
   transition: opacity 160ms ease-out, background-color 150ms ease,
               border-color 150ms ease;
 }
-/* it arrives once the square has stood down, not while it is still moving */
+/* it arrives once the square has gone, not over the top of it */
 .shelf-comment[data-open] {
   opacity: 1;
-  transition: opacity 160ms ease-out 380ms, background-color 150ms ease,
+  transition: opacity 160ms ease-out 160ms, background-color 150ms ease,
               border-color 150ms ease;
 }
 /* A COMMENT THAT DID NOT SAVE FLOODS THE RECTANGLE, which is the login box's
@@ -3277,34 +3355,54 @@ button.shelf-wheel-btn:focus-visible,
           mask-position: var(--card-caret-x) var(--card-caret-y);
   pointer-events: none;
 }
-/* THE PROMPT AND THE RUN ARE THE SAME LINE OF TYPE, set at the size that
-   makes the face's whole ink band one rule high and hung from the rule's own
-   top — `--editor-lift` is the three thousandths between where this face's
-   tallest ascender sits and where a `line-height: 1` box puts its baseline. */
+/* THE PROMPT AND THE RUN ARE THE SAME LINE OF TYPE, SITTING ON THE RULE (the
+   owner's "Make sure the typed text bottom edge is aligned with the bottom
+   edge of the dashed line"). `--text-top` lifts the box so that the FIRST
+   BASELINE lands on the rule's foot: `--editor-first` is half the leading
+   plus where a `line-height: 1` box puts its baseline, both measured rather
+   than guessed. The ascent then reaches the rule's top, which is the earlier
+   ask — "the same height as the line" — still holding. */
 .shelf-comment-prompt,
 .shelf-comment-field,
 .shelf-comment-mirror {
   position: absolute;
-  top: calc(var(--editor-pad) + var(--type) * var(--editor-lift));
-  height: var(--type);
+  top: var(--text-top);
+  left: var(--text-x);
+  /* the ☁ always has room to stand at the end of the run */
+  right: calc(var(--editor-pad) + var(--send-w));
   font-family: var(--font-typed);
   font-size: var(--type);
   font-weight: 700;
+  /* THE MIRROR IS AN `<i>`, so it would be laid out ITALIC while the field
+     it is measuring is upright — and where a glyph falls through to the
+     next family in the stack (the face carries no punctuation) that is a
+     genuinely different advance, so the ☁ would stand in the wrong place. */
+  font-style: normal;
   font-synthesis: none;
-  line-height: 1;
-  white-space: nowrap;
+  line-height: var(--row);
+  letter-spacing: 0;
 }
+/* IT SHRINK-WRAPS THE PHRASE, and that is load-bearing: the ☁ waits ten
+   pixels past this box, so a box stretched to the field's own width would
+   stand the mark against the rectangle's right edge instead of one space
+   after the word. It is `right: auto` because the rule above sets `right`
+   for the two that DO want the full column. */
 .shelf-comment-prompt {
-  left: var(--text-x);
+  right: auto;
+  width: max-content;
+  max-width: calc(100% - var(--text-x) - var(--editor-pad) - var(--send-w));
+  height: var(--row);
   color: rgb(255 255 255 / 0.25);
+  white-space: nowrap;
   pointer-events: none;
 }
 /* it vanishes the moment the reader arrives, and the ☁ takes its place */
 .shelf-comment-prompt[data-gone] { visibility: hidden; }
+/* A TEXTAREA, so that a run too long for the line WRAPS — which is what
+   makes a new row, and the rectangle is as tall as there are rows. It never
+   scrolls and never shows a grip: it is exactly as tall as its own text. */
 .shelf-comment-field {
-  left: var(--text-x);
-  /* the ☁ always has room to stand at the end of the run */
-  right: calc(var(--editor-pad) + var(--send-w));
+  height: calc(var(--rows, 1) * var(--row));
   padding: 0;
   margin: 0;
   background: none;
@@ -3314,14 +3412,21 @@ button.shelf-wheel-btn:focus-visible,
   /* the ☁ IS the caret; there is no sense in two marks saying the same thing */
   caret-color: transparent;
   outline: none;
+  resize: none;
+  overflow: hidden;
 }
-/* the run again, unseen, so the ☁ can be put at the end of it */
+/* THE RUN AGAIN, UNSEEN, laid out at the field's own width so that it wraps
+   in exactly the same places — which is what makes it a measurement of the
+   rows rather than a guess at them. The empty mark at its end is where the
+   next letter goes, and so where the ☁ stands. */
 .shelf-comment-mirror {
-  left: 0;
+  height: auto;
   visibility: hidden;
-  white-space: pre;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
   pointer-events: none;
 }
+.shelf-comment-tip { display: inline-block; width: 0; }
 /* THE ☁: the caret and the send in one mark. Its LEFT EDGE is the tip — the
    point the site's own cursor is hotspotted on — so that is what stands
    where the next letter will go. Solid at three quarters until the reader is
@@ -3329,7 +3434,8 @@ button.shelf-wheel-btn:focus-visible,
 .shelf-comment-send {
   position: absolute;
   left: calc(var(--text-x) + var(--caret-x, 0px));
-  top: var(--editor-pad);
+  /* on the row it is standing at, with its foot on that row's baseline */
+  top: calc(var(--editor-pad) + var(--caret-row, 0) * var(--row));
   width: var(--send-w);
   height: var(--card-caret-h);
   padding: 0;
@@ -3568,7 +3674,8 @@ input[type='reset'],
 .seal-button-hit,
 .shelf-wheel,
 .shelf-wheel-btn,
-.shelf-wheel-sigil {
+.shelf-wheel-sigil,
+.shelf-comment-send {
   -webkit-touch-callout: none;
   user-select: none;
   -webkit-user-select: none;
@@ -3657,6 +3764,7 @@ input[type='radio'],
 .logo-menu-box,
 .shelf-wheel-btn,
 .shelf-wheel-sigil,
+.shelf-comment-send,
 .seal-button-hit {
   cursor: url('/sigil-cursor-press.png') 0 14, pointer;
   cursor: image-set(url('/sigil-cursor-press.png') 1x, url('/sigil-cursor-press@2x.png') 2x) 0 14, pointer;
@@ -3724,6 +3832,7 @@ input[type='radio']:active,
 .logo-menu-box:active,
 .shelf-wheel-btn:active,
 .shelf-wheel-sigil:active,
+.shelf-comment-send:active,
 .seal-button-hit:active {
   cursor: url('/sigil-cursor.png') 0 14, pointer;
   cursor: image-set(url('/sigil-cursor.png') 1x, url('/sigil-cursor@2x.png') 2x) 0 14, pointer;

@@ -61,8 +61,9 @@ export function ShelfPage({ entries, worth }: { entries: ShelfEntry[]; worth?: s
         '--editor-rule': `${EDITOR.rule}px`,
         '--editor-ink': EDITOR.ink,
         '--editor-fill': EDITOR.fill,
-        '--editor-band': +CARD_CARET.band.toFixed(4),
-        '--editor-lift': +EDITOR.lift.toFixed(4),
+        '--editor-asc': +EDITOR.asc.toFixed(4),
+        '--editor-band': +EDITOR.band.toFixed(4),
+        '--editor-first': +EDITOR.first.toFixed(4),
         // the dashed rule in the text editor's square: the margin it kept
         // off the left edge when this was a bar, and its own height
         '--card-comment-pad': `${+(button * CARD.commentPad).toFixed(3)}px`,

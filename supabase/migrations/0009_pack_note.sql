@@ -30,8 +30,9 @@
 -- rather than by a trigger — the one place that writes the note is the one
 -- place that knows it changed.
 --
--- THE LENGTH IS CAPPED IN THE ACTION, not here, which is `saveNoteAction`'s
--- own arrangement (`.slice(0, 400)`). The slice is inside the server action,
+-- THE LENGTH IS CAPPED IN THE ACTION AT 150, not here — which is
+-- `saveNoteAction`'s own arrangement, that one at 400. The slice is inside
+-- the server action,
 -- so it holds for any caller — a server action is a public endpoint, and
 -- what protects this column is that nothing can reach it without being
 -- sliced first.
