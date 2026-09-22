@@ -50,6 +50,24 @@ type Props = {
 /** One drawing of one pack: which entry, and where its MIDDLE is on screen. */
 type Slot = { key: string; i: number; mid: number; h: number };
 
+/**
+ * HOW MUCH WHEEL TRAVEL MOVES THE SELECTION BY ONE, in normalised pixels.
+ *
+ * A mouse notch is about 100 in Chrome, so 40 makes one notch exactly one
+ * pack with room to spare either side; a trackpad's much smaller deltas bank
+ * up and step in proportion to the swipe. Below about 25 a single notch can
+ * arrive split across two events and step twice; above about 90 a shallow
+ * notch on some mice would not step at all.
+ */
+const WHEEL_STEP = 40;
+
+/**
+ * How soon the first tick of a run comes. A notch's seek lands in one tick,
+ * so at the beat's own 125ms a notch was an eighth of a second of nothing
+ * and then the whole move; this makes it answer at once.
+ */
+const FIRST_TICK_MS = 16;
+
 export function ShelfWheel({ entries, bookmark, button }: Props) {
   const stageRef = useRef<HTMLDivElement | null>(null);
 
@@ -63,6 +81,8 @@ export function ShelfWheel({ entries, bookmark, button }: Props) {
   const draggingRef = useRef(false);
   const pressRef = useRef<{ y: number; off: number; moved: boolean } | null>(null);
   const trailRef = useRef<{ t: number; y: number }[]>([]);
+  /** wheel travel banked since the last step — see the roll handler */
+  const bucketRef = useRef(0);
   /** which pack the wheel is on — kept in a ref so the tick can read it */
   const pickedRef = useRef(0);
   /** the selected pack's own element, for the quantity menu's width */
@@ -148,6 +168,33 @@ export function ShelfWheel({ entries, bookmark, button }: Props) {
     return Number.isFinite(bd) ? best : 0;
   }, [n, size.h, plan]);
 
+  /** The plan the TICK should use, which is not always the one it closed over. */
+  const planRef = useRef(plan);
+  planRef.current = plan;
+
+  /**
+   * KEEP THE OFFSET INSIDE ONE LAP.
+   *
+   * `compute` only draws laps -1..n round the current offset, but nothing was
+   * reducing the offset itself — so scrolling one way for long enough walked
+   * it past every lap it draws and THE SHELF WENT EMPTY, with no selection at
+   * all. About two seconds of scrolling up did it. The offset is wrapped
+   * here instead, and anything holding an absolute position — an in-flight
+   * seek, a drag's anchor — is shifted by the same amount in the same breath,
+   * or wrapping would tear them off the wheel.
+   */
+  const wrap = useCallback(() => {
+    const { lap } = planRef.current;
+    if (!(lap > 0)) return;
+    const was = offsetRef.current;
+    const now = ((was % lap) + lap) % lap;
+    if (now === was) return;
+    const shift = now - was;
+    offsetRef.current = now;
+    if (seekRef.current !== null) seekRef.current += shift;
+    if (pressRef.current) pressRef.current.off += shift;
+  }, []);
+
   const draw = useCallback(() => {
     const { out, near } = compute();
     setSlots(out);
@@ -163,6 +210,7 @@ export function ShelfWheel({ entries, bookmark, button }: Props) {
       const now = performance.now();
       const dt = Math.min(0.25, (now - lastTsRef.current) / 1000);
       lastTsRef.current = now;
+      wrap();
 
       let settling = false;
       if (!draggingRef.current && seekRef.current !== null) {
@@ -212,8 +260,14 @@ export function ShelfWheel({ entries, bookmark, button }: Props) {
       }
       timerRef.current = window.setTimeout(tick, cigPaintMs(Math.abs(velRef.current)));
     };
-    timerRef.current = window.setTimeout(tick, WHEEL_MOTION.paintMs);
-  }, [draw, offCentre]);
+    // THE FIRST TICK COMES AT ONCE, not a whole beat later. A notch's seek
+    // lands in a single tick (the seek's time constant is shorter than the
+    // beat), so at the beat's own 125ms a notch read as an eighth of a
+    // second of nothing and then the whole move — and the controls were
+    // gone for 250ms of it. One short tick first makes it move immediately
+    // and halves the time they are away.
+    timerRef.current = window.setTimeout(tick, FIRST_TICK_MS);
+  }, [draw, offCentre, wrap]);
 
   const stop = () => {
     if (timerRef.current) { window.clearTimeout(timerRef.current); timerRef.current = null; }
@@ -237,6 +291,10 @@ export function ShelfWheel({ entries, bookmark, button }: Props) {
 
   useEffect(() => {
     if (!size.h || !n) return;
+    // STOP THE TICK FIRST. It is a closure over the layout that has just
+    // been replaced, and it reschedules itself — left running it would go on
+    // driving the offset against positions that no longer exist.
+    stop();
     // A RESIZE RE-CENTRES THE PACK THAT WAS SELECTED, not whichever happens
     // to be nearest the new middle: every position has changed under it, so
     // the offset has to be put back on the same pack rather than left where
@@ -244,6 +302,7 @@ export function ShelfWheel({ entries, bookmark, button }: Props) {
     offsetRef.current = plan.pos[Math.min(pickedRef.current, plan.pos.length - 1)] ?? 0;
     velRef.current = 0;
     seekRef.current = null;
+    bucketRef.current = 0;
     draw();
     setResting(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- on a real resize only
@@ -258,12 +317,68 @@ export function ShelfWheel({ entries, bookmark, button }: Props) {
     // React registers `wheel` PASSIVE on the root, so a handler passed as a
     // prop cannot cancel the page's own scroll — this listener is added with
     // { passive: false } below for that reason. CLAUDE.md, the gotchas.
+
+    /*
+     * ONE NOTCH, ONE PACK (the owner's 2026-09-21 "make each scroll of a
+     * mouse wheel change the selected pack by 1"). The wheel used to push
+     * the offset by the raw delta and let the glide and the settle find a
+     * pack; now it STEPS, and the seek carries it.
+     *
+     * A CONTROL INSIDE THE WHEEL GETS THE EVENT FIRST AND KEEPS IT. The
+     * quantity stripes are rendered inside the selected slot and cancel
+     * their own wheel events, and both listeners are on the bubble path —
+     * so without this, rolling a stripe to pick an amount ALSO stepped the
+     * shelf, which unmounts the menu mid-gesture and loses the amount. A
+     * cancelled event has been dealt with by whatever is under the pointer.
+     */
+    if (e.defaultPrevented) return;
     e.preventDefault();
-    seekRef.current = null;
-    offsetRef.current += e.deltaY * WHEEL_MOTION.wheel;
-    velRef.current = 0;
-    draw();
-    run();
+
+    /*
+     * A LINE OR A PAGE IS ALREADY ONE NOTCH. `deltaY` is in pixels only
+     * when `deltaMode` is 0; Firefox reports LINES, and how many lines a
+     * notch is comes from the reader's own system setting — three by
+     * default on Windows, but one, six or a whole page are all settings a
+     * reader can choose. Multiplying by a guessed line height therefore got
+     * one-notch-one-pack right only at the default. These modes are coarse
+     * by construction, so one event is taken as one step and the bank is not
+     * involved at all.
+     */
+    if (e.deltaMode !== 0) {
+      if (!e.deltaY) return;
+      bucketRef.current = 0;
+      nudge(Math.sign(e.deltaY));
+      return;
+    }
+
+    /*
+     * AND PIXELS HAVE TO BE ACCUMULATED, because a trackpad is not a notched
+     * wheel: it sends a stream of small deltas where a mouse sends one of
+     * about 100. Counting events would step a dozen packs per swipe; a bank
+     * makes a mouse notch exactly one step and a trackpad swipe a number in
+     * proportion to the gesture.
+     *
+     * THE BANK IS ZEROED ON A STEP rather than drained by the threshold. 40
+     * is a test for "a notch happened", not a quantum of travel: drained, a
+     * 100px notch would leave 60 behind and step two or three packs, which
+     * is the very thing this change is undoing.
+     *
+     * AN EVENT WITH NO VERTICAL TRAVEL IS NOT A REVERSAL. `Math.sign(0)` is
+     * 0, so comparing signs made a horizontal swipe, a tilt wheel, or the
+     * zero-delta events Chrome brackets a trackpad gesture with wipe the
+     * whole bank — and a shallow diagonal swipe could then never step at
+     * all, 160px of real travel selecting nothing.
+     */
+    const dy = e.deltaY;
+    if (!dy) return;
+    if (bucketRef.current && (dy > 0) !== (bucketRef.current > 0)) bucketRef.current = 0;
+    bucketRef.current += dy;
+    if (Math.abs(bucketRef.current) < WHEEL_STEP) return;
+    const by = dy > 0 ? 1 : -1;
+    bucketRef.current = 0;
+    // `nudge` aims from the seek already in flight when there is one, so
+    // spinning the wheel quickly queues the packs up rather than losing them
+    nudge(by);
   };
   useEffect(() => {
     const el = stageRef.current;
@@ -309,7 +424,14 @@ export function ShelfWheel({ entries, bookmark, button }: Props) {
   const onPointerDown = (e: React.PointerEvent) => {
     if (!n || e.button !== 0) return;
     stop();
+    // A HAND ON THE WHEEL OUTRANKS ANYTHING THE WHEEL WAS DOING. The seek a
+    // notch left in flight has to go, or the drag's anchor is taken from an
+    // offset that is still travelling and the release hands back to a target
+    // the reader has since dragged away from; and the banked travel has to
+    // go with it, or a 3px flick of the wheel afterwards steps a pack on the
+    // strength of a gesture that ended.
     seekRef.current = null;
+    bucketRef.current = 0;
     velRef.current = 0;
     pressRef.current = { y: e.clientY, off: offsetRef.current, moved: false };
     trailRef.current = [{ t: performance.now(), y: e.clientY }];
@@ -340,6 +462,7 @@ export function ShelfWheel({ entries, bookmark, button }: Props) {
     // could send the wheel most of the way round to reach something sitting
     // just off the edge.
     seekRef.current = offsetRef.current + (slot.mid - size.h / 2);
+    bucketRef.current = 0;
     velRef.current = 0;
     run();
   };

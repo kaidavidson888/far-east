@@ -2387,6 +2387,48 @@ real and is stated in the file: the two ticks are two places now.**
   the same pack at the top and the bottom at once — which a shelf of two would
   do. A shelf of one is the case the arithmetic cannot save, and that is
   honest: there is only one.
+- **ONE NOTCH, ONE PACK** (the owner's "make each scroll of a mouse wheel
+  change the selected pack by 1"). The wheel used to push the offset by the
+  raw delta and let the glide and the settle find a pack; it STEPS now, and
+  the seek carries it. An adversarial pass over that change confirmed
+  thirteen defects, and they are the notes worth keeping:
+  - **THE OFFSET WAS NEVER WRAPPED, AND THE SHELF WENT EMPTY.** `compute`
+    only draws laps -1..n round the current offset and nothing reduced the
+    offset itself, so scrolling one way for about two seconds walked it past
+    every lap drawn: no packs, no selection. `wrap()` keeps it inside one
+    lap and shifts anything holding an absolute position — an in-flight
+    seek, a drag's anchor — by the same amount in the same breath. **This
+    predates the stepping and would have bitten a drag too.**
+  - **`Math.sign(0)` IS 0, AND THAT WIPED THE BANK.** Comparing signs made
+    any event with no vertical travel — a horizontal swipe, a tilt wheel,
+    the zero-delta events Chrome brackets a trackpad gesture with — read as
+    a direction reversal. Measured: a shallow diagonal swipe of 160px of
+    real travel selected nothing at all. An event with no vertical delta is
+    not a reversal and is not travel; it is ignored.
+  - **A CONTROL INSIDE THE WHEEL GETS THE EVENT FIRST AND KEEPS IT.** The
+    quantity stripes are rendered inside the selected slot and cancel their
+    own wheel events, and both listeners are on the bubble path — so rolling
+    a stripe to pick an amount ALSO stepped the shelf, which unmounts the
+    menu mid-gesture and loses the amount. `if (e.defaultPrevented) return`.
+  - **A LINE OR A PAGE IS ALREADY ONE NOTCH.** Firefox reports lines, and
+    how many lines a notch is comes from the reader's own system setting —
+    three by default on Windows, but one, six or a page are all choosable.
+    A guessed line height got one-notch-one-pack right only at the default,
+    so those modes step once per event and the bank is not involved.
+  - **THE BANK IS ZEROED ON A STEP, NOT DRAINED**, and that is deliberate:
+    40 is a test for "a notch happened", not a quantum of travel. Drained, a
+    100px notch would leave 60 behind and step two or three packs — the very
+    thing the owner asked to be removed. A reviewer called the zeroing a
+    defect; it is the requirement.
+  - **A HAND ON THE WHEEL OUTRANKS WHAT THE WHEEL WAS DOING.** A press now
+    clears the seek a notch left in flight and the banked travel with it.
+  - **A RESIZE STOPS THE TICK IT IS INVALIDATING**, which it did not: the
+    tick is a closure over the layout that has just been replaced and it
+    reschedules itself.
+  - The first tick of a run comes at 16ms rather than a whole 125ms beat,
+    because a notch's seek lands in one tick — so a notch used to be an
+    eighth of a second of nothing and then the whole move, with the controls
+    away for 250ms of it.
 - **THE CONTROLS HANG OFF THE PACK, NOT THE SLOT** (`.shelf-wheel-stand`). A
   slot is the full width of the page — it has to be, to centre a pack of any
   width — so a control placed at its 100% lands at the page's edge. The number
