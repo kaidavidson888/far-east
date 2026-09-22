@@ -25,6 +25,10 @@ import INK from '@/scripts/assets/far-east-ink.json';
  *
  *      [ 12x            63x18 ] [ bookmark  19x18 ]     <- outlined, red
  *      [ the pack            88 x 137, rule on its edge ]
+ *
+ * (That card is gone; the shelf is a wheel. What is kept below is what
+ * outlived it — the page's margin, the pack's rule, the caret's sprite
+ * window and the amount's arithmetic.)
  *      [ clouds 19x18 ] [ leave a comment <3     64x20 ] <- outline, then solid
  *
  * The narrow box swaps sides between the two rows — bookmark top RIGHT, clouds
@@ -99,13 +103,15 @@ export const CARD = {
  * itself either.
  *
  * EVERYTHING ELSE FOLLOWS ON ITS OWN, because nothing carries the figure
- * separately: the ring, the pack's own height (the pitch is fixed at half
- * the screen, so a heavier rule costs the IMAGE six pixels), the margins the
- * controls keep off the outline, and the width the quantity menu opens to
- * are all written in terms of this, and the menu measures the outline live.
+ * separately: the ring, the step from one pack to the next, the margins the
+ * controls keep off the outline and the width the quantity menu opens to are
+ * all written in terms of this, and the menu measures the outline live.
+ *
+ * IT IS WHITE, NOT HALF-BLACK (the owner's "make them white"). Half strength
+ * was part of being black — the drawing's "low opacity black outline" — so
+ * it went with the colour: white at 50% over red is pink.
  */
 export const PACK_RULE = 5;
-export const PACK_RULE_ALPHA = 0.5;
 
 /**
  * THE MOUNTAIN BUTTON'S SCALE ON THIS PAGE (the owner's 2026-09-21: the

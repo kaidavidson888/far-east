@@ -8,49 +8,31 @@ import { GRID_GUTTER, PACK_RULE } from './shelfGrid';
  * wheel like the one on the landing page only vertical rather than
  * horizontal").
  *
- * THE SCALE IS NOT CHOSEN — IT IS FORCED, by the owner's two constraints
- * together: "one pack is in the middle of the screen at all times and there
- * is margins between its top and bottom edges and the next packs on each side
- * of the wheel equal to the current distance between each pack in a row …
- * while also having the next pack on each sides image be exactly half
- * revealed at all times". Solve it and there is one answer:
+ * EVERY PACK IS THE SAME WIDTH, NOT THE SAME HEIGHT (the owner's later "make
+ * all the packs the same width not the same height[,] scale the wheel and the
+ * packs to adjust"). That is the opposite of everywhere else packs are drawn
+ * on this site — the landing row and the grid that stood here both stand them
+ * at one HEIGHT — and it is what turns this wheel's arithmetic into the row's
+ * rather than something simpler: a pack's along-axis extent is its own again,
+ * so the wheel carries an ARRAY of positions where it used to carry one
+ * pitch.
  *
- *   the middle outline spans        H/2 - P/2 - r  ..  H/2 + P/2 + r
- *   the next outline starts G later H/2 + P/2 + r + G
- *   its image starts r after that   H/2 + P/2 + 2r + G
- *   half of that image is revealed, so the viewport's foot cuts it at its
- *   own middle:  H = H/2 + P/2 + 2r + G + P/2
- *
- *   =>  P = H/2 - 2r - G     and     pitch = P + 2r + G = H/2 exactly.
- *
- * THE PITCH IS HALF THE SCREEN. That is the whole geometry in one line, and
- * it is why the halves come out at 50.0% at every size rather than at some
- * size: a pack half a screen away has exactly half of itself inside the
- * screen. Measured at 1920x947, 1440x820, 1280x720 and 390x844: 50.0% every
- * time.
- *
- * r is the pack's rule, drawn outside the image so it counts toward the gap.
- *
- * G STARTED AS THE GRID'S OWN 35 — "the current distance between each pack in
- * a row" — and is no longer, because the three controls stand in that gap:
- * see WHEEL_MARGIN just below. The pitch is untouched by that change, being
- * half the screen whatever G is; what gives is the pack.
+ * The marks are all drawn 92 units tall and 40..108 wide, so at one width
+ * their heights run 0.85 to 2.30 of it across the catalogue; on the fixture's
+ * six the spread is 1.53 to 1.84.
  */
 
 /**
- * ONE MARGIN, EVERYWHERE (the owner's 2026-09-21 "scale the packs down to
- * match the original margin constraints between them while keeping the
- * buttons equidistant").
+ * ONE MARGIN, EVERYWHERE (the owner's "scale the packs down to match the
+ * original margin constraints between them while keeping the buttons
+ * equidistant").
  *
  * The three controls stand in the gap under the pack, so the gap is not just
- * pack-to-pack any more: it is margin, buttons, margin. Held at the drawing's
- * own 35 the buttons had 5.95px of air either side, which is not a margin —
- * it is what was left over. So the MARGIN is the constant now and the GAP
- * falls out of it, and the packs take the difference, because the pitch is
- * fixed at half the screen by the half-revealed rule and cannot give.
- *
- * The buttons stay equidistant by construction: one margin above them, one
- * below, so they are still centred between one pack and the next.
+ * pack-to-pack: it is margin, buttons, margin. Held at the drawing's own 35
+ * the buttons had 5.95px of air either side, which is not a margin — it is
+ * what was left over. So the MARGIN is the constant and the GAP falls out of
+ * it. The buttons stay equidistant by construction: one margin above them,
+ * one below.
  */
 export const WHEEL_MARGIN = GRID_GUTTER;
 
@@ -59,45 +41,79 @@ export function wheelGap(button: number): number {
   return WHEEL_MARGIN * 2 + button;
 }
 
-/** The image's height, and the pitch, for a viewport of this height. */
-export function wheelScale(viewportH: number, button: number) {
-  const pitch = viewportH / 2;
-  const image = Math.max(40, pitch - 2 * PACK_RULE - wheelGap(button));
-  return { pitch, image, outline: image + 2 * PACK_RULE };
+/**
+ * HOW WIDE EVERY PACK IS DRAWN.
+ *
+ * THE HALF-REVEALED RULE CANNOT HOLD EXACTLY FOR EVERY PACK ANY MORE, and
+ * that is arithmetic rather than a decision. With pack i centred, the one
+ * below it is exactly half revealed when
+ *
+ *      H/2 = P_i/2 + 2r + G + P_j/2
+ *
+ * so `P_i + P_j` has to be the same for EVERY adjacent pair — which is only
+ * true if every pack is the same height, and that is precisely what has
+ * stopped being true. So the width is set so the rule holds exactly for a
+ * pack of the shelf's MEAN height: a taller one then shows a little under
+ * half and a shorter one a little over. It was 50.0% everywhere while the
+ * heights were equal; the honest figure now is a range.
+ *
+ * TWO CLAMPS, and both only ever make it smaller: the tallest pack on the
+ * shelf has to fit the screen with a margin top and bottom, and the width has
+ * to leave room for the number square standing off the pack's right edge.
+ */
+export function wheelWidth(
+  viewportH: number,
+  viewportW: number,
+  button: number,
+  ratios: number[],
+): number {
+  if (!ratios.length) return 1;
+  const mean = ratios.reduce((s, r) => s + r, 0) / ratios.length;
+  const tallest = Math.max(...ratios);
+  /** the height the original rule asks of a mean pack */
+  const want = viewportH / 2 - 2 * PACK_RULE - wheelGap(button);
+  const byMean = want / mean;
+  const byTallest = (viewportH - 2 * WHEEL_MARGIN - 2 * PACK_RULE) / tallest;
+  const byRoom = viewportW - 2 * PACK_RULE - 3 * WHEEL_MARGIN - button;
+  return Math.max(24, Math.min(byMean, byTallest, byRoom));
 }
 
 /**
  * Where each pack sits on the wheel, and how long one lap is.
  *
- * SIMPLER THAN THE ROW'S, and for a real reason: horizontally a pack's own
- * extent is its WIDTH, which runs 40..108 across the catalogue, so the row
- * has to carry an array of positions. Vertically the extent is the HEIGHT,
- * and every pack is drawn the same height — so the pitch is one number and
- * the position is a multiplication. Half of `cigLayout`'s reason to exist
- * disappears when the axis turns.
+ * `pos` is the middle of each pack's IMAGE along the wheel — what the settle
+ * aims at and what the page puts on the screen's middle. Consecutive image
+ * boxes stand `2r + G` apart: the two rules, which are drawn outside their
+ * pictures, and the gap.
  */
-export function wheelLayout(count: number, pitch: number) {
-  return { pitch, total: count * pitch };
+export function wheelLayout(ratios: number[], width: number, button: number) {
+  const step = 2 * PACK_RULE + wheelGap(button);
+  const pos: number[] = [];
+  const height: number[] = [];
+  let y = 0;
+  for (const r of ratios) {
+    const h = width * r;
+    height.push(h);
+    pos.push(y + h / 2);
+    y += h + step;
+  }
+  return { pos, height, total: y };
 }
 
 /**
  * HOW MANY COPIES OF THE SHELF THE WHEEL TURNS THROUGH.
  *
  * The loop is modular: the offset is taken modulo one lap and enough laps are
- * drawn to cover the screen. That is exact for the catalogue's 247 packs and
- * it stays exact here — but a shelf can hold two packs, and a lap shorter
- * than the screen puts the SAME pack at the top and the bottom at once. So
- * the list is repeated until one lap is longer than the screen plus a pitch,
- * which is the least that guarantees no pack is on screen twice.
+ * drawn to cover the screen. A lap shorter than the screen would put the SAME
+ * pack at the top and the bottom at once, which a shelf of two would do, so
+ * the list is repeated until a lap is comfortably longer than the screen.
  *
- * A shelf of one is the exception the arithmetic cannot save: repeated, it is
- * still the same pack above and below. That is honest — there is only one —
- * and it is what a wheel of one thing looks like.
+ * A shelf of one is the case the arithmetic cannot save: repeated, it is
+ * still the same pack above and below. That is honest — there is only one.
  */
-export function wheelCopies(count: number, pitch: number, viewportH: number): number {
-  if (count < 1) return 1;
-  const need = viewportH + pitch;
-  return Math.max(1, Math.ceil(need / (count * pitch)) + 1);
+export function wheelCopies(lap: number, viewportH: number): number {
+  if (!(lap > 0)) return 1;
+  return Math.max(1, Math.ceil((viewportH * 1.5) / lap) + 1);
 }
 
 /** Motion, borrowed whole from the row so the two feel the same. */
@@ -121,22 +137,4 @@ export const WHEEL_MOTION = {
   pad: 120,
 } as const;
 
-/**
- * WHERE THE CONTROLS STAND.
- *
- * The owner: the three buttons "equidistant vertically between the selected
- * pack and the pack half appeared on the bottom", and the number square "on
- * the right of the selected pack … with an equal margin between its left edge
- * and the pack outline to the top edge of the grouping of the other 3 buttons
- * and the bottom edge of the pack outline".
- *
- * ONE NUMBER DOES BOTH, and it is `WHEEL_MARGIN`: the three stand one margin
- * under the pack and one margin above the next, which is what keeps them
- * equidistant, and the number square stands that same margin off the pack's
- * right edge.
- *
- * ONE ROW OF THREE, NOT THE LANDING PAGE'S TRIANGLE. Its glass and dots share
- * an upper line with the plus centred below, about 100px from top to bottom,
- * and two lines of these squares would not fit. The owner chose the row.
- */
 export type WheelPack = CigPack;

@@ -2836,15 +2836,16 @@ ul, ol { list-style: none; }
   outline: none;
 }
 .shelf-wheel:focus-visible { outline: 2px solid #ffffff; outline-offset: -2px; }
-/* One pitch tall, so the pack sits in the middle of its own slot and the gap
-   falls between one slot and the next. Placed by `top` from the tick. */
+/* PLACED BY ITS PACK'S OWN MIDDLE, because the packs are no longer all the
+   same height: `top` is where that middle goes and the slot is lifted half
+   its own height onto it. A fixed-height slot only worked while one pitch
+   fitted every pack. */
 .shelf-wheel-slot {
   position: absolute;
   left: 0;
   right: 0;
-  height: var(--wheel-pitch);
+  transform: translateY(-50%);
   display: flex;
-  align-items: center;
   justify-content: center;
 }
 /* the pack's own box, which is what the controls are placed against */
@@ -2856,19 +2857,25 @@ ul, ol { list-style: none; }
 }
 .shelf-wheel-pack img {
   display: block;
-  /* every pack the same height, whatever its width — the drawing's rule,
-     and what makes a column of them read as a shelf */
-  height: var(--wheel-image);
-  width: auto;
+  /* EVERY PACK THE SAME WIDTH, whatever its height (the owner's 2026-09-21).
+     This is the opposite of the landing row and of the grid that stood here,
+     which both stand them at one HEIGHT — and it is what makes the wheel
+     carry an array of positions rather than one pitch. */
+  width: var(--wheel-width);
+  height: auto;
   max-width: none;
   pointer-events: none;
 }
-/* the half-black rule, on the edge of the image and never over it */
+/* THE RULE IS WHITE NOW (the owner's 2026-09-21 "make them white"), like
+   every other mark on the red page. It was the drawing's low-opacity black;
+   half strength was part of being black, so it goes with the colour — white
+   at 50% over red is pink, which is not what was asked for. Still drawn on
+   the edge of the image and never over it. */
 .shelf-wheel-pack::after {
   content: '';
   position: absolute;
   inset: calc(-1 * var(--pack-rule));
-  border: var(--pack-rule) solid rgb(0 0 0 / var(--pack-rule-alpha));
+  border: var(--pack-rule) solid #ffffff;
   pointer-events: none;
 }
 .shelf-wheel-pack:focus-visible { outline: 2px solid #ffffff; outline-offset: 6px; }

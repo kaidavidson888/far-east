@@ -1,11 +1,11 @@
 'use client';
 
 import Link from 'next/link';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { cigPaintMs } from '@/lib/cigRow';
 import { PACK_RULE, type ShelfEntry } from '@/lib/shelfGrid';
 import {
-  WHEEL_MARGIN, WHEEL_MOTION, wheelCopies, wheelGap, wheelLayout, wheelScale,
+  WHEEL_MARGIN, WHEEL_MOTION, wheelCopies, wheelGap, wheelLayout, wheelWidth,
 } from '@/lib/shelfWheel';
 import { ShelfWheelControls } from './ShelfWheelControls';
 
@@ -47,7 +47,8 @@ type Props = {
   button: number;
 };
 
-type Slot = { key: string; i: number; y: number };
+/** One drawing of one pack: which entry, and where its MIDDLE is on screen. */
+type Slot = { key: string; i: number; mid: number; h: number };
 
 export function ShelfWheel({ entries, bookmark, button }: Props) {
   const stageRef = useRef<HTMLDivElement | null>(null);
@@ -73,56 +74,79 @@ export function ShelfWheel({ entries, bookmark, button }: Props) {
   const [resting, setResting] = useState(false);
 
   const n = entries.length;
-  const geom = wheelScale(size.h || 800, button);
-  const PITCH = geom.pitch;
-  const copies = wheelCopies(n, PITCH, size.h || 800);
-  const LAP = wheelLayout(n * copies, PITCH).total;
 
-  /** Where the wheel is, laid out. Pure — no DOM, no state. */
+  /**
+   * THE WHEEL, LAID OUT. Every pack is the same WIDTH now, so each has its
+   * own height and the wheel carries an array of positions — exactly what
+   * the landing row carries, and for the mirror-image reason.
+   *
+   * `offset` is the wheel coordinate currently on the screen's middle, so a
+   * pack is selected when its own `pos` is that coordinate.
+   */
+  const plan = useMemo(() => {
+    const H = size.h || 800;
+    const W = size.w || 800;
+    const ratios = entries.map((e) => e.pack.h / e.pack.w);
+    const width = wheelWidth(H, W, button, ratios);
+    const one = wheelLayout(ratios, width, button);
+    const reps = wheelCopies(one.total, H);
+    // the repeats are laid out as one long list, so a lap is longer than the
+    // screen and no pack is ever drawn twice at once
+    const pos: number[] = [];
+    const height: number[] = [];
+    for (let r = 0; r < reps; r += 1) {
+      for (let i = 0; i < n; i += 1) {
+        pos.push(one.pos[i] + r * one.total);
+        height.push(one.height[i]);
+      }
+    }
+    return { width, pos, height, lap: one.total * reps };
+  }, [entries, n, size.h, size.w, button]);
+
+  /** Where the wheel is. Pure — no DOM, no state. */
   const compute = useCallback(() => {
     const H = size.h;
-    if (!n || !H) return { out: [] as Slot[], near: 0 };
-    const pitch = wheelScale(H, button).pitch;
-    const reps = wheelCopies(n, pitch, H);
-    const lap = n * reps * pitch;
+    const { pos, height, lap } = plan;
+    if (!n || !H || !(lap > 0)) return { out: [] as Slot[], near: 0 };
     const mid = H / 2;
-    const start = ((offsetRef.current % lap) + lap) % lap;
+    const off = offsetRef.current;
     const laps = Math.ceil((H + WHEEL_MOTION.pad * 2) / lap) + 1;
     const out: Slot[] = [];
     let near = 0;
     let best = Infinity;
-    // A SLOT IS ONE PITCH TALL WITH ITS PACK IN THE MIDDLE, so an offset of
-    // zero has to put that MIDDLE on the screen's middle, not the slot's top
-    // on the screen's top. Without this half-pitch the wheel rests with the
-    // pack a quarter-screen high and nothing ever reads as selected.
-    const home = mid - pitch / 2;
     for (let l = -1; l <= laps; l += 1) {
-      const base = l * lap - start + home;
-      for (let k = 0; k < n * reps; k += 1) {
-        const y = base + k * pitch;
-        if (y > H + WHEEL_MOTION.pad) break;
-        if (y + pitch < -WHEEL_MOTION.pad) continue;
+      for (let k = 0; k < pos.length; k += 1) {
+        const c = mid + (pos[k] + l * lap - off);
+        const h = height[k];
+        if (c - h / 2 > H + WHEEL_MOTION.pad) break;
+        if (c + h / 2 < -WHEEL_MOTION.pad) continue;
         const i = k % n;
-        out.push({ key: `${l}:${k}`, i, y });
-        // the middle of this slot's PACK against the middle of the screen
-        const d = Math.abs(y + pitch / 2 - mid);
+        out.push({ key: `${l}:${k}`, i, mid: c, h });
+        const d = Math.abs(c - mid);
         if (d < best) { best = d; near = i; }
       }
     }
     return { out, near };
-  }, [n, size.h, button]);
+  }, [n, size.h, plan]);
 
-  /** How far the nearest pack is from the middle. */
+  /**
+   * How far the offset has to move for the nearest pack to be dead centre.
+   * Circular, because the wheel has no ends: the short way round.
+   */
   const offCentre = useCallback(() => {
-    const H = size.h;
-    if (!n || !H) return 0;
-    const pitch = wheelScale(H, button).pitch;
-    // a pack's own middle sits on the wheel at (k + 1/2) * pitch; the wheel
-    // is centred when that lands on the screen's middle
-    const k = offsetRef.current / pitch;
-    const rest = k - Math.round(k);
-    return -rest * pitch;
-  }, [n, size.h, button]);
+    const { pos, lap } = plan;
+    if (!n || !size.h || !(lap > 0)) return 0;
+    const k = ((offsetRef.current % lap) + lap) % lap;
+    let best = 0;
+    let bd = Infinity;
+    for (const p of pos) {
+      let d = p - k;
+      if (d > lap / 2) d -= lap;
+      if (d < -lap / 2) d += lap;
+      if (Math.abs(d) < Math.abs(bd)) { bd = d; best = d; }
+    }
+    return Number.isFinite(bd) ? best : 0;
+  }, [n, size.h, plan]);
 
   const draw = useCallback(() => {
     const { out, near } = compute();
@@ -214,16 +238,16 @@ export function ShelfWheel({ entries, bookmark, button }: Props) {
   useEffect(() => {
     if (!size.h || !n) return;
     // A RESIZE RE-CENTRES THE PACK THAT WAS SELECTED, not whichever happens
-    // to be nearest the new middle: the pitch has changed under it, so the
-    // offset has to be put back on the same pack rather than left where it
-    // was. The row learned this one the hard way (`offFramed`).
-    offsetRef.current = pickedRef.current * wheelScale(size.h, button).pitch;
+    // to be nearest the new middle: every position has changed under it, so
+    // the offset has to be put back on the same pack rather than left where
+    // it was. The row learned this one the hard way (`offFramed`).
+    offsetRef.current = plan.pos[Math.min(pickedRef.current, plan.pos.length - 1)] ?? 0;
     velRef.current = 0;
     seekRef.current = null;
     draw();
     setResting(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- on a real resize only
-  }, [size.h, size.w, n]);
+  }, [size.h, size.w, n, plan]);
 
   useEffect(() => stop, []);
 
@@ -310,24 +334,40 @@ export function ShelfWheel({ entries, bookmark, button }: Props) {
   /** Press a pack that is not in the middle and it comes to the middle. */
   const seekTo = (slot: Slot) => {
     if (!size.h) return;
-    const pitch = wheelScale(size.h, button).pitch;
-    // the offset that puts THIS instance in the middle: it is the one on
-    // screen, so it is always the short way round
-    seekRef.current = offsetRef.current + (slot.y + pitch / 2 - size.h / 2);
+    // THE DISTANCE IS THE ONE ON SCREEN, taken from the instance pressed —
+    // that instance is a particular pack on a particular lap, so centring it
+    // is always the short way round, where working from the pack's index
+    // could send the wheel most of the way round to reach something sitting
+    // just off the edge.
+    seekRef.current = offsetRef.current + (slot.mid - size.h / 2);
     velRef.current = 0;
     run();
   };
 
   const nudge = (by: number) => {
-    if (!size.h) return;
-    const pitch = wheelScale(size.h, button).pitch;
-    seekRef.current = (seekRef.current ?? offsetRef.current) + by * pitch;
+    const { pos, lap } = plan;
+    if (!size.h || !(lap > 0)) return;
+    const from = seekRef.current ?? offsetRef.current;
+    const k = ((from % lap) + lap) % lap;
+    // the pack nearest where we are, then `by` places along from it
+    let at = 0;
+    let bd = Infinity;
+    pos.forEach((p, idx) => {
+      let d = p - k;
+      if (d > lap / 2) d -= lap;
+      if (d < -lap / 2) d += lap;
+      if (Math.abs(d) < Math.abs(bd)) { bd = d; at = idx; }
+    });
+    const next = pos[(at + by + pos.length) % pos.length];
+    let step = next - pos[at];
+    if (step > lap / 2) step -= lap;
+    if (step < -lap / 2) step += lap;
+    seekRef.current = from + bd + step;
     velRef.current = 0;
     run();
   };
 
   if (!n) return null;
-  const { image, outline } = geom;
 
   return (
     <div
@@ -346,21 +386,21 @@ export function ShelfWheel({ entries, bookmark, button }: Props) {
         if (e.key === 'ArrowUp') { e.preventDefault(); nudge(-1); }
       }}
       style={{
-        '--wheel-pitch': `${PITCH}px`,
-        '--wheel-image': `${image}px`,
-        '--wheel-outline': `${outline}px`,
+        '--wheel-width': `${plan.width}px`,
         '--wheel-gap': `${wheelGap(button)}px`,
         '--wheel-margin': `${WHEEL_MARGIN}px`,
       } as React.CSSProperties}
     >
       {slots.map((s) => {
         const e = entries[s.i];
-        const mine = s.i === picked && Math.abs(s.y + PITCH / 2 - size.h / 2) < PITCH / 2;
+        // the instance nearest the middle is the selected one — a pack can be
+        // on screen more than once when the shelf is short
+        const mine = s.i === picked && Math.abs(s.mid - size.h / 2) < s.h / 2 + WHEEL_MARGIN;
         return (
           <div
             className="shelf-wheel-slot"
             key={s.key}
-            style={{ top: `${s.y}px` }}
+            style={{ top: `${s.mid}px` }}
             data-picked={mine ? '' : undefined}
             aria-hidden={mine ? undefined : true}
           >

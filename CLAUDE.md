@@ -2313,41 +2313,53 @@ four outlined boxes round a pack. Now a wheel.
 `lib/shelfGrid.ts` keeps what outlived the grid — the page's margin, the pack
 rule, the caret's sprite window and the amount's arithmetic.
 
-**THE SCALE IS FORCED, NOT CHOSEN.** The owner's two constraints — "one pack
-is in the middle of the screen at all times and there is margins between its
-top and bottom edges and the next packs on each side of the wheel equal to the
-current distance between each pack in a row … while also having the next pack
-on each sides image be exactly half revealed at all times" — solve to one
-answer:
+**EVERY PACK IS THE SAME WIDTH, NOT THE SAME HEIGHT** (the owner's "make all
+the packs the same width not the same height[,] scale the wheel and the packs
+to adjust"). That is the opposite of everywhere else packs are drawn here —
+the landing row and the grid that stood on this page both stand them at one
+HEIGHT — and it is what makes this wheel carry an ARRAY of positions rather
+than one pitch, which is the landing row's arithmetic arrived at from the
+other side. The marks are all drawn 92 units tall and 40..108 wide, so at one
+width their heights run 0.85 to 2.30 of it across the catalogue.
 
-      P = H/2 - 2r - G      and      pitch = P + 2r + G = H/2 exactly
+**THE HALF-REVEALED RULE CANNOT HOLD FOR EVERY PACK ANY MORE, and that is
+arithmetic rather than a decision.** With pack i centred, the one below is
+exactly half revealed when
 
-with H the viewport's height, r the pack's rule (5px, its own number —
-the controls' 2px is separate) and G the gap.
-**THE PITCH IS HALF THE SCREEN**, which is the whole geometry in one line and
-the reason the halves come out at 50.0% at *every* size rather than at one: a
-pack half a screen away has exactly half of itself on screen. **G IS NOT THE GRID'S 35 ANY MORE**, and that is the owner's follow-up:
+      H/2 = P_i/2 + 2r + G + P_j/2
+
+so `P_i + P_j` has to be the same for EVERY adjacent pair — true only if
+every pack is the same height, which is the thing that has just stopped being
+true. So `wheelWidth` sets the width so the rule holds exactly for a pack of
+the shelf's MEAN height; a taller one then shows a little under half and a
+shorter one a little over. **Measured over the fixture's six at 1920x947:
+43.7% to 57.8%, mean 50.2%** — where it was 50.0% everywhere while the
+heights were equal. Two clamps, both of which only shrink it: the tallest
+pack must fit the screen with a margin top and bottom, and the width must
+leave room for the number square off the pack's right edge.
+
+With H the viewport's height, r the pack's rule (5px, its own number — the
+controls' 2px is separate) and G the gap. **G IS NOT THE GRID'S 35**, and that is the owner's follow-up:
 "scale the packs down to match the original margin constraints between them
 while keeping the buttons equidistant". The three controls stand in that gap,
 and at 35 they had 5.95px of air either side — which is not a margin, it is
 what was left over. So the MARGIN is the constant (`WHEEL_MARGIN`, the
 drawing's own 35) and the gap falls out of it as margin + buttons + margin =
-93.1. **The pitch does not move** — it is half the screen whatever G is — so
-the PACK takes the difference and comes down from 434.5 to 376.4 at
-1920x947. The buttons stay equidistant by construction: one margin above,
-one below.
+93.1. The PACK takes the difference. The buttons stay equidistant by
+construction: one margin above them, one below.
 
-Measured at 1920x947 and 390x844 — the pack dead centre, both neighbours
-50.0%, the gap 93.11 against a wanted 93.09, the three one margin under the
-pack and the number one margin off its right.
+Measured, stepping through all six packs at 1920x947: every one the same
+218.8px wide with heights 335..403, every one resting dead centre on 473.5,
+the margins exactly 35.00 under the pack and 35.00 off its right at every
+stop, and the gap 93.13 throughout.
 
-**THE PACK'S RULE IS 5 AND ANSWERS TO NOTHING BUT ITSELF** (the owner's "make
-the black outlines around the cig images 5px"). It was 5, went to `CARD.rule`
-for an afternoon when the ask was "the same thickness as the outlines above
-the image" — the four red boxes that stood over a card — and those boxes went
-with the grid. The controls' own 2px is a separate number. A heavier rule
-costs the IMAGE rather than the pitch, which cannot move: 376.4 -> 370.4 at
-1920x947, exactly the six pixels the two extra rules take.
+**THE PACK'S RULE IS 5, WHITE, AND ANSWERS TO NOTHING BUT ITSELF** (the
+owner's "make the black outlines around the cig images 5px", then "make them
+white"). It was 5, went to `CARD.rule` for an afternoon when the ask was "the
+same thickness as the outlines above the image" — the four red boxes that
+stood over a card — and those boxes went with the grid. The controls' own 2px
+is a separate number. **Half strength went with the black**: it was the
+drawing's "low opacity black outline", and white at 50% over red is pink.
 
 **IT IS THE ROW'S MOTION, NOT THE ROW'S CODE.** `WHEEL_MOTION` imports the
 brake, the fling cap, the settle and the 8fps beat straight from

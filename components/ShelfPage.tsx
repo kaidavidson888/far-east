@@ -1,7 +1,7 @@
 import { BOOKMARK } from '@/lib/cigPages';
 import {
   CARD, CARD_CARET, GRID_HEADER, GRID_MARGIN, MENU_ZOOM_MAX,
-  PACK_RULE, PACK_RULE_ALPHA, type ShelfEntry,
+  PACK_RULE, type ShelfEntry,
 } from '@/lib/shelfGrid';
 import { ShelfMenu } from './ShelfMenu';
 import { ShelfWheel } from './ShelfWheel';
@@ -43,7 +43,6 @@ export function ShelfPage({ entries, worth }: { entries: ShelfEntry[]; worth?: s
         '--shelf-margin': `${GRID_MARGIN}px`,
         '--card-rule': `${CARD.rule}px`,
         '--pack-rule': `${PACK_RULE}px`,
-        '--pack-rule-alpha': PACK_RULE_ALPHA,
         // the dashed rule in the text editor's square: the margin it kept
         // off the left edge when this was a bar, and its own height
         '--card-comment-pad': `${+(button * CARD.commentPad).toFixed(3)}px`,
