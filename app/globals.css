@@ -2896,13 +2896,29 @@ ul, ol { list-style: none; }
    "equidistant vertically between the selected pack and the pack half
    appeared on the bottom" rule exactly: (35 - 23.1) / 2 = 5.95px of air
    above and below. */
+/* THE UPPER LINE OF THE TRIANGLE: the text editor and the favourite, one
+   margin under the pack. They stand where the first and third of the old row
+   of three stood, so the gap between them is that row's three slots less
+   their own width. */
 .shelf-wheel-row {
   position: absolute;
   top: calc(100% + var(--pack-rule) + var(--wheel-margin));
   left: 50%;
   transform: translateX(-50%);
   display: flex;
-  gap: var(--btn);
+  gap: calc(var(--btn) * 3);
+  z-index: 3;
+}
+/* THE STAR, BELOW THEM AND ON THE PACK'S OWN AXIS — the plus's place in the
+   landing page's triangle. `--star-top` is measured off the wheel at rest:
+   the middle of the room between the pack's foot and the next pack's top,
+   which is the rule the landing page places its plus by. */
+.shelf-wheel-star {
+  position: absolute;
+  top: calc(100% + var(--star-top));
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
   z-index: 3;
 }
 .shelf-wheel-form { display: flex; }
@@ -2978,11 +2994,14 @@ button.shelf-wheel-btn:focus-visible,
 .shelf-wheel-note { position: relative; }
 .shelf-wheel-caret {
   position: absolute;
-  top: 50%;
+  /* ALIGNED ON ITS BOTTOM EDGE WITH THE LINE (the owner's 2026-09-21), so
+     the caret stands ON the rule the letters sit on rather than floating in
+     the middle of the box — which is how the two marks meet in a row of the
+     login box. */
+  bottom: var(--card-comment-pad);
   left: var(--card-comment-pad);
   width: var(--card-caret-w);
   height: var(--card-caret-h);
-  transform: translateY(-50%);
   /* the mark inside a control, so it is the controls' red */
   background: #ff0000;
   -webkit-mask-image: var(--card-caret-src);

@@ -2454,7 +2454,10 @@ real and is stated in the file: the two ticks are two places now.**
   vertical dashed rule at the margin it kept when this was a bar, and the
   horizontal one the typed letters sit on, which keeps that same margin off
   the box on the left, the right and the foot. Same sprite, same scale, so
-  the dashes match. Measured: 7.08 left, 7.07 right.
+  the dashes match. Measured: 7.08 left, 7.07 right. **They are ALIGNED ON
+  THEIR BOTTOM EDGES** (the owner's ask), so the caret stands on the rule
+  rather than floating in the middle of the box — which is how the two marks
+  meet in a row of the login box. Measured: both at 723.08.
 - **A PACK WITH NO AMOUNT SET READS 0**, not an empty box: the shelf holds
   it, so the honest answer to "how many" is none rather than nothing.
 - **THE CONTROLS HANG OFF THE PACK, NOT THE SLOT** (`.shelf-wheel-stand`). A
@@ -2464,12 +2467,29 @@ real and is stated in the file: the two ticks are two places now.**
 
 **WHAT STANDS UNDER THE PACK, AND ONLY ONCE IT HAS STOPPED** (the owner's
 "after it fully stops spinning" — the tick's own rest, not a transition):
-- **ONE ROW OF THREE, centred in the gap.** The landing page's three are an
-  inverted **triangle** — the glass and the dots on an upper line with the
-  plus centred below, about 100px from top to bottom — and two lines of
-  mountain-button-sized squares cannot fit a 35px gap. **Asked, the owner
-  chose the row.** If a later note says "arranged as the landing page's
-  three", this is what that came to mean.
+- **IT IS THE LANDING PAGE'S TRIANGLE AFTER ALL** (the owner's 2026-09-21
+  "move the star button down and aligned with the middle of the cig image so
+  it is the same as the triangle of buttons on the landing page"). Its glass
+  and dots share an upper line with the plus centred below them; here the
+  text editor and the favourite are above and the clouds below, centred on
+  the pack's own axis. **It could not be done when the three first went in**
+  — two lines of these squares cannot live in a 35px gap, which is what the
+  gap was then, and the owner picked a row instead. Half-size neighbours
+  pushed the packs apart and there is room now.
+  - **THE OUTER TWO DID NOT MOVE.** They stand where the first and third of
+    the row stood, so their gap is the row's three slots less their own
+    width — 3 x the button.
+  - **THE STAR'S LINE IS THE LANDING PAGE'S RULE WITH THIS PAGE'S EDGES**:
+    it centres its plus between the red frame's foot and the page's foot,
+    and this centres the clouds between the pack's outline foot and the top
+    of the pack half-showing below. Worked out from the MODEL at rest, never
+    read off a moving wheel — the row's own `cigTagsRight` failure, where an
+    edge read live swung 860 -> 304 -> 794 through one throw. The pack below
+    is taken as the shelf's MEAN so the line does not jog as the wheel
+    passes a tall pack and then a short one.
+  - **THE EDITOR IS LEFT AND THE FAVOURITE RIGHT**, the owner's swap.
+    Measured: centres at 913.8 and 1006.2 about a pack centred on 960, and
+    the star at exactly 960.
 - **ONE MARGIN DOES TWO JOBS.** The air that centres a button in the gap
   ((35 - 23.1)/2 = 5.95) is also the distance the number square stands off the
   pack's right edge — the owner's "an equal margin between its left edge and

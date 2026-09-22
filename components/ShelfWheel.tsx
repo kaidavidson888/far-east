@@ -5,7 +5,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { cigPaintMs } from '@/lib/cigRow';
 import { PACK_RULE, type ShelfEntry } from '@/lib/shelfGrid';
 import {
-  WHEEL_MARGIN, WHEEL_MOTION, wheelCopies, wheelGap, wheelLayout, wheelScaleAt, wheelWidth,
+  WHEEL_FAR_SCALE, WHEEL_MARGIN, WHEEL_MOTION,
+  wheelCopies, wheelGap, wheelLayout, wheelScaleAt, wheelWidth,
 } from '@/lib/shelfWheel';
 import { ShelfWheelControls } from './ShelfWheelControls';
 
@@ -514,6 +515,26 @@ export function ShelfWheel({ entries, bookmark, button }: Props) {
     run();
   };
 
+  /**
+   * WHERE THE STAR STANDS, from the foot of the pack's own image.
+   *
+   * The landing page centres its plus between the red frame's foot and the
+   * page's foot; here the room is between the pack's outline foot and the
+   * top of the pack half-showing below, which is that page's rule with this
+   * page's edges. Worked out from the MODEL at rest, never read off a moving
+   * wheel — the row's own `cigTagsRight` failure, where an edge read live
+   * swung 860 -> 304 -> 794 through one throw.
+   */
+  const starTop = (slot: Slot) => {
+    const { step, height } = plan;
+    // the pack below, taken as the shelf's mean so the line does not jog as
+    // the wheel passes a tall pack and then a short one
+    const mean = height.length ? height.reduce((a, b) => a + b, 0) / height.length : slot.h;
+    const gapTop = PACK_RULE;
+    const gapFoot = step - slot.h / 2 - (mean * WHEEL_FAR_SCALE) / 2;
+    return (gapTop + gapFoot) / 2 - button / 2;
+  };
+
   if (!n) return null;
 
   return (
@@ -581,6 +602,7 @@ export function ShelfWheel({ entries, bookmark, button }: Props) {
                 bookmark={bookmark}
                 button={button}
                 packRef={pickedPackRef}
+                starTop={starTop(s)}
               />
             ) : null}
             </div>

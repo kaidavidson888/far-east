@@ -45,10 +45,13 @@ export function ShelfWheelControls({
   bookmark,
   button,
   packRef,
+  starTop,
 }: {
   entry: ShelfEntry;
   bookmark: { mark: { width: number; height: number }; d: string };
   button: number;
+  /** how far under the pack's image the star's own line falls */
+  starTop: number;
   /** the pack's own element: the wheels open at the width of its outline */
   packRef: React.RefObject<HTMLElement | null>;
 }) {
@@ -95,9 +98,35 @@ export function ShelfWheelControls({
 
   return (
     <>
-      {/* the three, in the gap under the pack */}
+      {/*
+        THE THREE ARE THE LANDING PAGE'S TRIANGLE NOW (the owner's
+        2026-09-21: "move the star button down and aligned with the middle of
+        the cig image so it is the same as the triangle of buttons on the
+        landing page"). Its glass and dots share an upper line with the plus
+        centred below them, and that is what this is — the editor and the
+        favourite above, the clouds centred on the pack's own axis below.
+
+        It would not fit when the three first went in: two lines of these
+        squares cannot live in a 35px gap, which is what the gap was then.
+        Half-size neighbours pushed the packs apart, and there is room now.
+
+        THE OUTER TWO HAVE NOT MOVED. They stand where the first and third of
+        the row stood, so the gap between them is the three slots the row had
+        less their own width — 3 x the button.
+      */}
       <div className="shelf-wheel-row" style={{ '--btn': `${button}px` } as React.CSSProperties}>
-        <ShelfClouds label={`Open the clouds on ${pack.name}`} className="shelf-wheel-btn" />
+        <button
+          type="button"
+          className="shelf-wheel-btn shelf-wheel-note"
+          aria-label={`Leave a comment on ${pack.name}`}
+        >
+          {/* THE TWO MARKS THAT MAKE A ROW OF THE LOGIN BOX: its vertical
+              dashed rule and the horizontal one the letters sit on, both
+              standing the same margin off the box and ALIGNED ON THEIR
+              BOTTOM EDGES. */}
+          <i className="shelf-wheel-caret" aria-hidden />
+          <i className="shelf-wheel-underline" aria-hidden />
+        </button>
 
         <form action={togglePackAction} className="shelf-wheel-form">
           <input type="hidden" name="pack" value={pack.id} />
@@ -121,20 +150,14 @@ export function ShelfWheelControls({
             </svg>
           </button>
         </form>
+      </div>
 
-        <button
-          type="button"
-          className="shelf-wheel-btn shelf-wheel-note"
-          aria-label={`Leave a comment on ${pack.name}`}
-        >
-          {/* THE TWO MARKS THAT MAKE A ROW OF THE LOGIN BOX: its vertical
-              dashed rule, kept where it stood relative to the left edge when
-              this was a bar, and the horizontal one the typed letters sit
-              on — the same margin off the box on the left and the right as
-              the vertical keeps on the left. */}
-          <i className="shelf-wheel-caret" aria-hidden />
-          <i className="shelf-wheel-underline" aria-hidden />
-        </button>
+      {/* the star, on the pack's own axis and a line below the pair */}
+      <div
+        className="shelf-wheel-star"
+        style={{ '--btn': `${button}px`, '--star-top': `${starTop.toFixed(2)}px` } as React.CSSProperties}
+      >
+        <ShelfClouds label={`Open the clouds on ${pack.name}`} className="shelf-wheel-btn" />
       </div>
 
       {/* the number, centred on the pack, one margin off its right edge */}
