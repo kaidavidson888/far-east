@@ -294,6 +294,71 @@ export const CARD_CARET = {
 } as const;
 
 /**
+ * HOW LONG A COMMENT MAY BE — `saveNoteAction`'s own 400, which is the cap
+ * the catalogue shelf's note has carried since the beginning and so is the
+ * cap "the existing comment system" means.
+ *
+ * IT LIVES HERE RATHER THAN IN `app/actions.ts` because that module is
+ * `'use server'`, and such a module may export only async functions: a plain
+ * `const` there silently strips EVERY export from the file and the first
+ * sign is a runtime error saying an action that is obviously there does not
+ * exist. `lib/authPolicy.ts` exists for the same reason. The editor reads it
+ * for `maxLength` and the action slices to it.
+ */
+export const NOTE_MAX = 400;
+
+/**
+ * THE TEXT EDITOR, ONCE IT IS OPENED (the owner's 2026-09-22). Every figure
+ * is one the owner named, and the two that are not — where the rectangle
+ * stands and how thick its rule is — are noted as the judgements they are.
+ */
+export const EDITOR = {
+  /**
+   * TEN PIXELS, and the owner said it four times: the vertical dashed rule
+   * stands this far inside the rectangle on the left, the top and the foot;
+   * the typed run begins this far right of the rule; and the ☁ waits this
+   * far past the prompt. It is a REAL CSS PIXEL like the mountain button's
+   * 10px margins, not a fraction of anything, so it does not shrink with
+   * the page.
+   */
+  pad: 10,
+  /**
+   * THE RECTANGLE'S RULE IS THE CONTROLS' 2px, not the pack's 5. What the
+   * owner borrowed from the pack's outline was its OPACITY ("a rectangle
+   * that is white with the same opacity as the outline of the cig images"),
+   * and every box on this page is drawn at the controls' weight.
+   */
+  rule: CARD.rule,
+  /** and that borrowed opacity: what the pack's rule wears at rest */
+  ink: 'rgb(255 255 255 / 0.5)',
+  /**
+   * THE RECTANGLE IS FILLED WITH THE PAGE'S OWN BLACK, which draws nothing
+   * that is not already there and does one necessary job: the favourite
+   * button stands on this line, and an editor with a transparent middle
+   * would have a bookmark showing through it. "Black fill" is this page's
+   * own word for it.
+   */
+  fill: '#000000',
+  /**
+   * WHERE A `line-height: 1` BOX PUTS ITS BASELINE, measured in Chrome —
+   * 0.825 of the size, the figure the login row and the shelf place all
+   * their type by. It is how a line of type is hung from an ink line rather
+   * than from a box that happens to be near it.
+   */
+  baseline: 0.825,
+  /**
+   * SO THE LIFT IS ALMOST NOTHING, and it is worth having written down. To
+   * put a run's ink TOP on the rule's top, the box goes at
+   * `rule.top - baseline * size + maxAscent * size` — and this face's
+   * tallest ascender (b, 828) lands within three thousandths of where a
+   * `line-height: 1` box already puts its baseline. So the correction is
+   * 0.003 of the type size: real, stated, and under a hundredth of a pixel
+   * at the size this editor sets.
+   */
+  lift: Math.max(...Object.values(INK.asc)) / INK.em - 0.825,
+} as const;
+
+/**
  * THE FIVE SIGILS THAT OPEN BESIDE THE CLOUD STAR (the owner's 2026-09-22:
  * "I want 5 sigils to appear all scaled to the same height as the total price
  * number space them evenly including an even space before the first one and
@@ -404,4 +469,6 @@ export type ShelfEntry = {
   unit: PackUnit | null;
   /** 1-5 sigils, or null for a pack the reader has not rated */
   rating: number | null;
+  /** what the reader wrote about it, '' for nothing */
+  note: string;
 };

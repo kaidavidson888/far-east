@@ -1,0 +1,40 @@
+-- What the reader wrote about a pack — the shelf's comment.
+--
+-- The text editor square on the shelf opens into a rectangle with the login
+-- box's own dashed rule and a ☁ for a submit button (the owner's 2026-09-22:
+-- "have whatever the user typed be incorporated into the existing comment
+-- system from the handoff website"). This is where it goes.
+--
+-- IT IS THE EXISTING COMMENT SYSTEM'S OWN SHAPE. `favorites.note` is one
+-- piece of the reader's own writing per (reader, catalogue row), `text not
+-- null default ''`; this is the same thing per (reader, PACK). The two
+-- shelves are separate tables — `favorites.cigarette_id` is a foreign key
+-- into the 32 placeholder products and these 247 packs are not in it (see
+-- 0003_pack_favorites.sql) — so the column is added here rather than reused.
+--
+-- ONE COMMENT PER READER PER PACK, because that is what `pack_favorites`'s
+-- unique key already is and what both of the site's existing commentary
+-- tables do (`favorites.note`, and `reviews` with its `unique (user_id,
+-- cigarette_id)`). If the owner wants a THREAD — many comments on one pack,
+-- from one reader or from several — that is a table of its own and a
+-- different thing from a shelf row; it is not assumed here.
+--
+-- EMPTY STRING IS "NOTHING WRITTEN", matching `favorites.note` exactly, so
+-- the editor can be opened and shut without leaving a row in a third state.
+--
+-- `note_at` IS WHEN THE COMMENT WAS WRITTEN, and it is a separate column
+-- because `created_at` is when the PACK WAS SAVED. A comment displayed
+-- beside a date that is really the bookmark's would be quietly wrong, and
+-- `reviews` carries its own `created_at`/`updated_at` for the same reason.
+-- It is null while nothing has been written, and it is set by the write
+-- rather than by a trigger — the one place that writes the note is the one
+-- place that knows it changed.
+--
+-- THE LENGTH IS CAPPED IN THE ACTION, not here, which is `saveNoteAction`'s
+-- own arrangement (`.slice(0, 400)`). The slice is inside the server action,
+-- so it holds for any caller — a server action is a public endpoint, and
+-- what protects this column is that nothing can reach it without being
+-- sliced first.
+alter table public.pack_favorites
+  add column if not exists note    text not null default '',
+  add column if not exists note_at timestamptz;

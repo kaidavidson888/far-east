@@ -427,40 +427,50 @@ import type { PackUnit } from './cigPages';
 export type { PackUnit };
 
 /**
- * A shelf entry: the pack, how much of it the reader said they have, and what
- * they think of it in sigils (1-5, or null for a pack they have not rated).
+ * A shelf entry: the pack, how much of it the reader said they have, what
+ * they think of it in sigils (1-5, or null for a pack they have not rated)
+ * and what they wrote about it ('' for nothing).
  */
 export type SavedPack = {
   packId: string;
   amount: number | null;
   unit: PackUnit | null;
   rating: number | null;
+  note: string;
+  noteAt: string | null;
 };
 
 /**
- * ASK FOR THE RATING, AND COPE WITH IT NOT BEING THERE YET.
+ * ASK FOR THE 2026-09-22 COLUMNS, AND COPE WITH THEM NOT BEING THERE YET.
  *
- * `pack_favorites.rating` arrives with migration 0008, and this team applies
- * migrations by hand, once, by their author — so there is a window where this
- * code is deployed and the column is not. The shelf is a whole page; it reads
- * as unrated rather than 500ing over five little marks, exactly as the landing
- * page does for `profiles.big_shares`.
+ * `pack_favorites.rating` arrives with migration 0008 and `note`/`note_at`
+ * with 0009, and this team applies migrations by hand, once, by their author
+ * — so there is a window where this code is deployed and the columns are not.
+ * The shelf is a whole page; it reads as unrated with nothing written rather
+ * than 500ing over five little marks and a comment bar, exactly as the
+ * landing page does for `profiles.big_shares`.
  *
  * 42703 IS "COLUMN DOES NOT EXIST" AND NOTHING ELSE IS CAUGHT. This is one
  * known and temporary state, not a catch-all — every other error still throws.
  *
- * IT IS NOT MEMOISED, deliberately. Remembering "the column is missing" would
- * save one failed query per read and would then go on reading no ratings for
- * as long as the process lived after the owner applied the migration. Asking
- * every time costs a round trip only while the column really is absent, and
- * the page heals itself the moment it lands.
+ * THE TWO MIGRATIONS ARE TREATED AS ONE. Half applied, this falls back to
+ * neither rather than laddering down through every combination; they were
+ * written in the same hour and are applied in the same sitting, and three
+ * levels of fallback would outlive their reason by years.
+ *
+ * IT IS NOT MEMOISED, deliberately. Remembering "the columns are missing"
+ * would save one failed query per read and would then go on reading nothing
+ * for as long as the process lived after the owner applied them. Asking every
+ * time costs a round trip only while they really are absent, and the page
+ * heals itself the moment they land.
  */
-async function withRating<T>(asked: () => Promise<T>, without: () => Promise<T>): Promise<T> {
+async function withExtras<T>(asked: () => Promise<T>, without: () => Promise<T>): Promise<T> {
   try {
     return await asked();
   } catch (e) {
     if ((e as { code?: string })?.code !== '42703') throw e;
-    console.warn('pack_favorites.rating is missing — apply supabase/migrations/0008_pack_rating.sql');
+    console.warn('pack_favorites is missing rating/note — apply supabase/migrations/'
+      + '0008_pack_rating.sql and 0009_pack_note.sql');
     return without();
   }
 }
@@ -469,10 +479,18 @@ async function withRating<T>(asked: () => Promise<T>, without: () => Promise<T>)
 const num = (v: number | null) => (v === null ? null : Number(v));
 
 type PackRow = {
-  pack_id: string; amount: number | null; unit: PackUnit | null; rating: number | null;
+  pack_id: string; amount: number | null; unit: PackUnit | null;
+  rating: number | null; note: string | null; note_at: Date | string | null;
 };
 const asSaved = (r: PackRow): SavedPack => ({
-  packId: r.pack_id, amount: num(r.amount), unit: r.unit, rating: num(r.rating),
+  packId: r.pack_id,
+  amount: num(r.amount),
+  unit: r.unit,
+  rating: num(r.rating),
+  note: r.note ?? '',
+  // a timestamptz arrives as a Date; the pages format dates server-side and
+  // pass strings, so it never crosses the boundary as an object
+  noteAt: r.note_at ? new Date(r.note_at).toISOString() : null,
 });
 
 /**
@@ -489,13 +507,15 @@ export async function removePack(userId: string, packId: string): Promise<void> 
 /** One pack's shelf entry, or null if it is not on the shelf. What a cigarette's page asks. */
 export async function packEntry(userId: string, packId: string): Promise<SavedPack | null> {
   const sql = db();
-  const rows = await withRating(
+  const rows = await withExtras(
     () => sql<PackRow[]>`
-      SELECT pack_id, amount, unit, rating FROM pack_favorites
+      SELECT pack_id, amount, unit, rating, note, note_at FROM pack_favorites
       WHERE user_id = ${userId} AND pack_id = ${packId}
     `,
     () => sql<PackRow[]>`
-      SELECT pack_id, amount, unit, NULL::smallint AS rating FROM pack_favorites
+      SELECT pack_id, amount, unit,
+             NULL::smallint AS rating, '' AS note, NULL::timestamptz AS note_at
+      FROM pack_favorites
       WHERE user_id = ${userId} AND pack_id = ${packId}
     `,
   );
@@ -536,13 +556,15 @@ export async function setPackQuantity(
  */
 export async function savedPacks(userId: string): Promise<SavedPack[]> {
   const sql = db();
-  const rows = await withRating(
+  const rows = await withExtras(
     () => sql<PackRow[]>`
-      SELECT pack_id, amount, unit, rating FROM pack_favorites
+      SELECT pack_id, amount, unit, rating, note, note_at FROM pack_favorites
       WHERE user_id = ${userId} ORDER BY created_at DESC
     `,
     () => sql<PackRow[]>`
-      SELECT pack_id, amount, unit, NULL::smallint AS rating FROM pack_favorites
+      SELECT pack_id, amount, unit,
+             NULL::smallint AS rating, '' AS note, NULL::timestamptz AS note_at
+      FROM pack_favorites
       WHERE user_id = ${userId} ORDER BY created_at DESC
     `,
   );
@@ -570,13 +592,53 @@ export async function setPackRating(
   rating: number,
 ): Promise<boolean> {
   const sql = db();
-  return withRating(
+  return withExtras(
     async () => {
       await sql`
         INSERT INTO pack_favorites (user_id, pack_id, rating)
         VALUES (${userId}, ${packId}, ${rating})
         ON CONFLICT (user_id, pack_id)
         DO UPDATE SET rating = EXCLUDED.rating
+      `;
+      return true;
+    },
+    async () => false,
+  );
+}
+
+/**
+ * WHAT THE READER WROTE ABOUT A PACK — the shelf's comment, out of the text
+ * editor that opens beside the pack (the owner's 2026-09-22).
+ *
+ * The same shape as `setFavoriteNote`, which is the catalogue shelf's note
+ * and the comment system this one is modelled on: one piece of writing per
+ * reader per item, an empty string for nothing written. It SAVES THE PACK
+ * TOO if it is not there, as the rating and the quantity do.
+ *
+ * `note_at` IS WRITTEN HERE AND NOWHERE ELSE, because this is the one place
+ * that knows the comment changed — `created_at` is when the pack was
+ * bookmarked, which is a different fact and would be a quietly wrong date
+ * beside a comment. Clearing a comment clears its time with it: there is no
+ * such thing as when nothing was written.
+ *
+ * IT ANSWERS WHETHER IT SAVED, for the same reason the rating does — see
+ * `withExtras`, and Known gaps in CLAUDE.md while migration 0009 is
+ * unapplied.
+ */
+export async function setPackNote(
+  userId: string,
+  packId: string,
+  note: string,
+): Promise<boolean> {
+  const sql = db();
+  const at = note ? new Date() : null;
+  return withExtras(
+    async () => {
+      await sql`
+        INSERT INTO pack_favorites (user_id, pack_id, note, note_at)
+        VALUES (${userId}, ${packId}, ${note}, ${at})
+        ON CONFLICT (user_id, pack_id)
+        DO UPDATE SET note = EXCLUDED.note, note_at = EXCLUDED.note_at
       `;
       return true;
     },

@@ -10,10 +10,11 @@ import { logAuthEvent } from '@/lib/logAuthEvent';
 import { safeNext, signInGate, siteOrigin } from '@/lib/siteUrl';
 import { pageFor } from '@/lib/cigPages';
 import { CIG_PACKS } from '@/lib/cigRow';
+import { NOTE_MAX } from '@/lib/shelfGrid';
 import {
   accountState, createShare, deleteReview, getCigaretteBySlug, packIsSaved, removePack,
-  revokeShare, savePack, savedPackIds, setFavoriteNote, setPackQuantity, setPackRating,
-  toggleFavorite,
+  revokeShare, savePack, savedPackIds, setFavoriteNote, setPackNote, setPackQuantity,
+  setPackRating, toggleFavorite,
   upsertReview,
 } from '@/lib/db';
 
@@ -433,6 +434,45 @@ export async function setPackRatingAction(
   revalidatePath('/shelf');
   revalidatePath(`/packs/${packId}`);
   return { rating };
+}
+
+/**
+ * WHAT THE READER WROTE ABOUT A PACK, out of the shelf's text editor (the
+ * owner's 2026-09-22) — "whatever the user typed … incorporated into the
+ * existing comment system".
+ *
+ * `NOTE_MAX` IS `saveNoteAction`'S OWN 400, and the slice is here rather than
+ * in the database for the same reason it is there: a server action is a
+ * public endpoint, and what holds the cap is that nothing can reach the
+ * column without passing through this line. It lives in `lib/shelfGrid.ts`
+ * because the editor needs it too and **a `'use server'` module may only
+ * export async functions** — a plain `const` here silently strips every
+ * export from this file (see Gotchas).
+ *
+ * It is TRIMMED, so a bar with nothing but spaces in it clears the comment
+ * rather than storing whitespace and a timestamp for it.
+ *
+ * It answers with what is actually stored, as the rating does, so the editor
+ * can tell a save from a refusal — see Known gaps while 0009 is unapplied.
+ */
+export async function setPackNoteAction(
+  packId: string,
+  note: string,
+): Promise<{ note: string | null }> {
+  const page = pageFor(packId);
+  if (!page) return { note: null };
+
+  const user = await currentUser();
+  if (!user) redirect(signInGate('/shelf'));
+
+  const text = String(note ?? '').trim().slice(0, NOTE_MAX);
+  // (NOTE_MAX is imported from lib/shelfGrid — see the note above)
+  const saved = await setPackNote(user.id, page.id, text);
+  if (!saved) return { note: null };
+
+  revalidatePath('/shelf');
+  revalidatePath(`/packs/${packId}`);
+  return { note: text };
 }
 
 /**

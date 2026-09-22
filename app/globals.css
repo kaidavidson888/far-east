@@ -2935,16 +2935,26 @@ ul, ol { list-style: none; }
 /* THE UPPER LINE OF THE TRIANGLE: the text editor and the favourite, one
    margin under the pack. They stand where the first and third of the old row
    of three stood, so the gap between them is that row's three slots less
-   their own width. */
+   their own width — which is why each is PLACED on the line rather than laid
+   out by a flex gap. It was a flex row until the editor's square had to be
+   able to leave it (the owner's 2026-09-22) and a control cannot be both an
+   item in a row and a thing that stands somewhere else. The two x's are the
+   arithmetic that row was doing: a five-slot run, centred, first and last. */
 .shelf-wheel-row {
   position: absolute;
   top: calc(100% + var(--pack-rule) + var(--wheel-margin));
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  gap: calc(var(--btn) * 3);
+  left: 0;
+  right: 0;
+  height: var(--btn);
   z-index: 3;
 }
+.shelf-wheel-note,
+.shelf-wheel-form {
+  position: absolute;
+  top: 0;
+}
+.shelf-wheel-note { left: calc(50% - 2.5 * var(--btn)); }
+.shelf-wheel-form { left: calc(50% + 1.5 * var(--btn)); }
 /* THE STAR, BELOW THEM AND ON THE PACK'S OWN AXIS — the plus's place in the
    landing page's triangle. `--star-top` is measured off the wheel at rest:
    the middle of the room between the pack's foot and the next pack's top,
@@ -3054,7 +3064,7 @@ ul, ol { list-style: none; }
   .shelf-wheel-rate,
   .shelf-wheel-sigil i { transition: none; }
 }
-.shelf-wheel-form { display: flex; }
+.shelf-wheel-form { display: flex; line-height: 0; }
 /* THE NUMBER, centred on the pack, one of the same margins off its right
    edge — the owner's "an equal margin between its left edge and the pack
    outline to the top edge of the grouping of the other 3 buttons and the
@@ -3124,7 +3134,33 @@ button.shelf-wheel-btn:focus-visible,
    owner's next piece of work. For now it carries the login box's own dashed
    rule, kept the same distance off its left edge as it stood when this was a
    bar, white on the red page and white again on the black fill. */
-.shelf-wheel-note { position: relative; }
+/* IT MOVES WHEN IT IS PRESSED, exactly as the cloud star does and at the
+   same pace — the owner asked for both on the same day and in the same
+   words. Its own marks go with the move: the vertical rule and the line
+   under it are the RECTANGLE's now, where the owner placed them, so what is
+   left standing here is the outline. */
+.shelf-wheel-note { transition: left 380ms ease-out; }
+.shelf-wheel-btn.shelf-wheel-note[data-open] {
+  left: calc(-1 * var(--pack-rule));
+  border-color: #ff0000;
+}
+.shelf-wheel-note[data-open] .shelf-wheel-caret,
+.shelf-wheel-note[data-open] .shelf-wheel-underline { display: none; }
+/* THE BOTTOM DASH BLINKS UNDER THE POINTER AND STOPS ON THE PRESS (the
+   owner's 2026-09-22), which falls out of the mark not being there any
+   more once the editor is open. `cig-search-blink` is the site's one caret
+   keyframe — steps(1), a hard on-off rather than a pulse. */
+.shelf-wheel-note:not([data-open]):hover .shelf-wheel-underline,
+.shelf-wheel-note:not([data-open]):focus-visible .shelf-wheel-underline {
+  animation: cig-search-blink 1060ms steps(1, end) infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .shelf-wheel-note { transition: none; }
+  .shelf-wheel-note:not([data-open]):hover .shelf-wheel-underline,
+  .shelf-wheel-note:not([data-open]):focus-visible .shelf-wheel-underline {
+    animation: none;
+  }
+}
 .shelf-wheel-caret {
   position: absolute;
   /* ALIGNED ON ITS BOTTOM EDGE WITH THE LINE (the owner's 2026-09-21), so
@@ -3167,6 +3203,157 @@ button.shelf-wheel-btn:focus-visible,
   -webkit-mask-position: var(--card-rule-x) var(--card-rule-y);
           mask-position: var(--card-rule-x) var(--card-rule-y);
   pointer-events: none;
+}
+
+/* ---- the text editor ----------------------------------------------------- */
+/* THE RECTANGLE THE SQUARE OPENS INTO (the owner's 2026-09-22). It takes the
+   run the square vacates — its right edge to the pack outline's right edge —
+   and is centred on the square's own line.
+
+   IT IS AN OUTLINE, NOT A PANEL. "A rectangle that is white with the same
+   opacity as the outline of the cig images" borrows that outline's HALF
+   STRENGTH, and the reading is settled by the prompt: a quarter-strength
+   white word only reads on a dark ground, which is the login box's own
+   idiom, and would be invisible on a 50% white fill. THE FILL IS THE PAGE'S
+   BLACK, which draws nothing that is not already there and stops the
+   favourite button — which stands on this very line — showing through the
+   middle of the editor.
+
+   ITS RULE IS THE CONTROLS' 2px, not the pack's 5: what was borrowed was the
+   opacity, and every box on this page is drawn at the controls' weight. */
+.shelf-comment {
+  /* everything inside hangs off these four; the scalars they use come from
+     EDITOR and CARD_CARET in lib/shelfGrid.ts, so each is stated once */
+  --type: calc(var(--card-caret-h) / var(--editor-band));
+  --text-x: calc(2 * var(--editor-pad) + var(--card-caret-w));
+  --send-w: calc(var(--card-caret-h) * var(--sigil-ratio));
+  --h: calc(var(--card-caret-h) + 2 * var(--editor-pad) + 2 * var(--editor-rule));
+
+  box-sizing: border-box;
+  position: absolute;
+  left: calc(var(--btn) - var(--pack-rule));
+  right: calc(-1 * var(--pack-rule));
+  top: calc(100% + var(--pack-rule) + var(--wheel-margin)
+            + var(--btn) / 2 - var(--h) / 2);
+  height: var(--h);
+  margin: 0;
+  background: var(--editor-fill);
+  border: var(--editor-rule) solid var(--editor-ink);
+  opacity: 0;
+  z-index: 4;
+  transition: opacity 160ms ease-out, background-color 150ms ease,
+              border-color 150ms ease;
+}
+/* it arrives once the square has stood down, not while it is still moving */
+.shelf-comment[data-open] {
+  opacity: 1;
+  transition: opacity 160ms ease-out 380ms, background-color 150ms ease,
+              border-color 150ms ease;
+}
+/* A COMMENT THAT DID NOT SAVE FLOODS THE RECTANGLE, which is the login box's
+   own rejection — and what was typed is kept, because a comment is the
+   reader's own writing. */
+.shelf-comment[data-refused] {
+  background: #ff0000;
+  border-color: #ff0000;
+}
+/* THE VERTICAL DASHED RULE, white and ten pixels inside the rectangle on the
+   left, the top and the foot — which is what sets the rectangle's height.
+   Same sprite and same scale as the square's, so the dashes match. */
+.shelf-comment-caret {
+  position: absolute;
+  left: var(--editor-pad);
+  top: var(--editor-pad);
+  width: var(--card-caret-w);
+  height: var(--card-caret-h);
+  background: #ffffff;
+  -webkit-mask-image: var(--card-caret-src);
+          mask-image: var(--card-caret-src);
+  -webkit-mask-repeat: no-repeat;
+          mask-repeat: no-repeat;
+  -webkit-mask-size: var(--card-caret-d) var(--card-caret-d);
+          mask-size: var(--card-caret-d) var(--card-caret-d);
+  -webkit-mask-position: var(--card-caret-x) var(--card-caret-y);
+          mask-position: var(--card-caret-x) var(--card-caret-y);
+  pointer-events: none;
+}
+/* THE PROMPT AND THE RUN ARE THE SAME LINE OF TYPE, set at the size that
+   makes the face's whole ink band one rule high and hung from the rule's own
+   top — `--editor-lift` is the three thousandths between where this face's
+   tallest ascender sits and where a `line-height: 1` box puts its baseline. */
+.shelf-comment-prompt,
+.shelf-comment-field,
+.shelf-comment-mirror {
+  position: absolute;
+  top: calc(var(--editor-pad) + var(--type) * var(--editor-lift));
+  height: var(--type);
+  font-family: var(--font-typed);
+  font-size: var(--type);
+  font-weight: 700;
+  font-synthesis: none;
+  line-height: 1;
+  white-space: nowrap;
+}
+.shelf-comment-prompt {
+  left: var(--text-x);
+  color: rgb(255 255 255 / 0.25);
+  pointer-events: none;
+}
+/* it vanishes the moment the reader arrives, and the ☁ takes its place */
+.shelf-comment-prompt[data-gone] { visibility: hidden; }
+.shelf-comment-field {
+  left: var(--text-x);
+  /* the ☁ always has room to stand at the end of the run */
+  right: calc(var(--editor-pad) + var(--send-w));
+  padding: 0;
+  margin: 0;
+  background: none;
+  border: 0;
+  border-radius: 0;
+  color: #ffffff;
+  /* the ☁ IS the caret; there is no sense in two marks saying the same thing */
+  caret-color: transparent;
+  outline: none;
+}
+/* the run again, unseen, so the ☁ can be put at the end of it */
+.shelf-comment-mirror {
+  left: 0;
+  visibility: hidden;
+  white-space: pre;
+  pointer-events: none;
+}
+/* THE ☁: the caret and the send in one mark. Its LEFT EDGE is the tip — the
+   point the site's own cursor is hotspotted on — so that is what stands
+   where the next letter will go. Solid at three quarters until the reader is
+   in the field, then full and blinking on the site's one caret keyframe. */
+.shelf-comment-send {
+  position: absolute;
+  left: calc(var(--text-x) + var(--caret-x, 0px));
+  top: var(--editor-pad);
+  width: var(--send-w);
+  height: var(--card-caret-h);
+  padding: 0;
+  background: none;
+  border: 0;
+  line-height: 0;
+}
+.shelf-comment-send i {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: rgb(255 0 0 / 0.75);
+  -webkit-mask: url('/sigil.webp') center / 100% 100% no-repeat;
+          mask: url('/sigil.webp') center / 100% 100% no-repeat;
+  transition: background-color 150ms ease;
+}
+.shelf-comment-send[data-live] i {
+  background: #ff0000;
+  animation: cig-search-blink 1060ms steps(1, end) infinite;
+}
+.shelf-comment-send:focus-visible { outline: 2px solid #ffffff; outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) {
+  .shelf-comment { transition: none; }
+  .shelf-comment-send[data-live] i { animation: none; }
 }
 
 /* ---- the borrowed quantity wheels ---------------------------------------- */

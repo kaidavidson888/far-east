@@ -431,6 +431,48 @@ try {
   check('a rated pack with no quantity keeps a null amount',
     unratedToo?.amount === null && unratedToo.unit === null, JSON.stringify(unratedToo));
 
+  // — the comment, out of the shelf's text editor —
+  // The same shape as `favorites.note`, which is the comment system this one
+  // is modelled on: one piece of writing per reader per item, '' for nothing.
+  // What is worth checking is that it has a time of its OWN — `created_at` is
+  // when the pack was bookmarked, which is a different fact.
+  const blank = await lib.packEntry(owner, '04_ESSE-Change_Strawberry');
+  check('a pack starts with nothing written', blank?.note === '' && blank.noteAt === null,
+    JSON.stringify({ note: blank?.note, at: blank?.noteAt }));
+
+  check('setPackNote says it saved',
+    (await lib.setPackNote(owner, '04_ESSE-Change_Strawberry', 'Sweeter than it looks.')) === true);
+  const said = await lib.packEntry(owner, '04_ESSE-Change_Strawberry');
+  check('the comment and its time read back',
+    said?.note === 'Sweeter than it looks.' && typeof said.noteAt === 'string',
+    JSON.stringify({ note: said?.note, at: said?.noteAt }));
+  check('the comment has its own time, not the bookmark\'s', await (async () => {
+    const [row] = await sql`
+      SELECT created_at, note_at FROM pack_favorites
+      WHERE user_id = ${owner} AND pack_id = '04_ESSE-Change_Strawberry'
+    `;
+    return row.note_at > row.created_at;
+  })());
+  check('the rating and the quantity survived the comment',
+    said?.rating === 2 && said.amount === 3, JSON.stringify(said));
+
+  // clearing it clears the time with it: there is no when for nothing written
+  await lib.setPackNote(owner, '04_ESSE-Change_Strawberry', '');
+  const cleared = await lib.packEntry(owner, '04_ESSE-Change_Strawberry');
+  check('clearing a comment clears its time',
+    cleared?.note === '' && cleared.noteAt === null, JSON.stringify(cleared));
+
+  // and commenting on something unsaved saves it, as the other two do
+  await lib.setPackNote(owner, '98_Unsaved', 'First thing I said about it.');
+  check('commenting on a pack that was not saved saves it',
+    (await lib.packIsSaved(owner, '98_Unsaved'))
+      && (await lib.packEntry(owner, '98_Unsaved'))?.note === 'First thing I said about it.');
+
+  const shelfNow = await lib.savedPacks(owner);
+  check('savedPacks carries the comment too',
+    shelfNow.find((p) => p.packId === '98_Unsaved')?.note === 'First thing I said about it.',
+    JSON.stringify(shelfNow.find((p) => p.packId === '98_Unsaved')));
+
   const marked = cigs.filter((c) => new Set(favIds).has(c.id));
   check('catalogue marks saved items as on the shelf', marked.length === favIds.length,
     `${marked.length} of ${favIds.length}`);

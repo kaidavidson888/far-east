@@ -1,6 +1,6 @@
 import { BOOKMARK } from '@/lib/cigPages';
 import {
-  CARD, CARD_CARET, GRID_MARGIN, MENU_ZOOM_MAX,
+  CARD, CARD_CARET, EDITOR, GRID_MARGIN, MENU_ZOOM_MAX,
   PACK_RULE, RATE, type ShelfEntry,
 } from '@/lib/shelfGrid';
 import { ShelfMenu } from './ShelfMenu';
@@ -51,8 +51,18 @@ export function ShelfPage({ entries, worth }: { entries: ShelfEntry[]; worth?: s
         // own size is stated once here and read by both — the number and the
         // five marks — rather than written out twice and left to drift.
         '--worth-size': `calc(${button}px * ${CARD.countEm} * 1.1)`,
+        '--sigil-ratio': +RATE.aspect.toFixed(4),
         '--sigil-h': `calc(var(--worth-size) * ${+RATE.em.toFixed(4)})`,
-        '--sigil-w': `calc(var(--sigil-h) * ${+RATE.aspect.toFixed(4)})`,
+        '--sigil-w': `calc(var(--sigil-h) * var(--sigil-ratio))`,
+        // the text editor: the owner's ten pixels, the rule's weight and the
+        // opacity it borrows from the pack's outline, plus the two figures a
+        // line of type is hung from — see EDITOR in lib/shelfGrid.ts
+        '--editor-pad': `${EDITOR.pad}px`,
+        '--editor-rule': `${EDITOR.rule}px`,
+        '--editor-ink': EDITOR.ink,
+        '--editor-fill': EDITOR.fill,
+        '--editor-band': +CARD_CARET.band.toFixed(4),
+        '--editor-lift': +EDITOR.lift.toFixed(4),
         // the dashed rule in the text editor's square: the margin it kept
         // off the left edge when this was a bar, and its own height
         '--card-comment-pad': `${+(button * CARD.commentPad).toFixed(3)}px`,

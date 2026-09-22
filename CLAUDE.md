@@ -2584,6 +2584,96 @@ evenly including an even space before the first one and after the last one").
   un-rate** — nothing was asked for, so nothing was invented.
 - This is not `reviews.rating`, which is 1-10 against a catalogue row.
 
+**THE TEXT EDITOR OPENS INTO A RECTANGLE, AND THE COMMENT HAS A HOME AT LAST**
+(the owner's 2026-09-22 — the construction they said they would specify once
+the square was a button). `components/ShelfComment.tsx`, `EDITOR` and
+`NOTE_MAX` in `lib/shelfGrid.ts`, `setPackNote`, `setPackNoteAction`, and
+`pack_favorites.note`/`note_at` — migration **0009**, NOT YET APPLIED.
+- **TEN PIXELS, FOUR TIMES, AND IT IS THE SAME TEN.** The vertical rule stands
+  10 inside the rectangle on the left, the top AND the foot — which is what
+  sets the rectangle's height, since that is the only way a mark in a corner
+  can be "10px away from the edge on all edges" — the run begins 10 past the
+  rule, and the ☁ waits 10 past the prompt. Measured at 1920x947: 10.00 /
+  10.00 / 10.00 / 10.00 / 10.00, the box 33.7 tall over a 9.7 rule.
+- **THE MARKS MOVED OUT OF THE SQUARE; THEY WERE NOT DRAWN AGAIN.** The owner
+  placed the vertical rule against THE RECTANGLE, so there is one of it, and
+  the button it came from is its outline alone while the editor is open —
+  which is the cloud star's arrangement when it stands down for the sigils.
+  The square moves to the outline's left edge on the same 380ms slide.
+- **THE RECTANGLE IS AN OUTLINE, NOT A PANEL, and the PROMPT is what settles
+  it.** "A rectangle that is white with the same opacity as the outline of the
+  cig images" borrows that outline's half strength — but a white word at a
+  QUARTER only reads on a dark ground (it is the login box's own idiom), and
+  on a 50% white fill it would be invisible. So: a 2px white-50% rule, and
+  **the fill is the page's own black**, which draws nothing that is not
+  already there and does one necessary job — the favourite button stands on
+  this very line, and an editor with a transparent middle would have a
+  bookmark showing through it. Verified: `elementFromPoint` at the
+  favourite's middle is the editor's field while it is open, and the
+  favourite again the moment it shuts.
+  - **ITS RULE IS THE CONTROLS' 2px, not the pack's 5.** What was borrowed
+    was the opacity; every box on this page is drawn at the controls' weight.
+- **THE ROW IS NO LONGER A FLEX ROW.** A control cannot be both an item in a
+  row and a thing that stands somewhere else, so `.shelf-wheel-row` is the
+  LINE and its two controls are placed on it at `50% ∓ 2.5/1.5 x --btn` — the
+  arithmetic the flex gap was doing. Measured: both land within a twentieth
+  of a pixel of where they stood.
+- **THE TYPE IS HUNG FROM THE RULE, NOT FROM A BOX NEAR IT.** Its size is the
+  one that makes the FACE's whole ink band one rule high (`CARD_CARET.band`),
+  and the box is lifted by `EDITOR.lift` — the three thousandths between this
+  face's tallest ascender (b, 828) and where a `line-height: 1` box puts its
+  baseline (0.825, the figure the login row measured in Chrome). Measured in
+  the page: the face's ascent at 1000px reads 828.125 against the ink table's
+  828, so the correction is right and under a hundredth of a pixel here.
+  **The type comes out 9.15px**, which clears the site's 9px floor and no
+  more — on a touch screen it is under the 16px at which iOS zooms the page
+  and does not zoom back. The owner's rule is explicit ("the same height as
+  the line"), so it is kept; flagged rather than fudged.
+- **THE ☁ IS THE CARET AND THE SUBMIT IN ONE MARK**, which is the login box's
+  arrangement and the search bar's. Its TIP is its LEFT edge — the point the
+  site's own cursor is hotspotted on (0 14) — so that is what stands where
+  the next letter goes. Solid red at 75% until the reader is in the field,
+  then full and blinking on `cig-search-blink`. Enter sends too.
+  - **THE RUN IS MEASURED OFF A MIRROR**, a hidden copy of the value in the
+    field's own font, with the field's `scrollLeft` taken off it — so there
+    is no font string to assemble and get wrong, and the mark stays with the
+    text once the field has begun to scroll. The field's right edge reserves
+    the ☁'s width so it can always stand at the end. Measured: runs of 5.50 /
+    44.08 / 115.13px put the mark at 5.50 / 44.09 / 115.14 past the text's
+    start.
+  - **THE PROMPT GIVES WAY, NEVER THE MARK.** While "leave a comment <3" is
+    showing it is standing where the text will go, so the ☁ waits one prompt
+    and one gap past it and moves back to the first letter's place when the
+    reader arrives. Verified: 10.00px past the rule on focus, prompt hidden,
+    colour full, blink running.
+  - **NOTHING IS FOCUSED WHEN IT OPENS**, deliberately: "when the user clicks
+    into the text editor" is a second act after the press that opened it, and
+    the prompt is there to be read in between.
+- **THE BOTTOM DASH BLINKS UNDER THE POINTER AND STOPS ON THE PRESS**, which
+  falls out of the mark not being in the square any more once the editor is
+  open. Verified with a real pointer: `cig-search-blink` at 1.06s on the
+  underline and none on the vertical rule.
+- **A REFUSED SAVE FLOODS THE RECTANGLE AND KEEPS WHAT WAS TYPED.** The search
+  bar deletes a query that found nothing because there is nothing worth
+  keeping; a comment is the reader's own writing and throwing it away would be
+  the worst thing this control could do. **A SAVED ONE SHUTS THE EDITOR** —
+  that is a judgement, not an ask: a submit with no visible answer is worse,
+  and reopening shows the comment.
+- **THE COMMENT IS THE EXISTING SYSTEM'S OWN SHAPE**: one piece of the
+  reader's writing per (reader, pack), `text not null default ''`, capped at
+  `saveNoteAction`'s own 400 — which is `favorites.note` exactly, and the
+  `unique (user_id, …)` both of this site's commentary tables carry. **If the
+  owner wants a THREAD** — many comments on one pack, from one reader or
+  several — that is a table of its own and is not assumed here.
+  - **`note_at` IS ITS OWN COLUMN** because `created_at` is when the pack was
+    BOOKMARKED. A comment shown beside the bookmark's date would be quietly
+    wrong, and `reviews` carries its own timestamps for the same reason.
+    Clearing a comment clears its time: there is no when for nothing written.
+  - **`NOTE_MAX` IS IN `lib/shelfGrid.ts`, NOT IN `app/actions.ts`**, and that
+    is the `'use server'` gotcha: a plain `const` exported from an actions
+    file silently strips EVERY export from it. `lib/authPolicy.ts` exists for
+    the same reason. This was nearly shipped and caught in review.
+
 **WHAT THE SHELF IS WORTH — AND IT HAS DATA BEHIND IT NOW.** This number was
 drawn from the first day and totalled NOTHING for three redraws:
 `pack_favorites` keys on a pack id and `lib/cigs.json` carries no money, so
@@ -2862,6 +2952,18 @@ the brand assets and review text in this repo are visible to anyone.
    `false` — which makes the row of sigils fill on the press and go back,
    with a line in the server log. Delete the fallbacks in `withRating` once
    the column is live.
+0d. **MIGRATION `0009_pack_note.sql` IS WRITTEN AND NOT YET APPLIED.** It adds
+   `pack_favorites.note` and `note_at` — the shelf's comment, which is the
+   thing this file has been listing as "the comment bar, which types but has
+   nowhere to keep a note" since the grid. `npm run verify:db` passes with it
+   (71/71, eight of them new: the empty start, the write, the comment's own
+   time being later than the bookmark's, the rating and the quantity
+   surviving it, clearing it clearing its time, and commenting on an unsaved
+   pack saving it). **The author applies it once, in the SQL Editor**, in the
+   same sitting as 0008 — `withRating` was generalised to `withExtras` and
+   treats the two as ONE, so a half-applied pair reads as neither rather than
+   laddering through every combination. Until they land the editor draws and
+   types and a submit floods the rectangle red, keeping what was written.
 1. **Deploy is not yet green.** See HANDOFF.md → Deployment. The middleware was removed to get
    past `MIDDLEWARE_INVOCATION_FAILED`; that commit (`f6b03ff`) still needs pushing.
 2. **No session refresh on plain page loads** (middleware removed). Readers who only browse are
@@ -2935,16 +3037,16 @@ the brand assets and review text in this repo are visible to anyone.
    `.verify/temp-user.mjs` inserts into `auth.users` directly and never goes
    through GoTrue; and a signed-in press still cannot be verified end to end
    locally — the DB layer under it is covered by `npm run verify:db` instead.
-8. **The pack shelf has a page now — `/shelf` — and three things on it have
-   no data behind them.** `savedPacks()` feeds it and the bookmark there
-   both adds and removes, so a saved pack can be seen and taken off. What is
-   still hollow: **the worth in the header** (`ShelfPage` takes a `worth`
-   prop and the route passes none — `pack_favorites` keys on a pack id and
-   `lib/cigs.json` carries no money, so the shelf cannot be totalled);
-   **the comment bar**, which types but has nowhere to keep a note (a column
-   on `pack_favorites`, so a migration and the owner applying it); and **the
-   cloud button**, which opens exactly as asked and is wired to nothing.
-   All three are the owner's call, not oversights.
+8. **The pack shelf's three hollow controls all have data behind them now**
+   (2026-09-21 and -22), and what is left is applying two migrations. The
+   worth is totalled from `cigtags.json`'s price per pack; the cloud star
+   opens the five sigils and saves a rating (`pack_favorites.rating`, 0008);
+   and the comment bar — which typed into nothing for three redraws — is the
+   text editor and saves to `pack_favorites.note`/`note_at` (0009). **Neither
+   migration is applied**: see 0c and 0d, which is the whole of what is
+   outstanding. **What is still not built is DISPLAYING the comments** — the
+   owner has said they will specify that ("I will tell you how we are going
+   to display the comments after you are done"), so nothing was invented.
    `/favorites` is still the separate CATALOGUE shelf, through
    `favoritesWithNotes`.
 9. **The artwork pages are still centred on half pixels.** `styleFor` in

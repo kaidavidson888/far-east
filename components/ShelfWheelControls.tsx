@@ -5,6 +5,7 @@ import { togglePackAction } from '@/app/actions';
 import { cardAmount, cardQuantityFrame, type ShelfEntry } from '@/lib/shelfGrid';
 import { CigQuantity } from './CigQuantity';
 import { ShelfClouds } from './ShelfClouds';
+import { ShelfComment } from './ShelfComment';
 import { ShelfRating } from './ShelfRating';
 
 /**
@@ -42,7 +43,7 @@ import { ShelfRating } from './ShelfRating';
  * the dashed rule and takes a press; what it opens comes next.
  */
 export function ShelfWheelControls({
-  entry: { pack, amount, unit, rating },
+  entry: { pack, amount, unit, rating, note },
   bookmark,
   button,
   packRef,
@@ -69,6 +70,13 @@ export function ShelfWheelControls({
    * sigils cannot be left standing beside a pack they were not opened on.
    */
   const [ratingOpen, setRatingOpen] = useState(false);
+  /**
+   * WHETHER THE TEXT EDITOR IS OPEN (the owner's 2026-09-22). Pressing the
+   * square stands it down to the pack outline's left edge, exactly as the
+   * cloud star does, and opens the rectangle beside it. Pressing it again —
+   * or saving a comment — shuts it.
+   */
+  const [noteOpen, setNoteOpen] = useState(false);
   const countRef = useRef<HTMLSpanElement | null>(null);
   const [room, setRoom] = useState<{ w: number; h: number } | null>(null);
 
@@ -128,15 +136,25 @@ export function ShelfWheelControls({
         less their own width — 3 x the button.
       */}
       <div className="shelf-wheel-row" style={{ '--btn': `${button}px` } as React.CSSProperties}>
+        {/* THE TEXT EDITOR'S SQUARE. Shut, it carries the two marks that
+            make a row of the login box: the vertical dashed rule and the
+            horizontal one the letters sit on, standing the same margin off
+            the box and aligned on their bottom edges — and the bottom one
+            BLINKS under the pointer (the owner's 2026-09-22).
+
+            Open, it stands down to the outline's left edge as the cloud
+            star does and is its outline alone: its marks have gone into the
+            rectangle, where the owner placed them. */}
         <button
           type="button"
           className="shelf-wheel-btn shelf-wheel-note"
-          aria-label={`Leave a comment on ${pack.name}`}
+          data-open={noteOpen ? '' : undefined}
+          aria-expanded={noteOpen}
+          aria-label={noteOpen
+            ? `Close the comment on ${pack.name}`
+            : `Leave a comment on ${pack.name}`}
+          onClick={() => setNoteOpen((v) => !v)}
         >
-          {/* THE TWO MARKS THAT MAKE A ROW OF THE LOGIN BOX: its vertical
-              dashed rule and the horizontal one the letters sit on, both
-              standing the same margin off the box and ALIGNED ON THEIR
-              BOTTOM EDGES. */}
           <i className="shelf-wheel-caret" aria-hidden />
           <i className="shelf-wheel-underline" aria-hidden />
         </button>
@@ -189,6 +207,16 @@ export function ShelfWheelControls({
           onPress={setRatingOpen}
         />
       </div>
+
+      {/* the text editor the square opens into, on the square's own line */}
+      <ShelfComment
+        packId={pack.id}
+        name={pack.name}
+        note={note}
+        open={noteOpen}
+        button={button}
+        onSaved={() => setNoteOpen(false)}
+      />
 
       {/* the five sigils, filling the run from the stood-down star's right
           edge to the pack outline's right edge */}
