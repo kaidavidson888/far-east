@@ -1506,55 +1506,21 @@ ul, ol { list-style: none; }
 }
 
 /* --------------------------------------------------- the corner seal ----
-   THE OWNER'S 遠東, HOLLOWED OUT, IN A SQUARE IN THE TOP RIGHT — their
-   2026-09-20 ask: "a square seal button 2x as big as the mountain button in
-   the right corner of the screen with 10px margins on its top and right
-   edges. Make the characters just a black outline".
+   GONE, AND ITS CHARACTERS ARE THE MENU BUTTON NOW (the owner, 2026-09-23:
+   "move the character logo to the left corner … Adjust the animation so the
+   branches grow from the character logo rather than the mountain button and
+   delete the mountain button on the landing page from the top left").
 
-   It is the mountain button's mirror and is built the same way: the box is
-   twice that button's, it is drawn at the row's own `--logo-menu-zoom` so
-   that the two keep their ratio at every width, and its margin is in PAGE px
-   — divided by the zoom, because `zoom` multiplies an element's own offsets
-   as well as its contents, which is the shelf's rows and the logo menu
-   again. The mark inside is `currentColor`, so it inverts with the box. */
-.corner-seal {
-  position: absolute;
-  top: calc(var(--seal-margin, 10px) / var(--logo-menu-zoom, 1));
-  right: calc(var(--seal-margin, 10px) / var(--logo-menu-zoom, 1));
-  zoom: var(--logo-menu-zoom, 1);
-  display: flex;
-  /* the owner's 5px between the two squares, in PAGE px like the margins on
-     the same button — so it stays 5 on the screen while the boxes scale */
-  gap: calc(var(--seal-gap, 5px) / var(--logo-menu-zoom, 1));
-  color: #010101;
-  z-index: 4;
-}
-/* ONE CONTROL, TWO BOXES: the hover and the focus ring belong to the link,
-   so both squares invert together and there is one press target. */
-.corner-seal-box {
-  box-sizing: border-box;
-  width: var(--seal-box);
-  height: var(--seal-box);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: var(--seal-rule) solid #010101;
-  background: transparent;
-  transition: background-color 120ms ease-out;
-}
-.corner-seal:hover {
-  color: #ffffff;
-}
-.corner-seal:hover .corner-seal-box {
-  background: #010101;
-}
-.corner-seal:focus-visible {
-  outline: 2px solid #010101;
-  outline-offset: 3px;
-}
-.corner-seal svg {
-  display: block;
-}
+   The 遠東 stood in the TOP RIGHT, hollowed out, at twice the mountain
+   button's size, and led to the shelf. It is drawn by the menu's canvas now
+   — see .logo-menu-badge-cell and .logo-menu-badge-mark — because it has to
+   DRAIN, which is the same reason the mountain was drawn there. Its rules
+   are `badge.cells` in lib/growmenu-geometry.json.
+
+   THE SHELF LINK WENT WITH IT. SealButton on the row's own bar still leads
+   there on its second press; nothing else on the landing page does. Git has
+   this block and components/CornerSeal.tsx if the corner is ever wanted
+   back. */
 
 /* -------------------------------------------------------- cigarette row --
    A row of packs across the middle of the page that scrolls forever, with a
@@ -2738,14 +2704,26 @@ ul, ol { list-style: none; }
    pixel. Nothing of that survives — a picture is placed by the bake.) */
 .logo-menu-logo.logo-menu-badge {
   box-sizing: border-box;
-  border-style: solid;
-  border-color: #010101;
   background: transparent;
   color: #010101;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   z-index: 1;
+}
+/* THE OUTLINE IS A CHILD, NOT THE BUTTON'S OWN BORDER, because the landing
+   page's button is the owner's 遠東 and that is TWO boxes with one press
+   target between them (their 2026-09-23 ask, and the corner seal's own
+   construction before it). The bake says how many and where — `badge.cells`
+   — so the mountain is this same markup with one cell in it, and neither
+   button has a special case.
+
+   `currentColor`, so the one `color` on the button above carries the rule as
+   well as anything else drawn in it: the shelf's menu turns both red by
+   setting that one value. */
+.logo-menu-badge-cell {
+  position: absolute;
+  box-sizing: border-box;
+  border-style: solid;
+  border-color: currentColor;
+  pointer-events: none;
 }
 /* THE MARK AT REST, AND THE HANDOVER TO THE CANVAS.
 
@@ -3604,8 +3582,9 @@ button.shelf-wheel-btn:focus-visible,
 .shelf .cigpage-plus-hit:focus-visible { outline: 2px solid #ff0000; outline-offset: 2px; }
 
 /* ---- the mountain button, white on red ---------------------------------- */
+/* ONE VALUE. The cells' rule is `currentColor` (see .logo-menu-badge-cell),
+   so this turns the outline and anything else drawn in the button together. */
 .logo-menu[data-menu='shelf'] .logo-menu-logo.logo-menu-badge {
-  border-color: #ff0000;
   color: #ff0000;
 }
 .logo-menu[data-menu='shelf'] .logo-menu-logo:focus-visible,
@@ -3782,7 +3761,6 @@ input[type='reset'],
 .cig-search-toggle,
 .cig-dots-toggle,
 .cig-dots-box,
-.corner-seal,
 .cig-tag,
 .cig-confirm,
 .logo-menu,
@@ -3875,7 +3853,6 @@ input[type='radio'],
 .cig-search-toggle,
 .cig-dots-toggle,
 .cig-dots-box,
-.corner-seal,
 .cig-confirm,
 .cig-tag,
 .logo-menu-logo,
@@ -3943,7 +3920,6 @@ input[type='radio']:active,
 .cig-search-toggle:active,
 .cig-dots-toggle:active,
 .cig-dots-box:active,
-.corner-seal:active,
 .cig-confirm:active,
 .cig-tag:active,
 .logo-menu-logo:active,

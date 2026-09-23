@@ -27,6 +27,7 @@ import { writeFileSync, mkdirSync } from 'node:fs';
 import sharp from 'sharp';
 import { readFileSync } from 'node:fs';
 import { contours, loopArea, simplify, toPath, distanceTo } from './lib/trace-mark.mjs';
+import { sealChars } from './lib/seal-mark.mjs';
 
 const SRC = 'scripts/assets/logo-characters.svg';
 const OUT = 'lib/sealGlyph.ts';
@@ -51,63 +52,18 @@ const fail = (m) => {
 };
 
 // ---- the two characters ------------------------------------------------------
-const R = 2048;
-const { data, info } = await sharp(readFileSync(SRC))
-  .resize({ width: R })
-  .flatten({ background: '#ffffff' })
-  .greyscale()
-  .raw()
-  .toBuffer({ resolveWithObject: true });
-const W = info.width, H = info.height;
-const ink = (x, y) => data[y * W + x] < 128;
-
-/** The rows that carry ink, grouped into characters. */
-const chars = (() => {
-  const bands = [];
-  let run = null;
-  for (let y = 0; y < H; y++) {
-    let n = 0;
-    for (let x = 0; x < W; x++) if (ink(x, y)) n++;
-    if (n && !run) run = { y0: y };
-    if (!n && run) { run.y1 = y; bands.push(run); run = null; }
-  }
-  if (run) { run.y1 = H; bands.push(run); }
-  if (!bands.length) fail('no ink in the vector');
-  /*
-   * A CHARACTER'S OWN STROKES LEAVE GAPS TOO, so the split is the LARGEST gap
-   * rather than a threshold: there are two characters, so there is exactly
-   * one gap between them and it is the biggest. Measured here it is 192px
-   * against the 26px inside 遠 — a threshold set between those two would work
-   * today and break on the next drawing.
-   */
-  if (bands.length < 2) fail(`the vector has ${bands.length} band of ink; it should have several`);
-  let cut = 1, widest = -1;
-  for (let i = 1; i < bands.length; i++) {
-    const g = bands[i].y0 - bands[i - 1].y1;
-    if (g > widest) { widest = g; cut = i; }
-  }
-  console.log(`  ${bands.length} bands of ink; the widest gap is ${widest}px, before band ${cut + 1}`);
-  const out = [
-    { y0: bands[0].y0, y1: bands[cut - 1].y1 },
-    { y0: bands[cut].y0, y1: bands[bands.length - 1].y1 },
-  ];
-  if (out.length !== 2) fail(`expected two characters, found ${out.length}`);
-  return out.map((b) => {
-    let x0 = W, x1 = -1;
-    for (let y = b.y0; y < b.y1; y++) for (let x = 0; x < W; x++) if (ink(x, y)) { if (x < x0) x0 = x; if (x > x1) x1 = x; }
-    return { x0, x1: x1 + 1, y0: b.y0, y1: b.y1, w: x1 + 1 - x0, h: b.y1 - b.y0 };
-  });
-})();
+/*
+ * THE SPLIT IS SHARED (scripts/lib/seal-mark.mjs). It used to be here, and it
+ * is subtle — the largest GAP rather than a threshold, because a character's
+ * own strokes leave gaps too. Since the owner's 2026-09-23 ask the landing
+ * page's menu button is these same two characters, drawn FILLED and drained
+ * by `npm run build:growmenu`, so two builds cut them out of the one vector
+ * and neither may decide the split for itself.
+ */
+const { W, H, ink, chars, gap: GAP, gapPx, meanW } = await sealChars({ log: console.log });
 console.log(`${SRC}: ${W}x${H}`);
 chars.forEach((c, i) => console.log(`  character ${i + 1}: ${c.w}x${c.h} at ${c.x0},${c.y0}`));
-
-/** The owner's own gap between them, as a fraction of a character's width. */
-const GAP = (() => {
-  const g = chars[1].y0 - chars[0].y1;
-  const mean = (chars[0].w + chars[1].w) / 2;
-  console.log(`  the gap they are drawn with: ${g}px against a ${Math.round(mean)}px character (${((100 * g) / mean).toFixed(1)}%)`);
-  return g / mean;
-})();
+console.log(`  the gap they are drawn with: ${gapPx}px against a ${Math.round(meanW)}px character (${((100 * GAP)).toFixed(1)}%)`);
 
 // ---- one square each ---------------------------------------------------------
 /**

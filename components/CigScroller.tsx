@@ -39,6 +39,7 @@ import { searchLineW, searchPacks } from '@/lib/cigSearch';
 import { CigSearch } from '@/components/CigSearch';
 import { CigDots, DOTS_CLOSE_MS, DOTS_REACH, DOTS_RISE } from '@/components/CigDots';
 import { CIG_TOGGLE_GLYPH } from '@/lib/cigToggleGlyph';
+import growmenu from '@/lib/growmenu-geometry.json';
 
 /**
  * The row of packs across the middle of the landing page.
@@ -759,12 +760,31 @@ export function CigScroller({
        */
       searchLine: searchLineW((dotsLeft - bar.frameLeft) / (s * bar.barFit)),
     };
-    // The logo menu is drawn at the same scale as the plus (the owner's
-    // 2026-09-19 ask), and it is a sibling of this component's controls, so
-    // the scale is published on the stage they share rather than threaded
-    // through the page. A page with no such menu simply has a property
-    // nothing reads.
-    el.parentElement?.style.setProperty('--logo-menu-zoom', String(s));
+    /*
+     * The logo menu is drawn at the same scale as the plus (the owner's
+     * 2026-09-19 ask), and it is a sibling of this component's controls, so
+     * the scale is published on the stage they share rather than threaded
+     * through the page. A page with no such menu simply has a property
+     * nothing reads.
+     *
+     * …EXCEPT ON A WINDOW TOO NARROW TO HOLD THE ROW, WHERE FITTING WINS.
+     * The button became the owner's 遠東 on 2026-09-23 — two cells and the
+     * gap between them, 71 design px where the mountain was 33 — so the
+     * canvas went 505 wide to 543 and the last word ran 15px off a 375px
+     * phone, clipped with nothing to say so. Measured before the clamp:
+     * "Terms of service" at x 295.3 with its box cut dead on the viewport.
+     * A button 3% smaller than the plus is a smaller departure than a word
+     * that is not all there, and this is the SHELF menu's own answer —
+     * `shelfMenuZoom`, which exists because a fourth word did this first.
+     *
+     * IT CANNOT BE A `min()` IN CSS: a zoom is unitless and CSS will not
+     * divide a length by a length. Recomputed here rather than in the menu
+     * because this is the one place that already runs on every measure and
+     * every resize.
+     */
+    const room = document.documentElement.clientWidth - growmenu.place.left * 2;
+    const fit = +(room / growmenu.frame.w).toFixed(4);
+    el.parentElement?.style.setProperty('--logo-menu-zoom', String(Math.min(s, fit)));
     setMenu((was) =>
       was &&
       was.s === next.s &&

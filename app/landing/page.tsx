@@ -6,7 +6,6 @@ import { LogoMenu } from '@/components/LogoMenu';
 import { PRESSABLE } from '@/lib/cigPages';
 import { CigScroller } from '@/components/CigScroller';
 import { SealButton } from '@/components/SealButton';
-import { CornerSeal } from '@/components/CornerSeal';
 import { SigilMark } from '@/components/SigilMark';
 import { currentUser } from '@/lib/auth';
 import { bigShares } from '@/lib/db';
@@ -51,7 +50,7 @@ export default async function LandingRoute({
       spec={LANDING_SPEC}
       device={device}
       showHitboxes={showHitboxes}
-      overlay={<><CigScroller withPages={PRESSABLE} marks={marks} /><LogoMenu menu="grow" /><CornerSeal /></>}
+      overlay={<><CigScroller withPages={PRESSABLE} marks={marks} /><LogoMenu menu="grow" /></>}
       decorative={['logo']}
     />
   );

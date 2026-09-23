@@ -87,7 +87,18 @@ type MenuGeometry = {
    * a raster there is exactly the mismatch the 遠東 logo was reported for
    * ("it changed opacity when you hovered it"). See `npm run build:growmenu`.
    */
-  badge?: { rule: number; mark: { src: string; x: number; y: number; w: number; h: number } };
+  /**
+   * The trigger, where the menu has a drawn one rather than a hit area over
+   * the page's own logo. `cells` is ONE OUTLINE PER BOX — the mountain has a
+   * single box, the landing page's 遠東 two — and `logoHit` is still the one
+   * press target round the lot of them.
+   */
+  badge?: {
+    rule: number;
+    label?: string;
+    cells?: { x: number; y: number; w: number; h: number }[];
+    mark: { src: string; x: number; y: number; w: number; h: number };
+  };
   /**
    * WHERE THE BUTTON GOES ON THE PAGE — not the canvas's corner. The grow
    * menu's canvas starts above and left of its button by `logoHit`, because
@@ -612,14 +623,13 @@ export function LogoMenu({ menu = 'bar', stop = 'base' }: { menu?: MenuName; sto
       <button
         type="button"
         className={geometry.badge ? 'logo-menu-logo logo-menu-badge' : 'logo-menu-logo'}
-        aria-label={geometry.badge ? 'Menu' : '遠東 — menu'}
+        aria-label={geometry.badge?.label ?? '遠東 — menu'}
         aria-expanded={phase === 'open'}
         style={{
           left: px(logoHit.x),
           top: px(logoHit.y),
           width: px(logoHit.w),
           height: px(logoHit.h),
-          ...(geometry.badge ? { borderWidth: px(geometry.badge.rule) } : null),
         }}
         onPointerEnter={(e) => {
           if (e.pointerType === 'mouse') void goForward();
@@ -648,6 +658,25 @@ export function LogoMenu({ menu = 'bar', stop = 'base' }: { menu?: MenuName; sto
           onLogoPress();
         }}
       >
+        {/* THE OUTLINES. They are children rather than the button's own border
+            because the seal is TWO boxes and one control — the corner seal's
+            own construction, and the owner's ("make them 1 button with 5px
+            margin between"). One press target, one focus ring, one hover, and
+            both boxes answer together. The mountain is the same markup with
+            one cell in it. */}
+        {badge?.cells?.map((cell) => (
+          <span
+            key={`${cell.x},${cell.y}`}
+            className="logo-menu-badge-cell"
+            style={{
+              left: px(cell.x - logoHit.x),
+              top: px(cell.y - logoHit.y),
+              width: px(cell.w),
+              height: px(cell.h),
+              borderWidth: px(badge.rule),
+            }}
+          />
+        ))}
       </button>
 
       {shown.map((box) =>

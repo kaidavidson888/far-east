@@ -74,7 +74,17 @@ no CSS framework (tokens in `app/globals.css`). Deploys to Vercel.
   writes `public/dotsmenu/frames` + `lib/dotsmenu-geometry.json` in a few
   seconds. `DOTS_DEBUG=1` draws the finished network instead of the frames and
   `DOTS_PROBE=1` dumps the buffer the canvas is measured in. See "THE DOTS" below.
-- `npm run build:sealglyph` — cuts the owner's 遠東 out of
+- `npm run build:sealglyph` — **ORPHANED SINCE 2026-09-23**, and kept
+  because it is the owner's tooling. It hollowed the two characters into a
+  RING for the corner seal; the seal is the landing page's menu button now
+  and is drawn FILLED by `build:growmenu`, so nothing imports
+  `lib/sealGlyph.ts`. Two things to know if it is ever wanted again: the
+  checked-in file was built with **`SEAL_MARK=58 SEAL_LINE=1.2`**, not the
+  script's own defaults (54 / 1.1), so a bare run does not reproduce it;
+  and the SPLIT — which character is which — moved to
+  `scripts/lib/seal-mark.mjs` so that this build and the menu bake cannot
+  disagree about it. Proved byte-identical across that move.
+  It cuts the owner's 遠東 out of
   `scripts/assets/logo-characters.svg`, lays the two characters side by side as
   their seal does and hollows them out into `lib/sealGlyph.ts`, the corner
   seal's mark. `SEAL_LINE=<px> SEAL_MARK=<px> SEAL_PREVIEW=1` draws it at
@@ -231,7 +241,90 @@ artwork to fit a frame — that scales the margins with it, which is the thing b
     **Only the words are the owner's drawing**: they are cut from
     `scripts/assets/monkey-grow.gif`'s last frame and everything that moves is generated —
     see the next entry. **And it does not close** (`LATCH`).
-- **SINCE 2026-09-19 THE LANDING MENU GROWS OUT OF A MOUNTAIN BUTTON, AND THE ANIMATION IS
+- **SINCE 2026-09-23 THE LANDING PAGE'S BUTTON IS THE OWNER'S 遠東, AND THE
+  MOUNTAIN IS GONE FROM THAT PAGE** (their ask: "move the character logo to
+  the left corner and make both characters and their outlines the same scale
+  as the mountain button. start the characters as filled black by default and
+  make it so as the branching animation plays the black from the fill of the
+  characters drains and fills the white in the outline before draining into
+  the branches that create the text buttons. leave the button empty of the
+  drained black after the animation is finished. Adjust the animation so the
+  branches grow from the character logo rather than the mountain button and
+  delete the mountain button on the landing page from the top left").
+  **EVERYTHING BELOW ABOUT THE MOUNTAIN STILL STANDS — on the SHELF**, whose
+  menu is the same bake and still carries it; on the landing page the mark
+  changed and nothing else did.
+  - **IT IS THE SAME MACHINE WITH A DIFFERENT MARK.** `MENUS[…].mark` in
+    `scripts/build-grow-menu.mjs` is `seal` or `mountain`, beside the word
+    list and for the same reason. The sky, the drain, the dial, the network,
+    the words and every proof are untouched: **the shelf's 142 frames came
+    back byte-identical** across this change, which is the test.
+  - **TWO CELLS, ONE BUTTON.** A cell IS the mountain's box — `BADGE.size`
+    square with the same 2px rule — which is what "the same scale as the
+    mountain button" says. `logoHit` is the PAIR (71 x 33 design px) and so
+    is the press target, the focus ring and the hover; `badge.cells` in the
+    geometry is one outline per box and `LogoMenu` draws what it is given,
+    so the mountain is the same markup with one cell in it. Measured at
+    1920x947: two 24.98px cells, the button 10,10, and **1.0997 times the
+    plus's height — the owner's tenth, unchanged**.
+  - **THE 5PX BETWEEN THEM CHANGED COORDINATE SYSTEM, and it had to.** On
+    the corner seal it was 5 PAGE px (the stylesheet divided it by the zoom)
+    because the two boxes were plain CSS. They are not: the mark DRAINS, so
+    it is drawn by the CANVAS — the same reason the mountain was — and a
+    page-px gap inside a zoomed canvas cannot be held constant. It is 5
+    DESIGN px now, exactly as the rule round it is 2 design px.
+  - **FILLED AT REST, INVERTED IN THE MIDDLE, EMPTY AT THE END**, which is
+    the owner's sentence and also, exactly, the mountain's own two hands on
+    one dial. `mtn` runs 1 -> 0 while `sky` comes up, so the black leaves the
+    characters and fills the paper round them: at the top of the fill each
+    cell is a solid black square with a WHITE 遠 or 東 cut out of it, which
+    is a carved seal the other way round. Then the level falls back down and
+    goes out into the branches.
+  - **AND IT KEEPS NOTHING — `keep` IS ZERO FOR THE SEAL.** "Leave the button
+    empty of the drained black" is the ask, and at this size it is also the
+    only thing that could read. The mountain keeps a contour half a page px
+    wide; a stroke of 遠 at 27px is about 2.5 device px across, so a contour
+    on both sides of it is the WHOLE STROKE and the character would not have
+    visibly drained at all — "drained" and "filled" would have been the same
+    picture. A hollow 遠東 needs the 58px the corner seal had, not 33.
+  - **EVERY CELL IS SEEDED ON ITS OWN**, and this is the trap in the drain.
+    `PHI` is a Dijkstra THROUGH THE INK and the two characters are not
+    connected to one another: seeded only where the network leaves, the far
+    character is never reached, sits at phi = 1 everywhere and drains in a
+    single frame at the very end. Each cell gets the exits nearest it. For
+    the mountain there is one cell covering the whole rect, so it is exactly
+    the two seeds it always had.
+  - **`FRAME` SAYS WHAT IS INSIDE AN OUTLINE AT ALL.** The mark is one
+    rectangle of the canvas spanning BOTH interiors, and the strip between
+    them — two rules and the 5px — is out of frame, so nothing is drawn
+    there. Read as paper it would fill with the rest and the button would
+    come up as one long box.
+  - **THE FILL REACHES THE RULE.** The mountain keeps `MARK_SIDE_AIR` at its
+    sides because it is a full-bleed picture that would otherwise merge with
+    three sides of its box; here what fills is "the white in the outline", so
+    the frame IS the interior and the air goes round the CHARACTER inside it.
+  - **THE TWO MENUS NO LONGER SHARE ONE STILL.** `badge.webp` was one file
+    because both buttons were the mountain and frame 0 is the mark alone.
+    The shelf has `public/shelfmenu/badge.webp` now — byte-identical to the
+    238 bytes it used to borrow, checked — and the landing page's is the seal.
+  - **THE MENU IS CLAMPED TO THE WINDOW NOW, and the wider button is why.**
+    The canvas went 505 design px to 543, and at 375px "Terms of service" ran
+    15px off the page, clipped with nothing to say so (measured: its box cut
+    dead on the viewport at x 295.3). `CigScroller` takes `--logo-menu-zoom`
+    down to `(clientWidth - 20) / frame.w` where that is smaller, which is
+    the SHELF menu's own answer (`shelfMenuZoom`, which exists because a
+    fourth word did this first). It cannot be a `min()` in CSS — a zoom is
+    unitless and CSS will not divide a length by a length. **It does not bite
+    above about 400px wide**: measured 0.7573 and untouched at 1920, 0.6538 at
+    375 with the whole row on the page. A button 3% smaller than the plus is a
+    smaller departure than a word that is not all there.
+  - **THE SHELF LINK WENT WITH THE CORNER.** The 遠東 in the top right led to
+    `/shelf` and it is not there any more; this button opens the menu, and
+    the menu has no SHELF word because none was asked for. `SealButton` on
+    the row's own bar still goes there on its second press. **If the owner
+    wants it back it is a fourth word, the way HOME is on the shelf.**
+
+- **SINCE 2026-09-19 THE LANDING MENU GREW OUT OF A MOUNTAIN BUTTON, AND THE ANIMATION IS
   GENERATED RATHER THAN THE GIF'S.** Three asks in a row got here. First: replace the
   character logo "and all instances of it in the animation" with "an outline box with a
   capital I from the webfont bolded inside", black, 10px off the page's top and left; the
@@ -1478,6 +1571,13 @@ pressed again".
   and then the action sends the reader to the splash with `next=/landing`,
   which is the shelf's own rule and not this menu's business.
 
+**THE CORNER SEAL IS GONE — ITS CHARACTERS ARE THE MENU BUTTON NOW**
+(2026-09-23). See "THE LANDING PAGE'S BUTTON IS THE OWNER'S 遠東" in the
+logo-menu section above;
+what follows is the corner button it was, kept because every measurement in
+it still describes the marks, and `components/CornerSeal.tsx` is one
+`git show` away.
+
 **THE CORNER SEAL** (three asks of the owner's on 2026-09-20, with their seal
 artwork attached: "turn just the chinese characters in this image into a
 square seal button 2x as big as the mountain button in the right corner of
@@ -1600,7 +1700,7 @@ between"). `components/CornerSeal.tsx`, `lib/sealGlyph.ts`,
   - **And nothing is lost at the SIZE IT IS DRAWN either**: rendered at 42px
     (the mark on a 1x screen), 58 and 84, the palest piece of either character
     still reaches 206 of 255 — none is faint, none invisible.
-- **It goes to the shelf** (the owner chose, asked). A plain `<Link>`, not a
+- **It WENT to the shelf** (the owner chose, asked). A plain `<Link>`, not a
   button: it navigates, so a keyboard and a middle click should both get what
   they expect. The site's OTHER seal — `SealButton`, the animated one on the
   row's bar — still leads there too, on its second press.

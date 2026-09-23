@@ -22,8 +22,16 @@
   },
   "badge": {
     "rule": 2,
+    "cells": [
+      {
+        "x": 0,
+        "y": 5,
+        "w": 33,
+        "h": 33
+      }
+    ],
     "mark": {
-      "src": "/growmenu/badge.webp",
+      "src": "/shelfmenu/badge.webp",
       "x": 3,
       "y": 12,
       "w": 27,

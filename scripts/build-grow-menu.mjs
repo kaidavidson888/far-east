@@ -59,6 +59,7 @@ import { readFileSync, writeFileSync, mkdirSync, rmSync } from 'node:fs';
 import sharp from 'sharp';
 import { openMenuGif } from './lib/menu-gif.mjs';
 import { badgeMark, markAspect, distanceTo } from './lib/badge-mark.mjs';
+import { sealChars, sealCoverage } from './lib/seal-mark.mjs';
 import {
   mulberry32, spline, curl, channel, atArc, frontArc, widthAt, sprout, linkTips, translate, Ink, smoothstep, easeInOut, easeIn, vn2,
 } from './lib/ink-growth.mjs';
@@ -93,9 +94,16 @@ const MENUS = {
     framesDir: 'public/growmenu/frames',
     geometry: 'lib/growmenu-geometry.json',
     dir: '/growmenu/frames',
-    /** the one that cuts the mark's resting still; the other shares it */
     badge: 'public/growmenu/badge.webp',
     badgeSrc: '/growmenu/badge.webp',
+    /**
+     * THE LANDING PAGE'S BUTTON IS THE OWNER'S 遠東 (their 2026-09-23 ask:
+     * "move the character logo to the left corner and make both characters
+     * and their outlines the same scale as the mountain button … delete the
+     * mountain button on the landing page from the top left"). Two cells,
+     * one character each, filled solid at rest — see THE SEAL below.
+     */
+    mark: 'seal',
     items: [
       { id: 'about', label: 'About us', href: '/about', from: 'gif', lines: 1 },
       { id: 'privacy', label: 'Privacy policy', href: '/privacy', from: 'gif', lines: 2 },
@@ -107,14 +115,18 @@ const MENUS = {
     geometry: 'lib/shelfmenu-geometry.json',
     dir: '/shelfmenu/frames',
     /*
-     * NO BADGE OF ITS OWN. The resting still is cut out of frame 0, and frame
-     * 0 is the mark alone — its pixels depend on BADGE.size, BADGE_RULE,
-     * MARK_SIDE_AIR and the vector, not on a word. Measured: the two bakes'
-     * badge.webp come out byte-identical, so the shelf points at the grow
-     * menu's file rather than shipping a second copy of the same 238 bytes.
+     * IT HAS ITS OWN STILL AGAIN. The two menus shared one file while both
+     * buttons were the mountain — frame 0 is the mark alone, and the mark
+     * was a function of BADGE.size, BADGE_RULE, MARK_SIDE_AIR and the one
+     * vector, so the two bakes produced the same 238 bytes and the shelf
+     * pointed at the landing page's copy. The landing page's button is the
+     * seal now and this one is still the mountain, so there is nothing left
+     * to share.
      */
-    badge: null,
-    badgeSrc: '/growmenu/badge.webp',
+    badge: 'public/shelfmenu/badge.webp',
+    badgeSrc: '/shelfmenu/badge.webp',
+    /** THE SHELF KEEPS THE MOUNTAIN: the owner's ask named the landing page. */
+    mark: 'mountain',
     items: [
       { id: 'about', label: 'About us', href: '/about', from: 'gif', lines: 1 },
       { id: 'privacy', label: 'Privacy policy', href: '/privacy', from: 'gif', lines: 2 },
@@ -174,6 +186,30 @@ const BADGE_RULE = 2;
  * mountain on the ground rather than floating in a slot.
  */
 const MARK_SIDE_AIR = 1;
+
+/**
+ * THE SEAL: TWO CELLS, ONE CHARACTER EACH — the owner's 2026-09-23 ask.
+ *
+ * "make both characters and their outlines the same scale as the mountain
+ * button", so a cell IS the mountain's box: `BADGE.size` square with the same
+ * `BADGE_RULE` round it. The button is the PAIR, and everything that used to
+ * measure from the button's right edge now measures from `BUTTON_W`.
+ *
+ * THE 5PX BETWEEN THEM IS THE OWNER'S NUMBER IN THE DRAWING'S OWN PX, and it
+ * had to move coordinate systems to get here. On the corner seal it was 5
+ * PAGE px — the stylesheet divided it by the zoom, so it held at 5 on screen
+ * whatever the row was doing — and that was possible because the two boxes
+ * were plain CSS. They are not: the mark DRAINS, so it is drawn by the canvas
+ * (the same reason the mountain is), and a page-px gap inside a zoomed canvas
+ * cannot be held constant. So it is 5 design px, exactly as the rule round it
+ * is 2 design px, and it scales with the button like everything else drawn
+ * here.
+ */
+const SEAL_GAP = 5;
+const CELLS = MENU.mark === 'seal' ? 2 : 1;
+const BUTTON_W = CELLS * BADGE.size + (CELLS - 1) * SEAL_GAP;
+/** Each cell's box, in the button's own coordinates. */
+const CELL_X = Array.from({ length: CELLS }, (_, i) => BADGE.x + i * (BADGE.size + SEAL_GAP));
 
 /**
  * The words of THIS menu, in reading order along the row.
@@ -329,7 +365,7 @@ const TOP_Y0 = Math.max(0, BOX.y0 - 30);
 const TOP_Y1 = BOX.y1;
 const aboutMid = (aboutLine.xTop + aboutLine.base) / 2;
 const pieces = [];
-let cursor = BADGE.x + BADGE.size;
+let cursor = BADGE.x + BUTTON_W;
 const addPiece = (p) => {
   pieces.push(p);
   cursor = p.newX0 + (p.x1 - p.x0) * p.sx;
@@ -426,8 +462,8 @@ const inkRightOf = (wi) => Math.max(...wordPieces[wi].map(({ p, L }) => mapX(p, 
  */
 const ROW_GAP = inkLeftOf(2) - inkRightOf(1);
 {
-  const was = ITEMS.map((_, wi) => (wi ? inkLeftOf(wi) - inkRightOf(wi - 1) : inkLeftOf(0) - (BADGE.x + BADGE.size)));
-  let want = BADGE.x + BADGE.size + ROW_GAP;
+  const was = ITEMS.map((_, wi) => (wi ? inkLeftOf(wi) - inkRightOf(wi - 1) : inkLeftOf(0) - (BADGE.x + BUTTON_W)));
+  let want = BADGE.x + BUTTON_W + ROW_GAP;
   for (let wi = 0; wi < ITEMS.length; wi += 1) {
     const shift = want - inkLeftOf(wi);
     for (const { p } of wordPieces[wi]) p.newX0 += shift;
@@ -497,7 +533,7 @@ const LAID = topBoxes;
  * the top row goes out of the right-hand side on the row's middle line, the
  * stack out of the foot.
  */
-const EXIT_TOP = { x: BADGE.size, y: ROW_MIDDLE };
+const EXIT_TOP = { x: BADGE.x + BUTTON_W, y: ROW_MIDDLE };
 /** How the channels sprout. Lengths and gaps are page px. */
 const GROWTH = {
   step: 0.5,
@@ -711,14 +747,83 @@ const WORD = BOXES.map((b) => {
 }
 
 // ---- the mark, and how it drains -------------------------------------------
-const ASPECT = await markAspect();
-const MARK_W = BADGE.size - BADGE_RULE * 2 - MARK_SIDE_AIR * 2;
-const MARK_H = MARK_W / ASPECT;
-const MW = Math.round(MARK_W * SS), MH = Math.round(MARK_H * SS);
-const MX = Math.round((BADGE.x + BADGE.size / 2) * SS - MW / 2);
-const MY = Math.round((BADGE.y + BADGE.size - BADGE_RULE + SHIFT) * SS) - MH;
-const mark = await badgeMark(MW, MH, BADGE_RULE * SS);
-console.log(`  the mark: ${MARK_W}x${MARK_H.toFixed(2)} page px at ${MX / SS},${(MY / SS).toFixed(2)} (${MW}x${MH} device)`);
+/**
+ * THE MARK IS ONE RECTANGLE OF THE CANVAS whichever button this is, and
+ * `FRAME` says which of its pixels are inside the outline at all.
+ *
+ *   mountain  one cell; the rect is the mark's own box, standing on the
+ *             inner foot with a pixel of air at each side, and every pixel
+ *             of it is in frame.
+ *   seal      two cells; the rect spans BOTH interiors, and the strip
+ *             between them — the two rules and the owner's 5px — is out of
+ *             frame, so nothing is ever drawn there.
+ *
+ * Out of frame the painter draws nothing, which is what keeps the gap clear
+ * while the two boxes fill.
+ */
+let MARK_W; let MARK_H; let MW; let MH; let MX; let MY; let mark; let FRAME;
+/** Each cell's columns within the rect, in device px — the seal has two. */
+let CELL_RANGE;
+if (MENU.mark === 'seal') {
+  /*
+   * THE FILL REACHES THE RULE. The mountain's mark keeps a pixel of air at
+   * its sides because it is a full-bleed picture and would otherwise merge
+   * with three sides of its box — but here what fills is "the white in the
+   * outline" (the owner's words), so the frame IS the interior and the air
+   * goes round the CHARACTER inside it instead.
+   */
+  MARK_W = BUTTON_W - BADGE_RULE * 2;
+  MARK_H = BADGE.size - BADGE_RULE * 2;
+  MW = Math.round(MARK_W * SS);
+  MH = Math.round(MARK_H * SS);
+  MX = Math.round((BADGE.x + BADGE_RULE) * SS);
+  MY = Math.round((BADGE.y + BADGE_RULE + SHIFT) * SS);
+  const IN = Math.round((BADGE.size - BADGE_RULE * 2) * SS); // a cell's interior
+  const SIDE = Math.round((BADGE.size - BADGE_RULE * 2 - MARK_SIDE_AIR * 2) * SS);
+  const chars = await sealChars({ log: (m) => console.log(m) });
+  const cov = sealCoverage(chars, SIDE);
+  if (cov.length !== CELLS) fail(`the vector gave ${cov.length} characters for ${CELLS} cells`);
+  const ink = new Float32Array(MW * MH);
+  FRAME = new Uint8Array(MW * MH);
+  for (let c = 0; c < CELLS; c++) {
+    const ox = Math.round(c * (BADGE.size + SEAL_GAP) * SS); // the cell's interior, in the rect
+    for (let y = 0; y < IN; y++) for (let x = 0; x < IN; x++) {
+      const X = ox + x, Y = y;
+      if (X < 0 || Y < 0 || X >= MW || Y >= MH) continue;
+      FRAME[Y * MW + X] = 1;
+    }
+    const air = Math.round(MARK_SIDE_AIR * SS);
+    for (let y = 0; y < SIDE; y++) for (let x = 0; x < SIDE; x++) {
+      const v = cov[c][y * SIDE + x];
+      if (v <= 0) continue;
+      const X = ox + air + x, Y = air + y;
+      if (X < 0 || Y < 0 || X >= MW || Y >= MH) continue;
+      ink[Y * MW + X] = v;
+    }
+  }
+  CELL_RANGE = Array.from({ length: CELLS }, (_, c) => {
+    const ox = Math.round(c * (BADGE.size + SEAL_GAP) * SS);
+    return [ox, ox + IN];
+  });
+  // the characters ARE the silhouette; there is no second detail to keep
+  mark = { ink, body: ink, tipi: new Float32Array(MW * MH) };
+  console.log(
+    `  the mark: ${CELLS} cells of ${BADGE.size}px with ${SEAL_GAP} between,`
+    + ` each holding a ${SIDE / SS}px character in its ${IN / SS}px interior`
+    + ` (the rect ${MARK_W}x${MARK_H} page px at ${MX / SS},${MY / SS})`,
+  );
+} else {
+  const ASPECT = await markAspect();
+  MARK_W = BADGE.size - BADGE_RULE * 2 - MARK_SIDE_AIR * 2;
+  MARK_H = MARK_W / ASPECT;
+  MW = Math.round(MARK_W * SS); MH = Math.round(MARK_H * SS);
+  MX = Math.round((BADGE.x + BADGE.size / 2) * SS - MW / 2);
+  MY = Math.round((BADGE.y + BADGE.size - BADGE_RULE + SHIFT) * SS) - MH;
+  mark = await badgeMark(MW, MH, BADGE_RULE * SS);
+  FRAME = new Uint8Array(MW * MH).fill(1);
+  CELL_RANGE = [[0, MW]];
+  console.log(`  the mark: ${MARK_W}x${MARK_H.toFixed(2)} page px at ${MX / SS},${(MY / SS).toFixed(2)} (${MW}x${MH} device)`);
+}
 
 /**
  * WHAT IS LEFT WHEN IT HAS DRAINED — the traces.
@@ -730,7 +835,22 @@ console.log(`  the mark: ${MARK_W}x${MARK_H.toFixed(2)} page px at ${MX / SS},${
  */
 const CONTOUR = 1.1 * SS * 0.5; // half a page px of line
 const keep = new Float32Array(MW * MH);
-{
+if (MENU.mark === 'seal') {
+  /**
+   * THE SEAL KEEPS NOTHING: "leave the button empty of the drained black
+   * after the animation is finished" (the owner, 2026-09-23). So `keep`
+   * stays at zero and the two cells end the run as empty outlined squares.
+   *
+   * IT COULD NOT HAVE BEEN OTHERWISE AT THIS SIZE, which is worth knowing
+   * before anyone tries to give the characters the mountain's traces. The
+   * mountain keeps a contour half a page px wide, and at 27px a stroke of
+   * 遠 is about 2.5 device px across — so a contour on BOTH sides of it is
+   * the whole stroke. The character would not have visibly drained at all:
+   * "drained" and "filled" would have been the same picture. A hollow 遠東
+   * needs the 58px the corner seal had (lib/sealGlyph.ts, orphaned now),
+   * not the mountain's 33.
+   */
+} else {
   const solid = new Uint8Array(MW * MH);
   for (let i = 0; i < MW * MH; i++) solid[i] = mark.body[i] > 0.5 ? 1 : 0;
   const outside = new Uint8Array(MW * MH);
@@ -780,19 +900,42 @@ const PHI = (() => {
     for (let i = 0; i < MW * MH; i++) out[i] = solid(i) ? 0 : 1;
     return distanceTo(out, MW, MH);
   })();
+  /**
+   * EVERY CELL IS SEEDED ON ITS OWN, and that is not tidiness.
+   *
+   * This is a Dijkstra THROUGH THE INK, and the seal's two characters are
+   * not connected to one another: seeded only where the network leaves, the
+   * far character is never reached, stays at phi = 1 for every pixel, and so
+   * drains in one frame at the very end instead of emptying with its
+   * neighbour. For the mountain there is one cell covering the whole rect,
+   * so this is exactly the two seeds it always had.
+   *
+   * The exits are the button's right-hand side on the row's middle line —
+   * where the channels actually leave — and the foot under each cell, so a
+   * character empties toward the bottom right, which is the way the ink is
+   * going.
+   */
   const seeds = [];
-  for (const p of [{ x: BADGE.size, y: ROW_MIDDLE + SHIFT }, { x: BADGE.x + BADGE.size / 2, y: BADGE.y + BADGE.size + SHIFT }]) {
-    const px = p.x * SS - MX, py = p.y * SS - MY;
-    let best = -1, bestD = INF;
-    for (let i = 0; i < MW * MH; i++) {
-      if (!solid(i)) continue;
-      const x = i % MW, y = (i / MW) | 0;
-      const dd = (x - px) ** 2 + (y - py) ** 2;
-      if (dd < bestD) { bestD = dd; best = i; }
+  for (let c = 0; c < CELL_RANGE.length; c++) {
+    const [cx0, cx1] = CELL_RANGE[c];
+    const exits = [
+      { x: BADGE.x + BUTTON_W, y: ROW_MIDDLE + SHIFT },
+      { x: CELL_X[c] + BADGE.size / 2, y: BADGE.y + BADGE.size + SHIFT },
+    ];
+    for (const p of exits) {
+      const px = p.x * SS - MX, py = p.y * SS - MY;
+      let best = -1, bestD = INF;
+      for (let i = 0; i < MW * MH; i++) {
+        if (!solid(i)) continue;
+        const x = i % MW, y = (i / MW) | 0;
+        if (x < cx0 || x >= cx1) continue;
+        const dd = (x - px) ** 2 + (y - py) ** 2;
+        if (dd < bestD) { bestD = dd; best = i; }
+      }
+      if (best >= 0) seeds.push(best);
     }
-    if (best >= 0) seeds.push(best);
   }
-  if (seeds.length !== 2) fail('the mark has no ink at one of the two exits');
+  if (seeds.length !== CELL_RANGE.length * 2) fail(`the mark has no ink at ${CELL_RANGE.length * 2 - seeds.length} of its exits`);
   // Dijkstra through the ink, 8-connected, cheapest-first
   const q = [...seeds];
   for (const s of seeds) d[s] = 0;
@@ -856,20 +999,25 @@ const SKY_CLEAR = (() => {
 })();
 const LEVEL = (() => {
   const lv = new Float32Array(MW * MH);
-  const sky = (i) => mark.body[i] < 0.5;
+  // OUT OF FRAME IS NOT SKY. For the seal the strip between the two cells is
+  // outside both outlines and must stay empty; reading it as paper would fill
+  // the gap in with the rest and the button would come up one long box.
+  const sky = (i) => FRAME[i] === 1 && mark.body[i] < 0.5;
   let ySky = 0;
   for (let y = 0; y < MH; y++) for (let x = 0; x < MW; x++) if (sky(y * MW + x)) ySky = Math.max(ySky, y);
   if (!ySky) fail('the mark has no sky to fill');
   for (let y = 0; y < MH; y++) {
     for (let x = 0; x < MW; x++) {
       const i = y * MW + x;
+      if (!FRAME[i]) { lv[i] = 0; continue; }
       // Kept clear of the dial's own ends by the soft edge: at rest (1) every
       // pixel of the mountain must be SOLID and every pixel of the sky empty,
       // and at 0 the mountain must be gone rather than half there.
       lv[i] = sky(i) ? 1.05 + 0.95 * (1 - y / ySky) : 0.08 + 0.82 * (1 - PHI[i]);
     }
   }
-  console.log(`  the sky: ${Math.round((100 * lv.filter((v) => v > 1).length) / (MW * MH))}% of the mark's frame, filling to y=0 from y=${ySky}`);
+  const inFrame = FRAME.reduce((s, v) => s + v, 0);
+  console.log(`  the sky: ${Math.round((100 * lv.filter((v) => v > 1).length) / inFrame)}% of the mark's frame, filling to y=0 from y=${ySky}`);
   return lv;
 })();
 
@@ -1036,6 +1184,7 @@ for (let f = 0; f < FRAMES; f++) {
   for (let y = 0; y < MH; y++) {
     for (let x = 0; x < MW; x++) {
       const i = y * MW + x;
+      if (!FRAME[i]) continue; // the strip between the seal's two cells
       const isSky = LEVEL[i] > 1;
       // the sky is paper and has no coverage of its own, so it inks to
       // whatever the silhouette leaves — the two sum to a solid frame with no
@@ -1140,7 +1289,7 @@ for (let f = 0; f < FRAMES; f++) {
 console.log(`wrote ${FRAMES} frames to ${FRAMES_DIR} (${Math.round(total / 1024)}KB, ${Math.round(total / FRAMES / 1024)}KB each)`);
 
 console.log('  the menu:');
-console.log(`    button ${BADGE.x},${SHIFT} ${BADGE.size}x${BADGE.size}`);
+console.log(`    button ${BADGE.x},${SHIFT} ${BUTTON_W}x${BADGE.size}${CELLS > 1 ? ` (${CELLS} cells of ${BADGE.size} with ${SEAL_GAP} between)` : ""}`);
 for (const b of BOXES) console.log(`    ${b.id.padEnd(12)} ${String(b.x).padStart(7)},${String(b.y).padStart(6)} ${b.w}x${b.h}`);
 
 writeFileSync(
@@ -1159,9 +1308,20 @@ writeFileSync(
       // it shrinks with the zoom while the page's margin must not. The
       // stylesheet takes it off (`--logo-menu-ox/oy`).
       place: { left: MARGIN, top: MARGIN },
-      logoHit: { x: BADGE.x, y: SHIFT, w: BADGE.size, h: BADGE.size },
+      logoHit: { x: BADGE.x, y: SHIFT, w: BUTTON_W, h: BADGE.size },
       badge: {
         rule: BADGE_RULE,
+        /** What the button is CALLED, which only the bake knows. */
+        label: MENU.mark === 'seal' ? '遠東 — menu' : 'Menu',
+        /**
+         * ONE OUTLINE PER CELL, AND STILL ONE BUTTON. `logoHit` is the press
+         * target, the focus ring and the hover — the pair — and these are the
+         * boxes drawn inside it. The mountain has one and the seal two; the
+         * page draws what it is given rather than knowing which menu it is.
+         * (This is how the corner seal was built too: "make them 1 button
+         * with 5px margin between".)
+         */
+        cells: CELL_X.map((x) => ({ x, y: SHIFT, w: BADGE.size, h: BADGE.size })),
         // the mark as the page draws it at rest, in the canvas's coordinates
         // THE SIZE IS THE RASTER'S OWN, not the size it was worked out from:
         // the mark is rounded to whole device px when it is drawn, and a page
