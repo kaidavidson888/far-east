@@ -179,6 +179,44 @@ const HAND_CROP = {
   '255_Rothmans-King_Size': { x0: 220, y0: 141, x1: 678, y1: 851 },
   // A pale pack: its white top, emblem and all, read as paper and went.
   '144_Zhenlong-Ice_Pure': { x0: 291, y0: 102, x1: 732, y1: 921 },
+
+  // THE PAPER DOWN THE RIGHT-HAND SIDE, at last (the owner's 2026-09-23:
+  // "make sure theres no white between the pack and the black on user
+  // hover"). These are the Lotus / Nanjing / Taishan / Huanghelou block this
+  // file and CLAUDE.md already describe: the supplied cut-out's ALPHA runs
+  // past the pack into a margin of the photograph's own paper, opaque, so it
+  // came along, and `tighten()` declines to peel it because on a pale pack
+  // the boundary between its own cream surface and the paper beside it is
+  // exactly the thing not to guess at. Invisible on white paper; against the
+  // black band that now fills the landing row's frame on hover it is a white
+  // strip between the pack and the black.
+  //
+  // MEASURED, NOT GUESSED, and only on the side that is wrong. The paper is
+  // FLAT — nine rows sampled down each column agree to within 4..16 levels —
+  // and the pack arrives as a shadow ramp and then a jump, so the edge is
+  // found by walking in until a column departs from the paper's own level and
+  // STAYS departed. Every box below was then checked both ways: the column at
+  // the new edge is still flat paper (so nothing is cut off the pack) and the
+  // column twelve pixels inside is printed surface (so the pack really is
+  // there). The other three sides keep the build's own answer, as the entries
+  // above do — only the cut side is stated.
+  //
+  // `240_Nanjing-Black` was measured with them and LEFT ALONE: its proposed
+  // edge read 192 where the others read 221..235, i.e. already on the pack's
+  // own shading rather than on paper. A 5% tidier crop is not worth a risk of
+  // eating a dark pack's edge.
+  '222_Huanghelou-Fresh_Breeze': { x0: 238, y0: 130, x1: 747, y1: 921 },
+  '223_Huanghelou-1916': { x0: 233, y0: 139, x1: 745, y1: 921 },
+  '225_Huanghelou-Hongjing': { x0: 231, y0: 139, x1: 721, y1: 921 },
+  '226_Huanghelou-Sakura': { x0: 231, y0: 132, x1: 733, y1: 921 },
+  '227_Huanghelou-Galaxy': { x0: 231, y0: 138, x1: 724, y1: 921 },
+  '228_Huanghelou-Heavenly_Fragrance': { x0: 229, y0: 143, x1: 720, y1: 921 },
+  '229_Panda-Classic': { x0: 244, y0: 102, x1: 738, y1: 904 },
+  '232_Lotus-Green': { x0: 242, y0: 119, x1: 729, y1: 904 },
+  '234_Lotus-Silver': { x0: 242, y0: 128, x1: 730, y1: 904 },
+  '236_Nanjing-Blue': { x0: 258, y0: 146, x1: 713, y1: 874 },
+  '239_Nanjing-Pink': { x0: 256, y0: 105, x1: 701, y1: 874 },
+  '241_Taishan-Baisha': { x0: 256, y0: 144, x1: 703, y1: 874 },
 };
 
 /**

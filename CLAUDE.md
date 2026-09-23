@@ -680,12 +680,44 @@ pack, always behind at least one line of print, bevel or shadow. It is capped at
 a fifth of a side and held to the same standard as squaring off: a peel that
 leaves something no longer box-shaped has eaten the pack and is dropped whole.
 
-**Where it declines to peel, that is the answer, not a failure.** On a pale pack —
-Lotus Silver, Taishan Baisha, Nanjing Blue — the boundary between the pack's own
-cream surface and the paper beside it is exactly the thing not to guess at, so
-those keep their margin. The instruction has always been that the box wins over
-the tidier crop. The build lists every peel, deepest first, so an outlier is
-visible rather than silent.
+**Where it declines to peel, that is the answer, not a failure.** On a pale pack
+the boundary between the pack's own cream surface and the paper beside it is
+exactly the thing not to guess at, so `tighten()` leaves it. The instruction has
+always been that the box wins over the tidier crop. The build lists every peel,
+deepest first, so an outlier is visible rather than silent.
+
+**SO THE TWELVE IT DECLINED ON ARE HAND CROPS NOW** (the owner's 2026-09-23
+"make sure theres no white between the pack and the black on user hover"). What
+`tighten()` left behind on the Lotus / Nanjing / Taishan / Huanghelou block was
+5 to 13% of each pack's WIDTH in paper down the right-hand side — invisible on
+white paper for a year, and plain the moment the landing row's frame started
+filling black on hover: a white strip between the pack and the black.
+- **MEASURED, NOT GUESSED, WHICH IS WHY IT IS ALLOWED.** The paper is FLAT —
+  nine rows sampled down a column agree to within 4..16 levels — and the pack
+  arrives as a shadow ramp and then a jump. So the edge is found by walking in
+  from the crop until a column departs from the paper's own level and STAYS
+  departed, and then each box is checked BOTH WAYS: the column at the new edge
+  must still be flat paper (nothing cut off the pack) and the column twelve
+  pixels inside must be printed surface (the pack really is there). Measured
+  after: outside every new edge, saturation 4..9 and not one row below level
+  219; immediately inside, saturation 22..82 with 92% of rows dark.
+- **ONLY THE SIDE THAT IS WRONG IS STATED.** The other three keep the build's
+  own answer, as every earlier HAND_CROP entry does.
+- **`240_Nanjing-Black` WAS MEASURED WITH THEM AND LEFT ALONE**: its proposed
+  edge read 192 where the other twelve read 221..235 — already on the pack's
+  own shading rather than on paper. A 5% tidier crop is not worth risking a
+  dark pack's edge.
+- **THE AUDIT FLAGS THREE OF THEM AND THAT IS THE LIST DOING ITS JOB**, not a
+  clip: 225, 227 and 228 report a right strip that is 27..39% "ink", which is
+  the pack's own edge shading sitting right at the boundary. `audit:cigs`
+  separately reports **0 cut into a pack's face**. Its ink list is read, not
+  obeyed.
+- **Result: 16 packs had a pale edge over 5% of their span; 6 do now**, and
+  all six are packs whose own edge is pale — Septwolves' silver top, Ashima's
+  cream brand panel, Hongtashan's white warning lines, Nanjing Pink's pale
+  top. There is nothing there to remove: that white IS the pack, and covering
+  it would be cutting into the artwork. `33_Furongwang` and
+  `74_Huanghelou-Scenic_Wonder` were measured too and are already tight.
 
 **`npm run audit:cigs` checks every crop against its source, and it found six
 clips the build's own report could not.** The owner saw packs in the row cut
@@ -3115,12 +3147,13 @@ black").
 - **THE MOUNTAIN BUTTON'S OWN HOVER IS STILL THE ANIMATION**, not a fill. It
   has never had a colour hover — its answer to a pointer is to unfold — and
   the inversion is applied to the page's own outlined controls.
-- **SIXTEEN PACKS SHOW A WHITE PAPER FRINGE ON RED.** Every one of the 247
-  marks is a fully opaque photograph, and the loose cut-outs this file already
-  documents (the Lotus / Nanjing / Taishan / Huanghelou block) carry a margin
-  of the photograph's own white paper. On white that was invisible; on red it
-  is a white border on about 6% of the shelf. It is a crop question
-  (`npm run audit:cigs`, `HAND_CROP`), not a CSS one.
+- **THE WHITE PAPER FRINGE IS GONE** (2026-09-23). Sixteen packs used to carry
+  a margin of the photograph's own paper at an edge — invisible on the landing
+  page's white, a white border against this page's black. Twelve of them were
+  hand-cropped off; see "SO THE TWELVE IT DECLINED ON ARE HAND CROPS NOW"
+  above. **Six packs still have a pale edge and always will**: that white is
+  the pack's own (Septwolves' silver top, Ashima's cream panel), and removing
+  it would be cutting into the artwork.
 
 **THE MOUNTAIN BUTTON AND ITS MENU ARE DRAWN WHITE, AND THAT IS ONE VALUE.**
 - `INK` in `LogoMenu` is a per-menu table beside `LATCH` and `PLAY_RATE`, for
