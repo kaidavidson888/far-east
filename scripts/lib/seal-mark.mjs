@@ -98,27 +98,122 @@ export async function sealChars({ log = () => {} } = {}) {
  * and it costs about a part in five hundred: the two are drawn 639x637 and
  * 675x675. It is done HERE, on the way into the square, so nothing
  * downstream has to know the characters were not square to begin with.
+ *
+ * With `line` — a fraction of the square's own side — what comes back is the
+ * RING instead of the silhouette: see `sealRing`.
  */
 const OVER = 8;
-export function sealCoverage({ ink, chars }, side) {
+
+/**
+ * The character as a binary square at `OVER` times the asked-for size, with
+ * `pad` supersampled px of PAPER round it.
+ *
+ * THE PAD IS NOT OPTIONAL WHEREVER A DISTANCE IS TAKEN. A character is
+ * cropped to its own ink, so its outermost strokes LIE ON the square's edges,
+ * and a distance transform only sees the buffer it is given: with no pad it
+ * reads "off the top" as more ink rather than as paper, the top stroke is
+ * nowhere near any paper, and it comes out with no line along it. The owner
+ * saw exactly that on the corner seal — "at the top of both characters and at
+ * the very bottom there seems to be some sort of clipping" — and it is the
+ * same trap the mountain's `keep` field fell into. Three scripts now.
+ */
+function square(ink, c, side, pad) {
   const S = side * OVER;
+  const B = S + pad * 2;
+  const big = new Uint8Array(B * B);
+  for (let y = 0; y < S; y++) {
+    const sy = c.y0 + Math.min(c.h - 1, Math.floor((y / S) * c.h));
+    for (let x = 0; x < S; x++) {
+      const sx = c.x0 + Math.min(c.w - 1, Math.floor((x / S) * c.w));
+      if (ink(sx, sy)) big[(y + pad) * B + x + pad] = 1;
+    }
+  }
+  return { big, S, B, pad };
+}
+
+/** Box-filter a padded supersampled square down to coverage at `side`. */
+function down({ big, B, pad }, side) {
+  const cov = new Float32Array(side * side);
+  for (let y = 0; y < side; y++) for (let x = 0; x < side; x++) {
+    let n = 0;
+    for (let sy = 0; sy < OVER; sy++) for (let sx = 0; sx < OVER; sx++) {
+      n += big[(y * OVER + sy + pad) * B + x * OVER + sx + pad];
+    }
+    cov[y * side + x] = n / (OVER * OVER);
+  }
+  return cov;
+}
+
+export function sealCoverage({ ink, chars }, side) {
+  return chars.map((c) => down(square(ink, c, side, 0), side));
+}
+
+/**
+ * THE SAME CHARACTERS AS AN OUTLINE — the silhouette less the silhouette
+ * eroded by the line's width, which is what "an outline of the characters"
+ * is (the owner's 2026-09-23 "when the black drains from the characters it
+ * leave behind an outline of the characters"). One even-odd band following
+ * every edge, outside and in.
+ *
+ * `line` is a fraction of the square's own side, so the outline is the same
+ * weight relative to the character at any size it is asked for. The corner
+ * seal's proven value is 1.2 of a 58px mark; `SEAL_RING` overrides it.
+ *
+ * IT IS TAKEN AT `OVER` TIMES THE FINAL SIZE AND FILTERED DOWN, and that is
+ * the whole reason this is not done on the small raster. At the size the menu
+ * draws these, the line is about one device pixel: eroded on the finished
+ * 54px square there is nothing for a distance transform to be accurate about
+ * and the "outline" comes out as the character again, half-strength. Eroded
+ * at 432px and filtered down, it is a real line with real antialiasing.
+ */
+export function sealRing({ ink, chars }, side, line) {
+  const lineSS = line * side * OVER;
+  const pad = Math.ceil(lineSS) + 2;
   return chars.map((c) => {
-    const big = new Uint8Array(S * S);
-    for (let y = 0; y < S; y++) {
-      const sy = c.y0 + Math.min(c.h - 1, Math.floor((y / S) * c.h));
-      for (let x = 0; x < S; x++) {
-        const sx = c.x0 + Math.min(c.w - 1, Math.floor((x / S) * c.w));
-        if (ink(sx, sy)) big[y * S + x] = 1;
-      }
-    }
-    const cov = new Float32Array(side * side);
-    for (let y = 0; y < side; y++) for (let x = 0; x < side; x++) {
-      let n = 0;
-      for (let sy = 0; sy < OVER; sy++) for (let sx = 0; sx < OVER; sx++) {
-        n += big[(y * OVER + sy) * S + x * OVER + sx];
-      }
-      cov[y * side + x] = n / (OVER * OVER);
-    }
-    return cov;
+    const sq = square(ink, c, side, pad);
+    const { big, B } = sq;
+    // distance from every cell to the nearest PAPER: ink deeper than the
+    // line survives the erosion, and what the erosion drops is the ring
+    const paper = new Uint8Array(B * B);
+    for (let i = 0; i < B * B; i++) paper[i] = big[i] ? 0 : 1;
+    const d = distanceTo(paper, B, B);
+    const ring = new Uint8Array(B * B);
+    for (let i = 0; i < B * B; i++) ring[i] = big[i] && d[i] <= lineSS ? 1 : 0;
+    return down({ big: ring, B, pad }, side);
   });
+}
+
+/**
+ * Euclidean distance to the nearest set cell — the two-pass chamfer the rest
+ * of this project uses (`scripts/lib/badge-mark.mjs`, `trace-mark.mjs`),
+ * written here so this module stays free of either.
+ */
+function distanceTo(m, w, h) {
+  const INF = 1e9;
+  const d = new Float32Array(w * h);
+  for (let i = 0; i < w * h; i++) d[i] = m[i] ? 0 : INF;
+  const D2 = Math.SQRT2;
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const i = y * w + x;
+    let v = d[i];
+    if (y > 0) {
+      if (x > 0) v = Math.min(v, d[i - w - 1] + D2);
+      v = Math.min(v, d[i - w] + 1);
+      if (x < w - 1) v = Math.min(v, d[i - w + 1] + D2);
+    }
+    if (x > 0) v = Math.min(v, d[i - 1] + 1);
+    d[i] = v;
+  }
+  for (let y = h - 1; y >= 0; y--) for (let x = w - 1; x >= 0; x--) {
+    const i = y * w + x;
+    let v = d[i];
+    if (y < h - 1) {
+      if (x < w - 1) v = Math.min(v, d[i + w + 1] + D2);
+      v = Math.min(v, d[i + w] + 1);
+      if (x > 0) v = Math.min(v, d[i + w - 1] + D2);
+    }
+    if (x < w - 1) v = Math.min(v, d[i + 1] + 1);
+    d[i] = v;
+  }
+  return d;
 }

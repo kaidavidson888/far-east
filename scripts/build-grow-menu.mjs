@@ -59,7 +59,7 @@ import { readFileSync, writeFileSync, mkdirSync, rmSync } from 'node:fs';
 import sharp from 'sharp';
 import { openMenuGif } from './lib/menu-gif.mjs';
 import { badgeMark, markAspect, distanceTo } from './lib/badge-mark.mjs';
-import { sealChars, sealCoverage } from './lib/seal-mark.mjs';
+import { sealChars, sealCoverage, sealRing } from './lib/seal-mark.mjs';
 import {
   mulberry32, spline, curl, channel, atArc, frontArc, widthAt, sprout, linkTips, translate, Ink, smoothstep, easeInOut, easeIn, vn2,
 } from './lib/ink-growth.mjs';
@@ -206,6 +206,17 @@ const MARK_SIDE_AIR = 1;
  * here.
  */
 const SEAL_GAP = 5;
+/**
+ * THE OUTLINE THE DRAIN LEAVES, as a fraction of a character's own square.
+ *
+ * Swept at 0.0207 (the corner seal's 1.2 of 58), 0.03, 0.04 and 0.055 and
+ * looked at both magnified and at the size the page really draws it: 0.0207
+ * keeps a third of the ink and goes grey in places at 20px, 0.04 keeps three
+ * quarters and starts to read as the filled character again, and 0.055 trips
+ * the build's own 90% guard. 0.03 — about 0.8 design px — is a solid line
+ * with the hollows plain, and keeps 54% and 48%.
+ */
+const SEAL_RING = Number(process.env.SEAL_RING ?? 0.03);
 const CELLS = MENU.mark === 'seal' ? 2 : 1;
 const BUTTON_W = CELLS * BADGE.size + (CELLS - 1) * SEAL_GAP;
 /** Each cell's box, in the button's own coordinates. */
@@ -783,7 +794,16 @@ if (MENU.mark === 'seal') {
   const chars = await sealChars({ log: (m) => console.log(m) });
   const cov = sealCoverage(chars, SIDE);
   if (cov.length !== CELLS) fail(`the vector gave ${cov.length} characters for ${CELLS} cells`);
+  /**
+   * AND THE SAME CHARACTERS AS AN OUTLINE, which is what the drain leaves
+   * behind (the owner's 2026-09-23 "when the black drains from the characters
+   * it leave behind an outline of the characters"). The weight is a fraction
+   * of the square's own side, so it is the same line relative to the
+   * character whatever size the button is drawn at.
+   */
+  const ringCov = sealRing(chars, SIDE, SEAL_RING);
   const ink = new Float32Array(MW * MH);
+  const ringInk = new Float32Array(MW * MH);
   FRAME = new Uint8Array(MW * MH);
   for (let c = 0; c < CELLS; c++) {
     const ox = Math.round(c * (BADGE.size + SEAL_GAP) * SS); // the cell's interior, in the rect
@@ -795,18 +815,41 @@ if (MENU.mark === 'seal') {
     const air = Math.round(MARK_SIDE_AIR * SS);
     for (let y = 0; y < SIDE; y++) for (let x = 0; x < SIDE; x++) {
       const v = cov[c][y * SIDE + x];
-      if (v <= 0) continue;
+      const r = ringCov[c][y * SIDE + x];
+      if (v <= 0 && r <= 0) continue;
       const X = ox + air + x, Y = air + y;
       if (X < 0 || Y < 0 || X >= MW || Y >= MH) continue;
       ink[Y * MW + X] = v;
+      ringInk[Y * MW + X] = r;
+    }
+  }
+  {
+    // THE RING MUST NOT BE THE CHARACTER AGAIN, the corner seal's own guard:
+    // past about 90% the line is thicker than the strokes and "outline" is a
+    // word for the same picture. Measured at SEAL_RING: about half.
+    const kept = cov.map((f, i) => {
+      const a = ringCov[i].reduce((s, v) => s + v, 0);
+      const b = f.reduce((s, v) => s + v, 0);
+      return (100 * a) / b;
+    });
+    console.log(`  the outline the drain leaves: ${kept.map((k) => `${k.toFixed(1)}%`).join(' / ')} of each character's ink`);
+    const worst = Math.max(...kept);
+    if (worst > 90) fail(`the outline keeps ${worst.toFixed(1)}% of a character's ink — that is the character, not an outline`);
+    // …AND A FLOOR, because too THIN fails silently where too thick does not:
+    // a `SEAL_RING` of nothing leaves `keep` at zero and the drain simply
+    // empties the box again, which is what this replaced.
+    const thinnest = Math.min(...kept);
+    if (!Number.isFinite(thinnest) || thinnest < 15) {
+      fail(`the outline keeps ${thinnest.toFixed(1)}% of a character's ink — there is no line there (SEAL_RING is ${SEAL_RING})`);
     }
   }
   CELL_RANGE = Array.from({ length: CELLS }, (_, c) => {
     const ox = Math.round(c * (BADGE.size + SEAL_GAP) * SS);
     return [ox, ox + IN];
   });
-  // the characters ARE the silhouette; there is no second detail to keep
-  mark = { ink, body: ink, tipi: new Float32Array(MW * MH) };
+  // the characters ARE the silhouette, and what the drain keeps is their
+  // outline — `tipi` is the mountain's name for "the detail that stays"
+  mark = { ink, body: ink, tipi: new Float32Array(MW * MH), ring: ringInk };
   console.log(
     `  the mark: ${CELLS} cells of ${BADGE.size}px with ${SEAL_GAP} between,`
     + ` each holding a ${SIDE / SS}px character in its ${IN / SS}px interior`
@@ -837,19 +880,30 @@ const CONTOUR = 1.1 * SS * 0.5; // half a page px of line
 const keep = new Float32Array(MW * MH);
 if (MENU.mark === 'seal') {
   /**
-   * THE SEAL KEEPS NOTHING: "leave the button empty of the drained black
-   * after the animation is finished" (the owner, 2026-09-23). So `keep`
-   * stays at zero and the two cells end the run as empty outlined squares.
+   * WHAT THE SEAL KEEPS IS THE CHARACTERS' OWN OUTLINE (the owner's
+   * 2026-09-23 "when the black drains from the characters it leave behind an
+   * outline of the characters"), so the mark you are looking at is the same
+   * mark at every moment of the run: filled at rest, knocked out white while
+   * the boxes are full, and an outline once they have emptied.
    *
-   * IT COULD NOT HAVE BEEN OTHERWISE AT THIS SIZE, which is worth knowing
-   * before anyone tries to give the characters the mountain's traces. The
-   * mountain keeps a contour half a page px wide, and at 27px a stroke of
-   * 遠 is about 2.5 device px across — so a contour on BOTH sides of it is
-   * the whole stroke. The character would not have visibly drained at all:
-   * "drained" and "filled" would have been the same picture. A hollow 遠東
-   * needs the 58px the corner seal had (lib/sealGlyph.ts, orphaned now),
-   * not the mountain's 33.
+   * `keep` is a PROTECTION FACTOR, not ink — the painter draws
+   * `ink[i] * max(on, keep[i])` — so it is the share of this pixel's ink
+   * that the ring accounts for. At the middle of a stroke's edge both are 1
+   * and the pixel stays black; at the middle of a stroke the ring is 0 and
+   * it drains.
+   *
+   * (It was zero for a day, and the note said an outline could not read at
+   * 33px: that a stroke of 遠 was about 2.5 device px across, so a line on
+   * both sides of it would be the whole stroke. Measured instead of
+   * estimated, the ring keeps 54% and 48% of the ink and the hollows are
+   * plain — see the figure the bake prints. The estimate was wrong because
+   * the ring has to be taken at the SUPERSAMPLED size and filtered down,
+   * which is what `sealRing` does; eroded on the finished 54px square it
+   * really would have come out as the character again.)
    */
+  for (let i = 0; i < MW * MH; i++) {
+    keep[i] = mark.ink[i] > 0.004 ? Math.min(1, mark.ring[i] / mark.ink[i]) : 0;
+  }
 } else {
   const solid = new Uint8Array(MW * MH);
   for (let i = 0; i < MW * MH; i++) solid[i] = mark.body[i] > 0.5 ? 1 : 0;

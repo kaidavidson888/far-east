@@ -89,6 +89,15 @@ no CSS framework (tokens in `app/globals.css`). Deploys to Vercel.
   their seal does and hollows them out into `lib/sealGlyph.ts`, the corner
   seal's mark. `SEAL_LINE=<px> SEAL_MARK=<px> SEAL_PREVIEW=1` draws it at
   48/66/132px each way round for looking. See "THE CORNER SEAL".
+- `npm run build:pagodaglyph` — traces the owner's pagoda
+  (`scripts/assets/pagoda.png`) into `lib/pagodaGlyph.ts`, the mark in the
+  top-right corner button. **THE DRAWING IS A NEGATIVE**: a dark disc with
+  the pagoda cut out of it in the page colour, so the ink is the LIGHT
+  pixels and only the ones the page cannot reach — found by flooding the
+  light in from the border, not by guessing where the disc is. `inkMask`
+  takes dark for ink and would have traced the circle with pagoda-shaped
+  holes in it. `GLYPH_PREVIEW=1` draws the button at 22/25/33/60px, at rest
+  and lit. See "THE CORNER PAGODA".
 - `npm run build:searchglyph` — traces the owner's spiral glass
   (`scripts/assets/search-glass.jpg`) into `lib/searchGlyph.ts`, the row's search
   mark. `GLYPH_OPEN=<px> GLYPH_PREVIEW=1` draws the button at 21/30/60px for
@@ -280,13 +289,62 @@ artwork to fit a frame — that scales the margins with it, which is the thing b
     cell is a solid black square with a WHITE 遠 or 東 cut out of it, which
     is a carved seal the other way round. Then the level falls back down and
     goes out into the branches.
-  - **AND IT KEEPS NOTHING — `keep` IS ZERO FOR THE SEAL.** "Leave the button
-    empty of the drained black" is the ask, and at this size it is also the
-    only thing that could read. The mountain keeps a contour half a page px
-    wide; a stroke of 遠 at 27px is about 2.5 device px across, so a contour
-    on both sides of it is the WHOLE STROKE and the character would not have
-    visibly drained at all — "drained" and "filled" would have been the same
-    picture. A hollow 遠東 needs the 58px the corner seal had, not 33.
+  - **WHAT THE DRAIN LEAVES IS THE CHARACTERS' OWN OUTLINE** (the owner's
+    2026-09-23 "make the resting visuals and the animation visuls of the
+    character button the same and make it so when the black drains from the
+    characters it leave behind an outline of the characters"). So the mark is
+    the same mark at every moment of the run: **filled at rest, knocked out
+    white INSIDE ITS OWN OUTLINE while the boxes are full, and a hollow
+    outline once they have emptied** — which is the corner seal's old look,
+    arrived at by the drain rather than by a traced ring. `sealRing` in
+    `scripts/lib/seal-mark.mjs`.
+    - **`keep` IS HONOURED ON EVERY FRAME, not only at the end**, because the
+      painter takes `max(on, keep[i])` with no reference to the dial. So the
+      ring is opaque the whole way through, and the white knockout at the top
+      of the fill is the character LESS its outline rather than the whole
+      silhouette. That is what makes it the same mark throughout, which is the
+      ask — but it is not what "knocked out white" would lead you to assume, so
+      it is said here.
+    - **`keep` IS A PROTECTION FACTOR, NOT INK.** The painter draws
+      `ink[i] * max(on, keep[i])`, so what goes in it is the SHARE of this
+      pixel's ink the ring accounts for — `min(1, ring/ink)`. Put the ring's
+      coverage in raw and an edge pixel comes out as ink squared, a half-
+      strength line.
+    - **THE RING HAS TO BE TAKEN SUPERSAMPLED AND FILTERED DOWN**, and this
+      is the whole reason it works. `sealRing` erodes at OVER=8 — 432px for a
+      54px character — and box-filters the result. Eroded on the finished
+      54px square there is nothing for a distance transform to be accurate
+      about and the "outline" comes out as the character again at half
+      strength.
+    - **THIS FILE SAID FOR A DAY THAT AN OUTLINE COULD NOT READ AT 33px**, on
+      an ESTIMATE — that a stroke of 遠 was about 2.5 device px across, so a
+      line either side of it would be the whole stroke. Measured instead, the
+      ring keeps **53.6% and 47.8%** of the ink and the hollows are plain at
+      the size the page draws them. The estimate was of the wrong thing: it
+      described eroding the small raster, which is not what is done.
+    - **THE WEIGHT WAS SWEPT, NOT CHOSEN.** `SEAL_RING` is 0.03 of a
+      character's own square (about 0.8 design px), looked at magnified and at
+      the size the page really draws it against 0.0207 (the corner seal's 1.2
+      of 58 — keeps a third, goes grey in places at 20px), 0.04 (three
+      quarters, starts to read as the filled character) and 0.055 (trips the
+      guard). **The build fails if the ring keeps more than 90%** of a
+      character's ink, which is the corner seal's own rule: past that the line
+      is thicker than the strokes and "outline" is a word for the same
+      picture.
+    - **THE PAD IS NOT OPTIONAL.** A character is cropped to its own ink, so
+      its outermost strokes lie ON the square's edge, and a distance transform
+      only sees the buffer it is given — with no pad it reads "off the top" as
+      more ink and the top stroke gets no line. The owner saw exactly that on
+      the corner seal ("some sort of clipping"); it is the same trap the
+      mountain's `keep` field fell into. **Three scripts have now made it.**
+  - **AND THE RESTING MARK AND THE CANVAS'S FIRST FRAME ARE THE SAME PIXELS —
+    measured, because the owner asked.** `badge.webp` is cut from frame 0 and
+    the two were compared: **0 of 7,772 px differ**, and `.logo-menu-canvas`
+    carries `transition: none`, so there is no cross-fade between them either.
+    Anything that looks different between rest and the run is the INVERSION —
+    black characters, then the box full and the characters knocked out white —
+    not a mismatched mark. Do not go looking for a raster/vector seam here;
+    there is not one.
   - **EVERY CELL IS SEEDED ON ITS OWN**, and this is the trap in the drain.
     `PHI` is a Dijkstra THROUGH THE INK and the two characters are not
     connected to one another: seeded only where the network leaves, the far
@@ -310,19 +368,35 @@ artwork to fit a frame — that scales the margins with it, which is the thing b
   - **THE MENU IS CLAMPED TO THE WINDOW NOW, and the wider button is why.**
     The canvas went 505 design px to 543, and at 375px "Terms of service" ran
     15px off the page, clipped with nothing to say so (measured: its box cut
-    dead on the viewport at x 295.3). `CigScroller` takes `--logo-menu-zoom`
-    down to `(clientWidth - 20) / frame.w` where that is smaller, which is
-    the SHELF menu's own answer (`shelfMenuZoom`, which exists because a
-    fourth word did this first). It cannot be a `min()` in CSS — a zoom is
-    unitless and CSS will not divide a length by a length. **It does not bite
-    above about 400px wide**: measured 0.7573 and untouched at 1920, 0.6538 at
-    375 with the whole row on the page. A button 3% smaller than the plus is a
-    smaller departure than a word that is not all there.
-  - **THE SHELF LINK WENT WITH THE CORNER.** The 遠東 in the top right led to
-    `/shelf` and it is not there any more; this button opens the menu, and
-    the menu has no SHELF word because none was asked for. `SealButton` on
-    the row's own bar still goes there on its second press. **If the owner
-    wants it back it is a fourth word, the way HOME is on the shelf.**
+    dead on the viewport at x 295.3). `CigScroller` clamps `--logo-menu-zoom`
+    where that is smaller, which is the SHELF menu's own answer
+    (`shelfMenuZoom`, which exists because a fourth word did this first). It
+    cannot be a `min()` in CSS — a zoom is unitless and CSS will not divide a
+    length by a length.
+    **AND THE OTHER CORNER IS IN THE SUM, since the pagoda went into it**: the
+    menu grows rightward from the left margin and the pagoda stands against the
+    right one, BOTH at this zoom, and on a phone they met — measured at 375px,
+    "Terms of service" ran x 276.4..351 and the pagoda x 343.4..365 on the same
+    line, with the pagoda (z-index 4) drawn over the last 7.6px of the word and
+    swallowing a press there. **It is not circular even though both scale with
+    the answer**, because everything is linear in z:
+    `z <= (W - 3*margin) / (frame.w + box)`. **It does not bite above about
+    433px wide**: measured 0.7573 and untouched at 1920 (the cell still 1.0997x
+    the plus), 0.599 at 375 with the whole row on the page and 10px clear of
+    the pagoda. A button 3% smaller than the plus is a smaller departure than a
+    word that is not all there.
+    - **THE WIDTH IS `document.documentElement.clientWidth`, WHICH IS NOT QUITE
+      THE STAGE.** `.artpage` is its own `overflow: auto` scroll container, so
+      where a CLASSIC scrollbar is drawn the stage is narrower than the document
+      by its width and the clamp is that much too generous. It costs a few px,
+      on a platform with classic scrollbars, on a window narrow enough for the
+      clamp to bite at all. Known, not fixed.
+  - **THE SHELF LINK MOVED TO THE PAGODA, THE SAME DAY.** For a few hours
+    this menu's button had taken the 遠東's corner and nothing on the landing
+    page led to `/shelf` but `SealButton` on the row's own bar (second
+    press). The owner then supplied the pagoda for that corner — see "THE
+    CORNER PAGODA" below. The menu still has no SHELF word and does not need
+    one.
 
 - **SINCE 2026-09-19 THE LANDING MENU GREW OUT OF A MOUNTAIN BUTTON, AND THE ANIMATION IS
   GENERATED RATHER THAN THE GIF'S.** Three asks in a row got here. First: replace the
@@ -1570,6 +1644,60 @@ pressed again".
   menu's words are `inert`. Verified signed out: pressing SAVED starts the spin
   and then the action sends the reader to the splash with `next=/landing`,
   which is the shelf's own rule and not this menu's business.
+
+**THE CORNER PAGODA** (the owner's 2026-09-23, with their drawing attached:
+"Turn the art that i attached into a simple button without the circle
+background make it black with an outline box make it the same scale as the
+character buttons and put it in the top right corner with 10Px margins from
+the edge. have the button go to the shelf and fill black and turn lines red
+on hover and click"). `components/CornerPagoda.tsx`, `lib/pagodaGlyph.ts`,
+`npm run build:pagodaglyph`, and the `.corner-pagoda` block in `globals.css`.
+- **IT TAKES THE CORNER THE SEAL LEFT, AND CARRIES ITS LINK.** The 遠東 stood
+  here until earlier the same day; this is the way to `/shelf` now.
+- **THE DRAWING IS A NEGATIVE AND THAT IS THE WHOLE TRICK.** It is a dark
+  disc with the pagoda CUT OUT of it in the page's own cream, so the ink of
+  the mark is the LIGHT pixels — and only the light ones the page cannot
+  reach. `inkMask` in the shared tracer takes DARK for ink, which here traces
+  the disc with pagoda-shaped holes in it: exactly the circle the owner asked
+  to be rid of. So the strokes are found by **flooding the light in from the
+  image's border**; what the flood does not touch is walled in by the disc.
+  No threshold on how dark the circle is and no guess at where its edge runs.
+  - The split between the two levels is **Otsu**, not a fixed 128, and the
+    build prints what it found (154, with 27.2% of the frame the disc) and
+    stops if that is not a dark shape on a light page.
+  - **IT CHECKS THE DRAWING STANDS CLEAR OF THE DISC** (77px at its tightest).
+    If it touched, the flood would have got round it and what was traced would
+    be a fragment — and nothing downstream would say so.
+  - **AND IT DRAWS THE PATH BACK AND COMPARES**, the corner seal's own proof,
+    because `MIN_AREA`, `simplify` and the even-odd fill can each drop a piece
+    of a drawing silently: 98.90% of the drawing painted, 0.31% painted that
+    was not there. 13 loops, 204 points, 2.3KB of path.
+- **"THE SAME SCALE AS THE CHARACTER BUTTONS" IS READ OFF THEIR GEOMETRY**,
+  not typed again: `badge.cells[0].w` and `badge.rule` out of
+  `lib/growmenu-geometry.json`, drawn at the same `--logo-menu-zoom` the row
+  publishes on the stage. Measured at 1920x947: **24.98 x 24.98, exactly the
+  character cell's size**, 10px from the top and 10px from the right. The
+  mark's long side is the cells' own 27 with a pixel of air, so it is never
+  stretched (it is 0.949 wide for its height).
+  - The MARGIN is in PAGE px and the box in design px — the stylesheet
+    divides the margin by the zoom, because `zoom` multiplies an element's own
+    offsets as well as its contents. The corner seal did the same.
+- **"FILL BLACK AND TURN LINES RED" IS THE FILL AND THE MARK; THE RULE STAYS
+  BLACK.** So the lit button is one solid black tile with a red drawing in it,
+  rather than a red frame round a black square. `color` carries the mark alone
+  and the border is stated black. If the owner means the frame too, it is one
+  line. Measured with a real pointer: fill `rgb(1,1,1)`, mark `rgb(255,0,0)`.
+  - **The pane will tell you it did not work.** It does not advance CSS
+    transitions, so the computed colours read as the resting ones a whole
+    second in. Switch the transition off and read again, or read the rule.
+  - The keyboard gets the same state (`:focus-visible`) plus the outline ring.
+    **Next's CSS pipeline SPLITS `:focus-visible` out of a selector list into
+    its own rule** — so a `cssRules` dump shows `:hover, :active` alone and it
+    looks as though the focus case was dropped. It was not.
+- It is drawn inline and filled with `currentColor`, like the plus, the minus,
+  the glass and the dots, because an `<img>` cannot be handed a colour.
+- **It is in all three pressable lists** at the foot of `globals.css`.
+  Checked: its computed cursor is the white cloud.
 
 **THE CORNER SEAL IS GONE — ITS CHARACTERS ARE THE MENU BUTTON NOW**
 (2026-09-23). See "THE LANDING PAGE'S BUTTON IS THE OWNER'S 遠東" in the

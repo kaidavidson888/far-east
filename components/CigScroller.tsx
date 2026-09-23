@@ -782,8 +782,24 @@ export function CigScroller({
      * because this is the one place that already runs on every measure and
      * every resize.
      */
-    const room = document.documentElement.clientWidth - growmenu.place.left * 2;
-    const fit = +(room / growmenu.frame.w).toFixed(4);
+    /*
+     * …AND THE OTHER CORNER IS RESERVED TOO, because the pagoda stands in it.
+     * The menu grows rightward from the page's left margin and the pagoda sits
+     * against the right one, both at THIS zoom, and on a narrow window they
+     * met: measured at 375px, "Terms of service" ran x 276.4..351 and the
+     * pagoda x 343.4..365 on the same line, with the pagoda (z-index 4) drawn
+     * over the last 7.6px of the word and swallowing a press there.
+     *
+     * It is not circular even though both scale with the answer — everything
+     * is linear in z, so the room divides out:
+     *     margin + frame*z + margin <= W - margin - box*z
+     *     z <= (W - 3*margin) / (frame + box)
+     * Below about 433px wide this is what binds rather than the 0.7 floor;
+     * above it, neither does.
+     */
+    const M = growmenu.place.left;
+    const box = growmenu.badge?.cells?.[0]?.w ?? 0;
+    const fit = +((document.documentElement.clientWidth - M * 3) / (growmenu.frame.w + box)).toFixed(4);
     el.parentElement?.style.setProperty('--logo-menu-zoom', String(Math.min(s, fit)));
     setMenu((was) =>
       was &&

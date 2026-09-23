@@ -22,6 +22,7 @@
   },
   "badge": {
     "rule": 2,
+    "label": "遠東 — menu",
     "cells": [
       {
         "x": 0,

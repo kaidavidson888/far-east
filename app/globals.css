@@ -1517,10 +1517,64 @@ ul, ol { list-style: none; }
    DRAIN, which is the same reason the mountain was drawn there. Its rules
    are `badge.cells` in lib/growmenu-geometry.json.
 
-   THE SHELF LINK WENT WITH IT. SealButton on the row's own bar still leads
-   there on its second press; nothing else on the landing page does. Git has
-   this block and components/CornerSeal.tsx if the corner is ever wanted
-   back. */
+   THE SHELF LINK CAME BACK THE SAME DAY, on the pagoda that stands in this
+   corner now (.corner-pagoda, above). For the few hours between, SealButton
+   on the row's own bar was the only way there. Git has this block and
+   components/CornerSeal.tsx if the hollow characters are ever wanted back. */
+
+/* ------------------------------------------------- the corner pagoda ----
+   THE OWNER'S PAGODA, IN A BOX IN THE TOP RIGHT, AND THE WAY TO THE SHELF
+   (their 2026-09-23 ask, with the drawing attached: "Turn the art that i
+   attached into a simple button without the circle background make it black
+   with an outline box make it the same scale as the character buttons and
+   put it in the top right corner with 10Px margins from the edge. have the
+   button go to the shelf and fill black and turn lines red on hover and
+   click").
+
+   It takes the corner the seal left when 遠東 moved to the top left and
+   became the menu's button, and it carries the shelf link that seal used to.
+
+   The box and its rule come from the menu's own geometry (components/
+   CornerPagoda.tsx) so "the same scale as the character buttons" cannot
+   drift, and it is drawn at the same `--logo-menu-zoom` the row publishes.
+   The MARGIN is in PAGE px — divided by the zoom, because `zoom` multiplies
+   an element's own offsets as well as its contents, which is the shelf's
+   rows and the logo menu again. */
+.corner-pagoda {
+  position: absolute;
+  top: calc(var(--pagoda-margin, 10px) / var(--logo-menu-zoom, 1));
+  right: calc(var(--pagoda-margin, 10px) / var(--logo-menu-zoom, 1));
+  zoom: var(--logo-menu-zoom, 1);
+  box-sizing: border-box;
+  width: var(--pagoda-box);
+  height: var(--pagoda-box);
+  /* the rule stays BLACK while the box fills black, so the lit button is one
+     solid tile with a red drawing in it rather than a red frame round a black
+     square; `color` carries the mark alone. */
+  border: var(--pagoda-rule) solid #010101;
+  background: transparent;
+  color: #010101;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 4;
+  transition: background-color 120ms ease-out, color 120ms ease-out;
+}
+/* "fill black and turn lines red on hover and click" — and on the keyboard
+   too, which is the same reach by another route. */
+.corner-pagoda:hover,
+.corner-pagoda:active,
+.corner-pagoda:focus-visible {
+  background: #010101;
+  color: #ff0000;
+}
+.corner-pagoda:focus-visible {
+  outline: 2px solid #010101;
+  outline-offset: 3px;
+}
+.corner-pagoda svg {
+  display: block;
+}
 
 /* -------------------------------------------------------- cigarette row --
    A row of packs across the middle of the page that scrolls forever, with a
@@ -3761,6 +3815,7 @@ input[type='reset'],
 .cig-search-toggle,
 .cig-dots-toggle,
 .cig-dots-box,
+.corner-pagoda,
 .cig-tag,
 .cig-confirm,
 .logo-menu,
@@ -3853,6 +3908,7 @@ input[type='radio'],
 .cig-search-toggle,
 .cig-dots-toggle,
 .cig-dots-box,
+.corner-pagoda,
 .cig-confirm,
 .cig-tag,
 .logo-menu-logo,
@@ -3920,6 +3976,7 @@ input[type='radio']:active,
 .cig-search-toggle:active,
 .cig-dots-toggle:active,
 .cig-dots-box:active,
+.corner-pagoda:active,
 .cig-confirm:active,
 .cig-tag:active,
 .logo-menu-logo:active,

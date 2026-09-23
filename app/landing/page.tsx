@@ -3,6 +3,7 @@ import { LANDING_SPEC } from '@/lib/landing';
 import { detectDevice, deviceOverride } from '@/lib/device';
 import { ArtworkPage } from '@/components/ArtworkPage';
 import { LogoMenu } from '@/components/LogoMenu';
+import { CornerPagoda } from '@/components/CornerPagoda';
 import { PRESSABLE } from '@/lib/cigPages';
 import { CigScroller } from '@/components/CigScroller';
 import { SealButton } from '@/components/SealButton';
@@ -50,7 +51,7 @@ export default async function LandingRoute({
       spec={LANDING_SPEC}
       device={device}
       showHitboxes={showHitboxes}
-      overlay={<><CigScroller withPages={PRESSABLE} marks={marks} /><LogoMenu menu="grow" /></>}
+      overlay={<><CigScroller withPages={PRESSABLE} marks={marks} /><LogoMenu menu="grow" /><CornerPagoda /></>}
       decorative={['logo']}
     />
   );
