@@ -997,15 +997,71 @@ pack's own white was.
   text antialiasing. The repair works because the real panel is flat white and
   its lettering survived, not because anything was recovered.
 
-**FOUR PACKS ARE CUT IN THE OWNER'S OWN CUT-OUTS AND CANNOT BE CROPPED BACK.**
-Seven Stars loses about 5% off its left, West Red 8%, West Blue 22% and More
-Menthol 13% — the pixels are not in the supplied file, so no crop, peel or hand
-box reaches them and `audit:cigs` cannot see it either (it compares the crop
-against the source, and the source is what is short). Reconstruction was
-prototyped in `.tmp/rebuild-edge.mjs` — mirror the outer 24px rim from the
-intact edge and fill the rest with the pack's own nearest column — and **is not
-wired in**: it bakes invented pixels into the mark and into that pack's page,
-which is the owner's call, not ours.
+**A SIDE THE CUT-OUT SLICED OFF IS REGROWN — `REGROW` in `build-cigs.mjs`**
+(the owner's 2026-09-29 "fix the vogue and pall mall"). Two packs,
+`259_Pall_Mall-Silver` and `260_Vogue-Blue`. This is the other kind of damage
+and it is worse than `REPAIR`'s: there the pixels were keyed to transparent and
+the pack's shape survived, here the cut-out simply stops and part of the pack is
+not in the file. `unclip` cannot reach it — it grows a box back through the
+SUBJECT, and the subject is what is short.
+- **A CUT EDGE IS TOLD FROM A REAL ONE BY THE CORNER'S SHAPE. Magnify the
+  top-left corner against a colour that shows transparency.** Every intact pack
+  in this set renders with a ROUNDED corner and a visible edge facet; a cut one
+  is SQUARE and flush with the cut-out boundary. Pall Mall Silver and Vogue Bleu
+  are square; Red, Originale and Lilas are rounded, with their edge band plain.
+  A shape cannot be confounded by how pale a pack is, which is why this is the
+  test and not the one below.
+  - **THE LUMINANCE RAMP IS *NOT* A RELIABLE DISCRIMINATOR, and believing it was
+    nearly cost a wrong call.** A pack's own edge is a ramp, so the leftmost 16
+    columns swinging 30..37 levels on an intact pack against 8 and 2 on these
+    two looks decisive — and an adversarial check found the swing tracks the
+    pack being PALE rather than being cut: intact Vogue Originale swings about
+    14 and on a catalogue-wide bevel statistic Silver ranks 118th of 236, dead
+    middle. **It is corroboration, never the proof.** The same check wrongly
+    concluded from it that Vogue Bleu was intact; the corner settled it.
+  - Two further measurements agree and are worth taking: only these two have
+    artwork structure running down the boundary column, and there is no RGB
+    under the transparency, so nothing can be un-keyed the way the ESSEs were.
+- **TWO MORE MEASUREMENTS SET THE NUMBERS, and they agree.** The LEFT MARGIN
+  beside the centred printing: Pall Mall Blue and Red carry 50 and 44px of blank
+  pack left of "PALL MALL" and Silver carries **0**; the Vogues carry 91
+  (Menthe), 102 (Lilas) and 72 (Originale) left of the script and Bleu carries
+  **16**. And the printing's own width, which says the ARTWORK is not what went:
+  the wordmark is 317px on Silver against 323 and 338 on its siblings, and
+  Bleu's script is 281 against 279..290. **What was lost is the margin and the
+  edge, not any letter** — which is what makes this repairable at all.
+- **NOTHING IS MIRRORED ACROSS THE ARTWORK, and the first attempt that did is
+  worth knowing about.** Both designs are centred, so reflecting the surviving
+  half about the printing's own axis looked principled — and it is wrong:
+  **"PALL MALL" is centred but not mirror-symmetric**, so the reflection put a
+  backwards L in front of the P and a stray C before "QUALITY AMERICAN BLEND".
+  A centred word is not a symmetric ornament. Looked at, not reasoned about.
+- **SO THE STRIP IS MADE OF THE PACK'S OWN TWO INGREDIENTS**: the outer `rim` px
+  are the pack's RIGHT edge mirrored, which gives a real edge carrying this
+  photograph's own lighting, and the rest is the leftmost surviving column
+  carried outward, which is the blank face a margin is made of.
+- **IT STATES `from`, THE BOX OF THE SURVIVING PACK, SO THE STRIP IS CHECKABLE,
+  AND IT REFUSES A SOURCE THAT IS NOT CUT.** The strip must be at least 95%
+  transparent before it is written and the column it copies from must be a solid
+  pack edge for 90% of its rows. A re-supplied, uncut source therefore says
+  "nothing to regrow" rather than painting over the pack.
+- Result: Silver draws **53x92** where it drew 47 (siblings 56 and 54), Bleu
+  **49x92** where it drew 44 (Originale 51). `audit:cigs` is unchanged — still
+  0 cutting into a pack's face.
+
+**FOUR MORE PACKS ARE CUT THE SAME WAY AND ARE LEFT ALONE, AWAITING THE OWNER.**
+Seven Stars ~5%, West Red ~8%, West Blue ~22%, More Menthol ~13%. `REGROW` would
+take them — the mechanism is proven now — but they were not asked for, and West
+Blue's fifth is a great deal more than a margin: at that width the strip is
+carrying face the pack never showed us, which is invention rather than the edge
+being put back. Ask before adding them.
+
+Those four are the same fault as the two above: the pixels are not in the
+supplied file, so no crop, peel or hand box reaches them — and **`audit:cigs`
+cannot see it either**, which is the thing to remember. That audit compares the
+crop against the source, and here the SOURCE is what is short, so a pack can be
+visibly sliced and the audit stay silent. The left-edge luminance swing is the
+test that does see it.
 
 **THE FRAME IS A BLACK HAIRLINE NOW, AND THE BAND INSIDE IT FILLS UNDER THE
 POINTER** (the owner's 2026-09-22: "turn the outline on the selected cig

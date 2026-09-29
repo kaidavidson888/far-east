@@ -319,6 +319,96 @@ const REPAIR = {
 };
 
 /**
+ * A SIDE THE SUPPLIED CUT-OUT SLICED OFF, PUT BACK (the owner's 2026-09-29 "fix
+ * the vogue and pall mall").
+ *
+ * This is the other kind of damage, and it is worse than REPAIR's: there the
+ * pixels were keyed to transparent and the pack's shape survived, here the
+ * cut-out simply stops and part of the pack is not in the file at all. Nothing
+ * downstream can reach it — the crop, the peel and `unclip` all choose from the
+ * subject, and the subject is what is short.
+ *
+ * HOW A CUT EDGE IS TOLD FROM A REAL ONE, because this is the measurement that
+ * justifies the entry. A pack's own edge is a RAMP: the face, then the rounded
+ * edge catching the light, then nothing. Read as mean luminance over the middle
+ * of the pack, the leftmost 16 columns swing 30 to 37 levels on every intact
+ * pack in this shoot. They swing 8 on Pall Mall Silver and 2 on Vogue Bleu —
+ * flat face running straight into the boundary, which is a cut. Two further
+ * measurements agree and are what set the numbers below:
+ *   - the LEFT MARGIN beside the centred printing. Pall Mall Blue and Red carry
+ *     50 and 44px of blank pack left of "PALL MALL"; Silver carries 0. The four
+ *     Vogues carry 91 (Menthe), 102 (Lilas) and 72 (Originale) left of the
+ *     script; Bleu carries 16.
+ *   - the printing's own width, which says the ARTWORK is not what is missing:
+ *     the wordmark measures 317px on Silver against 323 and 338 on its
+ *     siblings, and Bleu's script is 281 against 279..290. So what was lost is
+ *     the margin and the edge, not any letter.
+ * Every right edge swings 22..38, so both packs are cut on ONE side.
+ *
+ * WHICH IS WHY NOTHING IS MIRRORED ACROSS THE ARTWORK. That was the first
+ * attempt — both designs are centred, so reflecting the surviving half looked
+ * principled — and it is wrong: "PALL MALL" is centred but not mirror-symmetric,
+ * and the reflection put a backwards L in front of the P and a stray C before
+ * "QUALITY". A centred word is not a symmetric ornament.
+ *
+ * So the restored strip is made of the pack's own two ingredients and no
+ * invented ones: the outer `rim` px are the pack's RIGHT edge mirrored, which
+ * gives a real edge carrying this photograph's own lighting, and the rest is the
+ * leftmost surviving column carried outward, which is the blank face a margin is
+ * made of. It states `from` — the box of the surviving pack — so the strip it
+ * writes is checkable, and it REFUSES if that strip is not already empty, which
+ * is what a re-supplied, uncut source would make it.
+ */
+const REGROW = {
+  '259_Pall_Mall-Silver': {
+    from: { x0: 266, y0: 102, x1: 649, y1: 846 },
+    add: 47, // to the siblings' mean left margin of 47
+    rim: 22,
+  },
+  '260_Vogue-Blue': {
+    from: { x0: 249, y0: 109, x1: 604, y1: 846 },
+    add: 41, // to a left margin matching its own right, as Originale's does
+    rim: 20,
+  },
+};
+
+/**
+ * Write the missing strip into the source, in place.
+ *
+ * Returns null when the strip is already occupied, which is what a corrected
+ * source should produce — the entry is then stale and should come out.
+ */
+function regrowEdge(d, w, h, { from, add, rim }) {
+  const { x0, y0, x1, y1 } = from;
+  if (x0 - add < 0) throw new Error(`regrow would run off the left of the image`);
+  // the strip has to be empty, or this is not the source these numbers describe
+  let opaque = 0, tot = 0;
+  for (let y = y0; y < y1; y++) {
+    for (let x = x0 - add; x < x0; x++) { tot++; if (d[(y * w + x) * 4 + 3] >= 128) opaque++; }
+  }
+  if (opaque > tot * 0.05) return null;
+  // and the pack really has to be there to copy from
+  let packRows = 0;
+  for (let y = y0; y < y1; y++) if (d[(y * w + x0) * 4 + 3] >= 128) packRows++;
+  if (packRows < (y1 - y0) * 0.9) {
+    throw new Error(`regrow: ${from.x0} is not a solid pack edge (${packRows}/${y1 - y0} rows)`);
+  }
+  let written = 0;
+  for (let y = y0; y < y1; y++) {
+    for (let k = 0; k < add; k++) {
+      const x = x0 - add + k;
+      // k counts outward-in: k < rim is the mirrored edge, the rest is face
+      const src = k < rim ? x1 - 1 - k : x0;
+      const s = (y * w + src) * 4;
+      const i = (y * w + x) * 4;
+      d[i] = d[s]; d[i + 1] = d[s + 1]; d[i + 2] = d[s + 2]; d[i + 3] = 255;
+      written++;
+    }
+  }
+  return { written, x0: x0 - add, x1: x0, y0, y1 };
+}
+
+/**
  * Fill the keyed-away panel back in, in place, and say what it did.
  *
  * Returns null when there is nothing to repair, which is the answer a
@@ -1020,6 +1110,21 @@ for (const file of files) {
       );
     } else {
       console.log(`  ${source}: nothing to repair — the source has its panel back`);
+    }
+  }
+
+  // Put back a side the cut-out sliced off, in the same breath and for the same
+  // reason: everything that measures this source has to see the whole pack.
+  const toRegrow = REGROW[source];
+  if (toRegrow) {
+    const g = regrowEdge(data, w, h, toRegrow);
+    if (g) {
+      console.log(
+        `  ${source}: regrew ${g.written}px of cut-off edge`
+        + ` (x ${g.x0}..${g.x1}, y ${g.y0}..${g.y1}), ${toRegrow.rim}px of it mirrored rim`,
+      );
+    } else {
+      console.log(`  ${source}: nothing to regrow — the source is no longer cut`);
     }
   }
 
