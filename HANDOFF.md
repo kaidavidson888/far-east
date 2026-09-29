@@ -24,10 +24,12 @@ without an account; an account adds rating, reviewing and a shelf.
 ## Current state — read this carefully
 - **Code:** GitHub `main` is at `ab60121` and matches the zip. That includes `f6b03ff`
   (middleware removed) and these handoff docs. Clone from GitHub; the zip is a fallback.
-- **Live site:** after that push, `far-east-beta.vercel.app` returns **404** (no deployment
-  serving) rather than the earlier 500. Whether the `ab60121` build is Ready, Blocked or
-  Errored was **not confirmed** at handoff — check the Deployments list in Vercel first.
-  **The site has never successfully deployed.**
+- **Live site: DEPLOYED AND GREEN since 2026-09-29.** This paragraph read "the site has
+  never successfully deployed" for a year after it stopped being true — it described the
+  404 that `far-east-beta.vercel.app` returned at handoff, right after the `ab60121` push.
+  Verified against the live project on 2026-09-29: `/landing` 200, `/growmenu/badge.webp`
+  200, and the served markup carrying the current build's own marks. Check the Deployments
+  list in Vercel if it ever goes back, but do not start from the assumption that it is down.
 - **Database:** schema applied (7 tables, RLS on, both migrations), catalogue seeded
   (32 rows), one registered account, no favourites or reviews yet.
 - **Verification:** `npm run verify:db` is 29/29 against a real Postgres. Signed-in UI paths

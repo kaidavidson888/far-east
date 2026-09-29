@@ -28,7 +28,7 @@ no CSS framework (tokens in `app/globals.css`). Deploys to Vercel.
 - `npm run build:sigil` — cuts the cloud ornament down for the age gate and
   for the site's pointer. Re-run it if `public/landing/parts/cloud.svg` changes;
   it prints the cursor hotspot line to paste into `globals.css`.
-- `npm run build:cigs` — rebuilds the 282 pack marks in `public/cigs` and `lib/cigs.json`
+- `npm run build:cigs` — rebuilds the 238 pack marks in `public/cigs` and `lib/cigs.json`
   from the owner's `Cigs Images` folder (path at the top of `scripts/build-cigs.mjs`).
   `CIGS_ONLY=<substring> node scripts/build-cigs.mjs` rebuilds just the matching
   sources and prints what the reasoning decided for each — the crop candidates,
@@ -114,7 +114,7 @@ no CSS framework (tokens in `app/globals.css`). Deploys to Vercel.
   `public/tile/fa-char-strip-{1x,2x}.webp` (all 72 frames stacked; the page steps them) and
   `lib/tile-geometry.json`. Takes a few seconds, keeps the character and drops the tile's
   rings, and stops rather than guessing — see "The seal, the tile and the outline" below.
-- `npm run build:cigpages` — rebuilds the 235 pages in `public/cigpages` and
+- `npm run build:cigpages` — rebuilds the 229 pages in `public/cigpages` and
   `lib/cigpages.json` from the owner's info-page vectors in `scripts/assets/cigpages`.
   **Takes about half an hour** (it re-encodes every raster in every vector), so background
   it. Re-run it after `build:cigs`: each page carries a copy of that pack's cleaned mark.
@@ -155,7 +155,7 @@ overwrote this file twice during setup. `.env.example` is the template.
     `share_items` references `cigarettes` — the 32 placeholder products from
     `lib/catalog.json`, which are the only things here with a `price_usd`. The seal, the
     bookmark, the quantity wheels and the sigil all belong to the PACK shelf
-    (`pack_favorites`, the 247 photographed packs), which has quantity but no price and **no
+    (`pack_favorites`, the 238 photographed packs), which has quantity but no price and **no
     share link at all**. The counter is wired to the share link that exists. If the owner
     means the pack shelf, that shelf needs a share link and a price first.
 - **`slug` is permanent identity.** Reviews and favourites reference the product row; changing
@@ -748,23 +748,57 @@ knowing before touching it:
   the body is centred, so on a much wider window it drifts right of the logo.
   Anchoring the body left would hold it at any width, at the cost of the equal
   side margins — the owner's call, not one to make unasked.
-- **Every pack on the row is a button, but there are not 247 vectors.** The
-  owner supplied one info-page vector per cigarette *name*, and twelve packs
+- **Every pack on the row is a button, but there are not 238 vectors.** The
+  owner supplied one info-page vector per cigarette *name*, and nine packs
   carry a name another pack already has (`299_Karelia-Blue` and
-  `252_Karelia-Blue`, `111_GoldenLeaf-Love_Style` and
-  `42_Golden_Leaf-Love_Style`, ten more). The build gives the vector to
-  whichever asks first; `lib/cigPages.ts` sends the other twelve to their
-  twin's page, matching on the name with punctuation and spacing removed —
-  which is what makes `GoldenLeaf` and `Golden Leaf` meet. Use `PRESSABLE` and
-  `pageFor()` from there rather than `cigpages.json` directly, or those twelve
-  go dead again. If the owner ever settles those names into genuinely
+  `252_Karelia-Blue`, and eight more). `lib/cigPages.ts` sends those nine to
+  their twin's page, matching on the name with punctuation and spacing removed
+  — which is what makes `GoldenLeaf` and `Golden Leaf` meet. Use `PRESSABLE`
+  and `pageFor()` from there rather than `cigpages.json` directly, or those
+  nine go dead again. If the owner ever settles those names into genuinely
   different products, each will claim its own vector and this finds nothing
   to do.
+- **WHICH VECTOR GETS WHICH PACK IS DECIDED FOR ALL OF THEM BEFORE ANY IS
+  WRITTEN, BEST MATCH FIRST** (2026-09-29). It used to be settled inside the
+  write loop — the vector read first took the pack — which was harmless only
+  while every vector's own pack existed. Removing the duplicate packs took
+  that away: a freed twin's vector overlaps the survivor's name by more than
+  half, so it claimed the pack the exactly-named vector was about to take, and
+  `97_Peony-The_Great_Peony_B` opened a page headed "The Great Peony A". Every
+  vector is scored first and they are served in descending order, so 1.0 beats
+  0.75. A vector still has ONE candidate pack and is orphaned rather than
+  falling back to a second choice: a second choice is a worse guess by
+  definition, and a wrong page is worse than no page.
+  - **THE BUILD KNOWS THE RUNTIME'S COLLAPSED-NAME RULE NOW, AND HAS TO.**
+    `lib/cigPages.ts` strips punctuation and spacing to make `GoldenLeaf` and
+    `Golden Leaf` meet; the build's tokeniser could not, so the two spellings
+    got two different answers. That was invisible while both spellings had a
+    pack — the `Golden Leaf` one took the vector and the runtime forwarded
+    `GoldenLeaf` to it — and the moment the duplicate was dropped,
+    `111_GoldenLeaf-Love_Style` and `114_GoldenLeaf-Golden_Mid-Size` were
+    packs you could see in the row and not press. `exactPack()` is that same
+    rule, ranked above the token guess and below a hand `MATCH`.
+  - **`PAGES_PLAN=1 node scripts/build-cigpages.mjs` PRINTS THE DECISION AND
+    STOPS.** The writing is the half hour; the assignment is milliseconds and
+    is the part that goes wrong when the pack list changes. It lists every
+    vector with its score and the pack it gets, the vectors with no pack, and
+    — the question that actually matters — **how many packs lead nowhere**.
+    Check that it says 0 before paying for a rebuild.
+  - **FOUR VECTORS NOW HAVE NO PACK, AND THAT IS RIGHT**: Lotus Green B, Fresh
+    Cool Slim, Grand Color Hard and The Great Peony A are the dropped
+    duplicates' names, and the pack each would describe is already on the page
+    its survivor claimed.
+  - **`121_Hadmen-Golden_Classic` OPENS A PAGE HEADED "Gold Classic", KNOWN.**
+    There is no "Golden Classic" vector — the owner filed the one product under
+    both spellings, as with `GoldenLeaf`/`Golden Leaf` — so the choice is the
+    owner's real artwork under the other spelling, or a `RESEARCHED` template
+    page with invented copy under the right one. The artwork wins. It had the
+    template page until the duplicate pack that held the vector was dropped.
 - **The 5px red rule round the info** is `INFO_BOX` in the same file, drawn by
   the page rather than baked into the vector. It frames the title block down to
   the foot of the comment panels and deliberately leaves the logo and the seal
   outside it — they are the page's furniture, not the cigarette's. That box is
-  only constant across all 235 pages because the build puts the title on the
+  only constant across all 229 pages because the build puts the title on the
   landing page's own line, so its ink top is 161 whatever the brand name.
   **It stands off the info by that page's own brand-to-flavour gap**, which is
   not a constant — every line on these pages is sized to its own phrase, so the
@@ -795,7 +829,7 @@ knowing before touching it:
   packs yet** — see Known gaps.
 - **The pack shelf is a different table from the catalogue shelf.**
   `favorites.cigarette_id` is a foreign key into `cigarettes`, which holds 32
-  placeholder products from `lib/catalog.json`; these 235 pages are the owner's
+  placeholder products from `lib/catalog.json`; these 229 pages are the owner's
   own vectors, keyed by the pack's source filename. Putting one in `favorites`
   would mean inventing a brand, a country, a tar figure and a verdict for each.
   So `public.pack_favorites` keys on `pack_id` — text, deliberately not a
@@ -905,10 +939,73 @@ ink list is read, not obeyed — the loose cigarettes and overhanging splashes t
 the peels: of 136, one touched a top or bottom at all, and that one (Raison)
 was transparent, not pack. Run it after any crop change.
 
-**A crop change means rebuilding the pages too.** Each of the 235 info pages
+**A crop change means rebuilding the pages too.** Each of the 229 info pages
 carries a copy of that pack's cleaned mark (`fitPhoto` reads `public/cigs/<id>.svg`),
 so `npm run build:cigpages` has to follow `npm run build:cigs` or the row and the
 page will disagree about the same cigarette.
+
+**IT IS 238 PACKS AND 229 PAGES SINCE 2026-09-29** (the owner's "remove all the
+duplicate packs"). It was 247 and 235. Nine more entries went into `DUPLICATES`
+in `build-cigs.mjs`, which had 26 already; the table is "listed by what is
+dropped", so the survivor keeps its own name.
+- **A PERCEPTUAL HASH CANNOT MAKE THIS CALL, and that was measured rather than
+  assumed.** A 24x24 colour signature over the 238 marks scored two unrelated
+  red packs at 0.95 and put Peony A against Peony B — which ARE one pack —
+  below the same threshold. The crop differences between two shots of one pack
+  outweigh the difference between two similar packs. **Every pair was compared
+  by eye** (`.tmp/pairs.mjs` lays each group out side by side); the sweep was
+  only ever used to build the shortlist.
+- **A SHARED NAME IS NOT A DUPLICATE.** 46 pairs share a name and only 34 are
+  the same pack: More Menthol is a green 120s in one and a white 20-class in
+  the other, Nanjing Gold a pale floral pack and a navy one. Those 15 stay and
+  their names collide, which is what `lib/cigPages.ts`'s `TWINS` is for.
+- **AND A DUPLICATE NEED NOT SHARE A NAME.** Four of the nine are the same pack
+  filed under two variant names — `49_Hadmen-Gold_Classic` against
+  `121_Hadmen-Golden_Classic`, Fresh Cool Slim against Refreshing Slim, Grand
+  Color against Vibrant Colors, Soft Nanyang against Soft Pack Nanyang. That is
+  what broke the page build; see "WHICH VECTOR GETS WHICH PACK" below.
+- Of each pair the larger source is kept, except ESSE Change Strawberry, whose
+  bigger file is smeared through with white streaks.
+
+**THREE PACKS WERE DAMAGED BY A WHITE KEY UPSTREAM AND ARE REPAIRED IN THE
+BUILD** — `REPAIR` in `scripts/build-cigs.mjs`, `repairPanel()`. Something
+before us keyed white out of these three and left holes in the alpha where the
+pack's own white was.
+- **WHAT WAS KEYED AWAY IS TOLD BY THE FRINGE ROUND THE HOLES, NOT BY LOOKING
+  AT THE PACK.** `91_Mevius-Blue_6` is a flat white panel with black lettering;
+  `99_ESSE-Double_Shot_Black` is a white dotted spiral printed OVER black. Both
+  arrive as holes. The hole-edge median luminance separates them: **52 on the
+  black ESSE (dark — white dots on black) against 188 and 197 on the other two
+  (pale — a white face)**. Filling white is right in all three cases; what
+  differs is `fill`, which says whether the repair may reach the pack's face.
+- **THE WHITE IS THE PACK'S OWN, MEASURED, NOT PICKED.** The rule is one line:
+  the luminance of the pack's fully-opaque pixels at or above 240. It reads
+  **250 for Mevius and 251 for both ESSEs** — and an earlier guess of 225 for
+  the black ESSE greyed it visibly against the landing page's white paper. Use
+  the rule; do not eyeball a value.
+- **A `fill: 'face'` REPAIR CANNOT RUN WITHOUT A `HAND_CROP`, AND THE BUILD
+  STOPS IF ONE IS MISSING.** Filling a pack's white back in makes that white
+  read as backdrop to the crop reasoning, which then eats the pack: the black
+  ESSE's drawn region went 50x92 to 81x92. So a face repair states its own box
+  and `repairPanel` refuses without one. **The guard was made to fire before it
+  was trusted** — deleting the hand crop stops the build with
+  `99_ESSE-Double_Shot_Black: a 'face' repair needs a HAND_CROP to fill inside`.
+- **A CLAIM RETRACTED, because it is the kind that wastes an afternoon**: this
+  file briefly said Mevius's image data survived under the holes and could
+  simply be un-keyed. It does not — **92.3% of the hole area is pure black**.
+  The RGB range of 0..255 that suggested otherwise came from the 7.7% that is
+  text antialiasing. The repair works because the real panel is flat white and
+  its lettering survived, not because anything was recovered.
+
+**FOUR PACKS ARE CUT IN THE OWNER'S OWN CUT-OUTS AND CANNOT BE CROPPED BACK.**
+Seven Stars loses about 5% off its left, West Red 8%, West Blue 22% and More
+Menthol 13% — the pixels are not in the supplied file, so no crop, peel or hand
+box reaches them and `audit:cigs` cannot see it either (it compares the crop
+against the source, and the source is what is short). Reconstruction was
+prototyped in `.tmp/rebuild-edge.mjs` — mirror the outer 24px rim from the
+intact edge and fill the rest with the pack's own nearest column — and **is not
+wired in**: it bakes invented pixels into the mark and into that pack's page,
+which is the owner's call, not ours.
 
 **THE FRAME IS A BLACK HAIRLINE NOW, AND THE BAND INSIDE IT FILLS UNDER THE
 POINTER** (the owner's 2026-09-22: "turn the outline on the selected cig
@@ -1134,8 +1231,9 @@ the 2026-09-14 ask above, which this supersedes.
 **MY SAVED SPINS THE ROW LIKE A ROULETTE WHEEL AND SWAPS THE PACKS MID-SPIN.**
 Pressing it throws the row at `CIG_SPIN_SPEED` (10,290px/s, 54x the pace the
 owner's recording runs at), and after exactly ONE LAP of the catalogue —
-`CIG_SPIN_LAP`, 20,580px, derived from `cigLayout()` so it moves if the row
-does — the packs are replaced by the reader's own shelf, the velocity is set
+`CIG_SPIN_LAP`, 19,728px, derived from `cigLayout()` so it moves if the row
+does, and it did: it was 20,580px and a 2.0s spin at 247 packs, and dropping
+the nine duplicates made it 1.9s — the packs are replaced by the reader's own shelf, the velocity is set
 back to `CIG_FLING_MAX`, and **the rest is not animation code at all**: it is
 the same `CIG_BRAKE` and the same settle that end every other throw. The
 owner asked for the momentum to return to normal and the rest to play out as
@@ -1416,7 +1514,7 @@ no hits have the sigil flash red and delete whatever is written").
   half again on a narrow window; and on a coarse pointer both toggles get an
   invisible 38px target while shut. **Left as they are**: "hard" and "mid" also find the packs NAMED
   "Hard Pack" and "Mid-Size", which is the name being searched as asked;
-  "cannabis" finds all 247, every pack having a strain; and the prefix rule
+  "cannabis" finds all 238, every pack having a strain; and the prefix rule
   lets "esse" find Guiyan Essence.
 - **NEVER PATCH THIS FILE WITH `String.replace(a, b)` AND A STRING `b`.** A
   replacement string reads a dollar sign followed by a backtick as "everything
@@ -1908,7 +2006,7 @@ cannot drift.
   (Lite/mid/hard), pack price ($15/$25/$30). One is the **brand**, the name
   before the em dash, all 63 of them. The last two are **families**: the
   page's tasting notes and its pairings are open vocabularies (112 and 207
-  distinct values across the 235 pages), so the owner asked for five
+  distinct values across the 229 pages), so the owner asked for five
   categories encompassing each, and `scripts/build-cigtags.mjs` classifies
   every value into one — **Sweet, Fruit, Fresh, Floral, Earthy** for notes
   and **Cannabis, Alcohol, Beverage, Dessert, Savoury** for pairings.
@@ -1939,7 +2037,7 @@ cannot drift.
   named after puddings, so "Mint Chocolate (Hybrid)" and "Mint Chocolate
   Chip (Hybrid)" both landed in Dessert when the rules were only sorted by
   length — the bracket is what says what a pairing IS. Note that **every
-  pack has a strain**, so Cannabis on its own matches all 247 and narrows
+  pack has a strain**, so Cannabis on its own matches all 238 and narrows
   nothing; it is there to be combined.
 - **A pack can be in more than one family** — it has three notes and three
   pairings — so those two groups are array-valued and a pack matches if ANY
@@ -1987,7 +2085,7 @@ cannot drift.
   `listCigarettes` builds `column = ANY(values)` per facet and ANDs them, and
   `matchingPacks` in `lib/cigTags.ts` is that rule in the browser. It could
   not be the same query — that one reads the `cigarettes` table, which holds
-  the 32 placeholder products, and the row is the 247 photographed packs
+  the 32 placeholder products, and the row is the 238 photographed packs
   which are deliberately not in it (see `pack_favorites`). A pack with no
   tags fails every tag, as a NULL column fails `= ANY(...)`.
 - **`npm run build:cigtags`** writes `lib/cigtags.json` from the BUILT pages
@@ -2228,7 +2326,7 @@ comes from the button they are being matched to rather than being typed again.
 - **The seal's frames are baked at 174px for an 87px draw**
   (`DRAWN` in `scripts/build-seal-frames.mjs`), so at 30 the browser downscales
   them 2.9x and the red filigree softens. Accepted rather than re-baked: that
-  constant is shared with about/privacy/terms and all 235 cigarette pages,
+  constant is shared with about/privacy/terms and all 229 cigarette pages,
   which still draw at 87, so a second size means a second 179-frame set.
 
 **The landing page has since moved off the design in five places, all the
@@ -3290,8 +3388,8 @@ the square was a button). `components/ShelfComment.tsx`, `EDITOR` and
 drawn from the first day and totalled NOTHING for three redraws:
 `pack_favorites` keys on a pack id and `lib/cigs.json` carries no money, so
 the route passed no `worth` at all. **`cigtags.json` has the price**: it is
-generated from the owner's own 235 cigarette pages and carries a PRICE PER
-PACK for all 247 — the $15/$25/$30 the tag menu filters by. `shelfWorth`
+generated from the owner's own 229 cigarette pages and carries a PRICE PER
+PACK for all 238 — the $15/$25/$30 the tag menu filters by. `shelfWorth`
 multiplies it by `cardAmount` (the wheels' answer, a carton counted as ten)
 and sums.
 - **It is totalled on the SERVER**, so the 247-pack tag table never reaches
@@ -3362,7 +3460,7 @@ black").
   edge.
 - **THE BORROWED QUANTITY WHEELS ARE OVERRIDDEN, NEVER EDITED.**
   `CigQuantity`'s own scheme is a red panel with white stripes and black type,
-  and those rules are shared with all 235 cigarette pages — so the shelf
+  and those rules are shared with all 229 cigarette pages — so the shelf
   restates them under `.shelf`. Here it is a BLACK panel with RED everything
   (the owner's "make the white in the number selector red"), which puts it
   with the rest of the page's controls. **THE ONE WHITE LEFT IS THE DIGIT
@@ -3486,9 +3584,9 @@ black").
 `PLUS`/`QUANTITY_MENU`/`WHEEL` in `lib/cigPages.ts`). **TWO PAGES USE IT AND
 ONLY ONE HAS A PLUS**: the cigarette page, where the artwork draws the button,
 and the shelf card, where the amount box is the button and the component's own
-trigger is laid invisibly over it (see the shelf above). It is shared by 235
+trigger is laid invisibly over it (see the shelf above). It is shared by 229
 pages, so change it with care — the shelf deliberately took none. The plus box is the
-artwork's (byte-identical in all 235 built pages, checked); only the hit area is
+artwork's (byte-identical in all 229 built pages, checked); only the hit area is
 the page's. Hovering shows the menu at 50% (`pointer-events:none`), pressing
 opens it solid at 100% over everything below — which cannot be pressed while it
 is open. It grows out of the top-left corner of the outline, out and down
@@ -3577,8 +3675,14 @@ the brand assets and review text in this repo are visible to anyone.
    treats the two as ONE, so a half-applied pair reads as neither rather than
    laddering through every combination. Until they land the editor draws and
    types and a submit floods the rectangle red, keeping what was written.
-1. **Deploy is not yet green.** See HANDOFF.md → Deployment. The middleware was removed to get
-   past `MIDDLEWARE_INVOCATION_FAILED`; that commit (`f6b03ff`) still needs pushing.
+1. **DEPLOY IS GREEN — this entry said otherwise until 2026-09-29 and was
+   wrong.** `f6b03ff`, the commit removing the middleware to get past
+   `MIDDLEWARE_INVOCATION_FAILED`, was pushed long ago along with everything
+   after it. Verified against the live project: `/landing` 200 and
+   `/growmenu/badge.webp` 200 on `far-east-beta.vercel.app`, the served markup
+   carrying `corner-pagoda`. **HANDOFF.md still says "The site has never
+   successfully deployed"; that is stale too.** What the removed middleware
+   really costs is the next entry, which is the one to read.
 2. **No session refresh on plain page loads** (middleware removed). Readers who only browse are
    signed out ~1h after login; server actions keep active sessions alive. Fix: a Node-runtime
    route handler (`/auth/refresh`) that calls `getUser()` and persists cookies, pinged from a

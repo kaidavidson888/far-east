@@ -162,26 +162,15 @@ const PRICE = [
 const TEMPLATE = 'Changbaishan (Soft Red).svg';
 
 const RESEARCHED = {
-  '121_Hadmen-Golden_Classic': {
-    from: 'Hadmen (Gold Classic)',
-    brand: 'Hadmen',
-    variant: 'Golden Classic',
-    price: 0,
-    notes: 'Notes of Traditional, Harsh, Smoky',
-    menthol: 'N',
-    harshness: 'hard',
-    pairings: ['Peanuts', 'Baijiu', 'Sour Diesel (Sativa)'],
-  },
-  '148_Double_Happiness-Soft_Nanyang': {
-    from: 'Double Happiness (Soft Nanyang)',
-    brand: 'Double Happiness',
-    variant: 'Soft Nanyang',
-    price: 0,
-    notes: 'Notes of Mild, Sweet, Floral',
-    menthol: 'N',
-    harshness: 'Lite',
-    pairings: ['Almond Cake', 'Oolong Tea', 'Wedding Cake (Hybrid)'],
-  },
+  // '121_Hadmen-Golden_Classic' and '148_Double_Happiness-Soft_Nanyang' were
+  // both here until 2026-09-29, each a template page carrying copy borrowed
+  // from the vector its TWIN had claimed. Both twins turned out to be the same
+  // pack photographed twice and were dropped (see DUPLICATES in
+  // build-cigs.mjs), which frees those vectors — and the token match hands
+  // each to the survivor, because that is the pack it was always of. So these
+  // two are drawn from the owner's own artwork now rather than assembled from
+  // the template, and stating them here would be claiming a page they already
+  // have.
   '207_Huanghelou-1916': {
     from: 'Huanghelou (1916 Hard)',
     brand: 'Huanghelou',
@@ -330,6 +319,32 @@ const packs = JSON.parse(readFileSync(PACKS, 'utf8')).packs;
 const byName = new Map(packs.map((p) => [p.name, p]));
 const scored = packs.map((p) => ({ p, t: tokens(p.name) }));
 
+/**
+ * The pack whose name IS this vector's, once punctuation and spacing are taken
+ * out — `lib/cigPages.ts`'s own rule, which is what makes `GoldenLeaf` and
+ * `Golden Leaf` meet. It is the same rule here because it has to be: the
+ * runtime uses it to send a pack with no vector to its name-twin's page, and a
+ * build that could not see the same equality gave those two spellings two
+ * different answers. While both spellings had a pack that was survivable — the
+ * `Golden Leaf` one took the vector and the runtime sent `GoldenLeaf` along to
+ * it. Dropping the duplicate pack took the vector's owner away and left
+ * `111_GoldenLeaf-Love_Style` and `114_GoldenLeaf-Golden_Mid-Size` visible in
+ * the row and unpressable.
+ *
+ * A collapsed name held by two packs is ambiguous, so it is dropped rather than
+ * guessed at — the same judgement `TWINS` makes.
+ */
+const collapse = (s) => s.toLowerCase().replace(/[^a-z0-9]/g, '');
+const byCollapsed = new Map();
+for (const p of packs) {
+  const k = collapse(p.name);
+  if (byCollapsed.has(k)) byCollapsed.set(k, null);
+  else byCollapsed.set(k, p);
+}
+// a vector is labelled `Brand (Variant)`, a pack `Brand — Variant`; collapsed,
+// the two are the same string
+const exactPack = (label) => byCollapsed.get(collapse(label)) ?? null;
+
 const files = readdirSync(SRC)
   .filter((f) => f.endsWith('.svg'))
   .sort();
@@ -400,16 +415,38 @@ const claimed = new Map();
 let bytesIn = 0;
 let bytesOut = 0;
 
-for (const file of files) {
-  const label = file.replace(/\.svg$/, '');
-  if (SKIP.has(label)) continue;
-
-  // which pack is this?
-  let pack = null;
-  if (MATCH[label]) {
-    pack = byName.get(MATCH[label]) ?? null;
-    if (!pack) throw new Error(`${label}: MATCH points at "${MATCH[label]}", which is not a pack`);
-  } else {
+// EVERY VECTOR IS SCORED BEFORE ANY IS GIVEN A PACK, AND THE BEST MATCH IS
+// SERVED FIRST. Assigning inside the write loop meant the vector that happened
+// to be read first took the pack, which was harmless while every vector's own
+// pack existed — and wrong the moment one did not. Removing the duplicate packs
+// freed their twins' vectors, and a freed twin overlaps the survivor's name by
+// more than half, so it claimed the pack its own exactly-named vector was about
+// to take: `97_Peony-The_Great_Peony_B` was handed the "Great Peony A" page and
+// `121_Hadmen-Golden_Classic` the "Gold Classic" one, each a pack in the row
+// opening a page with another variant's name on it. Ordered by score, the exact
+// name (1.0) is served before the near miss (0.75 and 0.67), and the loser is
+// reported as unmatched exactly as before.
+//
+// A vector still has ONE candidate pack — its own best — and is orphaned rather
+// than falling back to a second choice. That is deliberate: a second choice is a
+// worse guess by definition, and a wrong page is worse than no page.
+const assigned = new Map();
+{
+  const bids = [];
+  for (const file of files) {
+    const label = file.replace(/\.svg$/, '');
+    if (SKIP.has(label)) continue;
+    if (MATCH[label]) {
+      const p = byName.get(MATCH[label]) ?? null;
+      if (!p) throw new Error(`${label}: MATCH points at "${MATCH[label]}", which is not a pack`);
+      bids.push({ label, pack: p, score: 3 }); // a hand match outranks everything
+      continue;
+    }
+    const exact = exactPack(label);
+    if (exact) {
+      bids.push({ label, pack: exact, score: 2 }); // the same name outranks a guess
+      continue;
+    }
     const t = tokens(label);
     let best = null;
     let score = -1;
@@ -420,17 +457,56 @@ for (const file of files) {
         best = q.p;
       }
     }
-    if (score >= 0.5) pack = best;
+    bids.push({ label, pack: score >= 0.5 ? best : null, score });
   }
-  if (!pack) {
-    unmatched.push(label);
-    continue;
+  // stable, so vectors scoring the same keep the order the folder gives them
+  bids.sort((a, b) => b.score - a.score);
+  for (const b of bids) {
+    if (!b.pack) {
+      unmatched.push(b.label);
+      continue;
+    }
+    if (claimed.has(b.pack.id)) {
+      unmatched.push(`${b.label} (would take ${b.pack.id}, already used by ${claimed.get(b.pack.id)})`);
+      continue;
+    }
+    claimed.set(b.pack.id, b.label);
+    assigned.set(b.label, b.pack);
   }
-  if (claimed.has(pack.id)) {
-    unmatched.push(`${label} (would take ${pack.id}, already used by ${claimed.get(pack.id)})`);
-    continue;
+  // `PAGES_PLAN=1 node scripts/build-cigpages.mjs` prints which vector each pack
+  // ends up with and stops. The writing is the half hour; the decision above is
+  // milliseconds, and it is the part that goes wrong when the pack list changes.
+  if (process.env.PAGES_PLAN) {
+    for (const b of bids) {
+      const got = assigned.get(b.label);
+      console.log(
+        `${b.score.toFixed(3)}  ${b.label.padEnd(44)} -> ${got ? got.id : '(none)'}`,
+      );
+    }
+    console.log(`\n${assigned.size} pages, ${unmatched.length} vectors with no pack`);
+    // the question the vector list cannot answer: is there a pack in the row
+    // that now leads nowhere? A pack with no vector reaches its name-twin's
+    // page at runtime, so only a pack whose collapsed name matches no claimed
+    // pack at all is a button you can see and not press.
+    const served = new Set();
+    for (const p of packs) if (claimed.has(p.id)) served.add(collapse(p.name));
+    for (const id of Object.keys(RESEARCHED)) {
+      const p = packs.find((q) => q.id === id);
+      if (p) served.add(collapse(p.name));
+    }
+    const dead = packs.filter((p) => !claimed.has(p.id) && !served.has(collapse(p.name)));
+    console.log(`${dead.length} packs lead nowhere`);
+    for (const p of dead) console.log(`   ${p.id}  "${p.name}"`);
+    process.exit(0);
   }
-  claimed.set(pack.id, label);
+}
+
+for (const file of files) {
+  const label = file.replace(/\.svg$/, '');
+  if (SKIP.has(label)) continue;
+
+  const pack = assigned.get(label);
+  if (!pack) continue; // scored out above, and already reported
 
   let svg = readFileSync(`${SRC}/${file}`, 'utf8');
   bytesIn += svg.length;

@@ -164,6 +164,15 @@ const HAND_CROP = {
   '128_Septwolves-Blue_Diamond': { x0: 258, y0: 102, x1: 764, y1: 921 },
   // Clipped down the left: the pack's purple edge and half the ESSE mark.
   '05_ESSE-Double_Shot_Red_White_Wine': { x0: 240, y0: 106, x1: 511, y1: 610 },
+  // Half its face keyed away, so the widest box-shaped thing found stopped
+  // inside the artwork. Stated to the pack's real edges, green side panel
+  // included — see REPAIR above.
+  '100_ESSE-Double_Shot_Green_Purple': { x0: 291, y0: 169, x1: 731, y1: 891 },
+  // Its box has to be stated for the same reason: once the keyed-away dots are
+  // filled back in, that white reads as BACKDROP to the crop's own reasoning,
+  // which then trims two thirds of the pack away (drawn 50x92 -> 81x92 before
+  // this line existed). A 'face' repair and a hand crop go together.
+  '99_ESSE-Double_Shot_Black': { x0: 290, y0: 102, x1: 734, y1: 921 },
   // THE WHITE-FACE CLIPS, found by auditing every final crop against its
   // source (the owner saw packs cut in the row). Each of these has a white
   // face at an edge that the reasoning read as empty and cropped off — the
@@ -218,6 +227,166 @@ const HAND_CROP = {
   '239_Nanjing-Pink': { x0: 256, y0: 105, x1: 701, y1: 874 },
   '241_Taishan-Baisha': { x0: 256, y0: 144, x1: 703, y1: 874 },
 };
+
+/**
+ * A PANEL THE CUT-OUT KEYED AWAY, PUT BACK (the owner's 2026-09-29 "fix
+ * mevius", then "fix the esse double shot pack iamge" and "fix the black one
+ * too"). Three entries, and the bar for a fourth is high: everything else in
+ * this file CHOOSES from the pixels it was given, and this one WRITES pixels
+ * that were not there. What makes each of the three admissible is that the
+ * missing thing is a FLAT panel whose printing survived — a white rectangle,
+ * not a photograph being invented. Anything textured is out of scope, and the
+ * four packs cut short in their own sources are left alone for that reason.
+ *
+ * THE WHITE IS ONE RULE, NOT A NUMBER PER PACK: the median luminance of the
+ * pack's own fully-opaque pixels at 240 or above. Do not eyeball it — 225 was
+ * guessed for the black ESSE and greyed it visibly against the landing page.
+ *
+ * `91_Mevius-Blue_6` is a blue pack over a white warning panel with black
+ * lettering. Whatever made the cut-out keyed out white, so the panel went and
+ * its lettering stayed — 41% of the pack's height, opaque only where the
+ * letters are. The HAND_CROP note above records the earlier decision to KEEP
+ * that region ("line art on transparency ... the owner wants it kept"), which
+ * was right for the landing page: black type on nothing, over a white page,
+ * reads as the panel. It stops being right on the shelf, whose page is black —
+ * there the panel is black type on black and the pack has a hole in it.
+ * Measured: 35.2% of that crop is transparent, and 92.3% of it is pure black
+ * in RGB as well, so there is nothing under the mask to recover.
+ *
+ * WHAT MAKES THIS SAFE IS THAT THE REAL PANEL IS FLAT. It is not a photograph
+ * being invented; it is a plain white rectangle whose lettering survived. The
+ * white is not chosen either — 250 is the median of the white panel on
+ * `64_Mevius-Island_Sunset`, the one Mevius in this same shoot that kept its
+ * own (p10 246, p90 252).
+ *
+ * Everything else about the region is MEASURED at build time rather than
+ * stated, so a re-supplied source cannot silently be mangled: the fill starts
+ * below the last row that is still a solid pack, ends at the subject's own
+ * foot, and spans the columns the pack occupies there. And if the holes are
+ * gone — a fixed cut-out — the repair says so and does nothing.
+ */
+const REPAIR = {
+  // BELOW the solid pack: the warning panel, and only that.
+  '91_Mevius-Blue_6': { white: 250, fill: 'panel' },
+  /*
+   * THE WHOLE FACE, because on this one the key took the pack's white
+   * wherever it found it rather than in one block (the owner's 2026-09-29
+   * "fix the esse double shot pack image"). 48.3% of the crop is transparent
+   * and 87.4% of that is pure black, so again there is nothing to recover —
+   * but again the missing thing is FLAT WHITE, this pack being white with
+   * purple and green splashes over it, and the splashes and the lettering
+   * both survived.
+   *
+   * THE WHITE IS ONE MEASUREMENT FOR ALL THREE: the median of the pack's own
+   * surviving TRUE white — every fully opaque pixel at luminance 240 or above,
+   * in that photograph. It reads 251 here (29,179 samples) and 251 on the
+   * black one, which is the reassuring part: the two were photographed in the
+   * same shoot and the rule does not need a number per pack. (It was 247 for
+   * a few minutes, off a looser sample that swept in mid-greys.)
+   *
+   * ITS CROP IS STATED TOO, and that is the other half of the fault: with
+   * half the face keyed away the widest box-shaped thing the build could find
+   * stopped at x=685, inside the artwork — it cut the second capsule dot in
+   * half, ran "DOUBLE SHOT" off the edge and left the pack's GREEN SIDE PANEL
+   * out altogether. `05_ESSE-Double_Shot_Red_White_Wine` is the same design
+   * undamaged (0% transparent) and shows that side panel, which is what says
+   * the green band at 697..731 is the pack and not a neighbour.
+   *
+   * WHAT THIS STILL DOES NOT FIX: the ESSE wordmark's last letter. It sat
+   * further right than "DOUBLE SHOT" does — see the sibling — and the source
+   * is cut clean through it where the side panel begins. Those pixels are not
+   * in the file.
+   */
+  '100_ESSE-Double_Shot_Green_Purple': { white: 251, fill: 'face' },
+  /*
+   * THE SAME KEY, ON A BLACK PACK, AND IT TOOK THE DOTS (the owner's "fix the
+   * black one too"). 23.4% of this crop is transparent, 79% of that pure
+   * black. What is missing here is not a white FACE but the white dotted
+   * spiral printed over a black one — which is why the holes are bordered by
+   * DARK pixels, fringe median 52, where the green pack's are bordered by
+   * pale ones at 188. Same fault, opposite surroundings.
+   *
+   * IT LOOKS RIGHT TODAY AND THAT IS THE TRAP. On the landing page's white
+   * paper a hole shows the page through and reads as the white dot that
+   * belongs there, so nothing was ever reported. On the shelf, whose page is
+   * black, every one of those dots is a black hole and the spiral disappears.
+   * The fill is what makes the mark say the same thing on both grounds.
+   *
+   * No hand crop: with the dots restored the build's own reasoning finds the
+   * pack, and its answer is checked against the old one below.
+   */
+  '99_ESSE-Double_Shot_Black': { white: 251, fill: 'face' },
+};
+
+/**
+ * Fill the keyed-away panel back in, in place, and say what it did.
+ *
+ * Returns null when there is nothing to repair, which is the answer a
+ * corrected source should produce.
+ */
+function repairPanel(d, w, h, white, within, fill = 'panel') {
+  // the subject is the alpha here; find its box, held to the pack's own
+  // columns where a hand crop states them — this source carries a column of
+  // grey tabs outside the pack that the crop discards, and the fill must not
+  // wander out over them
+  let x0 = w, y0 = h, x1 = -1, y1 = -1;
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      if (d[(y * w + x) * 4 + 3] < 128) continue;
+      if (x < x0) x0 = x; if (x > x1) x1 = x;
+      if (y < y0) y0 = y; if (y > y1) y1 = y;
+    }
+  }
+  if (x1 < 0) return null;
+  x1 += 1; y1 += 1;
+  if (within) {
+    x0 = Math.max(x0, within.x0); x1 = Math.min(x1, within.x1);
+    y0 = Math.max(y0, within.y0); y1 = Math.min(y1, within.y1);
+    if (x1 - x0 < 10 || y1 - y0 < 10) return null;
+  }
+  const rowOpaque = (y) => {
+    let n = 0;
+    for (let x = x0; x < x1; x++) if (d[(y * w + x) * 4 + 3] >= 128) n++;
+    return n / (x1 - x0);
+  };
+  // `face` fills the whole stated box: the key took this pack's white all
+  // over rather than in one band, so there is no solid row to work down from.
+  // It relies on the box being stated by hand, which is why REPAIR entries of
+  // this kind carry a HAND_CROP beside them.
+  if (fill === 'face') {
+    // Stated box or nothing: see the note on 99_ESSE-Double_Shot_Black. Filling
+    // a pack's white back in makes it look like paper to the crop, so a face
+    // repair without a hand crop silently eats the pack.
+    if (!within) return { needsBox: true };
+    let filled = 0;
+    for (let y = y0; y < y1; y++) {
+      for (let x = x0; x < x1; x++) {
+        const i = (y * w + x) * 4;
+        if (d[i + 3] >= 128) continue;
+        d[i] = white; d[i + 1] = white; d[i + 2] = white; d[i + 3] = 255;
+        filled++;
+      }
+    }
+    return filled ? { filled, from: y0, to: y1, x0, x1 } : null;
+  }
+  // the last row that is still a solid pack, and the first hollow one after it
+  let solid = -1;
+  for (let y = y0; y < y1; y++) if (rowOpaque(y) > 0.9) solid = y;
+  if (solid < 0 || solid + 1 >= y1) return null;
+  let hollow = 0;
+  for (let y = solid + 1; y < y1; y++) hollow += 1 - rowOpaque(y);
+  if (hollow < (y1 - solid - 1) * 0.5) return null; // not hollow enough to be this
+  let filled = 0;
+  for (let y = solid + 1; y < y1; y++) {
+    for (let x = x0; x < x1; x++) {
+      const i = (y * w + x) * 4;
+      if (d[i + 3] >= 128) continue;
+      d[i] = white; d[i + 1] = white; d[i + 2] = white; d[i + 3] = 255;
+      filled++;
+    }
+  }
+  return { filled, from: solid + 1, to: y1, x0, x1 };
+}
 
 /**
  * Ten files whose names belong to the product before them.
@@ -307,6 +476,34 @@ const DUPLICATES = new Set([
   // The far end of the slip above: this file holds a 中南海 EIGHT, which is
   // what 221 holds too. Only visible once the run is renumbered.
   '220_Yuxi-Red_Gold', // keeping 221_Zhongnanhai-8
+
+  // NINE MORE, AND WHY THEY WERE NOT IN THE FIRST PASS (2026-09-29, the
+  // owner's "remove all the duplicate packs").
+  //
+  // The pass above worked through the 46 pairs that SHARE A NAME, which is
+  // the only place two files can obviously be one pack. Six of these nine do
+  // not share a name — the same pack was filed twice under two spellings
+  // ("Gold Classic" and "Golden Classic", "Fresh Cool Slim" and "Refreshing
+  // Slim", "Soft Pack Nanyang" and "Soft Nanyang", "Vibrant Colors" and
+  // "Grand Color") or with an A/B suffix — so nothing was ever going to put
+  // them side by side. They were found by comparing every mark against every
+  // other as a picture, and then, exactly as the note above insists, EACH
+  // PAIR WAS LOOKED AT rather than taken on the score: the same sweep rates
+  // two unrelated red packs at 0.95 and rates Peony A against Peony B, which
+  // are plainly one pack, below its own threshold.
+  //
+  // The larger crop is kept, per the rule above. Four of these drop a 312px
+  // thumbnail in favour of a 1024px photograph of the same pack, which is
+  // the whole difference between 0.05 and 0.47 megapixels of cigarette.
+  '41_Golden_Leaf-Golden_Mid-Size', // keeping 114 (0.05MP against 0.47)
+  '42_Golden_Leaf-Love_Style', // keeping 111 (0.04MP against 0.41)
+  '49_Hadmen-Gold_Classic', // keeping 121_Hadmen-Golden_Classic (0.05 / 0.42)
+  '34_Furongwang-Fresh_Cool_Slim', // keeping 133_Furongwang-Refreshing_Slim
+  '149_Ashima-Eternal_Love', // keeping 14 — same photograph, this one washed out
+  '148_Double_Happiness-Soft_Nanyang', // keeping 24_..._Soft_Pack_Nanyang, ditto
+  '95_Diamond-Lotus_Green_B', // keeping 94_..._A
+  '152_Huanghelou-Grand_Color_Hard_Pack', // keeping 77_..._Vibrant_Colors_Hard_Pack
+  '96_Peony-The_Great_Peony_A', // keeping 97_..._B (0.45MP against 0.40)
 ]);
 
 /** Near-white, and flat enough to be a backdrop rather than a pack panel. */
@@ -806,6 +1003,25 @@ for (const file of files) {
     .raw()
     .toBuffer({ resolveWithObject: true });
   const { width: w, height: h } = info;
+
+  // Put back a panel the cut-out keyed away, BEFORE anything measures this
+  // source — the crop, the squaring off and the peel all have to see the pack
+  // the repair leaves behind, not the hole.
+  const toRepair = REPAIR[source];
+  if (toRepair) {
+    const r = repairPanel(data, w, h, toRepair.white, HAND_CROP[source], toRepair.fill);
+    if (r) {
+      if (r.needsBox) {
+        throw new Error(`${source}: a 'face' repair needs a HAND_CROP to fill inside`);
+      }
+      console.log(
+        `  ${source}: filled ${r.filled}px of keyed-away panel`
+        + ` (y ${r.from}..${r.to}, x ${r.x0}..${r.x1}) at white ${toRepair.white}`,
+      );
+    } else {
+      console.log(`  ${source}: nothing to repair — the source has its panel back`);
+    }
+  }
 
   const cands = candidates(data, w, h);
   if (!cands.length) throw new Error(`${file}: nothing left after clearing the backdrop`);

@@ -306,13 +306,19 @@ export const CIG_FLING_WINDOW_MS = 80;
 /**
  * How fast the row is spun, in pixels per second.
  *
- * One lap of the catalogue is 20,580px (247 packs at their own widths plus
- * the 26px gap), and the swap happens after exactly one lap, so this number
- * IS the length of the spin:
+ * One lap of the catalogue is 19,728px (238 packs at the mean pitch, their
+ * mean width plus the 26px gap), and the swap happens after exactly one lap,
+ * so this number IS the length of the spin:
  *
- *   3,000px/s    6.9s     too long to hold anyone
- *  10,290px/s    2.0s     this
+ *   3,000px/s    6.6s     too long to hold anyone
+ *  10,290px/s    1.9s     this
  *  20,580px/s    1.0s     over before it reads as a spin
+ *
+ * THE LAP IS DERIVED (`CIG_SPIN_LAP = cigLayout().total`) AND THE SPEED IS
+ * NOT, so the spin's length follows the catalogue. It was 20,580px and a flat
+ * 2.0s at 247 packs; removing the nine duplicates took it to 1.9s, which is
+ * well inside the band this table is choosing between. Re-pick the speed only
+ * if the catalogue moves far enough to leave it.
  *
  * Two seconds is long enough to register as a wheel being thrown and short
  * enough that nobody is waiting. It is 54x the pace the owner's recording

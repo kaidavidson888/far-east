@@ -408,21 +408,6 @@
    "hand": false
   },
   {
-   "id": "34_Furongwang-Fresh_Cool_Slim",
-   "source": "34_Furongwang-Fresh_Cool_Slim",
-   "box": {
-    "x0": 79,
-    "y0": 17,
-    "x1": 232,
-    "y1": 296
-   },
-   "src": {
-    "w": 312,
-    "h": 314
-   },
-   "hand": false
-  },
-  {
    "id": "35_Furongwang-Glory_Slim",
    "source": "35_Furongwang-Glory_Slim",
    "box": {
@@ -498,36 +483,6 @@
    "hand": false
   },
   {
-   "id": "41_Golden_Leaf-Golden_Mid-Size",
-   "source": "41_Golden_Leaf-Golden_Mid-Size",
-   "box": {
-    "x0": 57,
-    "y0": 17,
-    "x1": 254,
-    "y1": 296
-   },
-   "src": {
-    "w": 312,
-    "h": 314
-   },
-   "hand": false
-  },
-  {
-   "id": "42_Golden_Leaf-Love_Style",
-   "source": "42_Golden_Leaf-Love_Style",
-   "box": {
-    "x0": 83,
-    "y0": 18,
-    "x1": 233,
-    "y1": 295
-   },
-   "src": {
-    "w": 314,
-    "h": 314
-   },
-   "hand": false
-  },
-  {
    "id": "43_Golden_Leaf-Luoyang_Peony_Soft_Pack",
    "source": "43_Golden_Leaf-Luoyang_Peony_Soft_Pack",
    "box": {
@@ -580,21 +535,6 @@
     "y0": 18,
     "x1": 252,
     "y1": 294
-   },
-   "src": {
-    "w": 314,
-    "h": 314
-   },
-   "hand": false
-  },
-  {
-   "id": "49_Hadmen-Gold_Classic",
-   "source": "49_Hadmen-Gold_Classic",
-   "box": {
-    "x0": 69,
-    "y0": 17,
-    "x1": 244,
-    "y1": 296
    },
    "src": {
     "w": 314,
@@ -1203,36 +1143,6 @@
    "hand": false
   },
   {
-   "id": "95_Diamond-Lotus_Green_B",
-   "source": "95_Diamond-Lotus_Green_B",
-   "box": {
-    "x0": 309,
-    "y0": 105,
-    "x1": 782,
-    "y1": 921
-   },
-   "src": {
-    "w": 1024,
-    "h": 1024
-   },
-   "hand": false
-  },
-  {
-   "id": "96_Peony-The_Great_Peony_A",
-   "source": "96_Peony-The_Great_Peony_A",
-   "box": {
-    "x0": 311,
-    "y0": 102,
-    "x1": 808,
-    "y1": 912
-   },
-   "src": {
-    "w": 1024,
-    "h": 1024
-   },
-   "hand": false
-  },
-  {
    "id": "97_Peony-The_Great_Peony_B",
    "source": "97_Peony-The_Great_Peony_B",
    "box": {
@@ -1253,14 +1163,14 @@
    "box": {
     "x0": 290,
     "y0": 102,
-    "x1": 733,
+    "x1": 734,
     "y1": 921
    },
    "src": {
     "w": 1024,
     "h": 1024
    },
-   "hand": false
+   "hand": true
   },
   {
    "id": "100_ESSE-Double_Shot_Green_Purple",
@@ -1268,14 +1178,14 @@
    "box": {
     "x0": 291,
     "y0": 169,
-    "x1": 685,
+    "x1": 731,
     "y1": 891
    },
    "src": {
     "w": 1024,
     "h": 1024
    },
-   "hand": false
+   "hand": true
   },
   {
    "id": "101_Changbaishan-Soft_Red",
@@ -1803,56 +1713,11 @@
    "hand": false
   },
   {
-   "id": "148_Double_Happiness-Soft_Nanyang",
-   "source": "148_Double_Happiness-Soft_Nanyang",
-   "box": {
-    "x0": 264,
-    "y0": 102,
-    "x1": 759,
-    "y1": 917
-   },
-   "src": {
-    "w": 1024,
-    "h": 1024
-   },
-   "hand": false
-  },
-  {
-   "id": "149_Ashima-Eternal_Love",
-   "source": "149_Ashima-Eternal_Love",
-   "box": {
-    "x0": 288,
-    "y0": 102,
-    "x1": 735,
-    "y1": 917
-   },
-   "src": {
-    "w": 1024,
-    "h": 1024
-   },
-   "hand": true
-  },
-  {
    "id": "151_Suyan-Eastward_Journey",
    "source": "151_Suyan-Eastward_Journey",
    "box": {
     "x0": 264,
     "y0": 106,
-    "x1": 759,
-    "y1": 916
-   },
-   "src": {
-    "w": 1024,
-    "h": 1024
-   },
-   "hand": false
-  },
-  {
-   "id": "152_Huanghelou-Grand_Color_Hard_Pack",
-   "source": "152_Huanghelou-Grand_Color_Hard_Pack",
-   "box": {
-    "x0": 264,
-    "y0": 102,
     "x1": 759,
     "y1": 916
    },

@@ -5,7 +5,7 @@
     "h": 712
   },
   "top": 18,
-  "count": 235,
+  "count": 229,
   "pages": [
     {
       "id": "04_ESSE-Change_Strawberry",
@@ -164,12 +164,6 @@
       "gap": 18.19
     },
     {
-      "id": "34_Furongwang-Fresh_Cool_Slim",
-      "name": "Furongwang — Fresh Cool Slim",
-      "source": "Furongwang (Fresh Cool Slim)",
-      "gap": 21.02
-    },
-    {
       "id": "35_Furongwang-Glory_Slim",
       "name": "Furongwang — Glory Slim",
       "source": "Furongwang (Glory Slim)",
@@ -200,18 +194,6 @@
       "gap": 22.01
     },
     {
-      "id": "41_Golden_Leaf-Golden_Mid-Size",
-      "name": "Golden Leaf — Golden Mid-Size",
-      "source": "Golden Leaf (Golden Mid-Size)",
-      "gap": 21.5
-    },
-    {
-      "id": "42_Golden_Leaf-Love_Style",
-      "name": "Golden Leaf — Love Style",
-      "source": "Golden Leaf (Love Style)",
-      "gap": 16.98
-    },
-    {
       "id": "43_Golden_Leaf-Luoyang_Peony_Soft_Pack",
       "name": "Golden Leaf — Luoyang Peony Soft Pack",
       "source": "Golden Leaf (Luoyang Peony)",
@@ -234,12 +216,6 @@
       "name": "Gutian — Gold Mid-Size",
       "source": "Gutian (Gold Mid-Size)",
       "gap": 21.66
-    },
-    {
-      "id": "49_Hadmen-Gold_Classic",
-      "name": "Hadmen — Gold Classic",
-      "source": "Hadmen (Gold Classic)",
-      "gap": 20.54
     },
     {
       "id": "51_Hongmei-Yellow_Hard_Pack",
@@ -482,18 +458,6 @@
       "gap": 23.43
     },
     {
-      "id": "95_Diamond-Lotus_Green_B",
-      "name": "Diamond — Lotus Green B",
-      "source": "Diamond (Lotus Green B)",
-      "gap": 23.34
-    },
-    {
-      "id": "96_Peony-The_Great_Peony_A",
-      "name": "Peony — The Great Peony A",
-      "source": "Peony (The Great Peony A)",
-      "gap": 19.95
-    },
-    {
       "id": "97_Peony-The_Great_Peony_B",
       "name": "Peony — The Great Peony B",
       "source": "Peony (The Great Peony B)",
@@ -548,10 +512,22 @@
       "gap": 19.7
     },
     {
+      "id": "111_GoldenLeaf-Love_Style",
+      "name": "GoldenLeaf — Love Style",
+      "source": "Golden Leaf (Love Style)",
+      "gap": 16.98
+    },
+    {
       "id": "113_Taishan-Hearts_Delight",
       "name": "Taishan — Hearts Delight",
       "source": "Taishan (Hearts Delight)",
       "gap": 22.72
+    },
+    {
+      "id": "114_GoldenLeaf-Golden_Mid-Size",
+      "name": "GoldenLeaf — Golden Mid-Size",
+      "source": "Golden Leaf (Golden Mid-Size)",
+      "gap": 21.5
     },
     {
       "id": "115_Septwolves-Blue_Ribbon_Mid-Size",
@@ -586,8 +562,8 @@
     {
       "id": "121_Hadmen-Golden_Classic",
       "name": "Hadmen — Golden Classic",
-      "source": "researched",
-      "gap": 22
+      "source": "Hadmen (Gold Classic)",
+      "gap": 20.54
     },
     {
       "id": "122_Tianzi-Thousand_Li_Landscape_Slim",
@@ -710,22 +686,10 @@
       "gap": 16.93
     },
     {
-      "id": "148_Double_Happiness-Soft_Nanyang",
-      "name": "Double Happiness — Soft Nanyang",
-      "source": "researched",
-      "gap": 19.21
-    },
-    {
       "id": "151_Suyan-Eastward_Journey",
       "name": "Suyan — Eastward Journey",
       "source": "Suyan (Eastward Journey)",
       "gap": 20.04
-    },
-    {
-      "id": "152_Huanghelou-Grand_Color_Hard_Pack",
-      "name": "Huanghelou — Grand Color Hard Pack",
-      "source": "Huanghelou (Grand Color Hard)",
-      "gap": 24.55
     },
     {
       "id": "155_Nanjing-Soft_95",
