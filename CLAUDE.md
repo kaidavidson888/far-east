@@ -939,6 +939,24 @@ ink list is read, not obeyed — the loose cigarettes and overhanging splashes t
 the peels: of 136, one touched a top or bottom at all, and that one (Raison)
 was transparent, not pack. Run it after any crop change.
 
+**BUT THE PAPER TEST HAS A FALSE NEGATIVE, AND IT IS THE ONE THIS AUDIT EXISTS
+TO CATCH.** `PAPER_SHARE` calls a solid strip paper when at least 90% of it is
+paper-white — so a pack whose own top is a band of PURE WHITE is indistinguishable
+from paper by that test, and the audit passes it. `110_Yunyan-Cloud_Dragon_Slim`
+was cut 48px into its white lid (a flat 255 from y=102 to y=147) and **the audit
+reported 0 face cuts throughout**, before the fix as after it. The owner found it
+by looking at the row.
+- **WHAT SETTLES IT IS WHERE THE STRIP STOPS SIDEWAYS.** That band spans 100% of
+  the crop's width and ends dead on its left and right edges, and there is no
+  opaque paper anywhere else in that frame — so it is the pack. Paper that came
+  along with a loose cut-out is a margin: it runs past the pack on the side it
+  is on. Render the whole source with the crop box and the cut-out's own
+  bounding box drawn on it and the answer is immediate.
+- So **a clean `audit:cigs` is not evidence that a pale-topped pack is whole.**
+  The audit is a floor, not a proof, and this is the class of fault it cannot
+  see. Six packs are known to keep a pale edge that IS the pack (Septwolves'
+  silver top, Ashima's cream panel); any of them being cut would be silent too.
+
 **A crop change means rebuilding the pages too.** Each of the 229 info pages
 carries a copy of that pack's cleaned mark (`fitPhoto` reads `public/cigs/<id>.svg`),
 so `npm run build:cigpages` has to follow `npm run build:cigs` or the row and the

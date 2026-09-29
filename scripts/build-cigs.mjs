@@ -182,8 +182,26 @@ const HAND_CROP = {
   // is the pack's own extent on the cut side, and the build's on the others,
   // so the catalogue numbers and shadows below stay out.
   '52_Hongtashan-Classic_Hard_Pack': { x0: 250, y0: 102, x1: 772, y1: 921 },
-  '110_Yunyan-Cloud_Dragon_Slim': { x0: 344, y0: 150, x1: 679, y1: 921 },
-  '149_Ashima-Eternal_Love': { x0: 288, y0: 102, x1: 735, y1: 917 },
+  // BOTH ends of this one, and the top was added on 2026-09-29 (the owner
+  // selected it in the row and asked for it). The entry above fixed its bottom
+  // warning lines and kept the build's own answer for the top, per the rule —
+  // but that answer was wrong the same way for the same reason: the pack's top
+  // is a band of PURE WHITE, 100% opaque and a flat 255 from y=102 to y=147,
+  // and the reasoning read it as empty and started at 150. 48px of pack, which
+  // is the whole of its white lid.
+  // It is the pack and not the photograph's paper, which is the call that
+  // matters here: the cut-out is exactly the pack on all four sides — the band
+  // spans 100% of the crop's width and stops dead at its edges, and there is no
+  // opaque paper anywhere else in the frame. `audit:cigs` has a test for
+  // precisely this and passed it, so its silence is not evidence; see the note
+  // on its paper test below.
+  '110_Yunyan-Cloud_Dragon_Slim': { x0: 344, y0: 102, x1: 679, y1: 921 },
+  // '149_Ashima-Eternal_Love' was here — it is the file DUPLICATES drops in
+  // favour of `14_Ashima-Eternal_Love`, so the entry has been dead since
+  // 2026-09-29 and is out. The survivor needs none: its crop is its cut-out to
+  // within 2px on every side, with nothing opaque outside any edge. Checked
+  // rather than assumed, because the twin was here for a real clip (its whole
+  // brand panel at the top) and a second copy of one pack can carry it too.
   '219_Liqun-Classic_Red_White': { x0: 303, y0: 111, x1: 731, y1: 857 },
   '255_Rothmans-King_Size': { x0: 220, y0: 141, x1: 678, y1: 851 },
   // A pale pack: its white top, emblem and all, read as paper and went.
