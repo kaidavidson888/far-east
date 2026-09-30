@@ -1158,21 +1158,6 @@
    "hand": false
   },
   {
-   "id": "99_ESSE-Double_Shot_Black",
-   "source": "99_ESSE-Double_Shot_Black",
-   "box": {
-    "x0": 290,
-    "y0": 102,
-    "x1": 734,
-    "y1": 921
-   },
-   "src": {
-    "w": 1024,
-    "h": 1024
-   },
-   "hand": true
-  },
-  {
    "id": "100_ESSE-Double_Shot_Green_Purple",
    "source": "100_ESSE-Double_Shot_Green_Purple",
    "box": {

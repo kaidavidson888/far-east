@@ -168,11 +168,10 @@ const HAND_CROP = {
   // inside the artwork. Stated to the pack's real edges, green side panel
   // included — see REPAIR above.
   '100_ESSE-Double_Shot_Green_Purple': { x0: 291, y0: 169, x1: 731, y1: 891 },
-  // Its box has to be stated for the same reason: once the keyed-away dots are
-  // filled back in, that white reads as BACKDROP to the crop's own reasoning,
-  // which then trims two thirds of the pack away (drawn 50x92 -> 81x92 before
-  // this line existed). A 'face' repair and a hand crop go together.
-  '99_ESSE-Double_Shot_Black': { x0: 290, y0: 102, x1: 734, y1: 921 },
+  // '99_ESSE-Double_Shot_Black' had a box here for the same reason, and went
+  // out with the pack — see UNUSABLE. The rule it demonstrated still holds for
+  // the entry above: a 'face' repair and a hand crop go together, because
+  // filled white reads as BACKDROP to the crop's own reasoning.
   // THE WHITE-FACE CLIPS, found by auditing every final crop against its
   // source (the owner saw packs cut in the row). Each of these has a white
   // face at an edge that the reasoning read as empty and cropped off — the
@@ -317,23 +316,13 @@ const REPAIR = {
    */
   '100_ESSE-Double_Shot_Green_Purple': { white: 251, fill: 'face' },
   /*
-   * THE SAME KEY, ON A BLACK PACK, AND IT TOOK THE DOTS (the owner's "fix the
-   * black one too"). 23.4% of this crop is transparent, 79% of that pure
-   * black. What is missing here is not a white FACE but the white dotted
-   * spiral printed over a black one — which is why the holes are bordered by
-   * DARK pixels, fringe median 52, where the green pack's are bordered by
-   * pale ones at 188. Same fault, opposite surroundings.
-   *
-   * IT LOOKS RIGHT TODAY AND THAT IS THE TRAP. On the landing page's white
-   * paper a hole shows the page through and reads as the white dot that
-   * belongs there, so nothing was ever reported. On the shelf, whose page is
-   * black, every one of those dots is a black hole and the spiral disappears.
-   * The fill is what makes the mark say the same thing on both grounds.
-   *
-   * No hand crop: with the dots restored the build's own reasoning finds the
-   * pack, and its answer is checked against the old one below.
+   * '99_ESSE-Double_Shot_Black' was here too — the same key on a black pack,
+   * where what it took was the white dotted spiral printed over black rather
+   * than a white face (the holes' fringe median is 52 against the green pack's
+   * 188: dark surroundings, same fault). That fill worked. The pack is out of
+   * the catalogue all the same, because the photograph turned out to show only
+   * PART of the pack, which no fill addresses — see UNUSABLE below.
    */
-  '99_ESSE-Double_Shot_Black': { white: 251, fill: 'face' },
 };
 
 /**
@@ -612,6 +601,42 @@ const DUPLICATES = new Set([
   '95_Diamond-Lotus_Green_B', // keeping 94_..._A
   '152_Huanghelou-Grand_Color_Hard_Pack', // keeping 77_..._Vibrant_Colors_Hard_Pack
   '96_Peony-The_Great_Peony_A', // keeping 97_..._B (0.45MP against 0.40)
+]);
+
+/**
+ * SOURCES THAT DO NOT SHOW A WHOLE PACK, AND SO ARE NOT IN THE CATALOGUE AT ALL
+ * (the owner's 2026-09-29 "the black one should just be removed").
+ *
+ * Kept apart from DUPLICATES on purpose: a duplicate is dropped because the
+ * pack is somewhere else, and the catalogue loses nothing. This drops a pack
+ * that has no other copy, so the catalogue is one product smaller — a bigger
+ * decision, and one the owner makes rather than the build.
+ *
+ * `99_ESSE-Double_Shot_Black` is a photograph of PART of the pack: the cut-out
+ * stops at x=734 through the middle of the artwork, slicing the ESSE wordmark
+ * mid-letter, the second half of "DOUBLE" and "SHOT", the end of the "Nano-Shin"
+ * label, and the green side stripe that `100_ESSE-Double_Shot_Green_Purple` and
+ * `05_ESSE-Double_Shot_Red_White_Wine` both show. It is not a margin that is
+ * missing — REGROW puts a margin back — it is lettering, and the pack's own
+ * pixels cannot say what the missing letters look like. Reconstructing it would
+ * mean transplanting artwork off a sibling in another colourway, which is
+ * making the picture up rather than repairing it.
+ *
+ * ITS REPAIR AND HAND_CROP ENTRIES CAME OUT WITH IT. They were added the same
+ * day for the keyed-away dotted spiral, which was a real fault and really was
+ * fixed; the truncation was the thing not looked for, because the check made
+ * was "are the holes gone" rather than "is the pack whole". Worth remembering
+ * as a lesson about repairs: fixing the fault reported does not mean the
+ * subject is sound.
+ *
+ * The owner's own info-page vector `ESSE (Double Shot Black).svg` is still in
+ * `scripts/assets/cigpages`, so `build:cigpages` reports it as a vector with no
+ * pack to attach to. That is correct and is left as the record of the gap: if a
+ * whole photograph of this pack ever arrives, deleting the line below is the
+ * entire change needed.
+ */
+const UNUSABLE = new Set([
+  '99_ESSE-Double_Shot_Black', // the photograph shows only part of the pack
 ]);
 
 /** Near-white, and flat enough to be a backdrop rather than a pack panel. */
@@ -1077,6 +1102,7 @@ const files = readdirSync(SRC)
   .filter((f) => /\.(png|jpe?g)$/i.test(f))
   .filter((f) => !ONLY || f.includes(ONLY))
   .filter((f) => !DUPLICATES.has(f.replace(/\.(png|jpe?g)$/i, '')))
+  .filter((f) => !UNUSABLE.has(f.replace(/\.(png|jpe?g)$/i, '')))
   .sort(
     (a, b) =>
       Number(a.match(/^\d+/)?.[0] ?? 0) - Number(b.match(/^\d+/)?.[0] ?? 0) ||

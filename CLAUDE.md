@@ -28,7 +28,7 @@ no CSS framework (tokens in `app/globals.css`). Deploys to Vercel.
 - `npm run build:sigil` — cuts the cloud ornament down for the age gate and
   for the site's pointer. Re-run it if `public/landing/parts/cloud.svg` changes;
   it prints the cursor hotspot line to paste into `globals.css`.
-- `npm run build:cigs` — rebuilds the 238 pack marks in `public/cigs` and `lib/cigs.json`
+- `npm run build:cigs` — rebuilds the 237 pack marks in `public/cigs` and `lib/cigs.json`
   from the owner's `Cigs Images` folder (path at the top of `scripts/build-cigs.mjs`).
   `CIGS_ONLY=<substring> node scripts/build-cigs.mjs` rebuilds just the matching
   sources and prints what the reasoning decided for each — the crop candidates,
@@ -155,7 +155,7 @@ overwrote this file twice during setup. `.env.example` is the template.
     `share_items` references `cigarettes` — the 32 placeholder products from
     `lib/catalog.json`, which are the only things here with a `price_usd`. The seal, the
     bookmark, the quantity wheels and the sigil all belong to the PACK shelf
-    (`pack_favorites`, the 238 photographed packs), which has quantity but no price and **no
+    (`pack_favorites`, the 237 photographed packs), which has quantity but no price and **no
     share link at all**. The counter is wired to the share link that exists. If the owner
     means the pack shelf, that shelf needs a share link and a price first.
 - **`slug` is permanent identity.** Reviews and favourites reference the product row; changing
@@ -748,7 +748,7 @@ knowing before touching it:
   the body is centred, so on a much wider window it drifts right of the logo.
   Anchoring the body left would hold it at any width, at the cost of the equal
   side margins — the owner's call, not one to make unasked.
-- **Every pack on the row is a button, but there are not 238 vectors.** The
+- **Every pack on the row is a button, but there are not 237 vectors.** The
   owner supplied one info-page vector per cigarette *name*, and nine packs
   carry a name another pack already has (`299_Karelia-Blue` and
   `252_Karelia-Blue`, and eight more). `lib/cigPages.ts` sends those nine to
@@ -962,12 +962,13 @@ carries a copy of that pack's cleaned mark (`fitPhoto` reads `public/cigs/<id>.s
 so `npm run build:cigpages` has to follow `npm run build:cigs` or the row and the
 page will disagree about the same cigarette.
 
-**IT IS 238 PACKS AND 229 PAGES SINCE 2026-09-29** (the owner's "remove all the
+**IT IS 237 PACKS AND 229 PAGES SINCE 2026-09-29** (the owner's "remove all the
 duplicate packs"). It was 247 and 235. Nine more entries went into `DUPLICATES`
 in `build-cigs.mjs`, which had 26 already; the table is "listed by what is
 dropped", so the survivor keeps its own name.
 - **A PERCEPTUAL HASH CANNOT MAKE THIS CALL, and that was measured rather than
-  assumed.** A 24x24 colour signature over the 238 marks scored two unrelated
+  assumed.** A 24x24 colour signature over the 238 marks then in the catalogue
+  scored two unrelated
   red packs at 0.95 and put Peony A against Peony B — which ARE one pack —
   below the same threshold. The crop differences between two shots of one pack
   outweigh the difference between two similar packs. **Every pair was compared
@@ -985,10 +986,12 @@ dropped", so the survivor keeps its own name.
 - Of each pair the larger source is kept, except ESSE Change Strawberry, whose
   bigger file is smeared through with white streaks.
 
-**THREE PACKS WERE DAMAGED BY A WHITE KEY UPSTREAM AND ARE REPAIRED IN THE
+**TWO PACKS WERE DAMAGED BY A WHITE KEY UPSTREAM AND ARE REPAIRED IN THE
 BUILD** — `REPAIR` in `scripts/build-cigs.mjs`, `repairPanel()`. Something
-before us keyed white out of these three and left holes in the alpha where the
-pack's own white was.
+before us keyed white out of them and left holes in the alpha where the pack's
+own white was. **It was three until `99_ESSE-Double_Shot_Black` left the
+catalogue entirely** (see UNUSABLE); its repair is described below because the
+measurements still hold and its case is the clearest of the three.
 - **WHAT WAS KEYED AWAY IS TOLD BY THE FRINGE ROUND THE HOLES, NOT BY LOOKING
   AT THE PACK.** `91_Mevius-Blue_6` is a flat white panel with black lettering;
   `99_ESSE-Double_Shot_Black` is a white dotted spiral printed OVER black. Both
@@ -1014,6 +1017,35 @@ pack's own white was.
   The RGB range of 0..255 that suggested otherwise came from the 7.7% that is
   text antialiasing. The repair works because the real panel is flat white and
   its lettering survived, not because anything was recovered.
+
+**A PACK WHOSE PHOTOGRAPH SHOWS ONLY PART OF IT IS DROPPED — `UNUSABLE` in
+`build-cigs.mjs`** (the owner's 2026-09-29 "the black one should just be
+removed"). One entry, `99_ESSE-Double_Shot_Black`, and the catalogue is 237.
+- **IT IS ITS OWN TABLE, NOT `DUPLICATES`.** A duplicate is dropped because the
+  pack is somewhere else and the catalogue loses nothing; this drops a product
+  that has no other copy, so the catalogue is genuinely one smaller. That is the
+  owner's decision to make, not the build's, and the two should not be confused
+  by sharing a list.
+- **WHY IT COULD NOT BE REPAIRED.** The cut-out stops at x=734, through the
+  middle of the artwork: the ESSE wordmark is sliced mid-letter, "DOUBLE" and
+  "SHOT" lose their second halves, the "Nano-Shin" label its end, and the green
+  side stripe that `100_ESSE-Double_Shot_Green_Purple` and
+  `05_ESSE-Double_Shot_Red_White_Wine` both carry is absent. `REGROW` puts back a
+  MARGIN; here what is missing is LETTERING, and a pack's own pixels cannot say
+  what the missing letters look like. The only route would be transplanting
+  artwork off a sibling in another colourway, which is making the picture up.
+- **THE LESSON, WHICH IS THE REASON THIS IS WRITTEN AT LENGTH: FIXING THE FAULT
+  REPORTED DOES NOT MEAN THE SUBJECT IS SOUND.** This pack was "repaired" earlier
+  the same day — the keyed-away dotted spiral really was restored, and that
+  repair was checked and did work. The check made was "are the holes gone", and
+  the truncation went unnoticed because nobody asked "is the pack whole". It was
+  the owner who saw it. **When repairing a source, look at the whole subject
+  afterwards, not at the fault you came for.**
+- The owner's info-page vector `ESSE (Double Shot Black).svg` stays in
+  `scripts/assets/cigpages`, so `build:cigpages` reports it as a vector with no
+  pack to attach to. That is correct and is the record of the gap: **if a whole
+  photograph ever arrives, deleting the one line in `UNUSABLE` is the entire
+  change.**
 
 **A SIDE THE CUT-OUT SLICED OFF IS REGROWN — `REGROW` in `build-cigs.mjs`**
 (the owner's 2026-09-29 "fix the vogue and pall mall"). Two packs,
@@ -1588,7 +1620,7 @@ no hits have the sigil flash red and delete whatever is written").
   half again on a narrow window; and on a coarse pointer both toggles get an
   invisible 38px target while shut. **Left as they are**: "hard" and "mid" also find the packs NAMED
   "Hard Pack" and "Mid-Size", which is the name being searched as asked;
-  "cannabis" finds all 238, every pack having a strain; and the prefix rule
+  "cannabis" finds all 237, every pack having a strain; and the prefix rule
   lets "esse" find Guiyan Essence.
 - **NEVER PATCH THIS FILE WITH `String.replace(a, b)` AND A STRING `b`.** A
   replacement string reads a dollar sign followed by a backtick as "everything
@@ -2111,7 +2143,7 @@ cannot drift.
   named after puddings, so "Mint Chocolate (Hybrid)" and "Mint Chocolate
   Chip (Hybrid)" both landed in Dessert when the rules were only sorted by
   length — the bracket is what says what a pairing IS. Note that **every
-  pack has a strain**, so Cannabis on its own matches all 238 and narrows
+  pack has a strain**, so Cannabis on its own matches all 237 and narrows
   nothing; it is there to be combined.
 - **A pack can be in more than one family** — it has three notes and three
   pairings — so those two groups are array-valued and a pack matches if ANY
@@ -2159,7 +2191,7 @@ cannot drift.
   `listCigarettes` builds `column = ANY(values)` per facet and ANDs them, and
   `matchingPacks` in `lib/cigTags.ts` is that rule in the browser. It could
   not be the same query — that one reads the `cigarettes` table, which holds
-  the 32 placeholder products, and the row is the 238 photographed packs
+  the 32 placeholder products, and the row is the 237 photographed packs
   which are deliberately not in it (see `pack_favorites`). A pack with no
   tags fails every tag, as a NULL column fails `= ANY(...)`.
 - **`npm run build:cigtags`** writes `lib/cigtags.json` from the BUILT pages
@@ -3463,7 +3495,7 @@ drawn from the first day and totalled NOTHING for three redraws:
 `pack_favorites` keys on a pack id and `lib/cigs.json` carries no money, so
 the route passed no `worth` at all. **`cigtags.json` has the price**: it is
 generated from the owner's own 229 cigarette pages and carries a PRICE PER
-PACK for all 238 — the $15/$25/$30 the tag menu filters by. `shelfWorth`
+PACK for all 237 — the $15/$25/$30 the tag menu filters by. `shelfWorth`
 multiplies it by `cardAmount` (the wheels' answer, a carton counted as ten)
 and sums.
 - **It is totalled on the SERVER**, so the 247-pack tag table never reaches
